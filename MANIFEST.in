@@ -1,0 +1,16 @@
+include Makefile CHANGES LICENSE AUTHORS README.md
+recursive-include tests *
+recursive-include docs *
+recursive-exclude docs *.pyc
+recursive-exclude docs *.pyo
+recursive-exclude docs .gitignore
+recursive-exclude tests *.pyc
+recursive-exclude tests *.pyo
+prune docs/_build
+prune docs/.ropeproject
+prune docs/.gitignore
+prune tests/.cache
+prune extensions
+prune .ropeproject
+prune .git
+prune .gitignore

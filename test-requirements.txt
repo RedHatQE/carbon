@@ -1,0 +1,6 @@
+pytest
+pytest-cov
+tox
+Sphinx
+sphinx-rtd-theme
+flake8
