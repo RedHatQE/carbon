@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2016 Red Hat, Inc.
+# Copyright (C) 2017 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,16 +16,28 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.product
+    carbon.resources.package
 
     Here you add brief description of what this module is about
 
-    :copyright: (c) 2016 Red Hat, Inc.
+    :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
+from ..helpers import Resource
+from ..tasks import InstallTask, ConfigTask
 
-class Product(object):
 
-    def __init__(self):
-        pass
+class Package(Resource):
+
+    _task_install_class = InstallTask
+    _task_config_class = ConfigTask
+
+    def __init__(self, data={}):
+        super(Package, self).__init__(data)
+
+    def install(self):
+        raise NotImplementedError
+
+    def config(self):
+        raise NotImplementedError

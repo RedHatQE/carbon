@@ -1,0 +1,21 @@
+---
+scenario:
+  name: Scenario Example
+  description: Description of the scenario example.
+  hosts:
+    - host: test_resource
+      description: description for machine 1
+      user: root
+      password: redhat
+      type: vm
+      flavor: m1.medium
+      image: rhel-6.8-workstation-x86_64-released
+      packages:
+        - package: firewall
+          vars:
+            enabled: false
+        - package: rhn
+          vars:
+            username: pit_rhn_user
+            password: pit_rhn_pass
+            host: subscription.rhn.stage.redhat.com

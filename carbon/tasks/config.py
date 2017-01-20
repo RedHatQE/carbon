@@ -16,16 +16,24 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon
+    carbon.tasks.config
 
-    A framework that cares about product interoperability quality.
+    Here you add brief description of what this module is about
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from .resources import Host, Package
-from .config import Config, ConfigAttribute
-from .scenario import Scenario
+from ..core import CarbonTask
 
-__version__ = '0.0.dev0'
 
+class ConfigTask(CarbonTask):
+    def __init__(self, msg, clean_msg, **kwargs):
+        super(ConfigTask, self).__init__(**kwargs)
+        self.msg = msg
+        self.clean_msg = clean_msg
+
+    def run(self, context):
+        print self.msg
+
+    def cleanup(self, context):
+        print self.clean_msg

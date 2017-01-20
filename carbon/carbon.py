@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2016 Red Hat, Inc.
+# Copyright (C) 2017 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 
     Here you add brief description of what this module is about
 
-    :copyright: (c) 2016 Red Hat, Inc.
+    :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 import os
@@ -29,13 +29,27 @@ from threading import Lock
 
 from .config import Config, ConfigAttribute
 from .helpers import _PackageBoundObject, get_root_path, LockedCachedProperty
+from .tasks import ValidateTask, CheckTask, ProvisionTask
+from .tasks import ConfigTask, InstallTask, TestTask
+from .tasks import ReportTask, TeardownTask
 
 #: a lock used for logger initialization
 _logger_lock = Lock()
 
+_MASTER_PIPELINE = [
+    {'name': 'validate',  'type': ValidateTask,  'pipeline': []},
+    {'name': 'check',     'type': CheckTask,     'pipeline': []},
+    {'name': 'provision', 'type': ProvisionTask, 'pipeline': []},
+    {'name': 'config',    'type': ConfigTask,    'pipeline': []},
+    {'name': 'install',   'type': InstallTask,   'pipeline': []},
+    {'name': 'test',      'type': TestTask,      'pipeline': []},
+    {'name': 'report',    'type': ReportTask,    'pipeline': []},
+    {'name': 'teardown',  'type': TeardownTask,  'pipeline': []},
+]
 
-class Scenario(_PackageBoundObject):
-    """The scenario object acts as the central object."""
+
+class Carbon(_PackageBoundObject):
+    """The Carbon object acts as the central object."""
 
     #: The class that is used for the ``config`` attribute of this app.
     #: Defaults to :class:`~carbon.Config`.
@@ -71,8 +85,7 @@ class Scenario(_PackageBoundObject):
         'SECRET_KEY':              'secret-key',
     }
 
-    def __init__(self, import_name,
-                 root_path=None):
+    def __init__(self, import_name, root_path=None):
 
         _PackageBoundObject.__init__(self, import_name, root_path=root_path)
 
@@ -89,6 +102,8 @@ class Scenario(_PackageBoundObject):
         #: Prepare the deferred setup of the logger.
         self._logger = None
         self.logger_name = self.import_name
+
+        self.workflow = _WORKFLOW
 
     @LockedCachedProperty
     def name(self):
@@ -133,3 +148,15 @@ class Scenario(_PackageBoundObject):
         """
         root_path = self.root_path
         return self.config_class(root_path, self.default_config)
+
+    def load_from_yaml(self):
+        """
+        Loads the scenario from a yaml file.
+        """
+        raise NotImplementedError
+
+    def run(self):
+        """
+        Run the carbon compound
+        """
+        raise NotImplementedError

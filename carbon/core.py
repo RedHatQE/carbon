@@ -16,16 +16,28 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon
-
-    A framework that cares about product interoperability quality.
+    carbon.core
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from .resources import Host, Package
-from .config import Config, ConfigAttribute
-from .scenario import Scenario
 
-__version__ = '0.0.dev0'
+from taskrunner import Task
 
+
+class CarbonTask(Task):
+
+    def __init__(self, name=None, **kwargs):
+        super(CarbonTask, self).__init__(**kwargs)
+
+        if name is not None:
+            self.name = name
+
+    def run(self, context):
+        pass
+
+    def cleanup(self, context):
+        pass
+
+    def __str__(self):
+        return self.name

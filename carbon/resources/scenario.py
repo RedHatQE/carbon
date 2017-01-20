@@ -16,16 +16,32 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon
+    carbon.resources.scenario
 
-    A framework that cares about product interoperability quality.
+    Here you add brief description of what this module is about
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from .resources import Host, Package
-from .config import Config, ConfigAttribute
-from .scenario import Scenario
 
-__version__ = '0.0.dev0'
+from ..helpers import Resource
+from ..tasks import ValidateTask, TestTask, ReportTask
 
+
+class Scenario(Resource):
+
+    _task_validate_class = ValidateTask
+    _task_test_class = TestTask
+    _task_report_class = ReportTask
+
+    def __init__(self, data={}):
+        super(Scenario, self).__init__(data)
+
+    def validate(self):
+        raise NotImplementedError
+
+    def test(self):
+        raise NotImplementedError
+
+    def report(self):
+        raise NotImplementedError

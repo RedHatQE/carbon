@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2016 Red Hat, Inc.
+# Copyright (C) 2017 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,16 +16,11 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.node
+    carbon.resources
 
-    Here you add brief description of what this module is about
-
-    :copyright: (c) 2016 Red Hat, Inc.
+    :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
-
-class Node(object):
-
-    def __init__(self):
-        self.products = list()
+from host import Host
+from package import Package

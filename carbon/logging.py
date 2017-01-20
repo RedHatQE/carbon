@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2016 Red Hat, Inc.
+# Copyright (C) 2017 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 
     Here you add brief description of what this module is about
 
-    :copyright: (c) 2016 Red Hat, Inc.
+    :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 from __future__ import absolute_import
@@ -49,6 +49,8 @@ def create_logger(app):
     level based on the application's debug flag.  Furthermore this
     function also removes all attached handlers in case there was a
     logger with the log name before.
+
+    :copyright: (c) 2015 by Armin Ronacher.
     """
     logger_cls = getLoggerClass()
 

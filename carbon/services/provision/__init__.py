@@ -16,16 +16,8 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon
-
-    A framework that cares about product interoperability quality.
+    carbon.services.provision
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from .resources import Host, Package
-from .config import Config, ConfigAttribute
-from .scenario import Scenario
-
-__version__ = '0.0.dev0'
-
