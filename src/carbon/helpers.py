@@ -87,7 +87,7 @@ def get_valid_tasks_types():
     :return: List of all valid tasks
     """
     from .core import CarbonTask
-    import tasks
+    from . import tasks
 
     # all task classes must
     prefix = tasks.__name__ + "."

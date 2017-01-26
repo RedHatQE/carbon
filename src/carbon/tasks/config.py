@@ -33,7 +33,7 @@ class ConfigTask(CarbonTask):
         self.clean_msg = clean_msg
 
     def run(self, context):
-        print self.msg
+        print(self.msg)
 
     def cleanup(self, context):
-        print self.clean_msg
+        print(self.clean_msg)

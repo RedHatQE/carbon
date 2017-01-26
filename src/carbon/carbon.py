@@ -198,7 +198,7 @@ class Carbon(_PackageBoundObject):
         Given a task object, it will find in which pipeline it
         will be added into.
 
-        :param task: a task object instance from one of the carbon.tasks
+        :param t: a task object instance from one of the carbon.tasks
         """
         for pipeline in self.pipelines:
             if pipeline['type'].__name__ == t['task'].__name__:
@@ -226,13 +226,13 @@ class Carbon(_PackageBoundObject):
 
         try:
             for pipeline in self.pipelines:
-                print " "
-                print "." * 50
-                print "=> Starting tasks on pipeline: %s" % pipeline['name']
+                print(" ")
+                print("." * 50)
+                print("=> Starting tasks on pipeline: %s" % pipeline['name'])
                 if not pipeline['task_list']:
-                    print "   ... nothing to be executed here ..."
+                    print("   ... nothing to be executed here ...")
                 else:
                     taskrunner.execute(pipeline['task_list'], cleanup='always')
-                print "." * 50
+                print("." * 50)
         except taskrunner.TaskExecutionException as ex:
             print(ex)

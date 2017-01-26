@@ -1,4 +1,4 @@
-.PHONY: clean-pyc clean-tests clean test tox-test docs audit
+.PHONY: clean-pyc clean-tests clean tox-test
 
 all: clean-pyc clean-tests clean tox-test
 
@@ -23,7 +23,7 @@ clean:
 	rm -rf dist
 
 clean-tests:
-	rm -rf tests/coverage-report
+	rm -rf tests/coverage-report*
 	rm -rf tests/.coverage*
 	rm -rf tests/__pycache__
 	rm -rf tests/junit-report.xml

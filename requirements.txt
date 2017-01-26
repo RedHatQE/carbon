@@ -1,4 +1,4 @@
 werkzeug==0.11.15
 click==6.7
-taskrunner==0.2.1
 PyYAML==3.12
+git+https://github.com/tvieira/taskrunner.git

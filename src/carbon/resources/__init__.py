@@ -22,6 +22,6 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-from host import Host
-from package import Package
-from scenario import Scenario
+from .host import Host
+from .package import Package
+from .scenario import Scenario
