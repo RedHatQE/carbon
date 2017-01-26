@@ -23,10 +23,12 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
-import sys
+import inspect
 import pkgutil
+import sys
 from threading import RLock
+
+import os
 
 # sentinel
 _missing = object()
@@ -77,6 +79,54 @@ def get_root_path(import_name):
     return os.path.dirname(os.path.abspath(filepath))
 
 
+def get_valid_tasks_types():
+    """
+    Go through all modules within carbon.tasks package and return
+    the list of all tasks within it. All tasks within the carbon.tasks
+    are considered valid tasks to be added into the pipeline.
+    :return: List of all valid tasks
+    """
+    from .core import CarbonTask
+    import tasks
+
+    # all task classes must
+    prefix = tasks.__name__ + "."
+
+    tasks_list = []
+
+    # Run through each module within tasks and take the list of
+    # classes that are subclass of CarbonTask but not CarbonTask itself.
+    # When you import a class within a module, it becames a member of
+    # that class
+    for importer, modname, ispkg in pkgutil.iter_modules(tasks.__path__, prefix):
+        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
+        for clsname, clsmember in clsmembers:
+            if (clsmember is not CarbonTask) and issubclass(clsmember, CarbonTask):
+                tasks_list.append(clsmember)
+
+    return tasks_list
+
+
+def get_tasks_from_resource(resource):
+    """
+    Get the list of tasks from a resour
+    :return:
+    """
+    tasks = []
+    return tasks
+
+
+def get_all_resources_from_scenario(scenario):
+    """
+    Given the scenario, it returns a list of all resources from
+    the scenario, including the scenario itself.
+    :param scenario: the scenario resource to get resources extracted from
+    :return: list of resources
+    """
+    resources_list = []
+    return resources_list
+
+
 class LockedCachedProperty(object):
     """
     A decorator that converts a function into a lazy property.  The
@@ -112,18 +162,18 @@ class _PackageBoundObject(object):
     """
 
     def __init__(self, import_name, root_path=None):
-        #: The name of the package or module.  Do not change this once
-        #: it was set by the constructor.
+        # The name of the package or module.  Do not change this once
+        # it was set by the constructor.
         self.import_name = import_name
 
         if root_path is None:
             root_path = get_root_path(self.import_name)
 
-        #: Where is the app root located?
+        # Where is the app root located?
         self.root_path = root_path
 
 
-class Resource(dict):
+class CustomDict(dict):
     """Carbon dictionary to represent a resource from JSON or YAML.
 
     Initialized a data (loaded JSON or YAML) and creates a
@@ -135,10 +185,10 @@ class Resource(dict):
     """
 
     def __init__(self, data={}):
-        super(Resource, self).__init__(data)
+        super(CustomDict, self).__init__(data)
         for key, value in data.items():
             if isinstance(value, dict):
-                value = Resource(value)
+                value = CustomDict(value)
             self[key] = value
 
     def __getattr__(self, attr):

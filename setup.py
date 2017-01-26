@@ -13,15 +13,14 @@ Links
 """
 import re
 import ast
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 _version_re = re.compile(r'__version__\s+=\s+(.*)')
 
-with open('carbon/__init__.py', 'rb') as f:
+with open('src/carbon/__init__.py', 'rb') as f:
     version = str(ast.literal_eval(_version_re.search(
         f.read().decode('utf-8')).group(1)))
-
 
 setup(
     name='carbon',
@@ -32,14 +31,16 @@ setup(
     author_email='pit@redhat.com',
     description='A framework to test product interoperability',
     long_description=__doc__,
-    packages=['carbon'],
+    package_dir={'': 'src'},
+    packages=find_packages('src'),
     include_package_data=True,
     zip_safe=False,
     platforms='any',
     install_requires=[
         'Werkzeug',
-        'Jinja2',
         'Click',
+        'taskrunner',
+        'PyYAML'
     ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

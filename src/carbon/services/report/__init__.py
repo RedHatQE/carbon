@@ -16,28 +16,8 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.resources.package
-
-    Here you add brief description of what this module is about
+    carbon.services.report
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-
-from ..helpers import Resource
-from ..tasks import InstallTask, ConfigTask
-
-
-class Package(Resource):
-
-    _task_install_class = InstallTask
-    _task_config_class = ConfigTask
-
-    def __init__(self, data={}):
-        super(Package, self).__init__(data)
-
-    def install(self):
-        raise NotImplementedError
-
-    def config(self):
-        raise NotImplementedError

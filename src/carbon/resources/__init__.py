@@ -16,28 +16,12 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.core
+    carbon.resources
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
-from taskrunner import Task
-
-
-class CarbonTask(Task):
-
-    def __init__(self, name=None, **kwargs):
-        super(CarbonTask, self).__init__(**kwargs)
-
-        if name is not None:
-            self.name = name
-
-    def run(self, context):
-        pass
-
-    def cleanup(self, context):
-        pass
-
-    def __str__(self):
-        return self.name
+from host import Host
+from package import Package
+from scenario import Scenario

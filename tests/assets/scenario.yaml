@@ -1,0 +1,27 @@
+---
+# An example of a scenario description for testing purpose
+name: Scenario Example
+description: Description of the scenario example.
+scenario_data:
+  vars:
+    version: 1.0
+hosts:
+  - name: test_resource
+    description: description for machine 1
+    user: root
+    password: redhat
+    type: vm
+    flavor: m1.medium
+    image: rhel-6.8-workstation-x86_64-released
+    host_data:
+      vars:
+        version: 1.0
+    packages:
+      - name: firewall
+        vars:
+          enabled: false
+      - name: rhn
+        vars:
+          username: pit_rhn_user
+          password: pit_rhn_pass
+          host_url: subscription.rhn.stage.redhat.com

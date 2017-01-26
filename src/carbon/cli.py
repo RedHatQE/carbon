@@ -28,7 +28,7 @@ import os
 import click
 
 from . import __version__
-from .scenario import Carbon
+from .carbon import Carbon
 
 _VERBOSITY = 0
 
@@ -60,6 +60,13 @@ def print_version(ctx, param, value):
         return
     click.echo('%s' % __version__)
     ctx.exit()
+
+
+def print_header():
+    click.echo("-" * 50)
+    click.echo("Carbon Framework v%s" % __version__)
+    click.echo("Copyright (C) 2017 Red Hat, Inc.")
+    click.echo("-" * 50)
 
 
 @click.group()
@@ -96,6 +103,7 @@ def validate():
               type=click.Choice(_TASK_CHOICES),
               help="Select a specific task to run. Default all tasks run.")
 @click.option("-s", "--scenario",
+              default=None,
               help="Scenario definition file to be executed.")
 @click.option("-c", "--cleanup",
               type=click.Choice(_TASK_CLEANUP_CHOICES),
@@ -105,27 +113,36 @@ def validate():
               type=click.Choice(_TASK_LOGLEVEL_CHOICES),
               default='info',
               help="Select logging level. Default is 'INFO'")
-def run(task, scenario, cleanup, log_level):
+@click.pass_context
+def run(ctx, task, scenario, cleanup, log_level):
     """
     Run a carbon scenario, given the scenario YAML file configuration.
     """
-    #: Create a new carbon compound
+    print_header()
+
+    if os.path.isfile(scenario):
+        scenario = os.path.abspath(scenario)
+    else:
+        click.echo('You have to provide a valide scenario file.')
+        ctx.exit()
+
+    # Create a new carbon compound
     cbn = Carbon(__name__)
 
-    #: Read configuration first from etc, then overwrite from CARBON_SETTINGS
-    #: environment variable and the look gor a carbon.cfg from within the
-    #: directory where this command is running from.
+    # Read configuration first from etc, then overwrite from CARBON_SETTINGS
+    # environment variable and the look gor a carbon.cfg from within the
+    # directory where this command is running from.
     cbn.config.from_pyfile('/etc/carbon/carbon.cfg', silent=True)
-    cbn.config.from_pyfile(os.environ['CARBON_SETTINGS'], silent=True)
+    cbn.config.from_envvar('CARBON_SETTINGS', silent=True)
     cbn.config.from_pyfile(os.path.join(os.getcwd(), 'carbon.cfg'), silent=True)
 
-    #: TODO: load yaml file given via command line
-    #: cnb.load_from_yaml(open(scenario))
+    # This is the easiest way to configure a full scenario.
+    cbn.load_from_yaml(scenario)
 
-    #: TODO: add any customization after the scenario is loaded
+    # The scenario will start the main pipeline and run through the ordered list
+    # of pipelines. See :function:`~carbon.Carbon.run` for more details.
+    cbn.run()
 
-    #: TODO: Run the carbon object
-    #: cbn.run()
 
 @cli.command('help')
 @click.option("--task",

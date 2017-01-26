@@ -16,11 +16,17 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.resources
+    carbon.constants
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
-"""
 
-from host import Host
-from package import Package
+"""
+PIPELINE_ORDER = ['validate',
+                  'check',
+                  'provision',
+                  'config',
+                  'install',
+                  'test',
+                  'report',
+                  'teardown']

@@ -16,17 +16,8 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.constants
+    carbon.services.provision
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
-
 """
-PIPELINES = ['validate',
-             'check',
-             'provision',
-             'config',
-             'install',
-             'test',
-             'report',
-             'teardown']
