@@ -1,0 +1,107 @@
+---
+scenario: FF Interop Test
+description: Run an Interop Test against FF
+
+# Provisioning and Installation Services
+# --------------------------------------
+hosts:
+  - name: machine_1
+    provider: ci-ops-provisioner
+    arch: x86_64
+    image: rhel-6.9-workstation-x86_64-latest
+    variant: Workstation
+    type: VM
+    flavor: medium
+    ip_addr: 192.1168.0.100
+    role: w_client
+    packages:
+      # For each package, it goes like this:
+      # ansible-playbook -H<ip_addr> -D<variable=a> -D<variable=b> <package.name>.yaml
+      - name: rhn
+        vars:
+          host: subscription.rhsm.stage.redhat.com
+          username: pit_rhel_workstation_1
+          password: EwEBUVYX
+          auto-attach: True
+          clean: False
+      - name: yum
+        vars:
+          packages: pexpect, git, wget, python-setuptools, python-devel, restraint-deamon
+          group_packages: desktop
+
+  - name: machine_2
+    provider: ci-ops-provisioner
+    arch: i386
+    type: HW
+    tag: ['RTT_ACCEPTED']
+    family: RedHatEnterpriseLinux6
+    variant: Workstation
+    info: client
+    ip_addr: 192.1168.0.101
+    role: w_client
+    packages:
+      # For each package, it goes like this:
+      # ansible-playbook -H<ip_addr> -D<variable=a> -D<variable=b> <package.name>.yaml
+      - name: yum
+        vars:
+          packages: pexpect, git, wget, python-setuptools, python-devel
+          group_packages: desktop
+      - name: restraint-deamon
+        vars:
+          enabled: true
+
+  - name: machine_3
+    provider: ci-ops-provisioner
+    arch: s390x
+    type: HW
+    tag: ['RTT_ACCEPTED']
+    family: RedHatEnterpriseLinux6
+    variant: Server
+    info: client
+    ip_addr: 192.1168.0.102
+    role: s390x_client
+    packages:
+      # For each package, it goes like this:
+      # ansible-playbook -H<ip_addr> -D<variable=a> -D<variable=b> <package.name>.yaml
+      - name: rhn
+        vars:
+          host: subscription.rhsm.stage.redhat.com
+          username: pit_rhel_workstation_1
+          password: EwEBUVYX
+          auto-attach: True
+          clean: False
+          channels: ['rhel-6-for-system-z-rpms', 'rhel-6-for-system-z-optional-rpms']
+
+# Execute Service
+# ---------------
+# Carbon finds what framework you want to use and execute it using
+# the variables it need
+execute:
+  - framework: restraint
+    vars:
+      execute_xml: http://file.bos.redhat.com/~vipatel/FFinterop-rhel6.xml
+      role: ['w_client', 's390x_client']
+
+# Report Service
+# --------------
+# At the end of execute, there will be a buch of files that will be
+# saved: logs, test results, tracebacks, probes logs, etc
+# The report task will find out what module you want to report and
+# pass all the artifacts above to it. It is up to the module to
+# upload the files, report test results (TCMS, Polarion, etc) and
+# notify (IRC, Slack, etc)
+report:
+  - type: notification
+    name: irc
+    vars:
+      channels: #pit
+  - type: notification
+    name: email
+    vars:
+      emails: tmv@redhat.com, vipatel@redhat.com
+  - type: test
+    name: polarion
+    vars:
+      host:
+      username:
+      password:

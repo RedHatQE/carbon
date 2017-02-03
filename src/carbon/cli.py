@@ -123,7 +123,7 @@ def run(ctx, task, scenario, cleanup, log_level):
     if os.path.isfile(scenario):
         scenario = os.path.abspath(scenario)
     else:
-        click.echo('You have to provide a valide scenario file.')
+        click.echo('You have to provide a valid scenario file.')
         ctx.exit()
 
     # Create a new carbon compound

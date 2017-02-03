@@ -156,23 +156,6 @@ class LockedCachedProperty(object):
             return value
 
 
-class _PackageBoundObject(object):
-    """
-    :copyright: (c) 2015 by Armin Ronacher.
-    """
-
-    def __init__(self, import_name, root_path=None):
-        # The name of the package or module.  Do not change this once
-        # it was set by the constructor.
-        self.import_name = import_name
-
-        if root_path is None:
-            root_path = get_root_path(self.import_name)
-
-        # Where is the app root located?
-        self.root_path = root_path
-
-
 class CustomDict(dict):
     """Carbon dictionary to represent a resource from JSON or YAML.
 

@@ -31,8 +31,7 @@ from threading import Lock
 import taskrunner
 
 from .config import Config, ConfigAttribute
-from .helpers import _PackageBoundObject, get_root_path
-from .helpers import LockedCachedProperty, CustomDict
+from .helpers import LockedCachedProperty, CustomDict, get_root_path
 from .tasks import ValidateTask, CheckTask, ProvisionTask
 from .tasks import ConfigTask, InstallTask, TestTask
 from .tasks import ReportTask, TeardownTask
@@ -42,7 +41,7 @@ from .resources import Scenario, Host, Package
 _logger_lock = Lock()
 
 
-class Carbon(_PackageBoundObject):
+class Carbon(object):
     """The Carbon object acts as the central object."""
 
     # The class that is used for the ``config`` attribute of this app.
@@ -97,12 +96,15 @@ class Carbon(_PackageBoundObject):
 
     def __init__(self, import_name, root_path=None):
 
-        _PackageBoundObject.__init__(self, import_name, root_path=root_path)
+        # The name of the package or module.  Do not change this once
+        # it was set by the constructor.
+        self.import_name = import_name
 
         if root_path is None:
             root_path = get_root_path(self.import_name)
 
-        # Where is the app root located?
+        # Where is the app root located? Calling the client will
+        # always be the place where carbon is installed (site-packages)
         self.root_path = root_path
 
         self.config = self.make_config()
