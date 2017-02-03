@@ -109,8 +109,6 @@ class Carbon(object):
 
         self.config = self.make_config()
 
-        self.nodes = list()
-
         # Prepare the deferred setup of the logger.
         self._logger = None
         self.logger_name = self.import_name
