@@ -2,75 +2,133 @@
 scenario: FF Interop Test
 description: Run an Interop Test against FF
 
-# Provisioning and Installation Services
-# --------------------------------------
-hosts:
-  - name: machine_1
-    provider: ci-ops-provisioner
-    arch: x86_64
-    image: rhel-6.9-workstation-x86_64-latest
-    variant: Workstation
-    type: VM
-    flavor: medium
-    ip_addr: 192.1168.0.100
+# Provision
+# ---------
+#
+# We would organize like:
+#
+# carbon.providers.beaker
+# carbon.providers.openstack
+# carbon.providers.aws
+# carbon.providers.digitalocean
+#
+#  class CarbonProvider(object):
+#
+#      def __init__(self, hosts):   # the provisioner will receive a list of hosts
+#          implement init
+#
+#      def validate():              # this will be called in the Validation stage.
+#          implement validation
+#
+# Implementation would follow:
+#
+#  class BeakerCarbonProvider(CarbonProvider):
+#      ...
+#
+#  class OpenstackCarbonProvider(CarbonProvider):
+#      ...
+#
+#  class AWSCarbonProvider(CarbonProvider):
+#      ...
+#
+provision:
+  - name: machine_1                            # Host Provision Description:
+    provider: openstack                        # This one will use OpenstackCarbonProbider.
+    arch: x86_64                               # The settings will be used by the OpenstackCarbonProvider
+    image: rhel-6.9-workstation-x86_64-latest  # to validate againts its needs. For instance,
+    variant: Workstation                       # Openstack needs flavor information, so one of the
+    flavor: medium                             # actions within validate() is to check if flavor is
+    ip_addr:                                   # valid. Same works for other providers.
     role: w_client
-    packages:
-      # For each package, it goes like this:
-      # ansible-playbook -H<ip_addr> -D<variable=a> -D<variable=b> <package.name>.yaml
-      - name: rhn
-        vars:
-          host: subscription.rhsm.stage.redhat.com
-          username: pit_rhel_workstation_1
-          password: EwEBUVYX
-          auto-attach: True
-          clean: False
-      - name: yum
-        vars:
-          packages: pexpect, git, wget, python-setuptools, python-devel, restraint-deamon
-          group_packages: desktop
 
   - name: machine_2
-    provider: ci-ops-provisioner
+    provider: beaker
     arch: i386
-    type: HW
     tag: ['RTT_ACCEPTED']
     family: RedHatEnterpriseLinux6
     variant: Workstation
     info: client
     ip_addr: 192.1168.0.101
     role: w_client
-    packages:
-      # For each package, it goes like this:
-      # ansible-playbook -H<ip_addr> -D<variable=a> -D<variable=b> <package.name>.yaml
-      - name: yum
-        vars:
-          packages: pexpect, git, wget, python-setuptools, python-devel
-          group_packages: desktop
-      - name: restraint-deamon
-        vars:
-          enabled: true
 
   - name: machine_3
-    provider: ci-ops-provisioner
+    provider: beaker
     arch: s390x
-    type: HW
     tag: ['RTT_ACCEPTED']
     family: RedHatEnterpriseLinux6
     variant: Server
     info: client
     ip_addr: 192.1168.0.102
     role: s390x_client
-    packages:
-      # For each package, it goes like this:
-      # ansible-playbook -H<ip_addr> -D<variable=a> -D<variable=b> <package.name>.yaml
-      - name: rhn
-        vars:
-          host: subscription.rhsm.stage.redhat.com
-          username: pit_rhel_workstation_1
-          password: EwEBUVYX
-          auto-attach: True
-          clean: False
-          channels: ['rhel-6-for-system-z-rpms', 'rhel-6-for-system-z-optional-rpms']
+
+# Orchestration
+# -------------
+# This is controlled by the CarbonOchestrator object.
+# Initially we use Ansible as our orchestration mechanisms
+# and implements accordingly to our needs.
+#
+# We would organize like:
+#
+# carbon.orchestrators.ansible
+# carbon.orchestrators.puppet     (we won't use puppet, but someone would be able to do this)
+# carbon.orchestrators.chef       (we won't use chef, but someone would be able to do this)
+#
+# class CarbonOchestrator(object):
+#
+#      def __init__(self, actions_list):   # the orchestrator initialization
+#          implement init
+#
+#      def validate():                     # this will be called in the Validation stage.
+#          implement validation
+#
+#      def run():                          # this will run the orchestration
+#          implement running
+#
+# class AnsibleCarbonOchestrator(CarbonOchestrator):
+#
+#      def __init__(self, actions_list):   # the orchestration would initiate with a list
+#          implement init
+#
+#      def validate():                     # this will be called in the Validation stage
+#          implement validation            # with specific settings about Ansible playbooks
+#
+#      def run():                          # this will run the orchestration with Ansible,
+#          implement running               # and it would follow something like
+#                                          #
+#                                          # for action in list of actions:
+#                                          #   ansible-playbook -H<action.hosts> -D<var_a=action.var_a> -D<var_b=action.var_b> <action.name>.yaml
+
+# For each package, it goes like this:
+#
+orchestration:
+  - name: rhn
+    hosts: machine_1, machine_2
+    vars:
+      host: subscription.rhsm.stage.redhat.com
+      username: pit_rhel_workstation_1
+      password: EwEBUVYX
+      auto-attach: True
+      clean: False
+
+  - name: rhn
+    hosts: machine_3
+    vars:
+      host: subscription.rhsm.stage.redhat.com
+      username: pit_rhel_server_1
+      password: EwEBUAAA
+      auto-attach: True
+      clean: False
+      channels: ['rhel-6-for-system-z-rpms', 'rhel-6-for-system-z-optional-rpms']
+
+  - name: yum
+    vars:
+      packages: pexpect, git, wget, python-setuptools, python-devel, restraint-deamon
+      group_packages: desktop
+
+  - name: restraint-deamon
+    hosts: machine_3
+    vars:
+      enabled: true
 
 # Execute Service
 # ---------------
