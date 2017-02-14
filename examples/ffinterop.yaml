@@ -33,7 +33,7 @@ description: Run an Interop Test against FF
 #
 provision:
   - name: machine_1                            # Host Provision Description:
-    provider: openstack                        # This one will use OpenstackCarbonProbider.
+    provider: openstack                        # This one will use OpenstackCarbonProvider.
     arch: x86_64                               # The settings will be used by the OpenstackCarbonProvider
     image: rhel-6.9-workstation-x86_64-latest  # to validate againts its needs. For instance,
     variant: Workstation                       # Openstack needs flavor information, so one of the
@@ -61,6 +61,13 @@ provision:
     ip_addr: 192.1168.0.102
     role: s390x_client
 
+  - name: machine_4
+    provider: openstack
+    arch: x86_64
+    variant: Server
+    flavor: medium
+    ip_addr:
+    role: test_pilot
 # Orchestration
 # -------------
 # This is controlled by the CarbonOchestrator object.
