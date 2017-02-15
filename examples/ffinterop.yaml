@@ -2,6 +2,18 @@
 scenario: FF Interop Test
 description: Run an Interop Test against FF
 
+# Credentials
+# -----------
+# Should we use something like this for credentials??
+#
+credentials:
+  - provision: openstack
+    url: http://qeos.lab.eng.rdu2.redhat.com
+    site: qeos
+    project: project
+    user: username
+    password: password
+
 # Provision
 # ---------
 #
@@ -32,34 +44,35 @@ description: Run an Interop Test against FF
 #      ...
 #
 provision:
+
   - name: machine_1                            # Host Provision Description:
-    provider: openstack                        # This one will use OpenstackCarbonProvider.
-    arch: x86_64                               # The settings will be used by the OpenstackCarbonProvider
+    provider: openstack                        # ---------------------------
+    arch: x86_64                               # The settings will be used by the CarbonProvider (provider)
     image: rhel-6.9-workstation-x86_64-latest  # to validate againts its needs. For instance,
-    variant: Workstation                       # Openstack needs flavor information, so one of the
-    flavor: medium                             # actions within validate() is to check if flavor is
-    ip_addr:                                   # valid. Same works for other providers.
-    role: w_client
-
-  - name: machine_2
-    provider: beaker
-    arch: i386
-    tag: ['RTT_ACCEPTED']
-    family: RedHatEnterpriseLinux6
-    variant: Workstation
-    info: client
-    ip_addr: 192.1168.0.101
-    role: w_client
-
-  - name: machine_3
-    provider: beaker
-    arch: s390x
-    tag: ['RTT_ACCEPTED']
-    family: RedHatEnterpriseLinux6
-    variant: Server
-    info: client
-    ip_addr: 192.1168.0.102
-    role: s390x_client
+    variant: Workstation                       # Openstack needs flavor, the reason for validate()
+    flavor: medium                             # is to check if flavor is valid a valid option for
+    ip_addr:                                   # the chosen provider.
+    role: w_client                             # Validation tasks are collected same way other tasks.
+                                               #
+  - name: machine_2                            #  Questions:
+    provider: beaker                           # - If the machine exists, what would we do?
+    arch: i386                                 # -
+    tag: ['RTT_ACCEPTED']                      #
+    family: RedHatEnterpriseLinux6             #
+    variant: Workstation                       #
+    info: client                               #
+    ip_addr:                                   #
+    role: w_client                             #
+                                               #
+  - name: machine_3                            #
+    provider: beaker                           #
+    arch: s390x                                #
+    tag: ['RTT_ACCEPTED']                      #
+    family: RedHatEnterpriseLinux6             #
+    variant: Server                            #
+    info: client                               #
+    ip_addr:                                   #
+    role: s390x_client                         #
 
   - name: machine_4
     provider: openstack
@@ -68,6 +81,7 @@ provision:
     flavor: medium
     ip_addr:
     role: test_pilot
+
 # Orchestration
 # -------------
 # This is controlled by the CarbonOchestrator object.
@@ -104,10 +118,13 @@ provision:
 #                                          #
 #                                          # for action in list of actions:
 #                                          #   ansible-playbook -H<action.hosts> -D<var_a=action.var_a> -D<var_b=action.var_b> <action.name>.yaml
-
-# For each package, it goes like this:
 #
+# Things we should be able to do:
+#     - add own playbook
+#
+# For each package, it goes like this:
 orchestration:
+
   - name: rhn
     hosts: machine_1, machine_2
     vars:
@@ -156,14 +173,22 @@ execute:
 # upload the files, report test results (TCMS, Polarion, etc) and
 # notify (IRC, Slack, etc)
 report:
+
+  - type: artifacts
+    name: ftp
+    vars:
+      address: ftp.redhat.com
+
   - type: notification
     name: irc
     vars:
       channels: #pit
+
   - type: notification
     name: email
     vars:
       emails: tmv@redhat.com, vipatel@redhat.com
+
   - type: test
     name: polarion
     vars:
