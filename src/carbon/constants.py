@@ -24,7 +24,7 @@
 """
 PIPELINE_ORDER = ['validate',
                   'check',
-                  'provision',
+                  'create',
                   'config',
                   'install',
                   'test',

@@ -21,10 +21,15 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import sys
 import inspect
 
 from taskrunner import Task
-from .helpers import CustomDict, get_valid_tasks_types
+from .helpers import get_valid_tasks_classes
+
+
+class CarbonException(Exception):
+    pass
 
 
 class CarbonTask(Task):
@@ -45,25 +50,35 @@ class CarbonTask(Task):
         return self.name
 
 
-class CarbonResource(CustomDict):
+class CarbonResource(object):
 
-    def __init__(self, data={}):
-        super(CarbonResource, self).__init__(data)
+    _valid_tasks_types = []
+    _fields = []
+
+    def __init__(self, name=None, **kwargs):
+
+        self._name = name
 
         # A list of tasks that will be executed upon the reource.
         self._tasks = []
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        raise ValueError('You can not set name of resource after the'
+                         ' instance is created.')
 
     def _add_task(self, t):
         """
         Add a task to the list of tasks for the resource
         """
-        if t['task'] not in set(get_valid_tasks_types()):
-            raise Exception("The task is not a valid type.")
-
+        if t['task'] not in set(get_valid_tasks_classes()):
+            raise CarbonException('The task class "%s" used is not valid.'
+                                  % t['task'])
         self._tasks.append(t)
-
-    def get_tasks(self):
-        return self._tasks
 
     def _extract_tasks_from_resource(self):
         lst = []
@@ -71,3 +86,38 @@ class CarbonResource(CustomDict):
             if issubclass(obj, CarbonTask):
                 lst.append(name)
         return lst
+
+    def load(self, data):
+        for key, value in data.items():
+            # name has precedence when coming from a YAML file
+            # if name is set through name=, it will be overwritten
+            # by the YAML file properties.
+            if key == 'name':
+                self._name = value
+            elif key in self._fields:
+                setattr(self, key, value)
+        if data:
+            self.reload_tasks()
+
+    def _get_task_constructors(self):
+        return [getattr(self, "_construct_%s_task" % task_type)
+                for task_type in self._valid_tasks_types]
+
+    def reload_tasks(self):
+        self._tasks = []
+        for task_constructor in self._get_task_constructors():
+            self._add_task(task_constructor())
+
+    def dump(self):
+        pass
+
+    def get_tasks(self):
+        return self._tasks
+
+
+class CarbonProvisioner(object):
+    """
+    This is the base class for all provisioners for provisioning machines
+    """
+    def create(self):
+        raise NotImplementedError

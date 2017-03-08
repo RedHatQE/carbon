@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.tasks.config
+    carbon.tasks.test
 
     Here you add brief description of what this module is about
 
@@ -26,9 +26,9 @@
 from ..core import CarbonTask
 
 
-class ConfigTask(CarbonTask):
+class ExecuteTask(CarbonTask):
     def __init__(self, msg, clean_msg, **kwargs):
-        super(ConfigTask, self).__init__(**kwargs)
+        super(ExecuteTask, self).__init__(**kwargs)
         self.msg = msg
         self.clean_msg = clean_msg
 

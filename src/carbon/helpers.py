@@ -79,12 +79,12 @@ def get_root_path(import_name):
     return os.path.dirname(os.path.abspath(filepath))
 
 
-def get_valid_tasks_types():
+def get_valid_tasks_classes():
     """
     Go through all modules within carbon.tasks package and return
-    the list of all tasks within it. All tasks within the carbon.tasks
-    are considered valid tasks to be added into the pipeline.
-    :return: List of all valid tasks
+    the list of all tasks classes within it. All tasks within the carbon.tasks
+    module are considered valid task class to be added into the pipeline.
+    :return: List of all valid tasks classes
     """
     from .core import CarbonTask
     from . import tasks

@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.resources.host
+    carbon.resources.actions
 
     Here you add brief description of what this module is about
 
@@ -26,29 +26,31 @@
 import uuid
 
 from ..core import CarbonResource
-from ..tasks import ProvisionTask, CleanupTask, ValidateTask
+from ..tasks import OrchestrateTask, ValidateTask
 
 
-class Host(CarbonResource):
+class Action(CarbonResource):
 
-    _valid_tasks_types = ['validate', 'provision', 'cleanup']
-    _valid_fields = ['name']
+    _valid_tasks_types = ['validate', 'orchestrate']
+    _fields = [
+        'name',
+        'hosts',
+        'vars',
+    ]
 
     def __init__(self,
                  name=None,
                  validate_task_cls=ValidateTask,
-                 provision_task_cls=ProvisionTask,
-                 cleanup_task_cls=CleanupTask,
+                 orchestrate_task_cls=OrchestrateTask,
                  data={},
                  **kwargs):
-        super(Host, self).__init__(name, **kwargs)
 
-        if not name:
-            self._name = str(uuid.uuid4())
+        super(Action, self).__init__(name, **kwargs)
 
         self._validate_task_cls = validate_task_cls
-        self._provision_task_cls = provision_task_cls
-        self._cleanup_task_cls = cleanup_task_cls
+        self._orchestrate_task_cls = orchestrate_task_cls
+
+        self.hosts = []
 
         self.reload_tasks()
 
@@ -56,31 +58,27 @@ class Host(CarbonResource):
             self.load(data)
 
     def _construct_validate_task(self):
+        """
+        Used to create the config attribute by the Host constructor.
+        """
         task = {
             'task': self._validate_task_cls,
             'name': str(self.name),
             'package': self,
-            'msg': '   validating host %s' % self.name,
-            'clean_msg': '   cleanup after validating host %s' % self.name
+            'msg': '   validating action %s' % self.name,
+            'clean_msg': '   cleanup after validating action %s' % self.name
         }
         return task
 
-    def _construct_provision_task(self):
+    def _construct_orchestrate_task(self):
+        """
+        Used to create the create attribute by the Host constructor.
+        """
         task = {
-            'task': self._provision_task_cls,
+            'task': self._orchestrate_task_cls,
             'name': str(self.name),
-            'host': self,
-            'msg': '   provisioning host %s' % self.name,
-            'clean_msg': '   cleanup after provisioning host %s' % self.name
-        }
-        return task
-
-    def _construct_cleanup_task(self):
-        task = {
-            'task': self._cleanup_task_cls,
-            'name': str(self.name),
-            'host': self,
-            'msg': '   cleanup host %s' % self.name,
-            'clean_msg': '   cleanup after cleanup host %s' % self.name
+            'package': self,
+            'msg': '   running orchestration %s for %s' % (self.name, self.hosts),
+            'clean_msg': '   cleanup after orchestration %s' % self.name
         }
         return task

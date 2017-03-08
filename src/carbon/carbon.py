@@ -30,12 +30,14 @@ from threading import Lock
 
 import taskrunner
 
+from .core import CarbonException
+from .resources import Scenario, Host, Action, Report, Execute
 from .config import Config, ConfigAttribute
 from .helpers import LockedCachedProperty, CustomDict, get_root_path
-from .tasks import ValidateTask, CheckTask, ProvisionTask
-from .tasks import ConfigTask, InstallTask, TestTask
-from .tasks import ReportTask, TeardownTask
-from .resources import Scenario, Host, Package
+from .tasks import ValidateTask, ProvisionTask
+from .tasks import OrchestrateTask, ExecuteTask
+from .tasks import ReportTask, CleanupTask
+
 
 # a lock used for logger initialization
 _logger_lock = Lock()
@@ -76,14 +78,12 @@ class Carbon(object):
     # and look for variables that start with `_task_`. If found, it will
     # verify what type of task it is and add into its respective task_list.
     pipelines = [
-        {'name': 'validate',  'type': ValidateTask,  'task_list': []},
-        {'name': 'check',     'type': CheckTask,     'task_list': []},
-        {'name': 'provision', 'type': ProvisionTask, 'task_list': []},
-        {'name': 'config',    'type': ConfigTask,    'task_list': []},
-        {'name': 'install',   'type': InstallTask,   'task_list': []},
-        {'name': 'test',      'type': TestTask,      'task_list': []},
-        {'name': 'report',    'type': ReportTask,    'task_list': []},
-        {'name': 'teardown',  'type': TeardownTask,  'task_list': []},
+        {'name': 'validate',    'type': ValidateTask,    'task_list': []},
+        {'name': 'provision',   'type': ProvisionTask,   'task_list': []},
+        {'name': 'orchestrate', 'type': OrchestrateTask, 'task_list': []},
+        {'name': 'execute',     'type': ExecuteTask,     'task_list': []},
+        {'name': 'report',      'type': ReportTask,      'task_list': []},
+        {'name': 'cleanup',     'type': CleanupTask,     'task_list': []},
     ]
 
     # Default configuration parameters.
@@ -142,6 +142,8 @@ class Carbon(object):
             app.logger.debug('A value for debugging')
             app.logger.warning('A warning occurred (%d apples)', 42)
             app.logger.error('An error occurred')
+
+        :copyright: (c) 2015 by Armin Ronacher.
         """
         if self._logger and self._logger.name == self.logger_name:
             return self._logger
@@ -155,6 +157,8 @@ class Carbon(object):
     def make_config(self):
         """
         Used to create the config attribute by the Carbon constructor.
+
+        :copyright: (c) 2015 by Armin Ronacher.
         """
         root_path = self.root_path
         return self.config_class(root_path, self.default_config)
@@ -178,20 +182,50 @@ class Carbon(object):
         """
         Loads the scenario from a yaml file.
         """
-        data = yaml.load(open(filename, 'r'))
+        data = dict(yaml.safe_load(open(filename, 'r')))
 
-        self.scenario = Scenario(data)
+        try:
+            pro_items = data.pop('provision')
+            orc_items = data.pop('orchestrate')
+            exe_items = data.pop('execute')
+            rpt_items = data.pop('report')
+        except KeyError as ex:
+            self.logger.error('You must have all the main areas defined'
+                              ' within the YAML file. See documents for'
+                              ' more information')
+            raise CarbonException(ex)
+
+        self.scenario.load(data)
+
+        self._load_resources(Host, pro_items)
+        self._load_resources(Action, orc_items)
+        self._load_resources(Execute, exe_items)
+        self._load_resources(Report, rpt_items)
 
         # Each resource has to be an instance of its own type.
         # This loop goes through the list of hosts, then for each
         # host it goes through the list of packages. Each instance
         # of package is added back into a Host object, loaded as a
         # Package object.
-        for hst in self._extract_hosts(data):
-            host = Host(hst)
-            for pkg in self._extract_packages(hst):
-                host.packages.append(Package(pkg))
-            self.scenario.add_hosts(host)
+        # for hst in self._extract_hosts(data):
+        #     host = Host(hst)
+        #     for pkg in self._extract_packages(hst):
+        #         host.packages.append(Action(pkg))
+        #     self.scenario.add_hosts(host)
+
+    def _load_resources(self, res_type, res_list):
+        """
+        Load the resource in the scenario list
+        :param res_type: The type of resources the function will load into its list
+        :param res_list: A list of resources dict
+        :return: None
+        """
+        for item in res_list:
+            self.logger.info('{res_type}: {res_item}'.format(
+                res_type=res_type.__name__,
+                res_item=item
+            ))
+            self.scenario.add_resource(res_type(data=item))
 
     def _add_task_into_pipeline(self, t):
         """
@@ -217,9 +251,18 @@ class Carbon(object):
         for host in self.scenario.hosts:
             for host_task in host.get_tasks():
                 self._add_task_into_pipeline(host_task)
-            for package in host.packages:
-                for package_task in package.get_tasks():
-                    self._add_task_into_pipeline(package_task)
+
+        for action in self.scenario.actions:
+            for action_task in action.get_tasks():
+                self._add_task_into_pipeline(action_task)
+
+        for execute in self.scenario.executes:
+            for execute_task in execute.get_tasks():
+                self._add_task_into_pipeline(execute_task)
+
+        for report in self.scenario.reports:
+            for report_task in report.get_tasks():
+                self._add_task_into_pipeline(report_task)
 
         for scenario_task in self.scenario.get_tasks():
             self._add_task_into_pipeline(scenario_task)

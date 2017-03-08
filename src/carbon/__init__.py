@@ -24,7 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from .config import Config, ConfigAttribute
-from .resources import Scenario, Host, Package
+from .resources import Scenario, Host, Action, Execute, Report
 from .helpers import CustomDict
 from .carbon import Carbon
 

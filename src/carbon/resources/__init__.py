@@ -21,7 +21,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-
 from .host import Host
-from .package import Package
+from .actions import Action
 from .scenario import Scenario
+from .executes import Execute
+from .reports import Report

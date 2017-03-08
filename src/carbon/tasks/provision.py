@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.tasks.provision
+    carbon.tasks.create
 
     Here you add brief description of what this module is about
 

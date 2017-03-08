@@ -7,39 +7,42 @@ interoperability tests.
 
 ## Is it ready?
 
-No. This is an experiment, a prototype.
+No. This is an experiment and it is on heavily development.
 
 ## Does it look familiar?
 
 Yes, this code started shamelessly by copying few good stuff from Flask
-framework - configuration and core object structure. Also, there's a bunch
-of code that will be transfered from the old pit framework. The biggest
-change is in the architecture of the framework which is now task oriented.
+framework - configuration and few core object structures. Also, there's
+a bunch of code that will be transfered from the old pit framework. The
+biggest change is in the architecture of the framework which is now task
+oriented and carry many design patterns that sustain framework principles.
+More to come...
 
 ## How is it supposed to work?
 
 Each scenario is a definition written in YAML. The framework loads the
-yaml file and build a pipeline of sub-pipelines. Each sub-pipeline will
-contain loads of tasks related to the resources. A resource can be a 
-scenario, a host or a package. Each resource will contain tasks that the
-framework will collect, load into its respective sub-pipeline and run in
-the order described in the YAML file. For instance, if a Package has a 
-task of type InstallTask, the framework will collect it and add to the
-Install pipeline.
+yaml file and build a list of pipelines. Each pipeline will contain lots
+of tasks related to the resources. A resource can be a scenario, a host
+an action or a report. Each resource will contain many tasks that the
+framework will collect, load into its respective pipelines and run in
+the order described in the YAML file. For instance, if an action has a
+task of type ValidateTask, the framework will collect it and add to the
+Validate pipeline.
 
 Basically, when you run the scenario the framework will:
 
-1. Provision the machines
-2. Configure all machines accordingly
-3. Install all packages for each host that are related to the products
-that will be tested.
-4. Run your tests (if you build a TestTask and add into the scenario)
-5. Report the results
+1. Validate your scenario attributes (All Resources)
+2. Provision the machines (Hosts)
+3. Configure all machines accordingly (Actions)
+4. Install all packages for each host (Actions)
+4. Run your tests (Executes)
+5. Report the results (Reports)
 
 ## Development
 
-Ideally you would create a virtual environment. Download the source
-code and follow the commands below:
+Ideally you would create a virtual environment with python 3.6. The
+framework has been developed to run with python 2.7.x and above.
+Download the source code and follow the commands below:
 
 ```
 $ pip install -r requirements.txt
@@ -56,6 +59,12 @@ $ pip install --editable .
 
 This way any change you do in the source code you don't need reinstall
 it and your changes will be reflected right away.
+
+You can run the command below to test an example (examples/ffinterop.yaml):
+
+```
+$ carbon -vvv run --scenario examples/ffinterop.yaml --cleanup always
+```
 
 Before run the tests you have to install some tools. Follow the
 command below:

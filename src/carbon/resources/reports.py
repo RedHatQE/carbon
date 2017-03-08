@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.resources.host
+    carbon.resources.actions
 
     Here you add brief description of what this module is about
 
@@ -26,29 +26,25 @@
 import uuid
 
 from ..core import CarbonResource
-from ..tasks import ProvisionTask, CleanupTask, ValidateTask
+from ..tasks import ReportTask, ValidateTask
 
 
-class Host(CarbonResource):
+class Report(CarbonResource):
 
-    _valid_tasks_types = ['validate', 'provision', 'cleanup']
-    _valid_fields = ['name']
+    _valid_tasks_types = ['validate', 'report']
+    _fields = ['name', 'type']
 
     def __init__(self,
                  name=None,
                  validate_task_cls=ValidateTask,
-                 provision_task_cls=ProvisionTask,
-                 cleanup_task_cls=CleanupTask,
+                 report_task_cls=ReportTask,
                  data={},
                  **kwargs):
-        super(Host, self).__init__(name, **kwargs)
 
-        if not name:
-            self._name = str(uuid.uuid4())
+        super(Report, self).__init__(name, **kwargs)
 
         self._validate_task_cls = validate_task_cls
-        self._provision_task_cls = provision_task_cls
-        self._cleanup_task_cls = cleanup_task_cls
+        self._report_task_cls = report_task_cls
 
         self.reload_tasks()
 
@@ -60,27 +56,17 @@ class Host(CarbonResource):
             'task': self._validate_task_cls,
             'name': str(self.name),
             'package': self,
-            'msg': '   validating host %s' % self.name,
-            'clean_msg': '   cleanup after validating host %s' % self.name
+            'msg': '   validating package %s' % self.name,
+            'clean_msg': '   cleanup after validating package %s' % self.name
         }
         return task
 
-    def _construct_provision_task(self):
+    def _construct_report_task(self):
         task = {
-            'task': self._provision_task_cls,
+            'task': self._report_task_cls,
             'name': str(self.name),
-            'host': self,
-            'msg': '   provisioning host %s' % self.name,
-            'clean_msg': '   cleanup after provisioning host %s' % self.name
-        }
-        return task
-
-    def _construct_cleanup_task(self):
-        task = {
-            'task': self._cleanup_task_cls,
-            'name': str(self.name),
-            'host': self,
-            'msg': '   cleanup host %s' % self.name,
-            'clean_msg': '   cleanup after cleanup host %s' % self.name
+            'package': self,
+            'msg': '   reporting %s' % self.name,
+            'clean_msg': '   cleanup after reporting %s' % self.name
         }
         return task

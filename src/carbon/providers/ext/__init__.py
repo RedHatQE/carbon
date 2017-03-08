@@ -15,22 +15,3 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-"""
-    carbon.tasks
-
-    :copyright: (c) 2017 Red Hat, Inc.
-    :license: GPLv3, see LICENSE for more details.
-"""
-from .validate import ValidateTask
-from .provision import ProvisionTask
-from .orchestrate import OrchestrateTask
-from .execute import ExecuteTask
-from .report import ReportTask
-from .cleanup import CleanupTask
-
-MAIN_PIPELINE = enumerate(['validate',
-                           'create',
-                           'orchestrate',
-                           'execute',
-                           'report',
-                           'cleanup'])

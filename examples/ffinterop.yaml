@@ -1,5 +1,5 @@
 ---
-scenario: FF Interop Test
+name: FF Interop Test
 description: Run an Interop Test against FF
 
 # Credentials
@@ -17,12 +17,27 @@ credentials:
 # Provision
 # ---------
 #
-# We would organize like:
+# Few definitions to better understand the provision section.
 #
-# carbon.providers.beaker
-# carbon.providers.openstack
-# carbon.providers.aws
-# carbon.providers.digitalocean
+#  - Provisioner: this is the tool that will contact a provider to provision a
+#                 host. For instance, Linchpin and central-ci-tools.
+#
+#  - Provider: this is the service or server where the the hosts will be
+#              created/managed/deleted.
+#
+# We may organize provisioners like:
+#
+#   - carbon.provisioners.linchpin
+#   - carbon.provisioners.centralci
+#
+# We may organize providers like:
+#
+#   - carbon.providers.beaker
+#   - carbon.providers.openstack
+#   - carbon.providers.aws
+#   - carbon.providers.digitalocean
+#
+# The main Carbon classes that will manage the provsion section are:
 #
 #  class CarbonProvider(object):
 #
@@ -31,6 +46,21 @@ credentials:
 #
 #      def validate():              # this will be called in the Validation stage.
 #          implement validation
+#
+#      def create():               # this will be called in the in the Provision stage.
+#          implement validation
+#
+#  class CarbonProvisioner(object):
+#
+#      def __init__(self, provider, host):   # the provisioner will receive the host to be
+#          implement init                    # created and the provider
+#
+#      def validate():                       # this will be called in the Validation stage.
+#          implement validation
+#
+#      def create():                         # this will be called in the in the Provision stage.
+#          implement validation
+
 #
 # Implementation would follow:
 #
@@ -45,40 +75,40 @@ credentials:
 #
 provision:
 
-  - name: machine_1                            # Host Provision Description:
-    provider: openstack                        # ---------------------------
-    arch: x86_64                               # The settings will be used by the CarbonProvider (provider)
-    image: rhel-6.9-workstation-x86_64-latest  # to validate againts its needs. For instance,
-    variant: Workstation                       # Openstack needs flavor, the reason for validate()
-    flavor: medium                             # is to check if flavor is valid a valid option for
-    ip_addr:                                   # the chosen provider.
-    role: w_client                             # Validation tasks are collected same way other tasks.
-                                               #
-  - name: machine_2                            #  Questions:
-    provider: beaker                           # - If the machine exists, what would we do?
-    arch: i386                                 # -
-    tag: ['RTT_ACCEPTED']                      #
-    family: RedHatEnterpriseLinux6             #
-    variant: Workstation                       #
-    info: client                               #
-    ip_addr:                                   #
-    role: w_client                             #
-                                               #
-  - name: machine_3                            #
-    provider: beaker                           #
-    arch: s390x                                #
-    tag: ['RTT_ACCEPTED']                      #
-    family: RedHatEnterpriseLinux6             #
-    variant: Server                            #
-    info: client                               #
-    ip_addr:                                   #
-    role: s390x_client                         #
+  - name: machine_1
+    provider: openstack
+    arch: x86_64
+    os_image: rhel-6.9-workstation-x86_64-latest
+    variant: Workstation
+    os_flavor: medium
+    ip_addr:
+    role: w_client
+
+  - name: machine_2
+    provider: beaker
+    arch: i386
+    tag: ['RTT_ACCEPTED']
+    bkr_family: RedHatEnterpriseLinux6
+    bkr_variant: Workstation
+    info: client
+    ip_addr:
+    role: w_client
+
+  - name: machine_3
+    provider: beaker
+    arch: s390x
+    tag: ['RTT_ACCEPTED']
+    bkr_family: RedHatEnterpriseLinux6
+    bkr_variant: Server
+    info: client
+    ip_addr:
+    role: s390x_client
 
   - name: machine_4
     provider: openstack
     arch: x86_64
     variant: Server
-    flavor: medium
+    os_flavor: medium
     ip_addr:
     role: test_pilot
 
@@ -123,7 +153,7 @@ provision:
 #     - add own playbook
 #
 # For each package, it goes like this:
-orchestration:
+orchestrate:
 
   - name: rhn
     hosts: machine_1, machine_2
@@ -144,22 +174,19 @@ orchestration:
       clean: False
       channels: ['rhel-6-for-system-z-rpms', 'rhel-6-for-system-z-optional-rpms']
 
-  - name: yum
+  - name: carbon_debugging
+    hosts: machine_1, machine_2, machine_3
     vars:
       packages: pexpect, git, wget, python-setuptools, python-devel, restraint-deamon
       group_packages: desktop
-
-  - name: restraint-deamon
-    hosts: machine_3
-    vars:
-      enabled: true
 
 # Execute Service
 # ---------------
 # Carbon finds what framework you want to use and execute it using
 # the variables it need
 execute:
-  - framework: restraint
+  - name: initial-tests
+    framework: restraint
     vars:
       execute_xml: http://file.bos.redhat.com/~vipatel/FFinterop-rhel6.xml
       role: ['w_client', 's390x_client']
@@ -174,12 +201,12 @@ execute:
 # notify (IRC, Slack, etc)
 report:
 
-  - type: artifacts
+  - type: python
     name: ftp
     vars:
       address: ftp.redhat.com
 
-  - type: notification
+  - type: playbook
     name: irc
     vars:
       channels: #pit

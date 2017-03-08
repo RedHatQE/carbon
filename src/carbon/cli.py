@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
+import yaml
 
 import click
 
@@ -34,7 +35,7 @@ _VERBOSITY = 0
 
 _TASK_CHOICES = ['validate',
                  'check',
-                 'provision',
+                 'create',
                  'config',
                  'install',
                  'test',
@@ -120,10 +121,19 @@ def run(ctx, task, scenario, cleanup, log_level):
     """
     print_header()
 
+    # Make sure the file exists and gets its absolute path
     if os.path.isfile(scenario):
         scenario = os.path.abspath(scenario)
     else:
         click.echo('You have to provide a valid scenario file.')
+        ctx.exit()
+
+    # Try to load the yaml. If it fails it is a malformed yaml
+    try:
+        with open(scenario, 'r') as fp:
+            yaml.safe_load(fp)
+    except yaml.YAMLError as ex:
+        click.echo('Error:\n%s\n%s' % (ex.problem, ex.problem_mark))
         ctx.exit()
 
     # Create a new carbon compound
@@ -146,7 +156,7 @@ def run(ctx, task, scenario, cleanup, log_level):
 
 @cli.command('help')
 @click.option("--task",
-              type=click.Choice(['provision', 'config', 'install', 'test',
+              type=click.Choice(['create', 'config', 'install', 'test',
                                  'report', 'teardown']),
               help="Display helpful information about a task.")
 def carbon_help():

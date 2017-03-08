@@ -23,32 +23,60 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import uuid
 
 from ..core import CarbonResource
-from ..tasks import ValidateTask, TestTask, ReportTask
-from ..resources import Host
+from ..tasks import ValidateTask
+from .actions import Action
+from .host import Host
+from .executes import Execute
+from .reports import Report
 
 
 class Scenario(CarbonResource):
 
-    _validate_task_class = ValidateTask
-    _test_task_class = TestTask
-    _report_task_class = ReportTask
+    _valid_tasks_types = ['validate']
 
-    def __init__(self, data={}):
+    _fields = [
+        'name',         # the name of the scenario
+        'description',  # a brief description of what the scenario is
+    ]
 
-        # if there's a package in the data, remove so we
-        # do not conflict with the hosts list in the class.
-        tmp_data = dict(data)
-        tmp_data.pop('hosts', None)
+    def __init__(self,
+                 name=None,
+                 validate_task_cls=ValidateTask,
+                 data={},
+                 **kwargs):
 
-        super(Scenario, self).__init__(tmp_data)
+        super(Scenario, self).__init__(name, **kwargs)
+
+        if not name:
+            self._name = str(uuid.uuid4())
 
         self._hosts = list()
+        self._actions = list()
+        self._executes = list()
+        self._reports = list()
 
-        self._add_task(self._make_validate_task())
-        self._add_task(self._make_test_task())
-        self._add_task(self._make_report_task())
+        self._validate_task_cls = validate_task_cls
+
+        self.reload_tasks()
+
+        if data:
+            self.load(data)
+
+    def add_resource(self, item):
+        if isinstance(item, Host):
+            self._hosts.append(item)
+        elif isinstance(item, Action):
+            self._actions.append(item)
+        elif isinstance(item, Execute):
+            self._executes.append(item)
+        elif isinstance(item, Report):
+            self._reports.append(item)
+        else:
+            raise ValueError('Resource must be of a valid Resource type.'
+                             'Check the type of the given item: %s' % item)
 
     @property
     def hosts(self):
@@ -56,48 +84,62 @@ class Scenario(CarbonResource):
 
     @hosts.setter
     def hosts(self, value):
-        raise ValueError("You can't set hosts directly. Use function add_hosts")
+        raise ValueError('You can not set hosts directly.'
+                         'Use function ~Scenario.add_hosts')
 
     def add_hosts(self, h):
-        if not isinstance(h, Host):
-            raise ValueError("Host must be of type %s " % type(Host))
+        if not isinstance(h, Report):
+            raise ValueError('Report must be of type %s ' % type(Report))
         self._hosts.append(h)
 
-    def _make_validate_task(self):
-        """
-        Used to create the provision attribute by the Host constructor.
-        """
-        task = {
-            'task': self._validate_task_class,
-            'name': str(self.name),
-            'package': self,
-            'msg': 'validating "%s"' % self.name,
-            'clean_msg': 'cleanup after validating "%s"' % self.name
-        }
-        return task
+    @property
+    def actions(self):
+        return self._actions
 
-    def _make_test_task(self):
-        """
-        Used to create the config attribute by the Host constructor.
-        """
-        task = {
-            'task': self._test_task_class,
-            'name': str(self.name),
-            'package': self,
-            'msg': 'running tests for "%s"' % self.name,
-            'clean_msg': 'cleanup after running tests for "%s"' % self.name
-        }
-        return task
+    @actions.setter
+    def actions(self, value):
+        raise ValueError('You can not set actions directly.'
+                         'Use function ~Scenario.add_actions')
 
-    def _make_report_task(self):
-        """
-        Used to create the config attribute by the Host constructor.
-        """
+    def add_actions(self, h):
+        if not isinstance(h, Action):
+            raise ValueError('Action must be of type %s ' % type(Action))
+        self._actions.append(h)
+
+    @property
+    def executes(self):
+        return self._executes
+
+    @executes.setter
+    def executes(self, value):
+        raise ValueError('You can not set executes directly.'
+                         'Use function ~Scenario.add_executes')
+
+    def add_executes(self, h):
+        if not isinstance(h, Execute):
+            raise ValueError('Execute must be of type %s ' % type(Execute))
+        self._executes.append(h)
+
+    @property
+    def reports(self):
+        return self._reports
+
+    @reports.setter
+    def reports(self, value):
+        raise ValueError('You can not set reports directly.'
+                         'Use function ~Scenario.add_reports')
+
+    def add_reports(self, h):
+        if not isinstance(h, Report):
+            raise ValueError('Execute must be of type %s ' % type(Execute))
+        self._reports.append(h)
+
+    def _construct_validate_task(self):
         task = {
-            'task': self._report_task_class,
+            'task': self._validate_task_cls,
             'name': str(self.name),
             'package': self,
-            'msg': 'reporting "%s"' % self.name,
-            'clean_msg': 'cleanup after reporting "%s"' % self.name
+            'msg': '   validating scenario "%s"' % self.name,
+            'clean_msg': '   cleanup after validating scenario "%s"' % self.name
         }
         return task

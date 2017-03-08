@@ -16,21 +16,24 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.tasks
+    carbon.tasks.teardown
+
+    Here you add brief description of what this module is about
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from .validate import ValidateTask
-from .provision import ProvisionTask
-from .orchestrate import OrchestrateTask
-from .execute import ExecuteTask
-from .report import ReportTask
-from .cleanup import CleanupTask
+from ..core import CarbonTask
 
-MAIN_PIPELINE = enumerate(['validate',
-                           'create',
-                           'orchestrate',
-                           'execute',
-                           'report',
-                           'cleanup'])
+
+class CleanupTask(CarbonTask):
+    def __init__(self, msg, clean_msg, **kwargs):
+        super(CleanupTask, self).__init__(**kwargs)
+        self.msg = msg
+        self.clean_msg = clean_msg
+
+    def run(self, context):
+        print(self.msg)
+
+    def cleanup(self, context):
+        print(self.clean_msg)
