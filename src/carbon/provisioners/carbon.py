@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.provisioners.ciops
+    carbon.provisioners.carbon
 
     Here you add brief description of what this module is about
 
@@ -26,10 +26,12 @@
 from ..core import Provisioner
 
 
-class CiopsProvisioner(Provisioner):
+class CarbonProvisioner(Provisioner):
     """
-    Ciops version 1 for provisioning machines
+    Carbon's own provisioner
     """
+    def __init__(self, **kwargs):
+        super(CarbonProvisioner, self).__init__(**kwargs)
 
     def create(self):
         print('Provisioning machines from {klass}'

@@ -115,9 +115,17 @@ class CarbonResource(object):
         return self._tasks
 
 
-class CarbonProvisioner(object):
+class Provisioner(object):
     """
     This is the base class for all provisioners for provisioning machines
+    """
+    def create(self):
+        raise NotImplementedError
+
+
+class CarbonProvider(object):
+    """
+    This is the base class for all providers
     """
     def create(self):
         raise NotImplementedError

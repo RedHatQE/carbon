@@ -2,95 +2,34 @@
 name: FF Interop Test
 description: Run an Interop Test against FF
 
-# Credentials
-# -----------
-# Should we use something like this for credentials??
-#
 credentials:
-  - provision: openstack
-    url: http://qeos.lab.eng.rdu2.redhat.com
-    site: qeos
-    project: project
-    user: username
+
+  - name: openstack_ciops
+    auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
+    tenant_name: pit-jenkins
+    tenant_id: bf4de4c330bb47d6937af31fd5c71a18
+    username: username
     password: password
 
-# Provision
-# ---------
-#
-# Few definitions to better understand the provision section.
-#
-#  - Provisioner: this is the tool that will contact a provider to provision a
-#                 host. For instance, Linchpin and central-ci-tools.
-#
-#  - Provider: this is the service or server where the the hosts will be
-#              created/managed/deleted.
-#
-# We may organize provisioners like:
-#
-#   - carbon.provisioners.linchpin
-#   - carbon.provisioners.centralci
-#
-# We may organize providers like:
-#
-#   - carbon.providers.beaker
-#   - carbon.providers.openstack
-#   - carbon.providers.aws
-#   - carbon.providers.digitalocean
-#
-# The main Carbon classes that will manage the provsion section are:
-#
-#  class CarbonProvider(object):
-#
-#      def __init__(self, hosts):   # the provisioner will receive a list of hosts
-#          implement init
-#
-#      def validate():              # this will be called in the Validation stage.
-#          implement validation
-#
-#      def create():               # this will be called in the in the Provision stage.
-#          implement validation
-#
-#  class CarbonProvisioner(object):
-#
-#      def __init__(self, provider, host):   # the provisioner will receive the host to be
-#          implement init                    # created and the provider
-#
-#      def validate():                       # this will be called in the Validation stage.
-#          implement validation
-#
-#      def create():                         # this will be called in the in the Provision stage.
-#          implement validation
-
-#
-# Implementation would follow:
-#
-#  class BeakerCarbonProvider(CarbonProvider):
-#      ...
-#
-#  class OpenstackCarbonProvider(CarbonProvider):
-#      ...
-#
-#  class AWSCarbonProvider(CarbonProvider):
-#      ...
-#
 provision:
 
   - name: machine_1
+    crendential: openstack_ciops
     provider: openstack
-    arch: x86_64
     os_image: rhel-6.9-workstation-x86_64-latest
-    variant: Workstation
     os_flavor: medium
+    os_sshkeypair:
+    os_networks: ['pit-jenkins']
     ip_addr:
-    role: w_client
+    role: test_pilot
 
   - name: machine_2
     provider: beaker
-    arch: i386
-    tag: ['RTT_ACCEPTED']
+    bkr_arch: i386
+    bkr_tag: ['RTT_ACCEPTED']
     bkr_family: RedHatEnterpriseLinux6
     bkr_variant: Workstation
-    info: client
+    bkr_info: client
     ip_addr:
     role: w_client
 
@@ -100,14 +39,14 @@ provision:
     tag: ['RTT_ACCEPTED']
     bkr_family: RedHatEnterpriseLinux6
     bkr_variant: Server
-    info: client
+    bkr_info: client
     ip_addr:
     role: s390x_client
 
   - name: machine_4
     provider: openstack
-    arch: x86_64
-    variant: Server
+    crendential: openstack_ciops
+    os_image: rhel-6.9-server-x86_64-latest
     os_flavor: medium
     ip_addr:
     role: test_pilot

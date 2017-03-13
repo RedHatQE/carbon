@@ -16,21 +16,27 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.provisioners.ciops
+    carbon.providers.beaker
 
     Here you add brief description of what this module is about
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import Provisioner
+from ..core import CarbonProvider
 
 
-class CiopsProvisioner(Provisioner):
+class BeakerProvider(CarbonProvider):
     """
-    Ciops version 1 for provisioning machines
+    Beaker provider implementation
     """
+
+    _valid_parameters = (
+        'bkr_arch',
+        'bkr_tag',
+        'bkr_family',
+        'bkr_variant',
+    )
 
     def create(self):
-        print('Provisioning machines from {klass}'
-              .format(klass=self.__class__))
+        pass

@@ -15,10 +15,18 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from ..core import CarbonProvisioner
+"""
+    carbon.provisioners.linchpin
+
+    Here you add brief description of what this module is about
+
+    :copyright: (c) 2017 Red Hat, Inc.
+    :license: GPLv3, see LICENSE for more details.
+"""
+from ..core import Provisioner
 
 
-class LinchpinProvisioner(CarbonProvisioner):
+class LinchpinProvisioner(Provisioner):
     """
     Ciops version 2 for provisioning machines
     """

@@ -43,7 +43,7 @@ class Host(CarbonResource):
                  **kwargs):
         super(Host, self).__init__(name, **kwargs)
 
-        if not name:
+        if name is None:
             self._name = str(uuid.uuid4())
 
         self._validate_task_cls = validate_task_cls

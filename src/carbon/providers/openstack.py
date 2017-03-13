@@ -16,21 +16,27 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.provisioners.ciops
+    carbon.providers.openstack
 
     Here you add brief description of what this module is about
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import Provisioner
+from ..core import CarbonProvider
 
 
-class CiopsProvisioner(Provisioner):
+class OpenstackProvider(CarbonProvider):
     """
-    Ciops version 1 for provisioning machines
+    Openstack provider implementation
     """
+    _valid_parameters = (
+        'os_flavor',
+        'os_image',
+        'os_networks',
+        'os_keypair',
+    )
 
     def create(self):
-        print('Provisioning machines from {klass}'
-              .format(klass=self.__class__))
+        pass
+
