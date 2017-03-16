@@ -30,13 +30,15 @@ class BeakerProvider(CarbonProvider):
     """
     Beaker provider implementation
     """
+    __provider_name__ = 'beaker'
+    __provider_prefix__ = 'bkr_'
 
-    _valid_parameters = (
-        'bkr_arch',
-        'bkr_tag',
-        'bkr_family',
-        'bkr_variant',
+    _mandatory_parameters = (
+        'arch',
+        'tag',
+        'family',
+        'variant',
     )
 
-    def create(self):
-        pass
+    def __init__(self, **kwargs):
+        super(BeakerProvider, self).__init__(**kwargs)

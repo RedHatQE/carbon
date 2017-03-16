@@ -79,7 +79,7 @@ def get_root_path(import_name):
     return os.path.dirname(os.path.abspath(filepath))
 
 
-def get_valid_tasks_classes():
+def get_core_tasks_classes():
     """
     Go through all modules within carbon.tasks package and return
     the list of all tasks classes within it. All tasks within the carbon.tasks
@@ -99,12 +99,67 @@ def get_valid_tasks_classes():
     # When you import a class within a module, it becames a member of
     # that class
     for importer, modname, ispkg in pkgutil.iter_modules(tasks.__path__, prefix):
+        if str(modname).endswith('.ext'):
+            continue
         clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
         for clsname, clsmember in clsmembers:
             if (clsmember is not CarbonTask) and issubclass(clsmember, CarbonTask):
                 tasks_list.append(clsmember)
 
     return tasks_list
+
+
+def get_providers_classes():
+    """
+    Go through all modules within carbon.providers package and return
+    the list of all providers classes within it. All providers within the
+    carbon.providers package are considered valid providers classes to be
+    used by Carbon framework.
+    :return: List of all providers classes
+    """
+    from .core import CarbonProvider
+    from . import providers
+
+    # all task classes must
+    prefix = providers.__name__ + "."
+
+    providers_list = []
+
+    # Run through each module within tasks and take the list of
+    # classes that are subclass of CarbonTask but not CarbonTask itself.
+    # When you import a class within a module, it becames a member of
+    # that class
+    for importer, modname, ispkg in pkgutil.iter_modules(providers.__path__, prefix):
+        if str(modname).endswith('.ext'):
+            continue
+        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
+        for clsname, clsmember in clsmembers:
+            if (clsmember is not CarbonProvider) and issubclass(clsmember, CarbonProvider):
+                providers_list.append(clsmember)
+
+    return providers_list
+
+
+def get_provider_class(name):
+    """
+    Return the provider class based on the __provider_name__ set within
+    the class. See ~carbon.core.CarbonProvider for more information.
+    :param name: the name of the provider
+    :return: the provider class
+    """
+    for provider in get_providers_classes():
+        if provider.__provider_name__ == name:
+            return provider
+
+
+def get_providers_list():
+    """
+    Return the provider class based on the __provider_name__ set within
+    the class.
+    :param name: the name of the provider
+    :return: the provider class
+    """
+    return [provider.__provider_name__ for provider in get_providers_classes()]
 
 
 def get_tasks_from_resource(resource):

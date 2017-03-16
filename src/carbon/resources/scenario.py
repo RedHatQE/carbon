@@ -44,8 +44,8 @@ class Scenario(CarbonResource):
 
     def __init__(self,
                  name=None,
+                 parameters={},
                  validate_task_cls=ValidateTask,
-                 data={},
                  **kwargs):
 
         super(Scenario, self).__init__(name, **kwargs)
@@ -62,8 +62,8 @@ class Scenario(CarbonResource):
 
         self.reload_tasks()
 
-        if data:
-            self.load(data)
+        if parameters:
+            self.load(parameters)
 
     def add_resource(self, item):
         if isinstance(item, Host):
@@ -133,6 +133,23 @@ class Scenario(CarbonResource):
         if not isinstance(h, Report):
             raise ValueError('Execute must be of type %s ' % type(Execute))
         self._reports.append(h)
+
+    def profile(self):
+        """
+        Builds a dictionary that represents the scenario with
+        all its properties.
+        :return: a dictionary representing the scenario
+        """
+        profile = dict(
+            name=self.name,
+            description=self.description,
+            credentials=[],
+            provision=[host.profile() for host in self.hosts],
+            orchestrate=[],
+            execute=[],
+            report=[]
+        )
+        return profile
 
     def _construct_validate_task(self):
         task = {

@@ -14,13 +14,18 @@ credentials:
 provision:
 
   - name: machine_1
-    crendential: openstack_ciops
     provider: openstack
+    crendential: openstack_ciops
+    os_name:
     os_image: rhel-6.9-workstation-x86_64-latest
     os_flavor: medium
-    os_sshkeypair:
     os_networks: ['pit-jenkins']
-    ip_addr:
+    os_key_name: 'pit-jenkins'
+    os_admin_pass:
+    os_description:
+    os_files:
+    os_security_groups:
+    ip_address:
     role: test_pilot
 
   - name: machine_2
@@ -30,25 +35,32 @@ provision:
     bkr_family: RedHatEnterpriseLinux6
     bkr_variant: Workstation
     bkr_info: client
-    ip_addr:
+    ip_address:
     role: w_client
 
   - name: machine_3
     provider: beaker
-    arch: s390x
-    tag: ['RTT_ACCEPTED']
+    bkr_arch: s390x
+    bkr_tag: ['RTT_ACCEPTED']
     bkr_family: RedHatEnterpriseLinux6
     bkr_variant: Server
     bkr_info: client
-    ip_addr:
+    ip_address:
     role: s390x_client
 
   - name: machine_4
     provider: openstack
     crendential: openstack_ciops
+    os_name:
     os_image: rhel-6.9-server-x86_64-latest
     os_flavor: medium
-    ip_addr:
+    os_networks: ['pit-jenkins']
+    os_key_name: 'pit-jenkins'
+    os_admin_pass:
+    os_description:
+    os_files:
+    os_security_groups:
+    ip_address:
     role: test_pilot
 
 # Orchestration

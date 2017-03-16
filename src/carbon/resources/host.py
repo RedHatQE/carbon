@@ -24,27 +24,71 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import uuid
+import random
+import string
 
 from ..core import CarbonResource
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
+from ..helpers import get_provider_class, get_providers_list
 
 
 class Host(CarbonResource):
 
     _valid_tasks_types = ['validate', 'provision', 'cleanup']
-    _valid_fields = ['name']
+    _valid_fields = ['name', 'ip_address']
 
     def __init__(self,
                  name=None,
+                 parameters={},
                  validate_task_cls=ValidateTask,
                  provision_task_cls=ProvisionTask,
                  cleanup_task_cls=CleanupTask,
-                 data={},
                  **kwargs):
+
         super(Host, self).__init__(name, **kwargs)
 
+        # name can't be set after the host is instanciated
+        # if no name is given, a uuid4 will be generated.
         if name is None:
-            self._name = str(uuid.uuid4())
+            self._name = parameters.pop('name', None)
+            if self._name is None:
+                self._name = str(uuid.uuid4())
+        else:
+            self._name = name
+
+        # we must set provider initially and it can't be
+        # changed afterwards.
+        provider = parameters.pop('provider', None)
+        if provider is None:
+            raise Exception('A provider must be set for the host.')
+        if provider not in get_providers_list():
+            raise Exception('Invalid provider for host %s.' % str(self.name))
+        else:
+            self._provider_cls = get_provider_class(provider)
+
+        # every provider has a name as mandatory field.
+        # first check if name exist (probably because of reusing machine).
+        # otherwise generate random bits to be added to provider instance name
+        # and create the provider name
+        p_name_param = '{}{}'.format(self.provider.__provider_prefix__, 'name')
+        if not parameters.get(p_name_param, None):
+            # random bits - http://stackoverflow.com/a/23728630
+            rnd_bits = ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(8))
+            parameters.update(
+                {p_name_param: '{}-{}'.format(self.name, rnd_bits)})
+
+        # check if we have all the mandatory fields set
+        missing_mandatory_fields = \
+            self.provider.check_mandatory_parameters(parameters)
+        if len(missing_mandatory_fields) > 0:
+            raise Exception('Missing mandatory fields for node %s,'
+                            ' based on the %s provider:\n\n%s'
+                            % (self.name, self.provider.name,
+                               missing_mandatory_fields))
+
+        # create the provider attributes in the host object
+        for p in self.provider.get_all_parameters():
+            setattr(self, p, parameters.get(p, None))
 
         self._validate_task_cls = validate_task_cls
         self._provision_task_cls = provision_task_cls
@@ -52,8 +96,32 @@ class Host(CarbonResource):
 
         self.reload_tasks()
 
-        if data:
-            self.load(data)
+        if parameters:
+            self.load(parameters)
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        raise AttributeError('You can set name after class is instanciated.')
+
+    @property
+    def provider(self):
+        return self._provider_cls
+
+    @provider.setter
+    def provider(self, value):
+        raise AttributeError('You can set provider after class is instanciated.')
+
+    def profile(self):
+        d = self.provider.build_profile(self)
+        d.update({
+            'name': self.name,
+            'provider': self.provider.name(),
+        })
+        return d
 
     def _construct_validate_task(self):
         task = {

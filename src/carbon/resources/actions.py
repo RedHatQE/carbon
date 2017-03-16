@@ -40,9 +40,9 @@ class Action(CarbonResource):
 
     def __init__(self,
                  name=None,
+                 parameters={},
                  validate_task_cls=ValidateTask,
                  orchestrate_task_cls=OrchestrateTask,
-                 data={},
                  **kwargs):
 
         super(Action, self).__init__(name, **kwargs)
@@ -54,8 +54,8 @@ class Action(CarbonResource):
 
         self.reload_tasks()
 
-        if data:
-            self.load(data)
+        if parameters:
+            self.load(parameters)
 
     def _construct_validate_task(self):
         """

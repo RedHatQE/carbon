@@ -28,15 +28,55 @@ from ..core import CarbonProvider
 
 class OpenstackProvider(CarbonProvider):
     """
-    Openstack provider implementation
+    Openstack provider implementation.
+    The following fields are supported:
+
+        os_flavor: (mandatory) The Flavor to boot onto.
+
+        os_image: (mandatory) The Image to boot with.
+
+        os_nics: (mandatory) An ordered list of nics (dicts) to be
+                 added to this server, with information about connected
+                 networks, fixed IPs, port etc. his field is required and
+                 also supports a single string value of ‘auto’ or ‘none’.
+                 The ‘auto’ value means the Compute service will
+                 automatically allocate a network for the project if one is
+                 not available. The ‘none’ value tells the Compute service
+                 to not allocate any networking for the server.
+
+        os_key_name: (optional) name of previously created keypair to
+                     inject into the instance
+
+        os_admin_pass: (optional) add a user supplied admin password.
+
+        os_description: (optional) description of the server.
+
+        os_files: (optional) A dict of files to overwrite on the server
+                  upon boot. Keys are file names (i.e. /etc/passwd) and
+                  values are the file contents (either as a string or as
+                  a file-like object). A maximum of five entries is
+                  allowed, and each file must be 10k or less.
+
+        os_security_groups: (optional)
+
     """
-    _valid_parameters = (
-        'os_flavor',
-        'os_image',
-        'os_networks',
-        'os_keypair',
+    __provider_name__ = 'openstack'
+    __provider_prefix__ = 'os_'
+
+    _mandatory_parameters = (
+        'name',
+        'flavor',
+        'image',
+        'networks',
     )
 
-    def create(self):
-        pass
+    _optional_parameters = (
+        'key_name',
+        'admin_pass',
+        'description',
+        'files',
+        'security_groups',
+    )
 
+    def __init__(self, **kwargs):
+        super(OpenstackProvider, self).__init__(**kwargs)

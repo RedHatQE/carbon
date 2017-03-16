@@ -38,9 +38,9 @@ class Execute(CarbonResource):
 
     def __init__(self,
                  name=None,
+                 parameters={},
                  execute_task_cls=ExecuteTask,
                  validate_task_cls=ValidateTask,
-                 data={},
                  **kwargs):
 
         super(Execute, self).__init__(name, **kwargs)
@@ -50,8 +50,8 @@ class Execute(CarbonResource):
 
         self.reload_tasks()
 
-        if data:
-            self.load(data)
+        if parameters:
+            self.load(parameters)
 
     def _construct_validate_task(self):
         task = {
