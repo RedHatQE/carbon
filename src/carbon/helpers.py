@@ -23,12 +23,13 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import sys
+import os
 import inspect
 import pkgutil
-import sys
-from threading import RLock
-
-import os
+import random
+import string
+import threading
 
 # sentinel
 _missing = object()
@@ -182,6 +183,19 @@ def get_all_resources_from_scenario(scenario):
     return resources_list
 
 
+def gen_random_str(char_num=8):
+    """
+    Generate a string with a specific number of characters, defined
+    by `char_num`.
+
+    :param char_num: the number of characters for the random string
+    :return: random string
+    """
+    return ''.join(random.SystemRandom().
+                   choice(string.ascii_lowercase + string.digits) for
+                   _ in range(char_num))
+
+
 class LockedCachedProperty(object):
     """
     A decorator that converts a function into a lazy property.  The
@@ -198,7 +212,7 @@ class LockedCachedProperty(object):
         self.__module__ = func.__module__
         self.__doc__ = doc or func.__doc__
         self.func = func
-        self.lock = RLock()
+        self.lock = threading.RLock()
 
     def __get__(self, obj, type=None):
         if obj is None:

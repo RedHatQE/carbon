@@ -191,22 +191,14 @@ class Carbon(object):
             exe_items = data.pop('execute')
             rpt_items = data.pop('report')
         except KeyError as ex:
-            self.logger.error('You must have all the main areas defined'
-                              ' within the YAML file. See documents for'
-                              ' more information')
             raise CarbonException(ex)
 
         self.scenario.load(data)
-        self.logger.debug('Scenario data loaded')
 
         self._load_resources(Host, pro_items)
-        self.logger.debug('Hosts data loaded')
         self._load_resources(Action, orc_items)
-        self.logger.debug('Actions data loaded')
         self._load_resources(Execute, exe_items)
-        self.logger.debug('Execute data loaded')
         self._load_resources(Report, rpt_items)
-        self.logger.debug('Report data loaded')
 
         # Each resource has to be an instance of its own type.
         # This loop goes through the list of hosts, then for each
@@ -228,10 +220,6 @@ class Carbon(object):
         """
         for item in res_list:
             self.scenario.add_resource(res_type(parameters=item))
-            self.logger.debug('{res_type}: {res_item}'.format(
-                res_type=res_type.__name__,
-                res_item=item
-            ))
 
     def _add_task_into_pipeline(self, t):
         """
@@ -243,8 +231,6 @@ class Carbon(object):
         for pipeline in self.pipelines:
             if pipeline['type'].__name__ == t['task'].__name__:
                 pipeline['task_list'].append(t)
-                self.logger.debug('Task %s appended to pipeline %s'
-                                  % (t['task'].__name__, pipeline['name']))
 
     def run(self):
         """
@@ -259,26 +245,21 @@ class Carbon(object):
         for host in self.scenario.hosts:
             for host_task in host.get_tasks():
                 self._add_task_into_pipeline(host_task)
-        self.logger.debug('Host tasks loaded into pipepline')
 
         for action in self.scenario.actions:
             for action_task in action.get_tasks():
                 self._add_task_into_pipeline(action_task)
-        self.logger.debug('Action tasks loaded into pipepline')
 
         for execute in self.scenario.executes:
             for execute_task in execute.get_tasks():
                 self._add_task_into_pipeline(execute_task)
-        self.logger.debug('Execute tasks loaded into pipepline')
 
         for report in self.scenario.reports:
             for report_task in report.get_tasks():
                 self._add_task_into_pipeline(report_task)
-        self.logger.debug('Report tasks loaded into pipepline')
 
         for scenario_task in self.scenario.get_tasks():
             self._add_task_into_pipeline(scenario_task)
-        self.logger.debug('Scenario tasks loaded into pipepline')
 
         try:
             for pipeline in self.pipelines:

@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonProvider
+from .._compat import string_types
 
 
 class BeakerProvider(CarbonProvider):
@@ -42,3 +43,19 @@ class BeakerProvider(CarbonProvider):
 
     def __init__(self, **kwargs):
         super(BeakerProvider, self).__init__(**kwargs)
+
+    @classmethod
+    def validate_arch(cls, value):
+        return isinstance(value, string_types)
+
+    @classmethod
+    def validate_tag(cls, value):
+        return isinstance(value, list)
+
+    @classmethod
+    def validate_family(cls, value):
+        return isinstance(value, string_types)
+
+    @classmethod
+    def validate_variant(cls, value):
+        return isinstance(value, string_types)

@@ -154,9 +154,6 @@ class Scenario(CarbonResource):
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,
-            'name': str(self.name),
-            'package': self,
-            'msg': '   validating scenario "%s"' % self.name,
-            'clean_msg': '   cleanup after validating scenario "%s"' % self.name
+            'resource': self,
         }
         return task

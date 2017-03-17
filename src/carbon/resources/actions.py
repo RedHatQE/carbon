@@ -58,15 +58,9 @@ class Action(CarbonResource):
             self.load(parameters)
 
     def _construct_validate_task(self):
-        """
-        Used to create the config attribute by the Host constructor.
-        """
         task = {
             'task': self._validate_task_cls,
-            'name': str(self.name),
-            'package': self,
-            'msg': '   validating action %s' % self.name,
-            'clean_msg': '   cleanup after validating action %s' % self.name
+            'resource': self,
         }
         return task
 

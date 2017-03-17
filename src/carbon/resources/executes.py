@@ -56,10 +56,7 @@ class Execute(CarbonResource):
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,
-            'name': str(self.name),
-            'package': self,
-            'msg': '   validating execution %s' % self.name,
-            'clean_msg': '   cleanup after validating execution of %s' % self.name
+            'resource': self,
         }
         return task
 

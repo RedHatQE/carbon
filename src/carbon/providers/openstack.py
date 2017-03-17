@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonProvider
+from .._compat import string_types
 
 
 class OpenstackProvider(CarbonProvider):
@@ -80,3 +81,54 @@ class OpenstackProvider(CarbonProvider):
 
     def __init__(self, **kwargs):
         super(OpenstackProvider, self).__init__(**kwargs)
+
+    @classmethod
+    def validate_name(cls, value):
+        return isinstance(value, string_types)
+
+    @classmethod
+    def validate_flavor(cls, value):
+        return isinstance(value, string_types)
+
+    @classmethod
+    def validate_image(cls, value):
+        return isinstance(value, string_types)
+
+    @classmethod
+    def validate_networks(cls, value):
+        return isinstance(value, list)
+
+    @classmethod
+    def validate_key_name(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_admin_pass(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_description(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_files(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_security_groups(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True

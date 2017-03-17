@@ -24,13 +24,14 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import uuid
-import random
-import string
 
-from ..core import CarbonResource
+from ..core import CarbonResource, CarbonException
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
-from ..helpers import get_provider_class, get_providers_list
+from ..helpers import get_provider_class, get_providers_list, gen_random_str
 
+
+class CarbonHostException(CarbonException):
+    pass
 
 class Host(CarbonResource):
 
@@ -52,7 +53,7 @@ class Host(CarbonResource):
         if name is None:
             self._name = parameters.pop('name', None)
             if self._name is None:
-                self._name = str(uuid.uuid4())
+                self._name = gen_random_str(12)
         else:
             self._name = name
 
@@ -72,10 +73,8 @@ class Host(CarbonResource):
         # and create the provider name
         p_name_param = '{}{}'.format(self.provider.__provider_prefix__, 'name')
         if not parameters.get(p_name_param, None):
-            # random bits - http://stackoverflow.com/a/23728630
-            rnd_bits = ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(8))
             parameters.update(
-                {p_name_param: '{}-{}'.format(self.name, rnd_bits)})
+                {p_name_param: '{}-{}'.format(self.name, gen_random_str())})
 
         # check if we have all the mandatory fields set
         missing_mandatory_fields = \
@@ -123,13 +122,15 @@ class Host(CarbonResource):
         })
         return d
 
+    def validate(self):
+        for item in self.provider.validate(self):
+            print('Error with parameter "{}": {}'.format(item[0], item[1]))
+
     def _construct_validate_task(self):
+
         task = {
             'task': self._validate_task_cls,
-            'name': str(self.name),
-            'package': self,
-            'msg': '   validating host %s' % self.name,
-            'clean_msg': '   cleanup after validating host %s' % self.name
+            'resource': self,
         }
         return task
 
