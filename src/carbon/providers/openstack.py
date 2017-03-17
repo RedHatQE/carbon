@@ -79,6 +79,7 @@ class OpenstackProvider(CarbonProvider):
         'security_groups',
     )
 
+
     def __init__(self, **kwargs):
         super(OpenstackProvider, self).__init__(**kwargs)
 
