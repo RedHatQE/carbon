@@ -17,3 +17,7 @@
 #
 from .beaker import BeakerProvider
 from .openstack import OpenstackProvider
+from .aws import AwsProvider
+from .digitalocean import DigitalOceanProvider
+from .openshift import OpenshiftProvider
+from .rackspace import RackspaceProvider
