@@ -44,7 +44,7 @@ Ideally you would create a virtual environment with python 3.6. The
 framework has been developed to run with python 2.7.x and above.
 Download the source code and follow the commands below:
 
-```
+```commandline
 $ pip install -r requirements.txt
 ```
 
@@ -53,36 +53,56 @@ This is going to install all necessary packages that Carbon depends on.
 Next you can install Carbon itself from the source directory so you can
 run tests before commit any code:
 
-```
+```commandline
 $ pip install --editable .
 ```
 
 This way any change you do in the source code you don't need reinstall
 it and your changes will be reflected right away.
 
-You can run the command below to test an example (examples/ffinterop.yaml):
+You want to have a configuration file set so you can turn ON and OFF debugging,
+and set other development variables. See `examples/my_config.cfg` for an example
+how to create a configuration file. (_configuration is still something to be done,
+only DEBUG is used at the moment._)
 
-```
+Set the configuration in your environment. You can chose one of the ways below:
+
+1. Create a file at `/etc/carbon/carbon.cfg`
+2. Create a environment variable called `CARBON_SETTINGS` and add the path for
+   your configuration file.
+3. Crate a file called `carbon.cfg` within the same directory you are running
+   the carbon scenario or the carbon app.
+
+You can run the command below to test a scenario example (examples/ffinterop.yaml):
+
+```commandline
 $ carbon -vvv run --scenario examples/ffinterop.yaml --cleanup always
+```
+
+You can also '_develop_' a scenario. Check out the `examples/scenario_app.py`.
+To run this scenario, go to the `examples/` folder and run:
+
+```commandline
+$ python scenario_app.py
 ```
 
 Before run the tests you have to install some tools. Follow the
 command below:
 
-```
+```commandline
 $ pip install -r test-requirements.txt
 ```
 
 Now you can run the tests via Makefile:
 
-```
+```commandline
 $ make test
 ```
 
 Before you commit the code, run a full check to make sure the code is
 tested and lint'ed':
 
-```
+```commandline
 $ make
 ```
 
