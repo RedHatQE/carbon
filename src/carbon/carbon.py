@@ -26,7 +26,7 @@
 import os
 import sys
 import yaml
-import pprint
+import collections
 from threading import Lock
 
 import taskrunner
@@ -43,9 +43,44 @@ from .tasks import ReportTask, CleanupTask
 # a lock used for logger initialization
 _logger_lock = Lock()
 
+# A pipeline is a tuple with a name, type and a list of tasks.
+# The Carbon object will have a list of pipelines that holds
+# all types of pipelines and a list of tasks associated with the
+# type of the pipeline.
+Pipeline = collections.namedtuple('Pipeline', ('name', 'type', 'tasks'))
+
 
 class Carbon(object):
-    """The Carbon object acts as the central object."""
+    """
+    The Carbon object acts as the central object. We call this object
+    'the carbon compound'. Like in chemistry, a carbon molecule helps on the
+    construction of compounds of other molecules. We can use this analogy
+    to understand how Carbon object creates compounds of 'resources'.
+
+    The valid resources for Carbon can be found at ~carbon.resources package.
+    These resources have special connection with carbon, which allows carbon
+    to run the resources tasks, without the need to understand each resource
+    in depth. Think of all caron resources as instances that are blessed by
+    Carbon object. A carbon compound can have as many resource as it can.
+
+    Once a compound of resources is defined, the function ~self.run will
+    take care of running all the tasks needed to have the compound of
+    resources up and running.
+
+    The Carbon object passes through 6 main stages:
+    (see all types of tasks at ~carbon.tasks package)
+
+    1. Validation - a pipeline of tasks instances of ValidationTask.
+    2. Provision - a pipeline of tasks instances of ProvisionTask.
+    3. Orchestrate - a pipeline of tasks instances of OrchestrateTask.
+    4. Execute - a pipeline of tasks instances of ExecuteTask.
+    5. Report - a pipeline of tasks instances of ReportTask.
+    6. Cleanup - a pipeline of tasks instances of CleanupTask.
+
+    Each resource can have its own set of tasks. Theses tasks will be
+    loaded within the central pipeline, the ~self.pipelines object.
+
+    """
 
     # The class that is used for the ``config`` attribute of this app.
     # Defaults to :class:`~carbon.Config`.
@@ -73,18 +108,19 @@ class Carbon(object):
     # sign messages and other things.
     secret_key = ConfigAttribute('SECRET_KEY')
 
-    # The pipeline of pipelines. All lists starts empty and tasks will
-    # be added later when the :function:`~carbon.Carbon.run` is executed.
-    # The framework will run through each resource object within the scenario
-    # and look for variables that start with `_task_`. If found, it will
-    # verify what type of task it is and add into its respective task_list.
-    pipelines = [
-        {'name': 'validate',    'type': ValidateTask,    'task_list': []},
-        {'name': 'provision',   'type': ProvisionTask,   'task_list': []},
-        {'name': 'orchestrate', 'type': OrchestrateTask, 'task_list': []},
-        {'name': 'execute',     'type': ExecuteTask,     'task_list': []},
-        {'name': 'report',      'type': ReportTask,      'task_list': []},
-        {'name': 'cleanup',     'type': CleanupTask,     'task_list': []},
+    # The pipeline of pipelines. All pipelines in the lists starts an
+    # empty tasks list and tasks will be added later when the
+    # :function:`~carbon.Carbon.run` is executed. The framework will run
+    # through each resource object within the scenario and look for
+    # variables that start with `_task_`. If found, it will verify what
+    # type of task it is and add into its respective task_list.
+    _pipelines = [
+        Pipeline('validate',    ValidateTask,    list()),
+        Pipeline('provision',   ProvisionTask,   list()),
+        Pipeline('orchestrate', OrchestrateTask, list()),
+        Pipeline('execute',     ExecuteTask,     list()),
+        Pipeline('report',      ReportTask,      list()),
+        Pipeline('cleanup',     CleanupTask,     list()),
     ]
 
     # Default configuration parameters.
@@ -164,26 +200,27 @@ class Carbon(object):
         root_path = self.root_path
         return self.config_class(root_path, self.default_config)
 
-    @staticmethod
-    def _extract_resources_from_dict(data, resource):
-        lst = []
-        for k, v in data.items():
-            if k == resource and isinstance(v, list):
-                for i in v:
-                    lst.append(CustomDict(i))
-        return lst
-
-    def _extract_hosts(self, data):
-        return self._extract_resources_from_dict(data, 'hosts')
-
-    def _extract_packages(self, data):
-        return self._extract_resources_from_dict(data, 'packages')
-
-    def load_from_yaml(self, filename):
+    def load_from_yaml(self, filepath):
         """
-        Loads the scenario from a yaml file.
+        Given the YAML filename with the scenario description, this
+        function will load all resources described in the file with
+        the carbon object.
+
+        The main sections of the YAML descriptor (provision, orchestrate,
+        execute and report) will be taken of the data in its respective
+        data object. All the rest of the attributes within the YAML file
+        will be loaded into the ~self.scenario object. The additional
+        attributes within the file will be ignored by the Scenario
+        resource.
+
+        Once each data section is taken of the main descriptor, it will
+        then be be loaded in each respective lists within the
+        ~self.scenario object.
+
+        :param filepath: the full path for the YAML file descriptor
+        :return:
         """
-        data = dict(yaml.safe_load(open(filename, 'r')))
+        data = dict(yaml.safe_load(open(filepath, 'r')))
 
         try:
             pro_items = data.pop('provision')
@@ -213,7 +250,18 @@ class Carbon(object):
 
     def _load_resources(self, res_type, res_list):
         """
-        Load the resource in the scenario list
+        Load the resource in the scenario list of `res_type`.
+
+        The scenario holds a list of each resource type: hosts, actions,
+        reports, etc. This function takes what type of resource is in
+        list it calls ~self.scenario.add_resource for each item in the
+        list of the given resources.
+
+        For example, if we call _load_resources(Host, hosts_list), the
+        function will go through each item in the list, create the
+        resource with Host(parameter=item) and load it within the list
+        ~self.hosts.
+
         :param res_type: The type of resources the function will load into its list
         :param res_list: A list of resources dict
         :return: None
@@ -223,25 +271,37 @@ class Carbon(object):
 
     def _add_task_into_pipeline(self, t):
         """
-        Given a task object, it will find in which pipeline it
-        will be added into.
+        Given a task object, it will find in which pipeline within
+        ~self.pipelines it belongs to and add it into its respective
+        queue of tasks.
 
-        :param t: a task object instance from one of the carbon.tasks
+        :param t: a task object instance from one of the carbon.tasks package
         """
-        for pipeline in self.pipelines:
-            if pipeline['type'].__name__ == t['task'].__name__:
-                pipeline['task_list'].append(t)
+        for pipeline in self._pipelines:
+            if pipeline.type.__name__ == t['task'].__name__:
+                pipeline.tasks.append(t)
 
     def run(self):
         """
-        Run the carbon compound
+        This function assumes there are zero or more tasks to be
+        loaded within the list of pipelines: ~self.pipelines.
+
+        It will run through all resources within the ~self.scenario
+        object (lists of hosts, actions, executes, reports), including
+        tasks associated with the ~self.scenario itself, and find if any
+        of them has a task to be loaded in the pipelines.
+
+        Once a task is found, it is loaded within its respective
+        pipeline and then each pipeline is sent to taskrunner execution.
+        For every pipeline within ~self.pipelines,
         """
 
         # check if scenario was set
         if self.scenario is None:
             raise Exception("You must set a scenario before run the framework.")
 
-        # get the list of resources, excluding scenario
+        # get the list of resources for each main section, including
+        # the ~self.scenario object itself.
         for host in self.scenario.hosts:
             for host_task in host.get_tasks():
                 self._add_task_into_pipeline(host_task)
@@ -262,14 +322,14 @@ class Carbon(object):
             self._add_task_into_pipeline(scenario_task)
 
         try:
-            for pipeline in self.pipelines:
+            for pipeline in self._pipelines:
                 print(" ")
                 print("." * 50)
-                print("=> Starting tasks on pipeline: %s" % pipeline['name'])
-                if not pipeline['task_list']:
+                print("=> Starting tasks on pipeline: %s" % pipeline.name)
+                if not pipeline.tasks:
                     print("   ... nothing to be executed here ...")
                 else:
-                    taskrunner.execute(pipeline['task_list'], cleanup='always')
+                    taskrunner.execute(pipeline.tasks, cleanup='always')
                 print("." * 50)
         except taskrunner.TaskExecutionException as ex:
             print(ex)

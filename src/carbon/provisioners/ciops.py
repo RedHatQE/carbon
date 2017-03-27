@@ -23,10 +23,10 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import Provisioner
+from ..core import CarbonProvisioner
 
 
-class CiopsProvisioner(Provisioner):
+class CiopsProvisioner(CarbonProvisioner):
     """
     Ciops version 1 for provisioning machines
     """

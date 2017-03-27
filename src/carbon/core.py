@@ -27,12 +27,19 @@ import inspect
 from taskrunner import Task
 from .helpers import get_core_tasks_classes
 
-
+# TODO: we must implement core exceptions
 class CarbonException(Exception):
     pass
 
 
 class CarbonTask(Task):
+    """
+    This is the base class for every task created for Carbon framework.
+    All instances of this class can be found within the ~carbon.tasks
+    package.
+
+    This class is an instance of taskrunner.Task.
+    """
 
     def __init__(self, name=None, **kwargs):
         super(CarbonTask, self).__init__(**kwargs)
@@ -51,12 +58,17 @@ class CarbonTask(Task):
 
 
 class CarbonResource(object):
-
+    """
+    This is the base class for every resource created for Carbon Framework.
+    All instances of this class can be found within ~carbon.resources
+    package.
+    """
     _valid_tasks_types = []
     _fields = []
 
     def __init__(self, name=None, **kwargs):
 
+        # every resource has a name
         self._name = name
 
         # A list of tasks that will be executed upon the reource.
@@ -80,6 +92,13 @@ class CarbonResource(object):
         self._tasks.append(t)
 
     def _extract_tasks_from_resource(self):
+        """
+        It checks every member of this class and compare if this is
+        an instance of CarbonTask.
+
+        # TODO: better if we return a generator
+        :return: list of tasks for this class
+        """
         lst = []
         for name, obj in inspect.getmembers(self, inspect.isclass):
             if issubclass(obj, CarbonTask):
@@ -87,6 +106,12 @@ class CarbonResource(object):
         return lst
 
     def load(self, data):
+        """
+        Given a dictionary of attributes, this function loads these
+        attributes for this class.
+
+        :param data: a dictionary with attributes for the resource
+        """
         for key, value in data.items():
             # name has precedence when coming from a YAML file
             # if name is set through name=, it will be overwritten
@@ -119,7 +144,7 @@ class CarbonResource(object):
     def validate(self):
         pass
 
-class Provisioner(object):
+class CarbonProvisioner(object):
     """
     This is the base class for all provisioners for provisioning machines
     """

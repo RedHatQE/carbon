@@ -18,8 +18,6 @@
 """
     carbon.providers.openstack
 
-    Here you add brief description of what this module is about
-
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
@@ -59,6 +57,13 @@ class OpenstackProvider(CarbonProvider):
                   allowed, and each file must be 10k or less.
 
         os_security_groups: (optional)
+
+        To add more fields for the provider, you have to also create a
+        validate_* function for the field. The signature for the function
+        must be validate_<paramenter_name> and the return must be True for
+        valid or False if the validation fails.
+
+        For instance, the field 'flavor' has the function 'validate_flavor'.
 
     """
     __provider_name__ = 'openstack'

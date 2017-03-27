@@ -23,15 +23,15 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import Provisioner
+from ..core import CarbonProvisioner
 
 
-class CarbonProvisioner(Provisioner):
+class PITProvisioner(CarbonProvisioner):
     """
     Carbon's own provisioner
     """
     def __init__(self, **kwargs):
-        super(CarbonProvisioner, self).__init__(**kwargs)
+        super(PITProvisioner, self).__init__(**kwargs)
 
     def create(self):
         print('Provisioning machines from {klass}'

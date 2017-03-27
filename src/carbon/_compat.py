@@ -18,9 +18,10 @@
 """
     carbon._compat
 
-    Here you add brief description of what this module is about
+    This is a compatibility module that assists on keeping the Carbon
+    Framework compatible with python 2.x and python 3.x.
 
-    :modified: (c) 2016 Red Hat, Inc.
+    :modified: (c) 2017 Red Hat, Inc.
     :copyright: (c) 2015 by Armin Ronacher.
     :license: GPLv3, see LICENSE for more details.
 """
