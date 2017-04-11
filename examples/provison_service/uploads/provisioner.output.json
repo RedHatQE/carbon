@@ -1,0 +1,36 @@
+{
+	"resources": [{
+		"name": "CT-ci-minimal-vmhw-5b09e-",
+		"public_ip": "10.8.173.3",
+		"provider": "OpenStack",
+		"metadata": {
+			"private_ip": "172.16.5.121",
+			"flavor": "m1.medium",
+			"address": "",
+			"automation_required_packages": "pexpect git wget",
+			"firewall_enabled": "no",
+			"grouppackages": "",
+			"hostname": "",
+			"identifier": "430652f6-2734-4fc8-937f-0713b0fb39cd",
+			"image": "rhel-6.9-server-x86_64-released",
+			"machine": "MACHINE_1",
+			"ntpdate_enabled": "yes",
+			"ntpdate_servers": "clock.corp.redhat.com clock.redhat.com",
+			"packages": "firefox",
+			"password": "redhat",
+			"product": "testclient",
+			"rhn_channels": "rhel-6-server-rpms rhel-6-server-optional-rpms",
+			"rhn_enabled": "yes",
+			"rhn_remove_pre-existing_repos": "no",
+			"rhn_sm_auto": "yes",
+			"rhn_sm_clean": "yes",
+			"rhn_type": "subscription_manager",
+			"role": "test_resource",
+			"selinux": "disabled",
+			"type": "vm",
+			"user": "root",
+			"variant": "Server",
+			"version": "testclient"
+		}
+	}]
+}
