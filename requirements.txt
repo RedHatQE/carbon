@@ -1,4 +1,7 @@
-werkzeug==0.11.15
-click==6.7
-PyYAML==3.12
 git+https://github.com/tvieira/taskrunner.git
+werkzeug>=0.11.15
+click>=6.7
+PyYAML>=3.12
+tox>=2.7.0
+Sphinx>=1.5.5
+sphinx-rtd-theme>=0.2.4
