@@ -14,6 +14,8 @@ _mailinglist
 .cache/
 .idea/
 .ropeproject
+.project
+.pydevproject
 tests/coverage-report*
 tests/flake8-report.txt
 tests/junit-report.xml
