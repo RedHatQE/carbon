@@ -18,40 +18,41 @@ class TestScenario(object):
         scenario.newattribute = 'value'
         assert scenario.newattribute == str('value')
 
-    def test_dict_to_class(self):
-        scenario = Scenario(scenario_description)
-        assert isinstance(scenario.scenario_data, CustomDict)
+    #def test_dict_to_class(self):
+    #    scenario = Scenario(scenario_description)
+    #    assert isinstance(scenario.profile, CustomDict)
 
-    def test_pop_attribute(self):
-        scenario = Scenario(scenario_description)
-        scenario.newattribute = 'value'
-        assert scenario.newattribute == str('value')
-        scenario.pop('newattribute')
-        assert scenario.newattribute is None
+    #def test_pop_attribute(self):
+    #    scenario = Scenario(scenario_description)
+    #    scenario.newattribute = 'value'
+    #    assert scenario.newattribute == str('value')
+    #    scenario.pop('newattribute')
+    #    assert scenario.newattribute is None
 
 
 class TestHost(object):
 
     def test_new_host_from_yaml(self):
         cp_scenario_description = dict(scenario_description)
-        host = Host(cp_scenario_description.pop('hosts')[0])
+        host = Host(parameters=cp_scenario_description.pop('provision')[0])
         assert isinstance(host, Host)
 
     def test_new_attribute(self):
         cp_scenario_description = dict(scenario_description)
-        host = Host(cp_scenario_description.pop('hosts')[0])
+        host = Host(parameters=cp_scenario_description.pop('provision')[3])
+        print "%s" % host
         host.newattribute = 'value'
         assert host.newattribute == str('value')
 
-    def test_dict_to_class(self):
-        cp_scenario_description = dict(scenario_description)
-        host = Host(cp_scenario_description.pop('hosts')[0])
-        assert isinstance(host.host_data, CustomDict)
+    #def test_dict_to_class(self):
+    #    cp_scenario_description = dict(scenario_description)
+    #    host = Host(parameters=cp_scenario_description.pop('provision')[1])
+    #    assert isinstance(host.host_data, CustomDict)
 
-    def test_pop_attribute(self):
-        cp_scenario_description = dict(scenario_description)
-        host = Host(cp_scenario_description.pop('hosts')[0])
-        host.newattribute = 'value'
-        assert host.newattribute == str('value')
-        host.pop('newattribute')
-        assert host.newattribute is None
+    #def test_pop_attribute(self):
+    #    cp_scenario_description = dict(scenario_description)
+    #    host = Host(parameters=cp_scenario_description.pop('provision')[2])
+    #    host.newattribute = 'value'
+    #    assert host.newattribute == str('value')
+    #    host.pop('newattribute')
+    #    assert host.newattribute is None
