@@ -27,6 +27,7 @@ import inspect
 from taskrunner import Task
 from .helpers import get_core_tasks_classes
 
+
 # TODO: we must implement core exceptions
 class CarbonException(Exception):
     pass
@@ -143,6 +144,7 @@ class CarbonResource(object):
 
     def validate(self):
         pass
+
 
 class CarbonProvisioner(object):
     """

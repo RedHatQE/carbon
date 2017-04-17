@@ -37,4 +37,3 @@ class OrchestrateTask(CarbonTask):
 
     def cleanup(self, context):
         print(self.clean_msg)
-

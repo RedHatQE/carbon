@@ -33,6 +33,7 @@ from ..helpers import get_provider_class, get_providers_list, gen_random_str
 class CarbonHostException(CarbonException):
     pass
 
+
 class Host(CarbonResource):
 
     _valid_tasks_types = ['validate', 'provision', 'cleanup']
