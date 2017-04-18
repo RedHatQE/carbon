@@ -93,9 +93,35 @@ def create():
 
 
 @cli.command()
-def validate():
+@click.option("-s", "--scenario",
+              default=None,
+              help="Scenario definition file to be executed.")
+@click.pass_context
+def validate(ctx, scenario):
     """Validate a scenario configuration."""
-    raise NotImplementedError
+    # Make sure the file exists and gets its absolute path
+    if os.path.isfile(scenario):
+        scenario = os.path.abspath(scenario)
+    else:
+        click.echo('You have to provide a valid scenario file.')
+        ctx.exit()
+
+    # Create a new carbon compound
+    cbn = Carbon(__name__)
+
+    # Read configuration first from etc, then overwrite from CARBON_SETTINGS
+    # environment variable and the look gor a carbon.cfg from within the
+    # directory where this command is running from.
+    cbn.config.from_pyfile('/etc/carbon/carbon.cfg', silent=True)
+    cbn.config.from_envvar('CARBON_SETTINGS', silent=True)
+    cbn.config.from_pyfile(os.path.join(os.getcwd(), 'carbon.cfg'), silent=True)
+
+    # This is the easiest way to configure a full scenario.
+    cbn.load_from_yaml(scenario)
+
+    # The scenario will start the main pipeline and run through the ordered list
+    # of pipelines. See :function:`~carbon.Carbon.run` for more details.
+    cbn.run(tasklist=["validate"])
 
 
 @cli.command()

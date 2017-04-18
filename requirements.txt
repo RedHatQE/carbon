@@ -5,3 +5,4 @@ PyYAML>=3.12
 tox>=2.7.0
 Sphinx>=1.5.5
 sphinx-rtd-theme>=0.2.4
+pykwalify==1.6.0

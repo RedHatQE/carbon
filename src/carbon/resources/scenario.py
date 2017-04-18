@@ -24,7 +24,9 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import uuid
+import sys
 
+from pykwalify.core import Core
 from ..core import CarbonResource
 from ..tasks import ValidateTask
 from .actions import Action
@@ -40,6 +42,7 @@ class Scenario(CarbonResource):
     _fields = [
         'name',         # the name of the scenario
         'description',  # a brief description of what the scenario is
+        'filename',  # location of the file that is the scenario
     ]
 
     def __init__(self,
@@ -57,7 +60,6 @@ class Scenario(CarbonResource):
         self._actions = list()
         self._executes = list()
         self._reports = list()
-
         self._validate_task_cls = validate_task_cls
 
         self.reload_tasks()
@@ -134,6 +136,20 @@ class Scenario(CarbonResource):
             raise ValueError('Execute must be of type %s ' % type(Execute))
         self._reports.append(h)
 
+    def yaml_validate(self, yaml_file):
+        """
+        Validating the scenario yaml
+        """
+
+        c = Core(source_file=yaml_file, schema_files=["schema.yaml"])
+
+        try:
+            c.validate(raise_exception=True)
+        except:
+            e = sys.exc_info()[1]
+            return(1, e)
+        return(0, "Successful validation of the yaml file")
+
     def profile(self):
         """
         Builds a dictionary that represents the scenario with
@@ -151,9 +167,18 @@ class Scenario(CarbonResource):
         )
         return profile
 
+    def validate(self):
+        print "Validate the file %s" % self.filename
+        val = self.yaml_validate(self.filename)
+        if val[0]:
+            print " error occurred during file validation: %s" % val[1]
+        else:
+            print "Successful validation of the yaml according to our schema"
+
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,
             'resource': self,
         }
+
         return task

@@ -25,7 +25,8 @@ requires = [
     'Werkzeug',
     'Click',
     'taskrunner',
-    'PyYAML'
+    'PyYAML',
+    'pykwalify'
 ]
 
 
