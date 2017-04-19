@@ -28,7 +28,6 @@ import sys
 import yaml
 import collections
 from threading import Lock
-
 import taskrunner
 
 from .core import CarbonException
@@ -151,6 +150,7 @@ class Carbon(object):
         self.logger_name = self.import_name
 
         self.scenario = Scenario()
+        self.scenario_file = None
 
     @LockedCachedProperty
     def name(self):
@@ -230,7 +230,9 @@ class Carbon(object):
         except KeyError as ex:
             raise CarbonException(ex)
 
+        data["filename"] = filepath
         self.scenario.load(data)
+        self.scenario_filename = filepath
 
         self._load_resources(Host, pro_items)
         self._load_resources(Action, orc_items)
@@ -281,7 +283,7 @@ class Carbon(object):
             if pipeline.type.__name__ == t['task'].__name__:
                 pipeline.tasks.append(t)
 
-    def run(self):
+    def run(self, tasklist=["validate", "provision", "orchestrate", "execute", "report", "cleanup"]):
         """
         This function assumes there are zero or more tasks to be
         loaded within the list of pipelines: ~self.pipelines.
@@ -323,6 +325,11 @@ class Carbon(object):
 
         try:
             for pipeline in self._pipelines:
+                if pipeline.name in tasklist:
+                    pass
+                else:
+                    continue
+
                 print(" ")
                 print("." * 50)
                 print("=> Starting tasks on pipeline: %s" % pipeline.name)
