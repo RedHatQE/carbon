@@ -30,6 +30,7 @@ import collections
 from threading import Lock
 import taskrunner
 
+from .constants import TASKLIST
 from .core import CarbonException
 from .resources import Scenario, Host, Action, Report, Execute
 from .config import Config, ConfigAttribute
@@ -283,7 +284,7 @@ class Carbon(object):
             if pipeline.type.__name__ == t['task'].__name__:
                 pipeline.tasks.append(t)
 
-    def run(self, tasklist=["validate", "provision", "orchestrate", "execute", "report", "cleanup"]):
+    def run(self, tasklist=TASKLIST):
         """
         This function assumes there are zero or more tasks to be
         loaded within the list of pipelines: ~self.pipelines.

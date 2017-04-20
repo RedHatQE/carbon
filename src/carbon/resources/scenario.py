@@ -27,6 +27,7 @@ import uuid
 import sys
 
 from pykwalify.core import Core
+from ..constants import SCENARIO_SCHEMA
 from ..core import CarbonResource
 from ..tasks import ValidateTask
 from .actions import Action
@@ -140,8 +141,7 @@ class Scenario(CarbonResource):
         """
         Validating the scenario yaml
         """
-
-        c = Core(source_file=yaml_file, schema_files=["schema.yaml"])
+        c = Core(source_file=yaml_file, schema_files=[SCENARIO_SCHEMA])
 
         try:
             c.validate(raise_exception=True)
@@ -168,12 +168,12 @@ class Scenario(CarbonResource):
         return profile
 
     def validate(self):
-        print "Validate the file %s" % self.filename
+        print("Validate the file %s" % self.filename)
         val = self.yaml_validate(self.filename)
         if val[0]:
-            print " error occurred during file validation: %s" % val[1]
+            print("error occurred during file validation: %s" % val[1])
         else:
-            print "Successful validation of the yaml according to our schema"
+            print("Successful validation of the yaml according to our schema")
 
     def _construct_validate_task(self):
         task = {

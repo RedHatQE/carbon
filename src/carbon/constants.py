@@ -22,11 +22,13 @@
     :license: GPLv3, see LICENSE for more details.
 
 """
-PIPELINE_ORDER = ['validate',
-                  'check',
-                  'create',
-                  'config',
-                  'install',
-                  'test',
-                  'report',
-                  'teardown']
+import os
+
+SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "schema.yaml")
+
+TASKLIST = ["validate",
+            "provision",
+            "orchestrate",
+            "execute",
+            "report",
+            "cleanup"]
