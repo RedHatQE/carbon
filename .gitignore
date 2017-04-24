@@ -27,3 +27,4 @@ venv3
 .ropeproject
 .project
 .pydevproject
+.settings/
