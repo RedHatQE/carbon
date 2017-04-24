@@ -15,8 +15,6 @@ def run(command):
 
 # install development libraries
 run('pip install -r requirements.txt')
-# install test libraries
-run('pip install nose tox coverage flake8')
 # clean distribution
 if os.path.isdir('dist') and os.listdir('dist'):
     shutil.rmtree('dist')

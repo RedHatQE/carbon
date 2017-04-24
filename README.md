@@ -54,8 +54,15 @@ Next you can install Carbon itself from the source directory so you can
 run tests before commit any code:
 
 ```commandline
-$ pip install --editable .
+$ pip install --process-dependency-links --editable .
 ```
+
+_Note: We are using the flag `--process-dependency-links` because the
+latest version of taskrunner (0.2.1) is not compatible with Python3. A
+quick fix can make it compatible. The patch was already [sent](https://github.com/mkollaro/taskrunner/pull/17)
+to the package mantainer and we are waiting for the merge to be accepted.
+The flag above will make the installation to take the package from a
+[private github account](https://github.com/tvieira/taskrunner)._
 
 This way any change you do in the source code you don't need reinstall
 it and your changes will be reflected right away.

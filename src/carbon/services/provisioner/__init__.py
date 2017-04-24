@@ -21,3 +21,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+from ..utils import create_app
+
+# create a carbon service app
+app = create_app(package_name='carbon.services.provisioner')
+run = app.run

@@ -20,11 +20,15 @@ from setuptools import setup, find_packages
 ROOT = os.path.dirname(__file__)
 VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
 
+dependencies = [
+    'https://github.com/tvieira/taskrunner/tarball/master#egg=taskrunner-0.3.1'
+]
 
 requires = [
+    'Flask',
     'Werkzeug',
     'Click',
-    'taskrunner',
+    'taskrunner==0.3.1',
     'PyYAML',
     'pykwalify'
 ]
@@ -49,6 +53,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=requires,
+    dependency_links=dependencies,
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
