@@ -15,44 +15,28 @@ provision:
 
   - name: machine_1
     provider: openstack
-    crendential: openstack_ciops
+    credential: openstack_ciops
+    os_count:
     os_name:
     arch: x86_64
     os_image: rhel-6.9-workstation-x86_64-latest
     variant: Workstation
-    os_flavor: medium
+    os_flavor: m1.medium
     ip_addr:
     os_networks:
+    os_floating_ip_pool:
     role: w_client
 
   - name: machine_2
-    provider: beaker
-    bkr_arch: i386
-    bkr_tag: ['RTT_ACCEPTED']
-    bkr_family: RedHatEnterpriseLinux6
-    bkr_variant: Workstation
-    info: client
-    ip_addr:
-    role: w_client
-
-  - name: machine_3
-    provider: beaker
-    bkr_arch: s390x
-    bkr_tag: ['RTT_ACCEPTED']
-    bkr_family: RedHatEnterpriseLinux6
-    bkr_variant: Server
-    info: client
-    ip_addr:
-    role: s390x_client
-
-  - name: machine_4
     provider: openstack
-    crendential: openstack_ciops
+    credential: openstack_ciops
     arch: x86_64
     variant: Server
+    os_count:
     os_image: rhel-7.2-server-x86_64-latest
-    os_flavor: medium
+    os_flavor: m1.medium
     os_networks:
+    os_floating_ip_pool:
     ip_addr:
     role: test_pilot
 

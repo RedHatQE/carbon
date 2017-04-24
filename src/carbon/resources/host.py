@@ -58,6 +58,18 @@ class Host(CarbonResource):
         else:
             self._name = name
 
+        self._creds = parameters.pop('creds', None)
+        if self._creds is None:
+            raise Exception('A provider must be set for the host.')
+
+        self._role = parameters.pop('role', None)
+        if self._role is None:
+            raise Exception('A provider must be set for the host.')
+
+        self._scenario_id = parameters.pop('scenario_id', None)
+        if self._scenario_id is None:
+            raise Exception("Host is not associated with a scenario.")
+
         # we must set provider initially and it can't be
         # changed afterwards.
         provider = parameters.pop('provider', None)
@@ -113,7 +125,8 @@ class Host(CarbonResource):
 
     @provider.setter
     def provider(self, value):
-        raise AttributeError('You can set provider after class is instanciated.')
+        raise AttributeError(
+            'You can set provider after class is instanciated.')
 
     def profile(self):
         d = self.provider.build_profile(self)
@@ -154,3 +167,20 @@ class Host(CarbonResource):
             'clean_msg': '   cleanup after cleanup host %s' % self.name
         }
         return task
+
+    def desc(self):
+        """Transform a host object into a host description based on their
+        provider.
+        """
+        _desc = {
+            'name': self._name,
+            'provider': self._provider_cls.__provider_name__,
+            'creds': self._creds,
+            'role': self._role,
+            'scenario_id': self._scenario_id
+        }
+        _provider_prefix = self.provider.__provider_prefix__
+        for k, v in self.__dict__.items():
+            if k.startswith(_provider_prefix):
+                _desc[k] = v
+        return _desc

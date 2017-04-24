@@ -150,7 +150,11 @@ class CarbonProvisioner(object):
     """
     This is the base class for all provisioners for provisioning machines
     """
+
     def create(self):
+        raise NotImplementedError
+
+    def delete(self):
         raise NotImplementedError
 
 

@@ -26,10 +26,12 @@
 import sys
 import os
 import inspect
+import json
 import pkgutil
 import random
 import string
 import threading
+import yaml
 
 # sentinel
 _missing = object()
@@ -194,6 +196,69 @@ def gen_random_str(char_num=8):
     return ''.join(random.SystemRandom().
                    choice(string.ascii_lowercase + string.digits) for
                    _ in range(char_num))
+
+
+def file_mgmt(operation, file_path, content=None, cfg_parser=None):
+    """A generic function to manage files (read/write).
+
+    :param operation: File operation type to perform
+    :type operation: str
+    :param file_path: File name including path
+    :type file_path: str
+    :param content: Data to write to a file
+    :type content: object
+    :param cfg_parser: Config parser object (Only needed if the file being
+        processed is a configuration file parser language)
+    :type cfg_parser: bool
+    :return: Data that was read from a file
+    :rtype: object
+    """
+
+    # Determine file extension
+    file_ext = os.path.splitext(file_path)[-1]
+
+    if operation in ['r', 'read']:
+        # Read
+        if os.path.exists(file_path):
+            if file_ext == ".json":
+                # json
+                with open(file_path) as f_raw:
+                    return json.load(f_raw)
+            elif file_ext in ['.yaml', '.yml']:
+                # yaml
+                with open(file_path) as f_raw:
+                    return yaml.load(f_raw)
+            else:
+                # text
+                with open(file_path) as f_raw:
+                    if cfg_parser is not None:
+                        # Config parser file
+                        return cfg_parser.readfp(f_raw)
+                    else:
+                        return f_raw.read()
+        else:
+            raise IOError("%s file not found!" % file_path)
+    elif operation in ['w', 'write']:
+        # Write
+        mode = 'w+' if os.path.exists(file_path) else 'w'
+        if file_ext == ".json":
+            # json
+            with open(file_path, mode) as f_raw:
+                json.dump(content, f_raw, indent=4, sort_keys=True)
+        elif file_ext in ['.yaml', '.yml']:
+            # yaml
+            with open(file_path, mode) as f_raw:
+                yaml.dump(content, f_raw, default_flow_style=False)
+        else:
+            # text
+            with open(file_path, mode) as f_raw:
+                if cfg_parser is not None:
+                    # Config parser file
+                    cfg_parser.write(f_raw)
+                else:
+                    f_raw.write(content)
+    else:
+        raise Exception("Unknown file operation: %s." % operation)
 
 
 class LockedCachedProperty(object):

@@ -57,6 +57,10 @@ class Scenario(CarbonResource):
         if not name:
             self._name = str(uuid.uuid4())
 
+        # Every carbon scenario will have an id. This id aligns with the hosts
+        # defined in each scenario
+        self._id = str(uuid.uuid4())
+
         self._hosts = list()
         self._actions = list()
         self._executes = list()

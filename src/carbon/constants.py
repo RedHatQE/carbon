@@ -24,6 +24,7 @@
 """
 import os
 
+CARBON_ROOT = os.path.join("/".join(os.path.dirname(__file__).split('/')[0:-2]))
 SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "schema.yaml")
 
 TASKLIST = ["validate",

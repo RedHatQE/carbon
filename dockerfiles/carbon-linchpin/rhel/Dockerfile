@@ -54,6 +54,7 @@ carbon --version; \
 pip install requests==2.10.0; \
 pip install jinja2==2.8; \
 pip install pbr==2.0.0; \
+pip install babel==2.3.4; \
 cd ~/linchpin-source; \
 pip install pip --upgrade; \
 pip install setuptools --upgrade; \

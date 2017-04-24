@@ -1,4 +1,6 @@
+https://github.com/rywillia/linch-pin/tarball/requirements#egg=linchpin
 https://github.com/tvieira/taskrunner/tarball/master#egg=taskrunner-0.3.1
+jinja2!=2.9,<=2.8
 werkzeug>=0.11.15
 click>=6.7
 PyYAML>=3.12

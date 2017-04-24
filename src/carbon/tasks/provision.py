@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.tasks.create
+    carbon.tasks.provision
 
     Here you add brief description of what this module is about
 
@@ -24,16 +24,30 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from ..provisioners import LinchpinProvisioner
 
 
 class ProvisionTask(CarbonTask):
-    def __init__(self, msg, clean_msg, **kwargs):
+    """The provision task object will call a provisioner to provision
+    resources in their declared provider. By default Carbon will be
+    using the linch-pin provisioner if no provisioner was declared.
+    """
+
+    # In the future, we should give users the ability in their input file for
+    # Carbon to override the default provisioner.
+    __default_provisioner = LinchpinProvisioner
+
+    def __init__(self, msg, clean_msg, host, **kwargs):
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
         self.clean_msg = clean_msg
 
+        # Instantiate a provisioner object with a host description
+        self.provisioner = self.__default_provisioner(host.desc())
+
     def run(self, context):
         print(self.msg)
+        self.provisioner.create()
 
     def cleanup(self, context):
         print(self.clean_msg)

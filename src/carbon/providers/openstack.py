@@ -43,6 +43,11 @@ class OpenstackProvider(CarbonProvider):
                  not available. The ‘none’ value tells the Compute service
                  to not allocate any networking for the server.
 
+        os_count: (mandatory) The number of resources to create.
+
+        os_floating_ip_pool: (mandatory) The floating ip pool to use to create
+                             a floating IP.
+
         os_key_name: (optional) name of previously created keypair to
                      inject into the instance
 
@@ -71,9 +76,11 @@ class OpenstackProvider(CarbonProvider):
 
     _mandatory_parameters = (
         'name',
+        'count',
         'flavor',
         'image',
         'networks',
+        'floating_ip_pool'
     )
 
     _optional_parameters = (
@@ -133,6 +140,20 @@ class OpenstackProvider(CarbonProvider):
 
     @classmethod
     def validate_security_groups(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_count(cls, value):
+        if value:
+            return isinstance(value, int)
+        else:
+            return True
+
+    @classmethod
+    def validate_floating_ip_pool(cls, value):
         if value:
             return isinstance(value, string_types)
         else:

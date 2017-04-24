@@ -21,7 +21,8 @@ ROOT = os.path.dirname(__file__)
 VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
 
 dependencies = [
-    'https://github.com/tvieira/taskrunner/tarball/master#egg=taskrunner-0.3.1'
+    'https://github.com/tvieira/taskrunner/tarball/master#egg=taskrunner-0.3.1',
+    'https://github.com/rywillia/linch-pin/tarball/requirements#egg=linchpin'
 ]
 
 requires = [
@@ -30,7 +31,9 @@ requires = [
     'Click',
     'taskrunner==0.3.1',
     'PyYAML',
-    'pykwalify'
+    'pykwalify',
+    'jinja2!=2.9,<=2.8',
+    'linchpin'
 ]
 
 

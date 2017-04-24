@@ -15,11 +15,13 @@ provision:
 
   - name: machine_1
     provider: openstack
-    crendential: openstack_ciops
+    credential: openstack_ciops
+    os_count: 1
     os_name:
     os_image: rhel-6.9-workstation-x86_64-latest
-    os_flavor: medium
+    os_flavor: m1.medium
     os_networks: ['pit-jenkins']
+    os_floating_ip_pool: "10.8.172.0/22"
     os_key_name: 'pit-jenkins'
     os_admin_pass:
     os_description:
@@ -50,11 +52,13 @@ provision:
 
   - name: machine_4
     provider: openstack
-    crendential: openstack_ciops
+    credential: openstack_ciops
+    os_count: 1
     os_name:
     os_image: rhel-6.9-server-x86_64-latest
-    os_flavor: medium
+    os_flavor: m1.medium
     os_networks: ['pit-jenkins']
+    os_floating_ip_pool: "10.8.172.0/22"
     os_key_name: 'pit-jenkins'
     os_admin_pass:
     os_description:
