@@ -23,8 +23,6 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import uuid
-
 from ..core import CarbonResource, CarbonException
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
@@ -58,27 +56,29 @@ class Host(CarbonResource):
         else:
             self._name = name
 
-        self._creds = parameters.pop('creds', None)
-        if self._creds is None:
-            raise Exception('A provider must be set for the host.')
-
         self._role = parameters.pop('role', None)
         if self._role is None:
-            raise Exception('A provider must be set for the host.')
+            raise Exception('A role must be set for host %s.' % str(self.name))
 
-        self._scenario_id = parameters.pop('scenario_id', None)
-        if self._scenario_id is None:
-            raise Exception("Host is not associated with a scenario.")
+        # Set the scenario id
+        self._scenario_id = kwargs['scenario_id']
 
         # we must set provider initially and it can't be
         # changed afterwards.
         provider = parameters.pop('provider', None)
         if provider is None:
-            raise Exception('A provider must be set for the host.')
+            raise Exception('A provider must be set for the host %s.' %
+                            str(self.name))
         if provider not in get_providers_list():
             raise Exception('Invalid provider for host %s.' % str(self.name))
         else:
             self._provider_cls = get_provider_class(provider)
+
+        # We must set the providers credentials initially
+        provider_creds = parameters.pop('provider_creds', None)
+        if provider_creds is None:
+            raise Exception('Provider credentials must be set for host %s.' %
+                            str(self.name))
 
         # every provider has a name as mandatory field.
         # first check if name exist (probably because of reusing machine).
@@ -102,6 +102,23 @@ class Host(CarbonResource):
         for p in self.provider.get_all_parameters():
             setattr(self, p, parameters.get(p, None))
 
+        # Every provider must have credentials.
+        # Check if provider credentials have all the mandatory fields set
+        missing_mandatory_creds_fields = \
+            self.provider.check_mandatory_creds_parameters(
+                provider_creds[parameters['credential']])
+        if len(missing_mandatory_creds_fields) > 0:
+            raise Exception('Missing mandatory credentials fields for '
+                            'credentials section %s, for node %s, based on '
+                            'the %s provider:\n\n%s'
+                            % (parameters['credential'], self._name,
+                               self.provider.name, missing_mandatory_creds_fields))
+
+        # Create the provider credentials attributes in the host object
+        self.provider_creds = {}
+        for p in self.provider.get_mandatory_creds_parameters():
+            self.provider_creds[p] = provider_creds[parameters['credential']][p]
+
         self._validate_task_cls = validate_task_cls
         self._provision_task_cls = provision_task_cls
         self._cleanup_task_cls = cleanup_task_cls
@@ -117,7 +134,7 @@ class Host(CarbonResource):
 
     @name.setter
     def name(self, value):
-        raise AttributeError('You can set name after class is instanciated.')
+        raise AttributeError('You cannot set name after class is instanciated.')
 
     @property
     def provider(self):
@@ -125,14 +142,32 @@ class Host(CarbonResource):
 
     @provider.setter
     def provider(self, value):
-        raise AttributeError(
-            'You can set provider after class is instanciated.')
+        raise AttributeError('You cannot set provider after class is instanciated.')
+
+    @property
+    def scenario_id(self):
+        return self._scenario_id
+
+    @scenario_id.setter
+    def scenario_id(self, value):
+        raise AttributeError('You cannot set scenario id after class is instanciated.')
+
+    @property
+    def role(self):
+        return self._role
+
+    @role.setter
+    def role(self, value):
+        raise AttributeError('You cant set role after class is instanciated.')
 
     def profile(self):
         d = self.provider.build_profile(self)
         d.update({
             'name': self.name,
             'provider': self.provider.name(),
+            'role': self._role,
+            'provider_creds': self.provider_creds,
+            'scenario_id': self._scenario_id
         })
         return d
 
@@ -167,20 +202,3 @@ class Host(CarbonResource):
             'clean_msg': '   cleanup after cleanup host %s' % self.name
         }
         return task
-
-    def desc(self):
-        """Transform a host object into a host description based on their
-        provider.
-        """
-        _desc = {
-            'name': self._name,
-            'provider': self._provider_cls.__provider_name__,
-            'creds': self._creds,
-            'role': self._role,
-            'scenario_id': self._scenario_id
-        }
-        _provider_prefix = self.provider.__provider_prefix__
-        for k, v in self.__dict__.items():
-            if k.startswith(_provider_prefix):
-                _desc[k] = v
-        return _desc

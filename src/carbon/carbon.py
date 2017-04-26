@@ -151,7 +151,7 @@ class Carbon(object):
         self.logger_name = self.import_name
 
         self.scenario = Scenario()
-        self.creds = None
+        self.creds = {}
 
     @LockedCachedProperty
     def name(self):
@@ -225,7 +225,6 @@ class Carbon(object):
 
         try:
             cred_items = data.pop('credentials')
-            self.creds = cred_items
             pro_items = data.pop('provision')
             orc_items = data.pop('orchestrate')
             exe_items = data.pop('execute')
@@ -236,7 +235,12 @@ class Carbon(object):
         data["filename"] = filepath
         self.scenario.load(data)
 
-        self._load_host_resources(Host, pro_items)
+        # Set scenario id
+        self.scenario.set_scenario_id()
+
+        self._load_credentials(cred_items)
+
+        self._load_resources(Host, pro_items)
         self._load_resources(Action, orc_items)
         self._load_resources(Execute, exe_items)
         self._load_resources(Report, rpt_items)
@@ -251,6 +255,22 @@ class Carbon(object):
         #     for pkg in self._extract_packages(hst):
         #         host.packages.append(Action(pkg))
         #     self.scenario.add_hosts(host)
+
+    def _load_credentials(self, creds_list):
+        """Load all provider credentials for the scenario.
+
+        It will construct a dictionary containing entries for each credential
+        defined in the YAML.
+
+        :param creds_list: A list of provider credentials
+        :return: None
+        """
+        for item in creds_list:
+            try:
+                _name = item.pop('name')
+                self.creds[_name] = item
+            except KeyError as ex:
+                raise CarbonException(ex)
 
     def _load_resources(self, res_type, res_list):
         """
@@ -271,37 +291,11 @@ class Carbon(object):
         :return: None
         """
         for item in res_list:
-            self.scenario.add_resource(res_type(parameters=item))
-
-    def _load_host_resources(self, res_type, res_list):
-        """
-        Load the host resource in the scenario list of `res_type`.
-
-        The scenario holds a list specifically for the host resource type.
-        list it calls ~self.scenario.add_resource for each item in the
-        list of the given host resources, and it will map the credentials
-        into the host
-
-        :param res_type: The type of resources the function will load into its list
-        :param res_list: A list of resources dict
-        :return: None
-        """
-        for item in res_list:
-            credtoadd = None
-            if "credential" in item:
-                for cred in self.creds:
-                    #                     print cred
-                    if cred["name"] == item["credential"]:
-                        credtoadd = cred
-            if credtoadd:
-                item["creds"] = credtoadd
-            else:
-                raise CarbonException("ERROR: no creds for your host %s, cannot continue." % item["name"])
-
-            # Inject scenario id per host
-            item['scenario_id'] = self.scenario._id
-
-            self.scenario.add_resource(res_type(parameters=item))
+            if res_type == Host:
+                # Set all available provider credentials into host object
+                item['provider_creds'] = self.creds
+            self.scenario.add_resource(res_type(
+                parameters=item, scenario_id=self.scenario.scenario_id))
 
     def _add_task_into_pipeline(self, t):
         """
@@ -332,7 +326,8 @@ class Carbon(object):
 
         # check if scenario was set
         if self.scenario is None:
-            raise Exception("You must set a scenario before run the framework.")
+            raise Exception(
+                "You must set a scenario before run the framework.")
 
         # get the list of resources for each main section, including
         # the ~self.scenario object itself.

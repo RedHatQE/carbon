@@ -32,7 +32,6 @@ requires = [
     'taskrunner==0.3.1',
     'PyYAML',
     'pykwalify',
-    'jinja2!=2.9,<=2.8',
     'linchpin'
 ]
 

@@ -361,10 +361,10 @@ class LinchpinProvisioner(CarbonProvisioner):
             self.host_desc['name'],), console=False)
         print(results)
 
-        # TODO: Remove this destory call at somepoint, added for testing
-        self._destory()
+        # TODO: Remove this destroy call at somepoint, added for testing
+        self._destroy()
 
-    def _destory(self):
+    def _destroy(self):
         """Linch-pin destroy to teardown resources.
 
         http://linch-pin.readthedocs.io/en/latest/linchpincli_linchpin_drop.html
@@ -390,7 +390,7 @@ class LinchpinProvisioner(CarbonProvisioner):
         """
         print('Tearing down machines from {klass}'
               .format(klass=self.__class__))
-        self._destory()
+        self._destroy()
 
 
 class LinchpinFiles(object):
@@ -488,10 +488,10 @@ class LinchpinFiles(object):
         """
         _host_desc = kwargs['host_desc']
         mydict = {}
-        mydict["endpoint"] = _host_desc["creds"]["auth_url"]
-        mydict["project"] = _host_desc["creds"]["tenant_name"]
-        mydict["username"] = _host_desc["creds"]["username"]
-        mydict["password"] = _host_desc["creds"]["password"]
+        mydict["endpoint"] = _host_desc["provider_creds"]["auth_url"]
+        mydict["project"] = _host_desc["provider_creds"]["tenant_name"]
+        mydict["username"] = _host_desc["provider_creds"]["username"]
+        mydict["password"] = _host_desc["provider_creds"]["password"]
         return mydict
 
     @classmethod

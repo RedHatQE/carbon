@@ -11,6 +11,8 @@ credentials:
     username: username
     password: password
 
+  - name: beaker
+
 provision:
 
   - name: machine_1
@@ -32,6 +34,7 @@ provision:
 
   - name: machine_2
     provider: beaker
+    credential: beaker
     bkr_arch: i386
     bkr_tag: ['RTT_ACCEPTED']
     bkr_family: RedHatEnterpriseLinux6
@@ -42,6 +45,7 @@ provision:
 
   - name: machine_3
     provider: beaker
+    credential: beaker
     bkr_arch: s390x
     bkr_tag: ['RTT_ACCEPTED']
     bkr_family: RedHatEnterpriseLinux6

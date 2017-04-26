@@ -180,6 +180,7 @@ class CarbonProvider(object):
 
     _mandatory_parameters = ()
     _optional_parameters = ()
+    _mandatory_creds_parameters = ()
 
     def __init__(self, **kwargs):
         # I care only about the parameters set on ~self._parameters
@@ -208,6 +209,27 @@ class CarbonProvider(object):
         intersec = {k for k, v in parameters.items()}\
             .intersection({'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters})
         return {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters}.difference(intersec)
+
+    @classmethod
+    def check_mandatory_creds_parameters(cls, parameters):
+        """
+        Validates the parameters against the mandatory credentials parameters
+        set by the class.
+        :param parameters: a dictionary of parameters
+        :return: an empty set if all mandatory creds fields satisfy or the list
+                 of fields that needs to be filled.
+        """
+        intersec = {k for k, v in parameters.items()}\
+            .intersection({k for k in cls._mandatory_creds_parameters})
+        return {k for k in cls._mandatory_creds_parameters}.difference(intersec)
+
+    @classmethod
+    def get_mandatory_creds_parameters(cls):
+        """
+        Get the list of the mandatory credential parameters
+        :return: a tuple of the mandatory credential paramaters.
+        """
+        return (k for k in cls._mandatory_creds_parameters)
 
     @classmethod
     def get_mandatory_parameters(cls):

@@ -56,10 +56,7 @@ class Scenario(CarbonResource):
 
         if not name:
             self._name = str(uuid.uuid4())
-
-        # Every carbon scenario will have an id. This id aligns with the hosts
-        # defined in each scenario
-        self._id = str(uuid.uuid4())
+            self.scenario_id = self._name
 
         self._hosts = list()
         self._actions = list()
@@ -140,6 +137,18 @@ class Scenario(CarbonResource):
         if not isinstance(h, Report):
             raise ValueError('Execute must be of type %s ' % type(Execute))
         self._reports.append(h)
+
+    def set_scenario_id(self):
+        """Set the scenario ID.
+
+        Every scenario has a scenario name declared in the YAML. Each time
+        the scenario is run by Carbon, it will have its own unique scenario id.
+        This allows for easily storing files from provisioning to execution.
+
+        Scenario id is generated as follows: scenario name + 5 chars of uuid.
+        """
+        self.scenario_id = \
+            self._name.replace(' ', '_').lower() + '_' + self.scenario_id[0:5]
 
     def yaml_validate(self, yaml_file):
         """

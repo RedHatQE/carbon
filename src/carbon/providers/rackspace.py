@@ -43,5 +43,7 @@ class RackspaceProvider(CarbonProvider):
 
     _optional_parameters = ()
 
+    _mandatory_creds_parameters = ()
+
     def __init__(self, **kwargs):
         super(RackspaceProvider, self).__init__(**kwargs)

@@ -41,6 +41,8 @@ class BeakerProvider(CarbonProvider):
         'variant',
     )
 
+    _mandatory_creds_parameters = ()
+
     def __init__(self, **kwargs):
         super(BeakerProvider, self).__init__(**kwargs)
 

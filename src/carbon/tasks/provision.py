@@ -43,7 +43,7 @@ class ProvisionTask(CarbonTask):
         self.clean_msg = clean_msg
 
         # Instantiate a provisioner object with a host description
-        self.provisioner = self.__default_provisioner(host.desc())
+        self.provisioner = self.__default_provisioner(host.profile())
 
     def run(self, context):
         print(self.msg)

@@ -91,6 +91,14 @@ class OpenstackProvider(CarbonProvider):
         'security_groups',
     )
 
+    _mandatory_creds_parameters = (
+        'auth_url',
+        'tenant_name',
+        'tenant_id',
+        'username',
+        'password'
+    )
+
     def __init__(self, **kwargs):
         super(OpenstackProvider, self).__init__(**kwargs)
 
