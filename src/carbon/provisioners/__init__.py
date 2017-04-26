@@ -16,4 +16,4 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from .ciops import CiopsProvisioner
-from linch_pin import LinchpinProvisioner
+from .linch_pin import LinchpinProvisioner

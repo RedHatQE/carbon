@@ -257,7 +257,7 @@ class LinchpinProvisioner(CarbonProvisioner):
         src_pf = os.path.realpath('{0}.lp_example'.format(pf_w_path))
 
         if os.path.exists(pf_w_path):
-            print "Directory already exists"
+            print("Directory already exists")
             sys.exit(10)
 
         dir_util.copy_tree(src_w_path, ws, verbose=1)
