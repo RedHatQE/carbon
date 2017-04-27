@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+from sys import platform
 from subprocess import check_call
 import shutil
 
@@ -12,6 +13,23 @@ os.chdir(REPO_ROOT)
 
 def run(command):
     return check_call(command, shell=True)
+
+# Tox is not able to find libs and includes from Homebrew.
+# This fix the problem we may have on Macs. A dirty fix though.
+# Also, in tox I can't define what platform I am to set the appropriated
+# variables.
+if platform == "darwin":
+    # setting the pkg-config directory
+    os.environ["PKG_CONFIG_PATH"]=("/usr/local/lib/pkgconfig:"
+                                   "/usr/local/lib:"
+                                   "/usr/local/opt/libffi/lib/pkgconfig")
+    # installing cryptography
+    os.environ["LDFLAGS"] = "-L/usr/local/opt/openssl/lib"
+    os.environ["CPPFLAGS"] = "-I/usr/local/opt/openssl/include"
+    print("Platform is darwin - installing cryptography with openssl flags.")
+    run('pip install cryptography')
+    os.environ["LDFLAGS"] = ""
+    os.environ["CPPFLAGS"] = ""
 
 # install development libraries
 run('pip install -r requirements.txt')
