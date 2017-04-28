@@ -23,9 +23,7 @@
     triggers:
       - gerrit:
           trigger-on:
-            - patchset-created-event:
-                execlude-drafts: True
-            - ref-updated-event
+            - patchset-created-event
           projects:
             - project-compare-type: 'PLAIN'
               project-pattern: 'carbon'
