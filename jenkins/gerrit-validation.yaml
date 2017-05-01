@@ -70,9 +70,7 @@
           echo "VIRTUAL ENVIRONMENT PYTHON PACKAGES :"; pip freeze
           echo "*************************************************************"
 
-          # Only testing py27 to start until py36 and linch-pin install works
-          # make
-          tox -e py27
+          make
           rc=$?
           if [ $rc -eq 0 ]; then
               echo "*** Carbon validation PASSED : " $rc
