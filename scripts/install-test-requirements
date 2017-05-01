@@ -23,6 +23,15 @@ if platform == "darwin":
     os.environ["PKG_CONFIG_PATH"]=("/usr/local/lib/pkgconfig:"
                                    "/usr/local/lib:"
                                    "/usr/local/opt/libffi/lib/pkgconfig")
+
+    # set encoding as tox on mac loses the default encoding parameters
+    os.environ["LANG"] = "en_US"
+    os.environ["LC_COLLATE"] = "UTF-8"
+    os.environ["LC_CTYPE"] = "UTF-8"
+    os.environ["LC_MESSAGES"] = "UTF-8"
+    os.environ["LC_MONETARY"] = "UTF-8"
+    os.environ["LC_TIME"] = "UTF-8"
+
     # installing cryptography
     os.environ["LDFLAGS"] = "-L/usr/local/opt/openssl/lib"
     os.environ["CPPFLAGS"] = "-I/usr/local/opt/openssl/include"

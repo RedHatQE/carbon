@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 from subprocess import check_call
+from sys import platform
 
 _dname = os.path.dirname
 
@@ -12,6 +13,16 @@ os.chdir(os.path.join(REPO_ROOT, 'tests'))
 def run(command):
     return check_call(command, shell=True)
 
+
+if platform == "darwin":
+    # set encoding as tox on mac loses the default encoding parameters
+    # and nosetests complains of unknown encoding.
+    os.environ["LANG"]="en_US"
+    os.environ["LC_COLLATE"]="UTF-8"
+    os.environ["LC_CTYPE"]="UTF-8"
+    os.environ["LC_MESSAGES"]="UTF-8"
+    os.environ["LC_MONETARY"]="UTF-8"
+    os.environ["LC_TIME"]="UTF-8"
 
 run('nosetests --with-coverage --cover-erase --cover-package carbon '
     '--with-xunit --cover-xml --cover-html -v ./ functional/')
