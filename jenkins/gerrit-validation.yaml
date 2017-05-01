@@ -24,6 +24,17 @@
       - gerrit:
           trigger-on:
             - patchset-created-event
+          override-votes: True
+          gerrit-build-started-verified-value: 0
+          gerrit-build-successful-verified-value: 1
+          gerrit-build-failed-verified-value: -1
+          gerrit-build-unstable-verified-value: 0
+          gerrit-build-notbuilt-verified-value: 0
+          gerrit-build-started-codereview-value: 0
+          gerrit-build-successful-codereview-value: 0
+          gerrit-build-failed-codereview-value: 0
+          gerrit-build-unstable-codereview-value: 0
+          gerrit-build-notbuilt-codereview-value: 0
           projects:
             - project-compare-type: 'PLAIN'
               project-pattern: 'carbon'
