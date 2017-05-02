@@ -22,7 +22,7 @@ VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
 
 dependencies = [
     'https://github.com/mkollaro/taskrunner/tarball/master#egg=taskrunner-0.3.0',
-    'https://github.com/CentOS-PaaS-SIG/linch-pin/develop#egg=linchpin'
+    'https://github.com/rywillia/linch-pin/tarball/fix_import#egg=linchpin'
 ]
 
 requires = [

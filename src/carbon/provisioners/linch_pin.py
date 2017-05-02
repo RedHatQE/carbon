@@ -24,144 +24,15 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
+import json
 import shutil
-import sys
 
 from distutils import dir_util
-from linchpin.api.utils import yaml2json
-from linchpin.context import LinchpinContext
+from linchpin.cli.context import LinchpinContext
 from linchpin.api import LinchpinAPI
-from linchpin.api.invoke_playbooks import invoke_linchpin
 from ..constants import CARBON_ROOT
 from ..core import CarbonProvisioner
 from ..helpers import file_mgmt
-
-
-class lp_API(LinchpinAPI):
-
-    def lp_up(self, pinfile, targets='all', console=True):
-        """
-        This function takes a list of targets, and provisions them according
-        to their topology. If an layout argument is provided, an inventory
-        will be generated for the provisioned nodes.
-
-        \b
-        pf:
-            Provided PinFile, with available targets,
-
-        \b
-        targets:
-            A tuple of targets to provision.
-        """
-
-        return(self.run_playbook(pinfile, targets, playbook="provision", console=console))
-
-    def lp_destroy(self, pf, targets, console=True):
-        """
-        This function takes a list of targets, and performs a destructive
-        teardown, including undefining nodes, according to the target.
-
-        \b
-        SEE ALSO:
-            lp_down - currently unimplemented
-
-        \b
-        pf:
-            Provided PinFile, with available targets,
-
-        \b
-        targets:
-            A tuple of targets to destroy.
-        """
-
-        return(self.run_playbook(pf, targets, playbook="destroy", console=console))
-
-    def run_playbook(self, pinfile, targets='all', playbook='provision', console=True):
-        """
-        This function takes a list of targets, and executes the given
-        playbook (provison, destroy, etc.) for each provided target.
-
-        \b
-        pf:
-            Provided PinFile, with available targets,
-
-        \b
-        targets:
-            A tuple of targets to run.
-        """
-
-        results = []
-        pf = yaml2json(pinfile)
-
-        # playbooks check whether from_cli is defined
-        # if not, vars get loaded from linchpin.conf
-        self.ctx.evars['from_cli'] = True
-        self.ctx.evars['lp_path'] = self.lp_path
-
-        self.ctx.evars['default_resources_path'] = '{0}/{1}'.format(
-            self.ctx.workspace,
-            self.ctx.cfgs['evars']['resources_folder'])
-        self.ctx.evars['default_inventories_path'] = '{0}/{1}'.format(
-            self.ctx.workspace,
-            self.ctx.cfgs['evars']['inventories_folder'])
-
-        self.ctx.evars['state'] = "present"
-
-        if playbook == 'destroy':
-            self.ctx.evars['state'] = "absent"
-
-        # checks wether the targets are valid or not
-        if set(targets) == set(pf.keys()).intersection(targets) and len(targets) > 0:
-            for target in targets:
-                self.ctx.log_state('{0} target: {1}'.format(playbook, target))
-                topology_registry = pf.get("topology_registry", None)
-                self.ctx.evars['topology'] = self.find_topology(pf[target]["topology"],
-                                                                topology_registry)
-                if "layout" in pf[target]:
-                    self.ctx.evars['layout_file'] = (
-                        '{0}/{1}/{2}'.format(self.ctx.workspace,
-                                             self.ctx.cfgs['evars'][
-                                                 'layouts_folder'],
-                                             pf[target]["layout"]))
-
-
-#                def invoke_linchpin(ctx, lp_path, self.ctx.evars, playbook='provision', console=True):
-                # invoke the PROVISION linch-pin playbook
-                output = invoke_linchpin(
-                    self.ctx,
-                    self.lp_path,
-                    self.ctx.evars,
-                    playbook=playbook,
-                    console=console
-                )
-                results.append({target: output})
-            return results
-
-        elif len(targets) == 0:
-            for target in set(pf.keys()).difference():
-                self.ctx.log_state('{0} target: {1}'.format(playbook, target))
-                topology_registry = pf.get("topology_registry", None)
-                self.ctx.evars['topology'] = self.find_topology(pf[target]["topology"],
-                                                                topology_registry)
-                if "layout" in pf[target]:
-                    self.ctx.evars['layout_file'] = (
-                        '{0}/{1}/{2}'.format(self.ctx.workspace,
-                                             self.ctx.cfgs['evars'][
-                                                 'layouts_folder'],
-                                             pf[target]["layout"]))
-
-                # invoke the PROVISION linch-pin playbook
-                output = invoke_linchpin(
-                    self.ctx,
-                    self.lp_path,
-                    self.ctx.evars,
-                    playbook=playbook,
-                    console=console
-                )
-                results.append({target: output})
-            return results
-        else:
-            raise KeyError("One or more Invalid targets found")
 
 
 class LinchpinProvisioner(CarbonProvisioner):
@@ -214,8 +85,7 @@ class LinchpinProvisioner(CarbonProvisioner):
         self._linchpin_context = LinchpinContext()
         self._linchpin_context.load_config()
         self._linchpin_context.load_global_evars()
-        self._linchpin_context.setup_logging(
-            eval(self._linchpin_context.cfgs['logger']['enable']))
+        self._linchpin_context.setup_logging()
         self._linchpin_context.workspace = self._workspace
         self._linchpin_context.log_info(
             "ctx.workspace: {0}".format(self._linchpin_context.workspace))
@@ -236,8 +106,11 @@ class LinchpinProvisioner(CarbonProvisioner):
         self._credentials = os.path.join(self._workspace,
                                          self.host_desc['provider'] + ".yml")
 
+        # Set console
+        self._linchpin_context.cfgs['ansible']['console'] = u'False'
+
         # Create linch-pin API object
-        self._linchpin = lp_API(self._linchpin_context)
+        self._linchpin = LinchpinAPI(self._linchpin_context)
 
     def lp_init(self):
         """
@@ -257,14 +130,106 @@ class LinchpinProvisioner(CarbonProvisioner):
         src_pf = os.path.realpath('{0}.lp_example'.format(pf_w_path))
 
         if os.path.exists(pf_w_path):
-            print("Directory already exists")
-            sys.exit(10)
+            raise Exception("Directory %s already exists" % pf_w_path)
 
         dir_util.copy_tree(src_w_path, ws, verbose=1)
         os.rename(src_pf, pf_w_path)
 
         self._linchpin_context.log_state('{0} and file structure created at {1}'.format(
             self._linchpin_context.pinfile, self._linchpin_context.workspace))
+
+    def lp_check_results(self, results, module, target, console=False):
+        """
+        Takes linch-pin returned results and processes for success or failure.
+        Logs results. If Failures logs errors.
+        Updates status of resource and continues
+        """
+        failure_log = {}
+        log_output = {}
+
+        # Process results if console True
+        # Results only return 0 for success non zero failure
+        if console == u'True' or console == u'true':
+            if results == 0:
+                print("MODULE [%s] TARGET [%s] --- Success" % (module, target))
+            else:
+                print("MODULE [%s] TARGET [%s] --- Failed" % (module, target))
+
+            # TODO Update resources status here
+            # or throw exception and caller handles it.
+
+        # Process results if console False
+        else:
+            task_ok = 0
+            task_failed = 0
+            task_changed = 0
+            failures = []
+            log_msgs = []
+
+            # Process each task result for target
+            for task_result in results:
+
+                # Catalog Changed
+                if task_result._result['changed'] is True:
+                    task_changed = task_changed + 1
+
+                # Check if failed an obtain error
+                if 'failed' in task_result._result:
+                    task_stderr = ""
+                    task_stdout = ""
+                    task_msg = ""
+                    task_failed = task_failed + 1
+                    if 'module_stderr' in task_result._result:
+                        task_stderr = task_result._result['module_stderr']
+                    if 'module_stdout' in task_result._result:
+                        task_stdout = task_result._result['module_stdout']
+                    if 'msg' in task_result._result:
+                        task_msg = task_result._result['msg']
+                    elif 'message' in task_result._result:
+                        task_msg = task_result._result['message']
+                    bfailure = 'TARGET: [%s]: HOST: [%s]: TASK [%s: %s] *** FAILED! => { "changed": %s,' % (
+                        target, task_result._host,
+                        task_result._task._role, task_result._task.name,
+                        task_result._result['changed'])
+                    efailure = ' "failed": %s, "module_stderr": %s, "module_stdout": %s, "msg": %s}' % (
+                        task_result._result['failed'],
+                        json.dumps(task_stderr),
+                        json.dumps(task_stdout),
+                        json.dumps(task_msg))
+                    failure = "%s %s" % (bfailure, efailure)
+                    failures.append(failure)
+
+                # Track Success (OK)
+                else:
+                    task_ok = task_ok + 1
+
+            # Update failure log and db status of resource
+            failure_log[target] = failures
+
+            # TODO Update DB of resource status
+            # Do here or throw exception and let caller handle
+            # Success Failure etc.
+
+            # Update Msg's for logger
+            log_msg = "%s            : ok=%s    changed=%s    unreachable=%s    failed=%s" \
+                % (task_result._host, task_ok, task_changed, 0, task_failed)
+            tstr = "PLAY RECAP for %s - TARGET [%s]" % (module, target)
+            log_msgs.append(
+                "***** %s *********************************************************************" % tstr)
+            log_msgs.append(log_msg)
+            log_output[target] = log_msgs
+
+            # Output to log
+            print()
+            for target, msgs in log_output.iteritems():
+                for msg in msgs:
+                    print(msg)
+                if target in failure_log and len(failure_log[target]) > 0:
+                    print("     %s Failures:" % target)
+                    failures = failure_log[target]
+                    for failure in failures:
+                        print("          %s" % failure)
+                print()
 
     def create_topology_file(self):
         """Create the linch-pin topology file which contains resources to be
@@ -356,10 +321,11 @@ class LinchpinProvisioner(CarbonProvisioner):
         """
         # TODO: Need to submit a code patch to linch-pin to return output
         # TODO: Parse output depending on results
-        # TODO: Handle if failure occured, do we need to destory machines?
+        # TODO: Handle if failure occured, do we need to destroy machines?
         results = self._linchpin.lp_up(self._pinfile, targets=(
-            self.host_desc['name'],), console=False)
-        print(results)
+            self.host_desc['name'],))
+        self.lp_check_results(results, "lp_up", self.host_desc['name'],
+                              self._linchpin_context.cfgs['ansible']['console'])
 
         # TODO: Remove this destroy call at somepoint, added for testing
         self._destroy()
@@ -371,10 +337,11 @@ class LinchpinProvisioner(CarbonProvisioner):
         """
         # TODO: Need to submit a code patch to linch-pin to return output
         # TODO: Parse output depending on results
-        # TODO: Handle if failure occured, do we need to destory machines?
+        # TODO: Handle if failure occured, do we need to destroy machines?
         results = self._linchpin.lp_destroy(self._pinfile, targets=(
-            self.host_desc['name'],), console=False)
-        print(results)
+            self.host_desc['name'],))
+        self.lp_check_results(results, "lp_destroy", self.host_desc['name'],
+                              self._linchpin_context.cfgs['ansible']['console'])
 
     def create(self):
         """The main method to start resource creation. It will call linch-pin
