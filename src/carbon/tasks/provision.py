@@ -24,7 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
-from ..provisioners import LinchpinProvisioner
+from ..helpers import get_provisioner_class
 
 
 class ProvisionTask(CarbonTask):
@@ -35,7 +35,7 @@ class ProvisionTask(CarbonTask):
 
     # In the future, we should give users the ability in their input file for
     # Carbon to override the default provisioner.
-    __default_provisioner = LinchpinProvisioner
+    __default_provisioner = get_provisioner_class("linchpin")
 
     def __init__(self, msg, clean_msg, host, **kwargs):
         super(ProvisionTask, self).__init__(**kwargs)

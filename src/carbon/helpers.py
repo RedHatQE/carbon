@@ -112,6 +112,46 @@ def get_core_tasks_classes():
     return tasks_list
 
 
+def get_provisioners_classes():
+    """Go through all modules within carbon.provisioners package and return
+    the list of all provisioners classes within it. All provisioners within
+    the carbon.provisioners package are considered valid provisioners classes
+    to be used by Carbon framework.
+    :return: List of all provisioners classes"""
+    from .core import CarbonProvisioner
+    from . import provisioners
+
+    # all task classes must
+    prefix = provisioners.__name__ + "."
+
+    provisioners_list = []
+
+    # Run through each module within tasks and take the list of
+    # classes that are subclass of CarbonTask but not CarbonTask itself.
+    # When you import a class within a module, it becames a member of
+    # that class
+    for importer, modname, ispkg in pkgutil.iter_modules(provisioners.__path__, prefix):
+        if str(modname).endswith('.ext'):
+            continue
+        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
+        for clsname, clsmember in clsmembers:
+            if (clsmember is not CarbonProvisioner) and issubclass(clsmember, CarbonProvisioner):
+                provisioners_list.append(clsmember)
+
+    return provisioners_list
+
+
+def get_provisioner_class(name):
+    """Return the provisioner class based on the __provisioner_name__ set
+    within the class. See ~carbon.core.CarbonProvisioner for more information.
+    :param name: The name of the provisioner
+    :return: The provisioner class
+    """
+    for provisioner in get_provisioners_classes():
+        if provisioner.__provisioner_name__ == name:
+            return provisioner
+
+
 def get_providers_classes():
     """
     Go through all modules within carbon.providers package and return

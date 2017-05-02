@@ -30,9 +30,15 @@ class PITProvisioner(CarbonProvisioner):
     """
     Carbon's own provisioner
     """
+    __provisioner_name__ = 'carbon'
+
     def __init__(self, **kwargs):
         super(PITProvisioner, self).__init__(**kwargs)
 
     def create(self):
         print('Provisioning machines from {klass}'
+              .format(klass=self.__class__))
+
+    def delete(self):
+        print('Tearing down machines from {klass}'
               .format(klass=self.__class__))

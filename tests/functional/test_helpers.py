@@ -28,10 +28,15 @@ try:
 except ImportError:
     from configparser import ConfigParser
 
-from nose.tools import assert_is_instance, assert_equal, raises
+from nose.tools import assert_is_instance, assert_equal, assert_is, raises
+from nose.tools import assert_not_equal
 
 from carbon import Carbon
 from carbon.helpers import file_mgmt
+from carbon.helpers import get_provisioner_class, get_provisioners_classes
+from carbon.helpers import get_provider_class, get_providers_classes
+from carbon.providers import OpenstackProvider
+from carbon.provisioners import LinchpinProvisioner
 
 
 class TestLogging(object):
@@ -102,3 +107,29 @@ class TestFileManagement(object):
             assert_is_instance(cfg2, ConfigParser)
         finally:
             os.remove(_file)
+
+
+class TestGetModuleClasses(object):
+    """Unit tests to test carbon functions that get classes or a class from
+    carbon modules.
+    """
+
+    @staticmethod
+    def test_get_provisioners_classes():
+        provisioners = get_provisioners_classes()
+        assert_not_equal(len(provisioners), 0)
+
+    @staticmethod
+    def test_get_provisioner_class():
+        provisioner = get_provisioner_class('linchpin')
+        assert_is(provisioner, LinchpinProvisioner)
+
+    @staticmethod
+    def test_get_providers_classes():
+        providers = get_providers_classes()
+        assert_not_equal(len(providers), 0)
+
+    @staticmethod
+    def test_get_provider_class():
+        provider = get_provider_class('openstack')
+        assert_is(provider, OpenstackProvider)

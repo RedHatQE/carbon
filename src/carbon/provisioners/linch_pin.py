@@ -40,6 +40,8 @@ class LinchpinProvisioner(CarbonProvisioner):
     It handles actions such as creating necessary files and calling Linch-pin
     directly by the API.
     """
+    __provisioner_name__ = 'linchpin'
+
     _topology = "topology.yml"
     _layout = "layout.yml"
     _pinfile = "PinFile"
