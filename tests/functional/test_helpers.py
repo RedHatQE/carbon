@@ -1,19 +1,45 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2017 Red Hat, Inc.
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+"""
+    Unit tests to test carbon helpers.
+
+    :copyright: (c) 2017 Red Hat, Inc.
+    :license: GPLv3, see LICENSE for more details.
+"""
 import os
-import unittest
 
 try:
     from ConfigParser import ConfigParser
 except ImportError:
     from configparser import ConfigParser
 
-import carbon
+from nose.tools import assert_is_instance, assert_equal, raises
+
+from carbon import Carbon
 from carbon.helpers import file_mgmt
 
 
 class TestLogging(object):
+    """Unit test to test carbon logging."""
 
-    def test_logger_cache(self):
-        cbn = carbon.Carbon(__name__)
+    @staticmethod
+    def test_logger_cache():
+        cbn = Carbon(__name__)
         logger1 = cbn.logger
         assert cbn.logger is logger1
         assert cbn.name == __name__
@@ -21,51 +47,58 @@ class TestLogging(object):
         assert cbn.logger is not logger1
 
 
-class TestFileMgmt(unittest.TestCase):
+class TestFileManagement(object):
+    """Unit tests to test carbons file management function."""
 
-    def test_unknown_file_operation(self):
-        with self.assertRaisesRegexp(Exception, "Unknown file operation: x."):
-            file_mgmt('x', 'test.yml')
+    @staticmethod
+    @raises(Exception)
+    def test_unknown_file_operation():
+        file_mgmt('x', 'test.yml')
 
-    def test_file_not_found(self):
-        with self.assertRaisesRegexp(Exception, "test.yml file not found!"):
-            file_mgmt('r', 'test.yml')
+    @staticmethod
+    @raises(Exception)
+    def test_file_not_found():
+        file_mgmt('r', 'test.yml')
 
-    def test_yaml_ext(self):
+    @staticmethod
+    def test_yaml_file_extension():
         _file = "test.yml"
         _data = {'name': 'carbon', 'group': [{'name': 'group'}]}
         try:
-            assert file_mgmt('w', _file, _data) != 0
-            self.assertIsInstance(file_mgmt('r', _file), dict)
+            file_mgmt('w', _file, _data)
+            assert_is_instance(file_mgmt('r', _file), dict)
         finally:
             os.remove(_file)
 
-    def test_json_ext(self):
+    @staticmethod
+    def test_json_file_extension():
         _file = "test.json"
         _data = {'name': 'carbon', 'group': [{'name': 'group'}]}
         try:
-            assert file_mgmt('w', _file, _data) != 0
-            self.assertIsInstance(file_mgmt('r', _file), dict)
+            file_mgmt('w', _file, _data)
+            assert_is_instance(file_mgmt('r', _file), dict)
         finally:
             os.remove(_file)
 
-    def test_text_ext(self):
+    @staticmethod
+    def test_txt_file_extension():
         _file = "test.txt"
         _data = "Carbon project"
         try:
-            assert file_mgmt('w', _file, _data) != 0
-            assert file_mgmt('r', _file) == "Carbon project"
+            file_mgmt('w', _file, _data)
+            assert_equal(file_mgmt('r', _file), "Carbon project")
         finally:
             os.remove(_file)
 
-    def test_ini_ext(self):
+    @staticmethod
+    def test_ini_file_extension():
         _file = "test.ini"
         cfg1, cfg2 = ConfigParser(), ConfigParser()
         cfg1.add_section('Carbon')
         cfg1.set('Carbon', 'Team', 'PIT')
         try:
-            assert file_mgmt('w', _file, cfg_parser=cfg1) != 0
+            file_mgmt('w', _file, cfg_parser=cfg1)
             file_mgmt('r', _file, cfg_parser=cfg2)
-            self.assertIsInstance(cfg2, ConfigParser)
+            assert_is_instance(cfg2, ConfigParser)
         finally:
             os.remove(_file)

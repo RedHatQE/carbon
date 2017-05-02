@@ -1,0 +1,99 @@
+---
+scenario: Scenario Example
+description: Description of the scenario example.
+
+credentials:
+
+  - NAME: openstack_ciops
+    auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
+    tenant_name: pit-jenkins
+    tenant_id: bf4de4c330bb47d6937af31fd5c71a18
+    username: username
+    password: password
+
+PROVISION:
+
+  - name: machine_1
+    provider: openstack
+    credential: openstack_ciops
+    os_count:
+    os_name:
+    arch: x86_64
+    os_image: rhel-6.9-workstation-x86_64-latest
+    variant: Workstation
+    os_flavor: m1.medium
+    ip_addr:
+    os_networks:
+    os_floating_ip_pool:
+    role: w_client
+
+  - name: machine_2
+    provider: openstack
+    credential: openstack_ciops
+    arch: x86_64
+    variant: Server
+    os_count:
+    os_image: rhel-7.2-server-x86_64-latest
+    os_flavor: m1.medium
+    os_networks:
+    os_floating_ip_pool:
+    ip_addr:
+    role: test_pilot
+
+orchestrate:
+
+  - name: rhn
+    hosts: machine_1, machine_2
+    vars:
+      host: subscription.rhsm.stage.redhat.com
+      username: pit_rhel_workstation_1
+      password: EwEBUVYX
+      auto-attach: True
+      clean: False
+
+  - name: rhn
+    hosts: machine_3
+    vars:
+      host: subscription.rhsm.stage.redhat.com
+      username: pit_rhel_server_1
+      password: EwEBUAAA
+      auto-attach: True
+      clean: False
+      channels: ['rhel-6-for-system-z-rpms', 'rhel-6-for-system-z-optional-rpms']
+
+  - name: install_packages
+    hosts: machine_1, machine_2, machine_3
+    vars:
+      packages: pexpect, git, wget, python-setuptools, python-devel, restraint-deamon
+      group_packages: desktop
+
+execute:
+
+  - framework: restraint
+    vars:
+      execute_xml: http://file.bos.redhat.com/~vipatel/FFinterop-rhel6.xml
+      role: ['w_client', 's390x_client']
+
+report:
+
+  - type: python
+    name: ftp
+    vars:
+      address: ftp.redhat.com
+
+  - type: playbook
+    name: irc
+    vars:
+      channels: #pit
+
+  - type: notification
+    name: email
+    vars:
+      emails: tmv@redhat.com, vipatel@redhat.com
+
+  - type: test
+    name: polarion
+    vars:
+      host:
+      username:
+      password:
