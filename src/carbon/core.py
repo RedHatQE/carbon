@@ -183,6 +183,8 @@ class CarbonProvider(object):
     _optional_parameters = ()
     _mandatory_creds_parameters = ()
 
+    _credentials = {}
+
     def __init__(self, **kwargs):
         # I care only about the parameters set on ~self._parameters
         params = {k for k, v in kwargs.items()}\
@@ -196,7 +198,30 @@ class CarbonProvider(object):
 
     @classmethod
     def name(cls):
+        """Return the provider name."""
         return cls.__provider_name__
+
+    @property
+    def credentials(self):
+        """Return the credentials for the provider."""
+        return self._credentials
+
+    @credentials.setter
+    def credentials(self, value):
+        """Raise an exception when trying to set the credentials for the
+        provider after the class has been instanciated. You should use the
+        set_credentials method to set credentials.
+        :param value: The provider credentials
+        """
+        raise ValueError('You cannot set provider credentials directly. Use '
+                         'function ~CarbonProvider.set_credentials')
+
+    def set_credentials(self, cdata):
+        """Set the provider credentials.
+        :param cdata: The provider credentials dict
+        """
+        for p in self.get_mandatory_creds_parameters():
+            self._credentials[p] = cdata[p]
 
     @classmethod
     def check_mandatory_parameters(cls, parameters):
@@ -266,8 +291,7 @@ class CarbonProvider(object):
     def is_mandatory(cls, value):
         return value in cls.get_mandatory_parameters()
 
-    @classmethod
-    def validate(cls, host):
+    def validate(self, host):
         """
         Run a validation for all validate_<param_name> that is
         found in the provider class.
@@ -294,9 +318,9 @@ class CarbonProvider(object):
             # the validate_<param> function.
             items = [
                 (param,
-                 getattr(host, '{}{}'.format(cls.__provider_prefix__, param)),
-                 getattr(cls, "validate_%s" % param),)
-                for param in (cls._mandatory_parameters + cls._optional_parameters)]
+                 getattr(host, '{}{}'.format(self.__provider_prefix__, param)),
+                 getattr(self, "validate_%s" % param),)
+                for param in (self._mandatory_parameters + self._optional_parameters)]
             return [(param, value) for param, value, func in [item for item in items] if not func(value)]
         except AttributeError as e:
             raise CarbonException(e.args[0])

@@ -72,7 +72,7 @@ class Host(CarbonResource):
         if provider not in get_providers_list():
             raise Exception('Invalid provider for host %s.' % str(self.name))
         else:
-            self._provider_cls = get_provider_class(provider)
+            self._provider = get_provider_class(provider)()
 
         # We must set the providers credentials initially
         provider_creds = parameters.pop('provider_creds', None)
@@ -114,10 +114,8 @@ class Host(CarbonResource):
                             % (parameters['credential'], self._name,
                                self.provider.name, missing_mandatory_creds_fields))
 
-        # Create the provider credentials attributes in the host object
-        self.provider_creds = {}
-        for p in self.provider.get_mandatory_creds_parameters():
-            self.provider_creds[p] = provider_creds[parameters['credential']][p]
+        # create the provider credentials in provider object
+        self.provider.set_credentials(provider_creds[parameters['credential']])
 
         self._validate_task_cls = validate_task_cls
         self._provision_task_cls = provision_task_cls
@@ -130,53 +128,79 @@ class Host(CarbonResource):
 
     @property
     def name(self):
+        """Return the name for the host."""
         return self._name
 
     @name.setter
     def name(self, value):
+        """Raises an exception when trying to set the name for the host after
+        the class has been instanciated.
+        :param value: The name for host
+        """
         raise AttributeError('You cannot set name after class is instanciated.')
 
     @property
     def provider(self):
-        return self._provider_cls
+        """Return the provider object for the host."""
+        return self._provider
 
     @provider.setter
     def provider(self, value):
+        """Raises an exception when trying to set the provider for the host
+        after the class has been instanciated.
+        :param value: The provider name for the host
+        """
         raise AttributeError('You cannot set provider after class is instanciated.')
 
     @property
     def scenario_id(self):
+        """Return the scenario id the host is associated too."""
         return self._scenario_id
 
     @scenario_id.setter
     def scenario_id(self, value):
+        """Raises an exception when trying to set the scenario id the host is
+        associated too after the class has been instanciated.
+        :param value: The scenario id for the host
+        """
         raise AttributeError('You cannot set scenario id after class is instanciated.')
 
     @property
     def role(self):
+        """Return the role for the host."""
         return self._role
 
     @role.setter
     def role(self, value):
+        """Raises an exception when trying to set the role for the host after
+        the class has been instanciated.
+        :param value: The role for the host
+        """
         raise AttributeError('You cant set role after class is instanciated.')
 
     def profile(self):
+        """Builds a profile for the host.
+        :return: The profile for the host
+        """
         d = self.provider.build_profile(self)
         d.update({
             'name': self.name,
             'provider': self.provider.name(),
             'role': self._role,
-            'provider_creds': self.provider_creds,
+            'provider_creds': self.provider.credentials,
             'scenario_id': self._scenario_id
         })
         return d
 
     def validate(self):
+        """Validate the host."""
         for item in self.provider.validate(self):
             print('Error with parameter "{}": {}'.format(item[0], item[1]))
 
     def _construct_validate_task(self):
-
+        """Setup the validate task data structure.
+        :return: The validate task dict
+        """
         task = {
             'task': self._validate_task_cls,
             'resource': self,
@@ -184,6 +208,9 @@ class Host(CarbonResource):
         return task
 
     def _construct_provision_task(self):
+        """Setup the provision task data structure.
+        :param: The provision task dict
+        """
         task = {
             'task': self._provision_task_cls,
             'name': str(self.name),
@@ -194,6 +221,9 @@ class Host(CarbonResource):
         return task
 
     def _construct_cleanup_task(self):
+        """Setup the cleanup task data structure.
+        :return: The cleanup task dict
+        """
         task = {
             'task': self._cleanup_task_cls,
             'name': str(self.name),

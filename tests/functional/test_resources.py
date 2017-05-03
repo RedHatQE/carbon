@@ -21,8 +21,13 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from carbon import Carbon, Scenario, Host
+from copy import deepcopy
+from nose.tools import assert_equal, assert_is_instance, assert_is_not_none
+from nose.tools import raises
+
+from carbon import Scenario, Host
 from carbon.helpers import file_mgmt
+from carbon.providers import OpenstackProvider
 
 scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 
@@ -46,16 +51,106 @@ class TestScenario(object):
 class TestHost(object):
     """Unit tests to test carbon host."""
 
-    @staticmethod
-    def test_new_host_from_yaml():
-        # TODO: Revisit this test case
-        # cp_scenario_description = dict(scenario_description)
-        # host = Host(parameters=cp_scenario_description.pop('provision')[0])
-        # assert isinstance(host, Host)
-        pass
+    _cp_scenario_description = dict(scenario_description)
+    _parameters = _cp_scenario_description.pop('provision')[0]
+    _credentials = _cp_scenario_description.pop('credentials')[0]
+    _parameters['provider_creds'] = {_credentials.pop('name'): _credentials}
 
-    @staticmethod
-    def test_new_host_from_carbon_object():
-        cbn = Carbon(__name__)
-        cbn.load_from_yaml('assets/scenario.yaml')
-        assert isinstance(cbn.scenario._hosts.pop(0), Host)
+    def test_instantiate_host(self):
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        assert_is_instance(host, Host)
+
+    def test_set_name(self):
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters.pop('name')
+        host = Host('client1', parameters=cp_parameters, scenario_id='1234')
+        assert_equal(host.name, 'client1')
+
+    def test_set_random_name(self):
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters.pop('name')
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        assert_is_not_none(host.name)
+
+    @raises(AttributeError)
+    def test_update_name(self):
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host.name = 'my_machine1'
+
+    def test_get_role(self):
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        assert_equal(host.role, 'w_client')
+
+    @raises(AttributeError)
+    def test_set_role(self):
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host.role = "client1"
+
+    def test_get_scenario_id(self):
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        assert_equal(host.scenario_id, '1234')
+
+    @raises(AttributeError)
+    def test_set_scenario_id(self):
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host.scenario_id = '1234'
+
+    @raises(AttributeError)
+    def test_set_provider(self):
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host.provider = 'openstack'
+
+    def test_get_provider(self):
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        assert_is_instance(host.provider, OpenstackProvider)
+
+    @raises(Exception)
+    def test_role_undeclared(self):
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters.pop('role')
+        Host(parameters=cp_parameters, scenario_id='1234')
+
+    @raises(Exception)
+    def test_provider_undeclared(self):
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters.pop('provider')
+        Host(parameters=cp_parameters, scenario_id='1234')
+
+    @raises(Exception)
+    def test_invalid_provider(self):
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters['provider'] = 'provider123'
+        Host(parameters=cp_parameters, scenario_id='1234')
+
+    @raises(Exception)
+    def test_provider_creds_undeclared(self):
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters.pop('provider_creds')
+        Host(parameters=cp_parameters, scenario_id='1234')
+
+    @raises(Exception)
+    def test_provider_miss_cred_param(self):
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters['provider_creds'][cp_parameters['credential']].\
+            pop('auth_url')
+        Host(parameters=cp_parameters, scenario_id='1234')
+
+    @raises(Exception)
+    def test_provider_miss_param(self):
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters.pop('os_image')
+        Host(parameters=cp_parameters, scenario_id='1234')
+
+    def test_profile(self):
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        profile = host.profile()
+        assert_is_instance(profile, dict)
