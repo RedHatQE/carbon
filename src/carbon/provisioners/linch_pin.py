@@ -140,7 +140,7 @@ class LinchpinProvisioner(CarbonProvisioner):
         self._linchpin_context.log_state('{0} and file structure created at {1}'.format(
             self._linchpin_context.pinfile, self._linchpin_context.workspace))
 
-    def lp_check_results(self, results, module, target, console=False):
+    def lp_check_results(self, results, module, console=False):
         """
         Takes linch-pin returned results and processes for success or failure.
         Logs results. If Failures logs errors.
@@ -152,10 +152,11 @@ class LinchpinProvisioner(CarbonProvisioner):
         # Process results if console True
         # Results only return 0 for success non zero failure
         if console == u'True' or console == u'true':
-            if results == 0:
-                print("MODULE [%s] TARGET [%s] --- Success" % (module, target))
-            else:
-                print("MODULE [%s] TARGET [%s] --- Failed" % (module, target))
+            for target, result in results.items():
+                if result == 0:
+                    print("MODULE [%s] TARGET [%s] --- Success" % (module, target))
+                else:
+                    print("MODULE [%s] TARGET [%s] --- Failed" % (module, target))
 
             # TODO Update resources status here
             # or throw exception and caller handles it.
@@ -169,60 +170,61 @@ class LinchpinProvisioner(CarbonProvisioner):
             log_msgs = []
 
             # Process each task result for target
-            for task_result in results:
+            for target, result in results.items():
+                for task_result in result:
 
-                # Catalog Changed
-                if task_result._result['changed'] is True:
-                    task_changed = task_changed + 1
+                    # Catalog Changed
+                    if task_result._result['changed'] is True:
+                        task_changed = task_changed + 1
 
-                # Check if failed an obtain error
-                if 'failed' in task_result._result:
-                    task_stderr = ""
-                    task_stdout = ""
-                    task_msg = ""
-                    task_failed = task_failed + 1
-                    if 'module_stderr' in task_result._result:
-                        task_stderr = task_result._result['module_stderr']
-                    if 'module_stdout' in task_result._result:
-                        task_stdout = task_result._result['module_stdout']
-                    if 'msg' in task_result._result:
-                        task_msg = task_result._result['msg']
-                    elif 'message' in task_result._result:
-                        task_msg = task_result._result['message']
-                    bfailure = 'TARGET: [%s]: HOST: [%s]: TASK [%s: %s] *** FAILED! => { "changed": %s,' % (
-                        target, task_result._host,
-                        task_result._task._role, task_result._task.name,
-                        task_result._result['changed'])
-                    efailure = ' "failed": %s, "module_stderr": %s, "module_stdout": %s, "msg": %s}' % (
-                        task_result._result['failed'],
-                        json.dumps(task_stderr),
-                        json.dumps(task_stdout),
-                        json.dumps(task_msg))
-                    failure = "%s %s" % (bfailure, efailure)
-                    failures.append(failure)
+                    # Check if failed an obtain error
+                    if 'failed' in task_result._result:
+                        task_stderr = ""
+                        task_stdout = ""
+                        task_msg = ""
+                        task_failed = task_failed + 1
+                        if 'module_stderr' in task_result._result:
+                            task_stderr = task_result._result['module_stderr']
+                        if 'module_stdout' in task_result._result:
+                            task_stdout = task_result._result['module_stdout']
+                        if 'msg' in task_result._result:
+                            task_msg = task_result._result['msg']
+                        elif 'message' in task_result._result:
+                            task_msg = task_result._result['message']
+                        bfailure = 'TARGET: [%s]: HOST: [%s]: TASK [%s: %s] *** FAILED! => { "changed": %s,' % (
+                            target, task_result._host,
+                            task_result._task._role, task_result._task.name,
+                            task_result._result['changed'])
+                        efailure = ' "failed": %s, "module_stderr": %s, "module_stdout": %s, "msg": %s}' % (
+                            task_result._result['failed'],
+                            json.dumps(task_stderr),
+                            json.dumps(task_stdout),
+                            json.dumps(task_msg))
+                        failure = "%s %s" % (bfailure, efailure)
+                        failures.append(failure)
 
-                # Track Success (OK)
-                else:
-                    task_ok = task_ok + 1
+                    # Track Success (OK)
+                    else:
+                        task_ok = task_ok + 1
 
-            # Update failure log and db status of resource
-            failure_log[target] = failures
+                # Update failure log and db status of resource
+                failure_log[target] = failures
 
-            # TODO Update DB of resource status
-            # Do here or throw exception and let caller handle
-            # Success Failure etc.
+                # TODO Update DB of resource status
+                # Do here or throw exception and let caller handle
+                # Success Failure etc.
 
-            # Update Msg's for logger
-            log_msg = "%s            : ok=%s    changed=%s    unreachable=%s    failed=%s" \
-                % (task_result._host, task_ok, task_changed, 0, task_failed)
-            tstr = "PLAY RECAP for %s - TARGET [%s]" % (module, target)
-            log_msgs.append(
-                "***** %s *********************************************************************" % tstr)
-            log_msgs.append(log_msg)
-            log_output[target] = log_msgs
+                # Update Msg's for logger
+                log_msg = "%s            : ok=%s    changed=%s    unreachable=%s    failed=%s" \
+                    % (task_result._host, task_ok, task_changed, 0, task_failed)
+                tstr = "PLAY RECAP for %s - TARGET [%s]" % (module, target)
+                log_msgs.append(
+                    "***** %s *********************************************************************" % tstr)
+                log_msgs.append(log_msg)
+                log_output[target] = log_msgs
 
             # Output to log
-            print()
+            print("")
             for target, msgs in log_output.iteritems():
                 for msg in msgs:
                     print(msg)
@@ -231,7 +233,7 @@ class LinchpinProvisioner(CarbonProvisioner):
                     failures = failure_log[target]
                     for failure in failures:
                         print("          %s" % failure)
-                print()
+                print("")
 
     def create_topology_file(self):
         """Create the linch-pin topology file which contains resources to be
@@ -326,7 +328,7 @@ class LinchpinProvisioner(CarbonProvisioner):
         # TODO: Handle if failure occured, do we need to destroy machines?
         results = self._linchpin.lp_up(self._pinfile, targets=(
             self.host_desc['name'],))
-        self.lp_check_results(results, "lp_up", self.host_desc['name'],
+        self.lp_check_results(results, "lp_up",
                               self._linchpin_context.cfgs['ansible']['console'])
 
         # TODO: Remove this destroy call at somepoint, added for testing
@@ -342,7 +344,7 @@ class LinchpinProvisioner(CarbonProvisioner):
         # TODO: Handle if failure occured, do we need to destroy machines?
         results = self._linchpin.lp_destroy(self._pinfile, targets=(
             self.host_desc['name'],))
-        self.lp_check_results(results, "lp_destroy", self.host_desc['name'],
+        self.lp_check_results(results, "lp_destroy",
                               self._linchpin_context.cfgs['ansible']['console'])
 
     def create(self):
