@@ -148,7 +148,7 @@ def run(ctx, task, scenario, cleanup, log_level):
     print_header()
 
     # Make sure the file exists and gets its absolute path
-    if os.path.isfile(scenario):
+    if scenario is not None and os.path.isfile(scenario):
         scenario = os.path.abspath(scenario)
     else:
         click.echo('You have to provide a valid scenario file.')
