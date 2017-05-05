@@ -393,7 +393,7 @@ class LinchpinFiles(object):
                             "fip_pool": _host_desc['os_floating_ip_pool'],
                             "flavor": _host_desc['os_flavor'],
                             "image": _host_desc['os_image'],
-                            "keypair": _host_desc['os_key_name'],
+                            "keypair": _host_desc['os_keypair'],
                             "networks": _host_desc['os_networks'],
                             "res_name": _host_desc['os_name'],
                             "res_type": "os_server"

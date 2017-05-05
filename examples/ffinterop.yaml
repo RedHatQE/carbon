@@ -24,7 +24,7 @@ provision:
     os_flavor: m1.medium
     os_networks: ['pit-jenkins']
     os_floating_ip_pool: "10.8.172.0/22"
-    os_key_name: 'pit-jenkins'
+    os_keypair: 'pit-jenkins'
     os_admin_pass:
     os_description:
     os_files:
@@ -63,7 +63,7 @@ provision:
     os_flavor: m1.medium
     os_networks: ['pit-jenkins']
     os_floating_ip_pool: "10.8.172.0/22"
-    os_key_name: 'pit-jenkins'
+    os_keypair: 'pit-jenkins'
     os_admin_pass:
     os_description:
     os_files:

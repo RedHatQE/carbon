@@ -194,8 +194,13 @@ class Host(CarbonResource):
 
     def validate(self):
         """Validate the host."""
+        status = 0
         for item in self.provider.validate(self):
+            status = 1
             print('Error with parameter "{}": {}'.format(item[0], item[1]))
+
+        if status > 0:
+            raise CarbonException('Host %s validation failed!' % self.name)
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.

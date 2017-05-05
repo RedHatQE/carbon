@@ -21,6 +21,13 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+from glanceclient.v2.client import Client as glanceclient
+from keystoneauth1 import identity, session
+from keystoneclient.v2_0.client import Client as keystoneclient
+from neutronclient.v2_0.client import Client as neutronclient
+from novaclient.client import Client as novaclient
+from novaclient.exceptions import ClientException
+
 from ..core import CarbonProvider
 from .._compat import string_types
 
@@ -84,7 +91,7 @@ class OpenstackProvider(CarbonProvider):
     )
 
     _optional_parameters = (
-        'key_name',
+        'keypair',
         'admin_pass',
         'description',
         'files',
@@ -101,29 +108,232 @@ class OpenstackProvider(CarbonProvider):
 
     def __init__(self, **kwargs):
         super(OpenstackProvider, self).__init__(**kwargs)
+        self._nova = None
+        self._glance = None
+        self._neutron = None
+
+    @property
+    def nova(self):
+        """Instantiate novaclient (when needed) and return novaclient
+        object.
+        :return: The novaclient object
+        """
+        if not self._nova:
+            self.nova_connect(self.credentials)
+        return self._nova
+
+    @nova.setter
+    def nova(self, value):
+        """Raises an exception when trying to instantiate the novaclient
+        class. Use the nova_connect method to instantiate novaclient.
+        :param value: The credentials for Openstack tenant
+        """
+        raise ValueError('You cannot instantiate novaclient class directly. '
+                         'Use method ~OpenstackProvider.nova_connect')
+
+    def nova_connect(self, credentials):
+        """Instantiate a novaclient class object.
+        :param credentials: The credentials for Openstack tenant
+        """
+        self._nova = novaclient(
+            '2',
+            username=credentials['username'],
+            password=credentials['password'],
+            project_id=credentials['tenant_id'],
+            auth_url=credentials['auth_url'],
+            project_name=credentials['tenant_name']
+        )
+
+    @property
+    def glance(self):
+        """Instantiate glanceclient (when needed) and return glanceclient
+        object.
+        :return: The glanceclient object
+        """
+        if not self._glance:
+            self.glance_connect(self.credentials)
+        return self._glance
+
+    @glance.setter
+    def glance(self, value):
+        """Raises an exception when trying to instantiate the glanceclient
+        class. Use the glance_connect method to instantiate glanceclient.
+        :param value: The credentials for Openstack tenant
+        """
+        raise ValueError('You cannot instantiate glanceclient class directly.'
+                         'Use method ~OpenstackProvider.glance_connect')
+
+    def glance_connect(self, credentials):
+        """Instantiate a glanceclient class object.
+        :param credentials: The credentials for Openstack tenant
+        """
+        identity = keystoneclient(
+            username=credentials['username'],
+            password=credentials['password'],
+            tenant_name=credentials['tenant_name'],
+            auth_url=credentials['auth_url']
+        )
+        endpoint = identity.service_catalog.url_for(service_type='image')
+        self._glance = glanceclient(endpoint, token=identity.auth_token)
+
+    @property
+    def neutron(self):
+        """Instantiate neutronclient (when needed) and return neutronclient
+        object.
+        :return: The neutronclient object
+        """
+        if not self._neutron:
+            self.neutron_connect(self.credentials)
+        return self._neutron
+
+    @neutron.setter
+    def neutron(self, value):
+        """Raises an exception when trying to instantiate the neutronclient
+        class. Use the neutron_connect method to instantiate neutronclient.
+        :param value: The credentials for Openstack tenant
+        """
+        raise ValueError('You cannot instantiate neutronclient class directly.'
+                         'Use method ~OpenstackProvider.neutron_connect')
+
+    def neutron_connect(self, credentials):
+        """Instantiate a neutronclient class object.
+        :param credentials: The credentials for Openstack tenant
+        """
+        auth = identity.Password(
+            auth_url=credentials['auth_url'],
+            username=credentials['username'],
+            password=credentials['password'],
+            project_name=credentials['tenant_name']
+        )
+        sess = session.Session(auth=auth)
+        self._neutron = neutronclient(session=sess)
 
     @classmethod
     def validate_name(cls, value):
-        return isinstance(value, string_types)
+        """Validate the resource name.
+        :param value: The resource name
+        :return: A boolean, true = valid, false = invalid
+        """
+        # Quit when no value given
+        if not value:
+            print('Invalid data for name!')
+            return False
 
-    @classmethod
-    def validate_flavor(cls, value):
-        return isinstance(value, string_types)
+        # Name must be a string
+        if not isinstance(value, string_types):
+            print("Name is required to be a string type!")
+            return False
 
-    @classmethod
-    def validate_image(cls, value):
-        return isinstance(value, string_types)
+        return True
 
-    @classmethod
-    def validate_networks(cls, value):
-        return isinstance(value, list)
+    def validate_flavor(self, value):
+        """Validate the resource flavor. The flavor needs to be one of the
+        following:
+            1. Flavor name ~ m1.medium (string)
+            2. Flavor id ~ 3 (integer)
+        :param value: The resource flavor
+        :return: A boolean, true = valid, false = invalid
+        """
+        # Quit when no value given
+        if not value:
+            print('Invalid data for flavor!')
+            return False
 
-    @classmethod
-    def validate_key_name(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
+        try:
+            if isinstance(value, string_types):
+                self.nova.flavors.find(name=value)
+            elif isinstance(value, int):
+                self.nova.flavors.find(id=str(value))
+            else:
+                print('Flavor is required to be an integer or string type!')
+                return False
+        except ClientException as ex:
+            print(ex)
+            return False
+
+        return True
+
+    def validate_image(self, value):
+        """Validate the resource image. The image needs to be one of the
+        following:
+            1. Image name ~ Fedora-Cloud-Base-25-compose-latest (string)
+            2. Image id ~ 1e6ff712-b723-4c95-9e18-a393b80d1aff (string)
+        :param value: The resource image
+        :return: A boolean, true = valid, false = invalid
+        """
+        _name = None
+        _id = None
+
+        # Quit when no value given
+        if not value:
+            print('Invalid data for image!')
+            return False
+
+        # Image must be a string
+        if not isinstance(value, string_types):
+            print('Image is required to be a string type!')
+            return False
+
+        for image in self.glance.images.list():
+            if str(image.name) == value or str(image.id) == value:
+                _name = image.name
+                _id = image.id
+                break
+
+        if not _name and not _id:
+            print('Image %s does not exist!' % value)
+            return False
+
+        return True
+
+    def validate_networks(self, value):
+        """Validate the resource network.
+        :param value: The resource network
+        :return: A boolean, true = valid, false = invalid
+        """
+        # Quit when no value given
+        if not value:
+            print('Invalid data for networks!')
+            return False
+
+        # Networks must be a list
+        if not isinstance(value, list):
+            print('Networks is required to be a list type!')
+            return False
+
+        try:
+            for network in value:
+                data = self.neutron.list_networks(name=network)
+                if len(data['networks']) <= 0:
+                    print('Network: %s does not exist in tenant!' % network)
+                    raise RuntimeError
+        except RuntimeError:
+            return False
+
+        return True
+
+    def validate_keypair(self, value):
+        """Validate the resource keypair.
+        :param value: The resource keypair
+        :return: A boolean, true = valid, false = invalid
+        """
+        # Quit when no value given
+        if not value:
+            print('Invalid data for keypair!')
+            return False
+
+        # Keypair must be a string
+        if not isinstance(value, string_types):
+            print('Keypair is required to be a string type!')
+            return False
+
+        try:
+            self.nova.keypairs.find(name=value)
+        except ClientException as ex:
+            print(ex)
+            return False
+
+        return True
 
     @classmethod
     def validate_admin_pass(cls, value):
@@ -155,14 +365,48 @@ class OpenstackProvider(CarbonProvider):
 
     @classmethod
     def validate_count(cls, value):
-        if value:
-            return isinstance(value, int)
-        else:
-            return True
+        """Validate the resource count.
+        :param value: The resource count
+        :return: A boolean, true = valid, false = invalid
+        """
+        # Quit when no value given
+        if not value:
+            print('Invalid data for count!')
+            return False
 
-    @classmethod
-    def validate_floating_ip_pool(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
+        # Count must be an integer
+        if not isinstance(value, int):
+            print('Count is required to be a integer type!')
+            return False
+
+        # Count may not be a negative number
+        if value <= 0:
+            print('Count cannot be a negative number!')
+            return False
+
+        return True
+
+    def validate_floating_ip_pool(self, value):
+        """Validate the resource floating ip pool.
+        :param value: The resource floating ip pool
+        :return: A boolean, true = valid, false = invalid
+        """
+        # Quit when no value given
+        if not value:
+            print('Invalid data for floating ip pool!')
+            return False
+
+        # Floating ip pool must be a string
+        if not isinstance(value, string_types):
+            print('Floating ip pool is required to be a string type!')
+            return False
+
+        try:
+            data = self.neutron.list_networks(name=value)
+            if len(data['networks']) <= 0:
+                print('Floating IP pool: %s does not exist in tenant!' % value)
+                raise RuntimeError
+        except RuntimeError:
+            return False
+
+        return True

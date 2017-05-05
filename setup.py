@@ -32,7 +32,8 @@ requires = [
     'taskrunner==0.3.0',
     'PyYAML',
     'pykwalify',
-    'linchpin'
+    'linchpin',
+    'python-openstackclient'
 ]
 
 
