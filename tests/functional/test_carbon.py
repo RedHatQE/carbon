@@ -21,7 +21,7 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from nose.tools import raises
+from nose.tools import assert_equal, assert_is_instance, raises
 
 from carbon import Carbon
 from carbon.core import CarbonException
@@ -33,29 +33,44 @@ class TestCarbon(object):
 
     @staticmethod
     def test_create_carbon_object():
+        """Test creating a new carbon object. It will verify the object
+        created is an instance of the carbon class.
+        """
         obj = Carbon(__name__)
-        assert isinstance(obj, Carbon)
+        assert_is_instance(obj, Carbon)
 
     @staticmethod
     def test_change_carbon_name():
+        """Test changing the carbon name after the carbon object was created.
+        It will verify the name attribute has the same value that was set.
+        """
         obj = Carbon(__name__)
-        assert obj.name == __name__
-        obj.name = "my_scenario"
-        assert obj.name == "my_scenario"
+        assert_equal(obj.name, __name__)
+        obj.name = 'my_scenario'
+        assert_equal(obj.name, 'my_scenario')
 
     @staticmethod
     def test_load_yaml():
+        """Test carbons function to load a scenario descriptor (yaml) file into
+        the carbon object.
+        """
         obj = Carbon(__name__)
         obj.load_from_yaml('assets/scenario.yaml')
 
     @staticmethod
     @raises(CarbonException)
     def test_load_yaml_with_missing_section():
+        """Test carbons function to load a scenario descriptor (yaml) file with
+        a missing required section. An exception will be raised.
+        """
         obj = Carbon(__name__)
         obj.load_from_yaml('assets/invalid_scenario.yaml')
 
     @staticmethod
     def test_load_credentials():
+        """Test carbons function to load provider credentials from the scenario
+        descriptor (yaml) file.
+        """
         obj = Carbon(__name__)
         data = file_mgmt('r', 'assets/scenario.yaml')
         obj._load_credentials(data.pop('credentials'))
@@ -63,6 +78,9 @@ class TestCarbon(object):
     @staticmethod
     @raises(CarbonException)
     def test_load_invalid_credentials():
+        """Test carbons function to load provider credentials from the scenario
+        descriptor (yaml) file with a missing required credentials key.
+        """
         obj = Carbon(__name__)
         data = file_mgmt('r', 'assets/invalid_scenario.yaml')
         obj._load_credentials(data.pop('credentials'))

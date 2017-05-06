@@ -29,7 +29,7 @@ except ImportError:
     from configparser import ConfigParser
 
 from nose.tools import assert_is_instance, assert_equal, assert_is, raises
-from nose.tools import assert_not_equal
+from nose.tools import assert_not_equal, assert_is_not
 
 from carbon import Carbon
 from carbon.helpers import file_mgmt
@@ -44,12 +44,13 @@ class TestLogging(object):
 
     @staticmethod
     def test_logger_cache():
+        """Test carbons logger."""
         cbn = Carbon(__name__)
         logger1 = cbn.logger
-        assert cbn.logger is logger1
-        assert cbn.name == __name__
+        assert_is(cbn.logger, logger1)
+        assert_equal(cbn.name, __name__)
         cbn.logger_name = __name__ + '/test_logger_cache'
-        assert cbn.logger is not logger1
+        assert_is_not(cbn.logger, logger1)
 
 
 class TestFileManagement(object):
@@ -58,15 +59,24 @@ class TestFileManagement(object):
     @staticmethod
     @raises(Exception)
     def test_unknown_file_operation():
+        """Test carbons file management function with an invalid operaton. An
+        exception will be raised.
+        """
         file_mgmt('x', 'test.yml')
 
     @staticmethod
     @raises(Exception)
     def test_file_not_found():
+        """Test carbons file management function attempting to read a file
+        that does not exist. An exception will be raised.
+        """
         file_mgmt('r', 'test.yml')
 
     @staticmethod
     def test_yaml_file_extension():
+        """Test carbons file management function attempting to read/write a
+        yaml file type.
+        """
         _file = "test.yml"
         _data = {'name': 'carbon', 'group': [{'name': 'group'}]}
         try:
@@ -77,6 +87,9 @@ class TestFileManagement(object):
 
     @staticmethod
     def test_json_file_extension():
+        """Test carbons file management function attempting to read/write a
+        json file type.
+        """
         _file = "test.json"
         _data = {'name': 'carbon', 'group': [{'name': 'group'}]}
         try:
@@ -87,6 +100,9 @@ class TestFileManagement(object):
 
     @staticmethod
     def test_txt_file_extension():
+        """Test carbons file management function attempting to read/write a
+        txt file type.
+        """
         _file = "test.txt"
         _data = "Carbon project"
         try:
@@ -97,6 +113,9 @@ class TestFileManagement(object):
 
     @staticmethod
     def test_ini_file_extension():
+        """Test carbons file management function attempting to read/write a
+        ini file type.
+        """
         _file = "test.ini"
         cfg1, cfg2 = ConfigParser(), ConfigParser()
         cfg1.add_section('Carbon')
@@ -116,20 +135,34 @@ class TestGetModuleClasses(object):
 
     @staticmethod
     def test_get_provisioners_classes():
+        """Test the function to get all provisioner classes. It checks if the
+        length of the list returned is not zero.
+        """
         provisioners = get_provisioners_classes()
         assert_not_equal(len(provisioners), 0)
 
     @staticmethod
     def test_get_provisioner_class():
+        """Test the function to get a provisioner class. It will attempt to
+        get the linchpin provisioner class and then verify that the class
+        returned is the linchpin provisioner class.
+        """
         provisioner = get_provisioner_class('linchpin')
         assert_is(provisioner, LinchpinProvisioner)
 
     @staticmethod
     def test_get_providers_classes():
+        """Test the function to get all provider classes. It checks if the
+        length of the list returned is not zero.
+        """
         providers = get_providers_classes()
         assert_not_equal(len(providers), 0)
 
     @staticmethod
     def test_get_provider_class():
+        """Test the function to get a provider class. It will attempt to get
+        the openstack provider class and then verify that the class returned
+        is the openstack provider class.
+        """
         provider = get_provider_class('openstack')
         assert_is(provider, OpenstackProvider)
