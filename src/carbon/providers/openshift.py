@@ -31,19 +31,53 @@ class OpenshiftProvider(CarbonProvider):
     Openshift provider implementation.
     The following fields are supported:
 
-        oshift_name:
+        oc_name: (manadatory) The resource name.
 
-        ...
+        oc_image: (optional) The docker image used to create an application.
+
+        oc_git: (optional) The git url (source code) used to create an
+                application.
+
+        oc_template_name: (optional) The template name used to create an
+                          application.
+
+        oc_env_vars: (optional) A dict of environment variables that are
+                     needed by the components created when creating a new
+                     application.
+
+        oc_labels: (optional) A dict of labels to be associated with an
+                   application. The labels will be associated with all
+                   components of the application.
+
+        To add more fields for the provider, you have to also create a
+        validate_* function for the field. The signature for the function
+        must be validate_<paramenter_name> and the return must be True for
+        valid or False if the validation fails.
+
+        For instance, the field 'image' has the function 'validate_image'.
 
     """
     __provider_name__ = 'openshift'
-    __provider_prefix__ = 'oshift_'
+    __provider_prefix__ = 'oc_'
 
-    _mandatory_parameters = ()
+    _mandatory_parameters = (
+        'name',
+    )
 
-    _optional_parameters = ()
+    _optional_parameters = (
+        'image',
+        'git',
+        'template_name',
+        'env_vars',
+        'labels'
+    )
 
-    _mandatory_creds_parameters = ()
+    _mandatory_creds_parameters = (
+        'auth_url',
+        'project',
+        'username',
+        'token'
+    )
 
     def __init__(self, **kwargs):
         super(OpenshiftProvider, self).__init__(**kwargs)

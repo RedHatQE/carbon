@@ -115,20 +115,20 @@ class Carbon(object):
     # variables that start with `_task_`. If found, it will verify what
     # type of task it is and add into its respective task_list.
     _pipelines = [
-        Pipeline('validate',    ValidateTask,    list()),
-        Pipeline('provision',   ProvisionTask,   list()),
+        Pipeline('validate', ValidateTask, list()),
+        Pipeline('provision', ProvisionTask, list()),
         Pipeline('orchestrate', OrchestrateTask, list()),
-        Pipeline('execute',     ExecuteTask,     list()),
-        Pipeline('report',      ReportTask,      list()),
-        Pipeline('cleanup',     CleanupTask,     list()),
+        Pipeline('execute', ExecuteTask, list()),
+        Pipeline('report', ReportTask, list()),
+        Pipeline('cleanup', CleanupTask, list()),
     ]
 
     # Default configuration parameters.
     default_config = {
-        'DEBUG':                   False,
-        'LOGGER_NAME':             None,
-        'LOGGER_HANDLER_POLICY':   'always',
-        'SECRET_KEY':              'secret-key',
+        'DEBUG': False,
+        'LOGGER_NAME': None,
+        'LOGGER_HANDLER_POLICY': 'always',
+        'SECRET_KEY': 'secret-key',
     }
 
     def __init__(self, import_name, root_path=None):
@@ -224,11 +224,11 @@ class Carbon(object):
         data = dict(yaml.safe_load(open(filepath, 'r')))
 
         try:
-            cred_items = data.pop('credentials')
-            pro_items = data.pop('provision')
-            orc_items = data.pop('orchestrate')
-            exe_items = data.pop('execute')
-            rpt_items = data.pop('report')
+            cred_items = data.pop('credentials', None)
+            pro_items = data.pop('provision', None)
+            orc_items = data.pop('orchestrate', None)
+            exe_items = data.pop('execute', None)
+            rpt_items = data.pop('report', None)
         except KeyError as ex:
             raise CarbonException(ex)
 
@@ -290,6 +290,10 @@ class Carbon(object):
         :param res_list: A list of resources dict
         :return: None
         """
+        # No resources defined, then exit
+        if not res_list:
+            return
+
         for item in res_list:
             if res_type == Host:
                 # Set all available provider credentials into host object
