@@ -13,3 +13,4 @@ Sphinx>=1.5.5
 sphinx-rtd-theme>=0.2.4
 pykwalify==1.6.0
 python-openstackclient<3.8.1
+simplejson>=3.10.0

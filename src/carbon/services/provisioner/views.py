@@ -46,39 +46,47 @@ def post_jobs():
     return CarbonApiResult({'post_jobs': 'ok'})
 
 
-@api_bp.route('/jobs/<int:job_id>', methods=['GET'])
+@api_bp.route('/jobs/<string:job_id>', methods=['GET'])
 def get_job(job_id):
     return CarbonApiResult({'get_job': 'ok',
-                            'job_id': job_id})
+                            'job_id': str(job_id)})
 
 
-@api_bp.route('/jobs/<int:job_id>', methods=['PUT'])
+@api_bp.route('/jobs/<string:job_id>', methods=['PUT'])
 def put_job(job_id):
     return CarbonApiResult({'put_job': 'ok',
-                            'job_id': job_id})
+                            'job_id': str(job_id)})
 
 
-@api_bp.route('/jobs/<int:job_id>/logs', methods=['GET'])
+@api_bp.route('/jobs/<string:job_id>/logs', methods=['GET'])
 def get_job_logs(job_id):
     return CarbonApiResult({'get_job_logs': 'ok',
-                            'job_id': job_id})
+                            'job_id': str(job_id)})
 
 
-@api_bp.route('/jobs/<int:job_id>/teardown', methods=['POST'])
+@api_bp.route('/jobs/<string:job_id>/teardown', methods=['POST'])
 def post_job_teardown(job_id):
-    return CarbonApiResult({'post_job_terdown': 'ok',
-                            'job_id': job_id})
+    return CarbonApiResult({'post_job_teardown': 'ok',
+                            'job_id': str(job_id)})
 
 
-@api_bp.route('/jobs/<int:job_id>/nodes/<int:node_id>/teardown', methods=['POST'])
+@api_bp.route('/jobs/<string:job_id>/nodes', methods=['GET'])
+def get_job_nodes(job_id):
+    return CarbonApiResult({'get_job_nodes': 'ok',
+                            'job_id': str(job_id)})
+
+
+@api_bp.route('/jobs/<string:job_id>/nodes/<string:node_id>/teardown',
+              methods=['POST'])
 def post_job_node_teardown(job_id, node_id):
     return CarbonApiResult({'post_job_node_teardown': 'ok',
-                            'job_id': job_id,
-                            'node_id': node_id})
+                            'job_id': str(job_id),
+                            'node_id': str(node_id)})
 
 
-@api_bp.route('/jobs/<int:job_id>/nodes/<int:node_id>/logs', methods=['GET'])
+@api_bp.route('/jobs/<string:job_id>/nodes/<string:node_id>/logs',
+              methods=['GET'])
 def get_job_node_logs(job_id, node_id):
     return CarbonApiResult({'get_job_node_logs': 'ok',
-                            'job_id': job_id,
-                            'node_id': node_id})
+                            'job_id': str(job_id),
+                            'node_id': str(node_id)})
