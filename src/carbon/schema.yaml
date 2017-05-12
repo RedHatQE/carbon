@@ -24,7 +24,7 @@ mapping:
         provider:
           required: True
   orchestrate:
-    required: True
+    required: False
     sequence:
     - type: map
       allowempty: True
@@ -37,7 +37,7 @@ mapping:
           allowempty: True
           type: map
   execute:
-    required: True
+    required: False
     sequence:
     - type: map
       allowempty: True
@@ -48,7 +48,7 @@ mapping:
           allowempty: True
           type: map
   report:
-    required: True
+    required: False
     sequence:
     - type: map
       allowempty: True

@@ -24,6 +24,8 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonProvider
+from .._compat import string_types
+from ..helpers import check_is_gitrepo_fine
 
 
 class OpenshiftProvider(CarbonProvider):
@@ -81,3 +83,66 @@ class OpenshiftProvider(CarbonProvider):
 
     def __init__(self, **kwargs):
         super(OpenshiftProvider, self).__init__(**kwargs)
+
+    @classmethod
+    def validate_name(cls, value):
+        """Validate the resource name.
+        :param value: The resource name
+        :return: A boolean, true = valid, false = invalid
+        """
+        print("Validating Name: {}".format(value))
+        # Quit when no value given
+        if not value:
+            print('Invalid data for name!')
+            return False
+
+        # Name must be a string
+        if not isinstance(value, string_types):
+            print("Name is required to be a string type!")
+            return False
+
+        return True
+
+    @classmethod
+    def validate_image(cls, value):
+        if value:
+            print("Validating image: {}".format(value))
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_git(cls, value):
+        if value:
+            print("Validating git: {}".format(value))
+            if isinstance(value, string_types):
+                return check_is_gitrepo_fine(value)
+            else:
+                return False
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_template_name(cls, value):
+        if value:
+            #             print("Validating template name: {}".format(value))
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_env_vars(cls, value):
+        if value:
+            #             print("Validating env vars: {}".format(value))
+            return isinstance(value, dict)
+        else:
+            return True
+
+    @classmethod
+    def validate_labels(cls, value):
+        if value:
+            #             print("Validating labels: {}".format(value))
+            return isinstance(value, dict)
+        else:
+            return True

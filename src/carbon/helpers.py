@@ -32,6 +32,7 @@ import random
 import string
 import threading
 import yaml
+from subprocess import Popen, PIPE, STDOUT
 
 # sentinel
 _missing = object()
@@ -299,6 +300,27 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
                     f_raw.write(content)
     else:
         raise Exception("Unknown file operation: %s." % operation)
+
+
+def check_is_gitrepo_fine(git_repo_url):
+    """
+    :param git_repo_url: a git url to validate
+    :return: Boolean if the git url is good or not
+    :rtype: Boolean
+    """
+
+    try:
+        p = Popen(["git", "ls-remote", git_repo_url], stdout=PIPE)
+        output = p.communicate()[0]
+        if p.returncode != 0:
+            print("Error: Unable to access {} - Returncode {} - Output {}".format(git_repo_url, p.returncode, output))
+            return False
+    except:
+        print("Error: {}".format(sys.exc_info()[0]))
+        print("Error: Unable to access {}".format(git_repo_url))
+        return False
+
+    return True
 
 
 class LockedCachedProperty(object):
