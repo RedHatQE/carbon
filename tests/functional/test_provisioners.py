@@ -15,7 +15,14 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from .carbon import PITProvisioner
-from .carbon_openshift import CarbonOpenshiftProvisioner
-from .ciops import CiopsProvisioner
-from .linch_pin import LinchpinProvisioner
+"""
+    Unit tests to test carbon provisioners.
+
+    :copyright: (c) 2017 Red Hat, Inc.
+    :license: GPLv3, see LICENSE for more details.
+"""
+
+
+class TestCarbonOpenshiftProvisioner(object):
+    """Unit tests to test carbon provisioner ~ carbon_openshift."""
+    pass
