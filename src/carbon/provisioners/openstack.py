@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.provisioners.carbon
+    carbon.provisioners.openstack
 
     Here you add brief description of what this module is about
 
@@ -26,14 +26,14 @@
 from ..core import CarbonProvisioner
 
 
-class PITProvisioner(CarbonProvisioner):
+class OpenstackProvisioner(CarbonProvisioner):
     """
-    Carbon's own provisioner
+    Carbon's own openstack provisioner
     """
-    __provisioner_name__ = 'carbon'
+    __provisioner_name__ = 'openstack'
 
     def __init__(self, **kwargs):
-        super(PITProvisioner, self).__init__(**kwargs)
+        super(OpenstackProvisioner, self).__init__(**kwargs)
 
     def create(self):
         print('Provisioning machines from {klass}'

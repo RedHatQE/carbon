@@ -23,6 +23,11 @@
 """
 
 
-class TestCarbonOpenshiftProvisioner(object):
-    """Unit tests to test carbon provisioner ~ carbon_openshift."""
+class TestOpenshiftProvisioner(object):
+    """Unit tests to test carbon provisioner ~ openshift."""
+    pass
+
+
+class TestOpenstackProvisioner(object):
+    """Unit tests to test carbon provisioner ~ openstack."""
     pass
