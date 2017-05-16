@@ -32,7 +32,7 @@ from nose.tools import assert_is_instance, assert_equal, assert_is, raises
 from nose.tools import assert_not_equal, assert_is_not
 
 from carbon import Carbon
-from carbon.helpers import file_mgmt
+from carbon.helpers import AnsibleWorker, CarbonCallback, file_mgmt
 from carbon.helpers import get_provisioner_class, get_provisioners_classes
 from carbon.helpers import get_provider_class, get_providers_classes
 from carbon.providers import OpenstackProvider
@@ -166,3 +166,142 @@ class TestGetModuleClasses(object):
         """
         provider = get_provider_class('openstack')
         assert_is(provider, OpenstackProvider)
+
+
+class TestAnsible(object):
+    """Unit tests to test Ansible worker class."""
+
+    @staticmethod
+    def test_create_ansible_object():
+        """Test creating a new Ansible worker object. It will verify the
+        object created is an instance of the Ansible worker class.
+        """
+        obj = AnsibleWorker()
+        assert_is_instance(obj, AnsibleWorker)
+
+    @staticmethod
+    def test_run_module_pass():
+        """Test the run_module method executing a command successfully. This
+        test performs the following:
+            1. Create Ansible worker object.
+            2. Call the method with the play source.
+            3. Verify the return code and callback object.
+        """
+        obj = AnsibleWorker()
+        returncode, callback = obj.run_module(
+            dict(name='Module example',
+                 hosts='localhost',
+                 gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args='whoami'))])
+        )
+        assert_equal(returncode, 0)
+        assert_is_instance(callback, CarbonCallback)
+
+    @staticmethod
+    def test_run_module_fail():
+        """Test the run_module method executing a command unsuccessfully. This
+        test performs the following:
+            1. Create Ansible worker object.
+            2. Call the method with the play source.
+            3. Verify the return code and callback object.
+        """
+        obj = AnsibleWorker()
+        returncode, callback = obj.run_module(
+            dict(name='Module example',
+                 hosts='localhost',
+                 gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args='whoamx'))])
+        )
+        assert_not_equal(returncode, 0)
+        assert_is_instance(callback, CarbonCallback)
+
+    @staticmethod
+    def test_run_module_unreachable():
+        """Test the run_module method when a host is unreachable. This test
+        performs the following:
+            1. Create a mock inventory file.
+            2. Create the Ansible worker object.
+            3. Call the method with the play source.
+            4. Verify the return code and callback object.
+            5. Delete the mock inventory file.
+        """
+        host = 'machine1'
+        inventory = '/tmp/tmp_inventory'
+
+        # Create tmp inventory file
+        config = ConfigParser()
+        config.add_section(host)
+        config.set(host, '192.168.1.1', 'None')
+        file_mgmt('w', inventory, cfg_parser=config)
+        fdata = file_mgmt('r', inventory)
+        fdata = fdata.replace(' = None', '')
+        file_mgmt('w', inventory, fdata)
+
+        obj = AnsibleWorker(inventory)
+        returncode, callback = obj.run_module(
+            dict(name='Module example',
+                 hosts=host,
+                 gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args='whoamx'))])
+        )
+        assert_not_equal(returncode, 0)
+        assert_is(callback.unreachable, True)
+
+        # Remove tmp inventory file
+        os.remove(inventory)
+
+    @staticmethod
+    def test_run_playbook_pass():
+        """Test the run_playbook method executing a playbook successfully.
+        This test performs the following:
+            1. Create a mock playbook.
+            2. Create the Ansible worker object.
+            3. Call the method with the playbook.
+            4. Verify the return code and callback object.
+            5. Delete the mock playbook.
+        """
+        pb_file = '/tmp/example.yaml'
+        extra_vars = {'name': 'carbon'}
+
+        # Create tmp playbook
+        pbdata = [{'tasks': [{'shell': 'whoami', 'register': 'result'}],
+                   'hosts': 'localhost', 'gather_facts': 'no'}]
+        file_mgmt('w', pb_file, pbdata)
+
+        obj = AnsibleWorker()
+        returncode, callback = obj.run_playbook(pb_file, extra_vars=extra_vars)
+
+        assert_equal(returncode, 0)
+        assert_is_instance(callback, CarbonCallback)
+
+        # Remove tmp playbook
+        os.remove(pb_file)
+
+    @staticmethod
+    def test_run_playbook_fail():
+        """Test the run_playbook method executing a playbook unsuccessfully.
+        This test performs the following:
+            1. Create a mock playbook.
+            2. Create the Ansible worker object.
+            3. Call the method with the playbook.
+            4. Verify the return code and callback object.
+            5. Delete the mock playbook.
+        """
+        pb_file = '/tmp/example.yaml'
+        pb_retry = '/tmp/example.retry'
+        extra_vars = {'name': 'carbon'}
+
+        # Create tmp playbook
+        pbdata = [{'tasks': [{'shell': 'whoamx', 'register': 'result'}],
+                   'hosts': 'localhost', 'gather_facts': 'no'}]
+        file_mgmt('w', pb_file, pbdata)
+
+        obj = AnsibleWorker()
+        returncode, callback = obj.run_playbook(pb_file, extra_vars=extra_vars)
+
+        assert_not_equal(returncode, 0)
+        assert_is_instance(callback, CarbonCallback)
+
+        # Remove tmp playbook
+        for item in [pb_file, pb_retry]:
+            os.remove(item)

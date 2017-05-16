@@ -33,7 +33,8 @@ requires = [
     'PyYAML',
     'pykwalify',
     'linchpin',
-    'python-openstackclient'
+    'python-openstackclient',
+    'ansible==2.2.1'
 ]
 
 
