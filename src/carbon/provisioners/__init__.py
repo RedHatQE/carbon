@@ -16,6 +16,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from .carbon import PITProvisioner
-from .carbon_openshift import CarbonOpenshiftProvisioner
+from .openshift import OpenshiftProvisioner
 from .ciops import CiopsProvisioner
 from .linch_pin import LinchpinProvisioner

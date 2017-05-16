@@ -27,7 +27,7 @@
 from ..core import CarbonProvisioner
 
 
-class CarbonOpenshiftProvisioner(CarbonProvisioner):
+class OpenshiftProvisioner(CarbonProvisioner):
     """The main class for carbon openshift provisioner.
 
     This provisioner will interact with an openshift server using the
@@ -76,7 +76,7 @@ class CarbonOpenshiftProvisioner(CarbonProvisioner):
     container. This way we can get both the stdout/stderr plus the return
     code to determine pass or fail.
     """
-    __provisioner_name__ = "carbon_openshift"
+    __provisioner_name__ = "openshift"
 
     _oc_image = "rywillia/openshift-client"
 
@@ -94,7 +94,7 @@ class CarbonOpenshiftProvisioner(CarbonProvisioner):
         :param host_desc: A host description in (dict form) based on a Carbon
             host object.
         """
-        super(CarbonOpenshiftProvisioner, self).__init__()
+        super(OpenshiftProvisioner, self).__init__()
         self.host_desc = host_desc
 
         # TODO: Instantiate the AnsibleWorker class
