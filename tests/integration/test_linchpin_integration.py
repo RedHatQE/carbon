@@ -37,8 +37,8 @@ scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 
 def scrub_lp_setup(base_dir, ws_dir, ws_subdir=""):
     """ Scrub Linch-pin configuration setup to desired stage
-    before running test. Remove passed workspace directory if exists 
-    Return full workspace path 
+    before running test. Remove passed workspace directory if exists
+    Return full workspace path
     """
     workspace = os.path.join(base_dir, ws_dir)
     deldir = os.path.join(workspace, ws_subdir)
@@ -59,7 +59,7 @@ class TestLinchpinProvisionerIntegration(object):
 
     def test_linchpin_rise_count_1(self):
         """Test LinchpinProvisioner rise/up method os_count 1
-        Check result successful.  
+        Check result successful.
         """
         scrub_lp_setup(self._base_path, '1234')
         cp_parameters = deepcopy(self._parameters)
@@ -69,7 +69,7 @@ class TestLinchpinProvisionerIntegration(object):
 
     def test_linchpin_rise_count_3(self):
         """Test LinchpinProvisioner rise/up method os_count > 1
-        Check result successful.  
+        Check result successful.
         """
         scrub_lp_setup(self._base_path, '1234')
         cp_parameters = deepcopy(self._parameters_res2)
@@ -80,7 +80,7 @@ class TestLinchpinProvisionerIntegration(object):
     def test_linchpin_rise_error(self):
         """Test LinchpinProvisioner rise/up method
         Use Invalid password for auth. Linchpin returns error.
-        Check results show error.  
+        Check results show error.
         """
         scrub_lp_setup(self._base_path, '1234')
         parameters_err = deepcopy(self._parameters_res2)
@@ -93,7 +93,7 @@ class TestLinchpinProvisionerIntegration(object):
 
     def test_linchpin_drop(self):
         """Test LinchpinProvisioner delete/teardown method
-        Check result successful.  
+        Check result successful.
         """
         scrub_lp_setup(self._base_path, '1234')
         cp_parameters = deepcopy(self._parameters)
@@ -104,7 +104,7 @@ class TestLinchpinProvisionerIntegration(object):
     def test_linchpin_drop_error(self):
         """Test LinchpinProvisioner drop method
         Use Invalid password for auth. Linchpin returns error.
-        Check results show error.  
+        Check results show error.
         """
         scrub_lp_setup(self._base_path, '1234')
         parameters_err = deepcopy(self._parameters_res2)
@@ -117,4 +117,3 @@ class TestLinchpinProvisionerIntegration(object):
                 Exception,
                 "Failed to tear down all provisioned resources. Check logs or job resources status's"):
             lp.delete()
-
