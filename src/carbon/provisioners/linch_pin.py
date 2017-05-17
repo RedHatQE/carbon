@@ -23,9 +23,11 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
+import ast
 import json
+import os
 import shutil
+import yaml
 
 from distutils import dir_util
 from linchpin.cli.context import LinchpinContext
@@ -47,6 +49,7 @@ class LinchpinProvisioner(CarbonProvisioner):
     _pinfile = "PinFile"
     _credentials = "credentials.yml"
     _workspace = None
+    _logspace = None
     _linchpin_context = None
     _linchpin = None
 
@@ -82,11 +85,17 @@ class LinchpinProvisioner(CarbonProvisioner):
         # Set linch-pin workspace
         self._workspace = os.path.join(CARBON_ROOT, "jobs",
                                        self.host_desc['scenario_id'])
+        # Set linch-pin logspace
+        self._logspace = os.path.join(CARBON_ROOT, "jobs",
+                                      self.host_desc['scenario_id'], "logs")
+        if not os.path.exists(self._logspace):
+            os.makedirs(self._logspace)
 
         # Create linch-pin context object
         self._linchpin_context = LinchpinContext()
         self._linchpin_context.load_config()
         self._linchpin_context.load_global_evars()
+        self._linchpin_context.cfgs['logger']['file'] = self._logspace + "/linchpin.log"
         self._linchpin_context.setup_logging()
         self._linchpin_context.workspace = self._workspace
         self._linchpin_context.log_info(
@@ -94,8 +103,11 @@ class LinchpinProvisioner(CarbonProvisioner):
         self._linchpin_context.pinfile = self._linchpin_context.cfgs[
             'init']['pinfile']
 
-        # Create linch-pin project/directory structure
-        if not os.path.exists(self._workspace):
+        # Create linch-pin project/directory structure if does not exist
+        if not os.path.exists(self._workspace) or \
+                not os.path.exists(self._workspace + '/topologies') or \
+                not os.path.exists(self._workspace + '/layouts') or \
+                not os.path.exists(self._workspace + '/inventories'):
             self.lp_init()
 
         # Set absolute file paths for linch-pin files
@@ -140,6 +152,45 @@ class LinchpinProvisioner(CarbonProvisioner):
         self._linchpin_context.log_state('{0} and file structure created at {1}'.format(
             self._linchpin_context.pinfile, self._linchpin_context.workspace))
 
+    def lp_process_output(self):
+        """ Proccess linchpin output files in resources directory
+        """
+        resource_dir = self._linchpin_context.workspace + "/resources"
+        tmp_dir = self._linchpin_context.workspace + "/tmp"
+
+        if not os.path.exists(tmp_dir):
+            os.makedirs(tmp_dir)
+
+        for filename in os.listdir(resource_dir):
+            if filename.endswith(".output") and self.host_desc['os_name'] in filename:
+                res_file = resource_dir + "/" + filename
+                with open(res_file, 'r') as s:
+                    data = s.read()
+                    data = data.replace('null', 'None').replace('false', 'False').replace('true', 'True')
+
+                    res = ast.literal_eval(data)
+
+                    for key, value in res.iteritems():
+                        if "os_server_res" in key and value:
+                            host_list = []
+                            ip_list = []
+                            for item in value:
+                                for machine in item['openstack']:
+                                    host_list.append(machine['name'])
+                                    ip_list.append(machine['interface_ip'])
+                                host_desc_m = self.host_desc
+                                host_desc_m.update({"ip_address": ip_list})
+                                host_desc_m.pop("provider_creds", None)
+                                host_desc_m.pop("scenario_id", None)
+                                host_update = {'provision': host_desc_m}
+
+                        elif value:
+                            raise NotImplementedError
+
+                output_yaml = tmp_dir + "/" + self.host_desc['name'] + ".yaml"
+                with open(output_yaml, 'w') as fp:
+                    yaml.dump(host_update, fp, allow_unicode=True)
+
     def lp_check_results(self, results, module, console=False):
         """
         Takes linch-pin returned results and processes for success or failure.
@@ -148,15 +199,20 @@ class LinchpinProvisioner(CarbonProvisioner):
         """
         failure_log = {}
         log_output = {}
+        prov_resource_pass = True
 
         # Process results if console True
         # Results only return 0 for success non zero failure
         if console == u'True' or console == u'true':
             for target, result in results.items():
                 if result == 0:
-                    print("MODULE [%s] TARGET [%s] --- Success" % (module, target))
+                    self._linchpin_context.log_info(
+                        "MODULE [{0} TARGET [{1}] --- Success".format(module, target))
                 else:
-                    print("MODULE [%s] TARGET [%s] --- Failed" % (module, target))
+                    self._linchpin_context.log_info(
+                        "MODULE [%s] TARGET [%s] --- Failed".format(module, target))
+                    prov_resource_pass = False
+            return prov_resource_pass
 
             # TODO Update resources status here
             # or throw exception and caller handles it.
@@ -176,6 +232,10 @@ class LinchpinProvisioner(CarbonProvisioner):
                     # Catalog Changed
                     if task_result._result['changed'] is True:
                         task_changed = task_changed + 1
+
+                    # Output Task Info to log
+                    self._linchpin_context.log_info(
+                        "TASK [{0}: {1}] ***".format(task_result._task._role, task_result._task.name))
 
                     # Check if failed an obtain error
                     if 'failed' in task_result._result:
@@ -202,10 +262,39 @@ class LinchpinProvisioner(CarbonProvisioner):
                             json.dumps(task_msg))
                         failure = "%s %s" % (bfailure, efailure)
                         failures.append(failure)
-
+                        prov_resource_pass = False
+                        stderrstr = ""
+                        stdoutstr = ""
+                        msgstr = ""
+                        if 'module_stderr' in task_result._result:
+                            stderrstr = json.dumps(task_result._result['module_stderr'])
+                        if 'module_stdout' in task_result._result:
+                            stdoutstr = json.dumps(task_result._result['module_stdout'])
+                        if 'msg' in task_result._result:
+                            json.dumps(task_result._result['msg'])
+                        logstr = 'fatal: [{0}]: FAILED! => "changed": {1}, "failed": {2}, "module_stderr": "{3}", ' \
+                                 '"module_stdout": "{4}", "msg": "{5}"'.format(
+                                     task_result._host, task_result._result['changed'],
+                                     task_result._result['failed'],
+                                     stderrstr, stdoutstr, msgstr)
+                        self._linchpin_context.log_info(logstr)
                     # Track Success (OK)
                     else:
                         task_ok = task_ok + 1
+
+                        # Output task result to linchpin log
+                        self._linchpin_context.log_info("ok: [{0}]".format(task_result._host))
+                        if 'msg' in task_result._result:
+                            self._linchpin_context.log_info('"msg": {0}'.format(
+                                json.dumps(task_result._result['msg'])))
+                        if 'results' in task_result._result and 'include' in task_result._result['results']:
+                            self._linchpin_context.log_info('"included": {0}'.format(
+                                                            json.dumps(task_result._result['results']['include'])))
+                        if 'results' in task_result._result:
+                            for item in task_result._result['results']:
+                                if 'include' in item:
+                                    self._linchpin_context.log_info('"included": {0}'.format(
+                                        json.dumps(item['include'])))
 
                 # Update failure log and db status of resource
                 failure_log[target] = failures
@@ -223,17 +312,17 @@ class LinchpinProvisioner(CarbonProvisioner):
                 log_msgs.append(log_msg)
                 log_output[target] = log_msgs
 
-            # Output to log
-            print("")
+            # Output Summary to linchpin log
             for target, msgs in log_output.iteritems():
                 for msg in msgs:
-                    print(msg)
+                    self._linchpin_context.log_info(msg)
                 if target in failure_log and len(failure_log[target]) > 0:
-                    print("     %s Failures:" % target)
+                    self._linchpin_context.log_info("     {0} Failures:".format(target))
                     failures = failure_log[target]
                     for failure in failures:
-                        print("          %s" % failure)
-                print("")
+                        self._linchpin_context.log_info("          {0}".format(failure))
+
+            return prov_resource_pass
 
     def create_topology_file(self):
         """Create the linch-pin topology file which contains resources to be
@@ -328,11 +417,14 @@ class LinchpinProvisioner(CarbonProvisioner):
         # TODO: Handle if failure occured, do we need to destroy machines?
         results = self._linchpin.lp_up(self._pinfile, targets=(
             self.host_desc['name'],))
-        self.lp_check_results(results, "lp_up",
-                              self._linchpin_context.cfgs['ansible']['console'])
+        result = self.lp_check_results(results, "lp_up",
+                                       self._linchpin_context.cfgs['ansible']['console'])
+        self.lp_process_output()
 
         # TODO: Remove this destroy call at somepoint, added for testing
         self._destroy()
+
+        return result
 
     def _destroy(self):
         """Linch-pin destroy to teardown resources.
@@ -344,8 +436,8 @@ class LinchpinProvisioner(CarbonProvisioner):
         # TODO: Handle if failure occured, do we need to destroy machines?
         results = self._linchpin.lp_destroy(self._pinfile, targets=(
             self.host_desc['name'],))
-        self.lp_check_results(results, "lp_destroy",
-                              self._linchpin_context.cfgs['ansible']['console'])
+        return self.lp_check_results(results, "lp_destroy",
+                                     self._linchpin_context.cfgs['ansible']['console'])
 
     def create(self):
         """The main method to start resource creation. It will call linch-pin
@@ -353,7 +445,8 @@ class LinchpinProvisioner(CarbonProvisioner):
         """
         print('Provisioning machines from {klass}'
               .format(klass=self.__class__))
-        self._up()
+        if not self._up():
+            raise Exception("Failed to provision resources. Check logs or job resources status's")
 
     def delete(self):
         """The main method to start resource deletion. It will call linch-pin
@@ -361,7 +454,8 @@ class LinchpinProvisioner(CarbonProvisioner):
         """
         print('Tearing down machines from {klass}'
               .format(klass=self.__class__))
-        self._destroy()
+        if not self._destroy():
+            raise Exception("Failed to tear down all provisioned resources. Check logs or job resources status's")
 
 
 class LinchpinFiles(object):
