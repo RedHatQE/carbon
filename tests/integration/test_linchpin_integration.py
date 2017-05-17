@@ -47,7 +47,7 @@ def scrub_lp_setup(base_dir, ws_dir, ws_subdir=""):
     return workspace
 
 
-class TestLinchpinProvisioner(object):
+class TestLinchpinProvisionerIntegration(object):
 
     _cp_scenario_description = dict(scenario_description)
     _parameters = _cp_scenario_description['provision'][0]
@@ -57,67 +57,64 @@ class TestLinchpinProvisioner(object):
     _parameters_res2['provider_creds'] = {_credentials['name']: _credentials}
     _base_path = os.path.join(CARBON_ROOT, "jobs")
 
-    def test_preparation(self):
-        pass
-
-    def test_instantiate_linchpinprovisioner(self):
-        """Test instantiating a LinchpinProvisioner class and
-        verifying the object created is an instance of the 
-        LinchpinProvisioner class.
+    def test_linchpin_rise_count_1(self):
+        """Test LinchpinProvisioner rise/up method os_count 1
+        Check result successful.  
         """
         scrub_lp_setup(self._base_path, '1234')
         cp_parameters = deepcopy(self._parameters)
         host = Host(parameters=cp_parameters, scenario_id='1234')
         lp = LinchpinProvisioner(host.profile())
-        assert_is_instance(lp, LinchpinProvisioner)
+        lp.create()
 
-    def test_instantiate_linchpinprovisioner_lp_structure_exists(self):
-        """Test instantiating a LinchpinProvisioner class and
-        linch-pin structre exists. Verifying correct exception and
-        message is thrown.
+    def test_linchpin_rise_count_3(self):
+        """Test LinchpinProvisioner rise/up method os_count > 1
+        Check result successful.  
         """
-        scrub_lp_setup(self._base_path, '1234', 'topologies')
-        cp_parameters = deepcopy(self._parameters)
+        scrub_lp_setup(self._base_path, '1234')
+        cp_parameters = deepcopy(self._parameters_res2)
         host = Host(parameters=cp_parameters, scenario_id='1234')
-        with assert_raises_regexp(Exception, "Directory.*already exists"):
-            lp = LinchpinProvisioner(host.profile())
+        lp = LinchpinProvisioner(host.profile())
+        lp.create()
 
-    def test_linchpin_init(self):
-        """ Test linch-pin setup. Instantiate LinchpinProvisioner class.
-        Verify linchpin directory structure exists under workspace scenario.
-        Directories, topologies, layouts, inventories and File PinFile
+    def test_linchpin_rise_error(self):
+        """Test LinchpinProvisioner rise/up method
+        Use Invalid password for auth. Linchpin returns error.
+        Check results show error.  
         """
-        workspace = scrub_lp_setup(self._base_path, '1234')
+        scrub_lp_setup(self._base_path, '1234')
+        parameters_err = deepcopy(self._parameters_res2)
+        parameters_err['provider_creds'][self._parameters_res2['credential']]['password'] = 'laskdjls'
+        cp_parameters = deepcopy(parameters_err)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        lp = LinchpinProvisioner(host.profile())
+        with assert_raises_regexp(Exception, "Failed to provision resources. Check logs or job resources status's"):
+            lp.create()
+
+    def test_linchpin_drop(self):
+        """Test LinchpinProvisioner delete/teardown method
+        Check result successful.  
+        """
+        scrub_lp_setup(self._base_path, '1234')
         cp_parameters = deepcopy(self._parameters)
         host = Host(parameters=cp_parameters, scenario_id='1234')
         lp = LinchpinProvisioner(host.profile())
-        assert_is_instance(lp, LinchpinProvisioner)
-        assert_equal(os.path.exists(workspace + '/topologies'), True)
-        assert_equal(os.path.exists(workspace + '/layouts'), True)
-        assert_equal(os.path.exists(workspace + '/inventories'), True)
-        assert_equal(os.path.exists(workspace + '/PinFile'), True)
+        lp.delete()
 
-    def test_create_openstack_topology(self):
-        pass
-
-    def test_create_beaker_topology(self):
-        pass
-
-    def test_create_openshift_topology(self):
-        pass
-
-    def test_create_layout_file(self):
-        pass
-
-    def test_create_pinfile_file(self):
-        pass
-
-    def test_create_openstack_credentials(self):
-        pass
-
-    def test_create_beaker_credentials(self):
-        pass
-
-    def test_create_openshift_credentials(self):
-        pass
+    def test_linchpin_drop_error(self):
+        """Test LinchpinProvisioner drop method
+        Use Invalid password for auth. Linchpin returns error.
+        Check results show error.  
+        """
+        scrub_lp_setup(self._base_path, '1234')
+        parameters_err = deepcopy(self._parameters_res2)
+        parameters_err['provider_creds'][self._parameters_res2['credential']]['password'] = 'laskdjls'
+        parameters_err['provider_creds'][self._parameters_res2['credential']]['password'] = 'laskdjls'
+        cp_parameters = deepcopy(parameters_err)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        lp = LinchpinProvisioner(host.profile())
+        with assert_raises_regexp(
+                Exception,
+                "Failed to tear down all provisioned resources. Check logs or job resources status's"):
+            lp.delete()
 
