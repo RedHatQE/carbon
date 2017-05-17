@@ -25,4 +25,4 @@ if platform == "darwin":
     os.environ["LC_TIME"] = "UTF-8"
 
 run('nosetests --with-coverage --cover-erase --cover-package carbon '
-    '--with-xunit --cover-xml --cover-html -v --disabledoc ./ functional/')
+    '--with-xunit --cover-xml --cover-html -v --disabledoc ./functional/')
