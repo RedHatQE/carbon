@@ -41,6 +41,7 @@ if platform == "darwin":
     os.environ["CPPFLAGS"] = ""
 
 # install development libraries
+run('pip install PrettyTable==0.7.1')
 run('pip install -r requirements.txt')
 # clean distribution
 if os.path.isdir('dist') and os.listdir('dist'):
