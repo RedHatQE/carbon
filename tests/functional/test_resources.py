@@ -23,13 +23,15 @@
 """
 from copy import deepcopy
 from nose.tools import assert_equal, assert_is_instance, assert_is_not_none
-from nose.tools import raises
+from nose.tools import assert_not_equal, assert_false, raises
 
 from carbon import Scenario, Host
+from carbon.constants import PROVISIONERS
 from carbon.helpers import file_mgmt
 from carbon.providers import OpenstackProvider
 
 scenario_description = file_mgmt('r', 'assets/scenario.yaml')
+scenario_description_invalid = file_mgmt('r', 'assets/invalid_scenario.yaml')
 
 
 class TestScenario(object):
@@ -56,9 +58,17 @@ class TestHost(object):
     """Unit tests to test carbon host."""
 
     _cp_scenario_description = dict(scenario_description)
-    _parameters = _cp_scenario_description.pop('provision')[0]
+    _cp_scenario_description_invalid = dict(scenario_description_invalid)
+    _hosts_description = _cp_scenario_description.pop('provision')
+    _hosts_description_invalid = _cp_scenario_description_invalid.pop('PROVISION')
+    _invalid_parameters = _hosts_description_invalid[2]
+    _parameters = _hosts_description[0]
+    _parameters2 = _hosts_description[1]
+    _parameters3 = _hosts_description[2]
     _credentials = _cp_scenario_description.pop('credentials')[0]
     _parameters['provider_creds'] = {_credentials.pop('name'): _credentials}
+    _parameters3['provider_creds'] = _parameters2['provider_creds'] = _parameters['provider_creds']
+    _invalid_parameters['provider_creds'] = _parameters['provider_creds']
 
     def test_instantiate_host(self):
         """Test instantiating a host class and verify the object created is
@@ -141,6 +151,41 @@ class TestHost(object):
         cp_parameters = deepcopy(self._parameters)
         host = Host(parameters=cp_parameters, scenario_id='1234')
         assert_is_instance(host.provider, OpenstackProvider)
+
+    def test_set_provisioner_valid(self):
+        """Test a valid setting of the provisioner.
+        """
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        assert_equal(host.provisioner.__provisioner_name__, self._parameters["provisioner"])
+
+    @raises(Exception)
+    def test_set_provisioner_invalid(self):
+        """Test an invalid setting of the provisioner.  The provisioner
+        is still set to a valid provisioner, but rejects the input.
+        """
+        cp_parameters = deepcopy(self._invalid_parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+
+    def test_provisioner_notset(self):
+        """Test not setting a provisioner.  The provisioner
+        uses the constants to set the provisioner.
+        """
+        cp_parameters = deepcopy(self._parameters3)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        assert_is_not_none(host.provisioner)
+        assert_false("provisioner" in self._parameters3)
+        assert_equal(host.provisioner.__provisioner_name__, PROVISIONERS[self._parameters3["provider"]])
+
+    @raises(AttributeError)
+    def test_set_provisioner(self):
+        """Test setting the host provisioner after host class was instantiated.
+        An exception will be raised since you cannot update the provisioner
+        after host object was created.
+        """
+        cp_parameters = deepcopy(self._parameters)
+        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host.provisioner = 'linchpin'
 
     @raises(Exception)
     def test_role_undeclared(self):

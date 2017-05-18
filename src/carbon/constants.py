@@ -33,3 +33,9 @@ TASKLIST = ["validate",
             "execute",
             "report",
             "cleanup"]
+
+PROVISIONERS = {
+    "openstack": "linchpin",
+    "beaker": "linchpin",
+    "openshift": "openshift"
+}

@@ -27,6 +27,7 @@ provision:
 
   - name: Application by git
     provider: openshift
+    provisioner: openshift
     credential: openshift
     oc_name: application2
     role: application2
@@ -53,6 +54,7 @@ provision:
 
   - name: Application by custom template
     provider: openshift
+    provisioner: openshift
     credential: openshift
     oc_name: application4
     role: application4

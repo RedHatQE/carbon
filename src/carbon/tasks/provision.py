@@ -24,7 +24,6 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
-from ..helpers import get_provisioner_class
 
 
 class ProvisionTask(CarbonTask):
@@ -33,17 +32,13 @@ class ProvisionTask(CarbonTask):
     using the linch-pin provisioner if no provisioner was declared.
     """
 
-    # In the future, we should give users the ability in their input file for
-    # Carbon to override the default provisioner.
-    __default_provisioner = get_provisioner_class("linchpin")
-
     def __init__(self, msg, clean_msg, host, **kwargs):
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
         self.clean_msg = clean_msg
-
-        # Instantiate a provisioner object with a host description
-        self.provisioner = self.__default_provisioner(host.profile())
+        self.host = host
+        self._provisioner = host.provisioner
+        self.provisioner = self._provisioner(host.profile())
 
     def run(self, context):
         print(self.msg)

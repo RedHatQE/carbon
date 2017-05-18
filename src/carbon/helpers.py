@@ -44,6 +44,8 @@ from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
 from ansible.vars import VariableManager
 
+from .constants import PROVISIONERS
+
 # sentinel
 _missing = object()
 
@@ -150,6 +152,27 @@ def get_provisioners_classes():
                 provisioners_list.append(clsmember)
 
     return provisioners_list
+
+
+def get_default_provisioner(provider):
+    """
+    Given a provider, it will return the default provisioner
+    :param provider: the provider value
+    :return: the default provisioner
+    """
+    provisioner_name = PROVISIONERS[provider.__provider_name__]
+    return get_provisioner_class(provisioner_name)
+
+
+def get_provisioners_list():
+    """
+    Returns a list of all the valid provisioners.
+    :return: list of provisioners
+    """
+    valid_provisioners = []
+    for provisioner_class in get_provisioners_classes():
+        valid_provisioners.append(provisioner_class.__provisioner_name__)
+    return valid_provisioners
 
 
 def get_provisioner_class(name):

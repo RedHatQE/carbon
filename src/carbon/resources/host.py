@@ -26,6 +26,7 @@
 from ..core import CarbonResource, CarbonException
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
+from ..helpers import get_provisioner_class, get_default_provisioner, get_provisioners_list
 
 
 class CarbonHostException(CarbonException):
@@ -73,6 +74,16 @@ class Host(CarbonResource):
             raise Exception('Invalid provider for host %s.' % str(self.name))
         else:
             self._provider = get_provider_class(provider)()
+
+        # We must set the provisioner and validate it
+        provisioner_set = parameters.pop('provisioner', None)
+
+        if provisioner_set is None:
+            self._provisioner = get_default_provisioner(self.provider)
+        elif provisioner_set not in get_provisioners_list():
+            raise Exception('Invalid provisioner for host %s.' % str(self.name))
+        else:
+            self._provisioner = get_provisioner_class(provisioner_set)
 
         # We must set the providers credentials initially
         provider_creds = parameters.pop('provider_creds', None)
@@ -149,6 +160,19 @@ class Host(CarbonResource):
         """Raises an exception when trying to set the provider for the host
         after the class has been instanciated.
         :param value: The provider name for the host
+        """
+        raise AttributeError('You cannot set provider after class is instanciated.')
+
+    @property
+    def provisioner(self):
+        """Return the provisioner object for the host."""
+        return self._provisioner
+
+    @provisioner.setter
+    def provisioner(self, value):
+        """Raises an exception when trying to set the provisioner for the host
+        after the class has been instantiated .
+        :param value: The provisioner name for the host
         """
         raise AttributeError('You cannot set provider after class is instanciated.')
 
