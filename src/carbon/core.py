@@ -338,3 +338,12 @@ class CarbonProvider(object):
                 param: getattr(host, param, None)
             })
         return profile
+
+
+class CarbonController(object):
+    """This is the base class for all controllers.
+
+    Every controller will need to inherit the carbon controller. Controllers
+    handle actions between carbon and its resources aka hosts.
+    """
+    pass
