@@ -304,7 +304,7 @@ class DockerController(CarbonController):
     def __init__(self):
         """Constructor.
 
-        Instantiates ansible controller class and docker client class.
+        Instantiates docker client class.
         """
         super(DockerController, self).__init__()
         self.client = DockerClient()
@@ -396,7 +396,7 @@ class DockerController(CarbonController):
         :param tag: Name of the tag for the image.
         """
         try:
-            self.client.images.pull(name, tag)
+            self.client.images.pull(name, tag=tag)
         except APIError as ex:
             raise DockerControllerException(ex)
         print('Successfully pulled image %s:%s.' % (name, tag))
@@ -408,9 +408,6 @@ class DockerController(CarbonController):
         :param tag: Tag for the image.
         """
         _image = '%s:%s' % (name, tag)
-        if not self.get_image(_image):
-            print('Image %s not found.' % _image)
-            return
 
         try:
             self.client.images.remove(image=_image)
