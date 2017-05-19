@@ -34,7 +34,7 @@ requires = [
     'pykwalify',
     'linchpin',
     'python-openstackclient',
-    'docker>=2.3.0'
+    'docker==2.1.0'
 ]
 
 
