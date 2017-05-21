@@ -27,6 +27,7 @@
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
 from ..core import CarbonProvisioner, CarbonException
+from ..helpers import get_ansible_inventory_script
 
 
 class OpenshiftProvisionerException(CarbonException):
@@ -113,19 +114,13 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # TODO: Read labels from self.host_desc and set
         self._label = 'MINIONS'
 
-        # TODO: Download this script from github or store under project
-        # TODO: Handle setting inventory filepath
-        # For testing, please download the file to local machine and set
-        # path to use ansible with docker containers.
-        # https://raw.githubusercontent.com/rywillia/ansible-docker-inventory/master/src/docker_inventory.py
-        self.ansible_inventory = './docker_inventory.py'
+        # Set ansible inventory file
+        self.ansible_inventory = get_ansible_inventory_script('docker')
 
         # Run container
         try:
             self.run_container(self.name, self._oc_image, entrypoint='bash')
         except DockerControllerException as ex:
-            # TODO: Add flag to filter for running containers
-            # Currently getting all containers even when stopped
             print(ex)
 
         # Authenticate with openshift

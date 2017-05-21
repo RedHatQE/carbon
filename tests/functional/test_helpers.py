@@ -29,10 +29,11 @@ except ImportError:
     from configparser import ConfigParser
 
 from nose.tools import assert_is_instance, assert_equal, assert_is, raises
-from nose.tools import assert_not_equal, assert_is_not
+from nose.tools import assert_not_equal, assert_is_not, assert_is_none
 
 from carbon import Carbon
-from carbon.helpers import file_mgmt
+from carbon._compat import string_types
+from carbon.helpers import file_mgmt, get_ansible_inventory_script
 from carbon.helpers import get_provisioner_class, get_provisioners_classes
 from carbon.helpers import get_provider_class, get_providers_classes
 from carbon.providers import OpenstackProvider
@@ -166,3 +167,13 @@ class TestGetModuleClasses(object):
         """
         provider = get_provider_class('openstack')
         assert_is(provider, OpenstackProvider)
+
+
+def test_get_ansible_inv_script():
+    """Test the function to get the absolute path to the ansible dynamic
+    inventory script for a given provider.
+    """
+    _script = get_ansible_inventory_script('docker')
+    assert_is_instance(_script, string_types)
+    _script = get_ansible_inventory_script('gru')
+    assert_is_none(_script)

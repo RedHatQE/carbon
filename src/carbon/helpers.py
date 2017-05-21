@@ -263,6 +263,26 @@ def gen_random_str(char_num=8):
                    _ in range(char_num))
 
 
+def get_ansible_inventory_script(provider):
+    """Return the absolute path to the ansible dynamic inventory script for
+    the provider given.
+
+    All inventory scripts are stored at ~ carbon.utils and use the following
+    naming standard ~ provider_inventory.py.
+
+    :param provider: Name of the provider.
+    :return: Absolute path to script.
+    """
+    from . import utils
+
+    _script = '%s_inventory.py' % provider
+    inventory = os.path.join(get_root_path(utils.__name__), _script)
+    if not os.path.isfile(inventory):
+        print('Ansible inventory script not found for provider %s' % provider)
+        inventory = None
+    return inventory
+
+
 def file_mgmt(operation, file_path, content=None, cfg_parser=None):
     """A generic function to manage files (read/write).
 
