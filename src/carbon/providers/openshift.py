@@ -64,6 +64,7 @@ class OpenshiftProvider(CarbonProvider):
 
     _mandatory_parameters = (
         'name',
+        'labels'
     )
 
     _optional_parameters = (
@@ -71,7 +72,6 @@ class OpenshiftProvider(CarbonProvider):
         'git',
         'template_name',
         'env_vars',
-        'labels'
     )
 
     _mandatory_creds_parameters = (
@@ -105,6 +105,10 @@ class OpenshiftProvider(CarbonProvider):
 
     @classmethod
     def validate_image(cls, value):
+        """Validate the image, if set.
+        :param value: The resource image name
+        :return: A boolean, true = valid, false = invalid
+        """
         if value:
             print("Validating image: {}".format(value))
             return isinstance(value, string_types)
@@ -113,6 +117,10 @@ class OpenshiftProvider(CarbonProvider):
 
     @classmethod
     def validate_git(cls, value):
+        """Validate the git, if set.
+        :param value: The resource git name
+        :return: A boolean, true = valid, false = invalid
+        """
         if value:
             print("Validating git: {}".format(value))
             if isinstance(value, string_types):
@@ -125,6 +133,10 @@ class OpenshiftProvider(CarbonProvider):
 
     @classmethod
     def validate_template_name(cls, value):
+        """Validate the template_name, if set.
+        :param value: The resource template name
+        :return: A boolean, true = valid, false = invalid
+        """
         if value:
             #             print("Validating template name: {}".format(value))
             return isinstance(value, string_types)
@@ -133,6 +145,10 @@ class OpenshiftProvider(CarbonProvider):
 
     @classmethod
     def validate_env_vars(cls, value):
+        """Validate the environment variables.
+        :param value: The environment variables
+        :return: A boolean, true = valid, false = invalid
+        """
         if value:
             #             print("Validating env vars: {}".format(value))
             return isinstance(value, dict)
@@ -141,8 +157,25 @@ class OpenshiftProvider(CarbonProvider):
 
     @classmethod
     def validate_labels(cls, value):
+        """Validate the labels, list of single dictionaries.
+        :param value: The label list
+        :return: A boolean, true = valid, false = invalid
+        """
         if value:
             #             print("Validating labels: {}".format(value))
-            return isinstance(value, dict)
+            if isinstance(value, list):
+                for val in value:
+                    if isinstance(val, dict):
+                        k, v = val.items()[0]
+                        # check valid values and the list only has one item
+                        if k and v and len(val.items()) == 1:
+                            pass
+                        else:
+                            return False
+                    else:
+                        return False
+                return True
+            else:
+                return False
         else:
             return True

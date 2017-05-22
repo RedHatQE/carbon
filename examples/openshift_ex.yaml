@@ -22,8 +22,8 @@ provision:
       var1: var1
       var2: var2
     oc_labels:  # Need to see if we can pass multiple labels by oc client
-      label1: label1
-      label2: label2
+      - label1: label1
+      - label2: label2
 
   - name: Application by git
     provider: openshift
@@ -36,8 +36,8 @@ provision:
       var1: var1
       var2: var2
     oc_labels:  # Need to see if we can pass multiple labels by oc client
-      label1: label1
-      label2: label2
+      - label1: label1
+      - label2: label2
 
   - name: Application by pre-defined template
     provider: openshift
@@ -49,8 +49,8 @@ provision:
       var1: var1
       var2: var2
     oc_labels:  # Need to see if we can pass multiple labels by oc client
-      label1: label1
-      label2: label2
+      - label1: label1
+      - label2: label2
 
   - name: Application by custom template
     provider: openshift
@@ -62,6 +62,5 @@ provision:
     oc_env_vars:
       var1: var1
       var2: var2
-    oc_labels:  # Need to see if we can pass multiple labels by oc client
-      label1: label1
-      label2: label2
+    oc_labels:
+      - label key: 1

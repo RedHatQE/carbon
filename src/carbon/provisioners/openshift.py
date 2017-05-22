@@ -113,10 +113,6 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # TODO: Set actual name based on scenario name + uuid
         self._name = 'KEVIN'
 
-        # Set label for application and its resources
-        # TODO: Read labels from self.host_desc and set
-        self._label = 'MINIONS'
-
         # Set ansible inventory file
         self.ansible_inventory = get_ansible_inventory_script('docker')
 
@@ -132,6 +128,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # Select project to use
         self.select_project()
 
+        # Set a normalized label list
         self.setup_label()
 
     @property
@@ -160,6 +157,19 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         """
         raise AttributeError('You cannot set the label name for the '
                              'application after the class is instanciated.')
+
+    def setup_label(self):
+        """
+        Sets a normalized list of key, values for the label, which is a list
+        """
+        label_list_original = self.host_desc["oc_labels"]
+        label_list_final = []
+
+        for label in label_list_original:
+            k, v = label.items()[0]
+            normalized_key = k.strip().replace(" ", "_")
+            label_list_final.append(str(normalized_key) + "=" + str(v))
+        self._label = label_list_final
 
     def authenticate(self):
         """Establish an authenticated session with openshift server.
