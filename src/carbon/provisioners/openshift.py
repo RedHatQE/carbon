@@ -86,8 +86,11 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
     code to determine pass or fail.
     """
     __provisioner_name__ = "openshift"
+    __provisioner_prefix__ = 'oc_'
 
     _oc_image = "rywillia/openshift-client"
+
+    _app_choices = ['image', 'git', 'template']
 
     def __init__(self, host_desc):
         """Constructor.
@@ -198,19 +201,47 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
     def create(self):
         """Create a new application in openshift based on the type of
         application declared in the scenario.
+
+        First we will determine which application method to call based on the
+        application declared in the host profile. If a profile has multiple
+        application types declared, an exception will be raised. We are not
+        able to tell which one the user actually wanted to use.
         """
-        print('Provisioning machines from {klass}'
-              .format(klass=self.__class__))
+        print('Create application from {klass}'.format(klass=self.__class__))
+
+        newapp = None
+        count = 0
+        for app in self._app_choices:
+            _app = self.__provisioner_prefix__ + app
+            if _app in self.host_desc and not self.host_desc[_app] is None:
+                count += 1
+                newapp = app
+
+        if count > 1:
+            raise OpenshiftProvisionerException(
+                'More than one application type are declard for resource. '
+                'Unable to determine which one to use.')
+
+        if newapp is None:
+            raise OpenshiftProvisionerException(
+                'Application type not defined for resource. Available choices'
+                ' ~ %s' % self._app_choices)
+
+        try:
+            getattr(self, 'app_by_%s' % newapp)()
+        except AttributeError:
+            raise OpenshiftProvisionerException(
+                'Openshift provisioner does not have a method for application'
+                ' by %s' % newapp)
 
     def delete(self):
         """Delete all resources associated with an application. It will
         delete all resources for an application using the label assocaited to
         it. This ensures no stale resources are left laying around.
         """
-        print('Tearing down machines from {klass}'
-              .format(klass=self.__class__))
+        print('Deleting application from {klass}'.format(klass=self.__class__))
 
-    def create_oc_image(self):
+    def app_by_image(self):
         """Create a new application in an openshift server from a docker image.
 
         E.g. $ oc new-app --docker-image=<image> -l app=<label>
@@ -220,7 +251,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # TODO: Call the expose_route method to have external access?
         raise NotImplementedError
 
-    def create_oc_git(self):
+    def app_by_git(self):
         """Create a new application in an openshift server from a git
         repository (source code).
 
@@ -230,7 +261,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # TODO: Run the command inside container by Ansible
         raise NotImplementedError
 
-    def create_oc_template_name(self):
+    def app_by_template(self):
         """Create a new application in openshift from a template. This can
         either use an existing template stored in openshift or a local
         template.
