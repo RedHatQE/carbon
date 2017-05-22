@@ -48,7 +48,7 @@ Download the source code and follow the commands below:
 $ pip install -r requirements.txt
 ```
 
-This is going to install all necessary packages that Carbon depends on.
+This is going to install the necessary packages to develop/contribute to Carbon.
 
 Next you can install Carbon itself from the source directory so you can
 run tests before commit any code:
@@ -93,13 +93,6 @@ To run this scenario, go to the `examples/` folder and run:
 $ python scenario_app.py
 ```
 
-Before run the tests you have to install some tools. Follow the
-command below:
-
-```commandline
-$ pip install -r test-requirements.txt
-```
-
 Now you can run the tests via Makefile:
 
 ```commandline
@@ -118,5 +111,22 @@ You can find the reports on the tests directory:
  * `tests/flake8-report.txt` - Lint report (PEP8, etc)
  * `tests/junit-report.xml` - Test results in JUnit format (good for Jenkins display)
  * `tests/coverage-report/index.html` - Coverage report
+
+If your code introduces a new package needed by Carbon. Please read the
+short synopsis below to see where you should declare the package name/version:
+
+**setup.py**
+
+Carbon's setup.py module declares packages needed by carbon in order to run.
+What does this mean? If you were to install carbon (pip install carbon) in a
+fresh environment. It would install all of its required package dependencies.
+
+**requirements.txt**
+
+Carbon's requirements.txt declares packages needed by carbon for development
+purposes only. What does this mean? If you wanted to run carbon's unit tests
+you would need to install the packages declared inside the requirements.txt.
+This file contains packages such as sphinx or nose as an example. They are not
+required in order to run carbon.
 
 Happy hacking!
