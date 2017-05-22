@@ -21,18 +21,18 @@ ROOT = os.path.dirname(__file__)
 VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
 
 dependencies = [
-    'https://github.com/mkollaro/taskrunner/tarball/master#egg=taskrunner-0.3.0'
+    'http://file.rdu.redhat.com/~tmoreira/taskrunner-master.zip'
 ]
 
 requires = [
-    'Flask',
-    'Werkzeug',
-    'Click',
+    'Flask>=0.12.2',
+    'Werkzeug>=0.11.15',
+    'Click>=6.7',
     'taskrunner==0.3.0',
-    'PyYAML',
-    'pykwalify',
-    'python-openstackclient',
-    'python-neutronclient',
+    'PyYAML>=3.12',
+    'pykwalify>=1.6.0',
+    'python-openstackclient>=3.11.0',
+    'python-neutronclient>=6.2.0',
     'docker==2.1.0',
     'ansible>=2.3.0'
 ]
