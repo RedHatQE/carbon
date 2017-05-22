@@ -30,8 +30,8 @@ import shutil
 import yaml
 
 from distutils import dir_util
-from linchpin.cli.context import LinchpinContext
-from linchpin.api import LinchpinAPI
+# from linchpin.cli.context import LinchpinContext
+# from linchpin.api import LinchpinAPI
 from ..constants import CARBON_ROOT
 from ..core import CarbonProvisioner
 from ..helpers import file_mgmt
@@ -92,7 +92,8 @@ class LinchpinProvisioner(CarbonProvisioner):
             os.makedirs(self._logspace)
 
         # Create linch-pin context object
-        self._linchpin_context = LinchpinContext()
+        # self._linchpin_context = LinchpinContext()
+        self._linchpin_context = None
         self._linchpin_context.load_config()
         self._linchpin_context.load_global_evars()
         self._linchpin_context.cfgs['logger']['file'] = self._logspace + "/linchpin.log"
@@ -124,7 +125,8 @@ class LinchpinProvisioner(CarbonProvisioner):
         self._linchpin_context.cfgs['ansible']['console'] = u'False'
 
         # Create linch-pin API object
-        self._linchpin = LinchpinAPI(self._linchpin_context)
+        # self._linchpin = LinchpinAPI(self._linchpin_context)
+        self._linchpin = None
 
     def lp_init(self):
         """

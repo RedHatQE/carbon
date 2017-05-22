@@ -21,8 +21,7 @@ ROOT = os.path.dirname(__file__)
 VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
 
 dependencies = [
-    'https://github.com/mkollaro/taskrunner/tarball/master#egg=taskrunner-0.3.0',
-    'https://github.com/rywillia/linch-pin/tarball/fix_import#egg=linchpin'
+    'https://github.com/mkollaro/taskrunner/tarball/master#egg=taskrunner-0.3.0'
 ]
 
 requires = [
@@ -32,9 +31,10 @@ requires = [
     'taskrunner==0.3.0',
     'PyYAML',
     'pykwalify',
-    'linchpin',
     'python-openstackclient',
-    'docker==2.1.0'
+    'python-neutronclient',
+    'docker==2.1.0',
+    'ansible>=2.3.0'
 ]
 
 
