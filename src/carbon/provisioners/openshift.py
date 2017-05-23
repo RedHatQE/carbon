@@ -28,6 +28,8 @@ from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
 from ..core import CarbonProvisioner, CarbonException
 from ..helpers import get_ansible_inventory_script
+from ..constants import CARBON_ROOT
+import os
 
 
 class OpenshiftProvisionerException(CarbonException):
@@ -131,6 +133,12 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # Set a normalized label list
         self.setup_label()
 
+        # set the labels
+        self.get_final_label()
+
+        # set the env_vars if set
+        self.env_opts()
+
     @property
     def name(self):
         """Return the name for the container."""
@@ -161,6 +169,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
     def setup_label(self):
         """
         Sets a normalized list of key, values for the label, which is a list
+        The keys cannot have spaces, they will be replaced w/an underscore
         """
         label_list_original = self.host_desc["oc_labels"]
         label_list_final = []
@@ -244,6 +253,9 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 'Openshift provisioner does not have a method for application'
                 ' by %s' % newapp)
 
+        # added temporarily to delete while testing
+#         self.delete()
+
     def delete(self):
         """Delete all resources associated with an application. It will
         delete all resources for an application using the label assocaited to
@@ -251,15 +263,28 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         """
         print('Deleting application from {klass}'.format(klass=self.__class__))
 
+        _cmd = 'oc delete all -l {0}'.\
+            format(self._finallabel)
+
+        results = self.run_module(
+            dict(name='oc delete all', hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args=_cmd))])
+        )
+
+        self.results_analyzer(results['status'])
+        if results['status'] != 0:
+            raise OpenshiftProvisionerException
+
     def app_by_image(self):
         """Create a new application in an openshift server from a docker image.
 
         E.g. $ oc new-app --docker-image=<image> -l app=<label>
         """
-        # TODO: Setup the oc new-app command
-        # TODO: Run the command inside container by Ansible
-        # TODO: Call the expose_route method to have external access?
-        raise NotImplementedError
+        image = self.host_desc["oc_image"]
+        image_call = "--docker-image\={}".format(image)
+
+        # call oc new-app
+        self.newapp("image", image_call)
 
     def app_by_git(self):
         """Create a new application in an openshift server from a git
@@ -267,9 +292,10 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
         E.g. $ oc new-app <git_url> -l app=<label>
         """
-        # TODO: Setup the oc new-app command
-        # TODO: Run the command inside container by Ansible
-        raise NotImplementedError
+        git_url = self.host_desc["oc_git"]
+
+        # call oc new-app
+        self.newapp("git", git_url)
 
     def app_by_template(self):
         """Create a new application in openshift from a template. This can
@@ -279,9 +305,78 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         E.g. $ oc new-app --template=<name> --env=[] -l app=<label>
         E.g. $ oc new-app --file=./template --env=[] -l app=<label>
         """
-        # TODO: Setup the oc new-app command
-        # TODO: Run the command inside container by Ansible
-        raise NotImplementedError
+        _template = self.host_desc["oc_template"]
+        _template_file = None
+        _template_filename = None
+
+        # check in the carbon root dir for the file as .yml or yaml
+        filepath1 = os.path.join(CARBON_ROOT, _template + ".yaml")
+        filepath2 = os.path.join(CARBON_ROOT, _template + ".yml")
+
+        # checks for a custom template
+        if os.path.isfile(filepath1):
+            _template_file = filepath1
+            _template_filename = os.path.basename(filepath1)
+        elif os.path.isfile(filepath2):
+            _template_file = filepath2
+            _template_filename = os.path.basename(filepath2)
+
+        # copy file to container
+        if _template_file:
+
+            src_file_path = _template_file
+            dest_full_path_file = '/tmp/'
+
+            cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
+
+            results = self.run_module(
+                dict(name='copy file', hosts=self.name, gather_facts='no',
+                     tasks=[dict(action=dict(module='copy', args=cp_args))])
+            )
+
+            if results['status'] != 0:
+                raise OpenshiftProvisionerException
+
+            custom_template_file = os.path.join("/tmp", _template_filename)
+            custom_template_call = "--file\={}".format(custom_template_file)
+
+            # we will not use env vars for custom templates
+            # as they can be set in the template itself
+            self._env_opts = ""
+            self.newapp("custom_template", custom_template_call)
+
+        else:
+            self.newapp("template", _template)
+
+    def newapp(self, oc_type, value):
+        """
+        generic newapp call that should work for almost all use cases that we support
+
+        :param oc_type: used for the name of the call
+        :param value: data that will be passed in after oc new-app <value>
+        """
+        _cmd = 'oc new-app {0} -l {1} {2}'.\
+            format(value, self._finallabel, self._env_opts)
+
+        print(_cmd)
+        results = self.run_module(
+            dict(name='oc new-app {}'.format(oc_type), hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args=_cmd))])
+        )
+
+        self.results_analyzer(results['status'])
+        if results['status'] != 0:
+            raise OpenshiftProvisionerException
+
+    def env_opts(self):
+        self._env_opts = ""
+        # get the env vars if set
+        if "oc_env_vars" in self.host_desc:
+            env_vars = self.host_desc["oc_env_vars"]
+
+            for env_key in env_vars:
+                self._env_opts = self._env_opts + "-p " + env_key + "=" + env_vars[env_key] + " "
+            self._env_opts = self._env_opts.strip().replace("=", "\=")
 
     def expose_route(self):
         """Expose an existing container externally via routes.
@@ -291,3 +386,14 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # TODO: Setup the oc new-app command
         # TODO: Run the command inside container by Ansible
         raise NotImplementedError
+
+    def get_final_label(self):
+        '''get the required label(s) in the format expected by oc
+        '''
+        labels = ""
+        for label in self.label:
+            labels = labels + label + ","
+        labels = labels[:-1]
+        finallabel = "'" + labels + "'"
+        finallabel = finallabel.replace("=", "\=")
+        self._finallabel = finallabel

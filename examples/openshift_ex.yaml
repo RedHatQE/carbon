@@ -44,10 +44,11 @@ provision:
     credential: openshift
     oc_name: application3
     role: application3
-    oc_template_name: jenkins-ephemeral # Define existing template name
+    oc_template: jws30-tomcat7-basic-s2i # Define existing template name
     oc_env_vars:
-      var1: var1
-      var2: var2
+      JWS_ADMIN_USERNAME: jwsadmin
+      JWS_ADMIN_PASSWORD: jwsadmin
+      APPLICATION_NAME: tomcat-app
     oc_labels:  # Need to see if we can pass multiple labels by oc client
       - label1: label1
       - label2: label2
@@ -58,9 +59,9 @@ provision:
     credential: openshift
     oc_name: application4
     role: application4
-    oc_template_name: my_template # We append file ext, file should be in dir where scenario exists
+    oc_template: my_template # We append file ext, file should be in dir where scenario exists
     oc_env_vars:
       var1: var1
       var2: var2
     oc_labels:
-      - label key: 1
+      - another_label: another_val

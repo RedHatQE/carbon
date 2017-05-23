@@ -70,7 +70,7 @@ class OpenshiftProvider(CarbonProvider):
     _optional_parameters = (
         'image',
         'git',
-        'template_name',
+        'template',
         'env_vars',
     )
 
@@ -132,8 +132,8 @@ class OpenshiftProvider(CarbonProvider):
             return True
 
     @classmethod
-    def validate_template_name(cls, value):
-        """Validate the template_name, if set.
+    def validate_template(cls, value):
+        """Validate the template, if set.
         :param value: The resource template name
         :return: A boolean, true = valid, false = invalid
         """
