@@ -117,6 +117,13 @@ class Carbon(LoggerMixin):
     # sign messages and other things.
     secret_key = ConfigAttribute('SECRET_KEY')
 
+    # The cleanup flag. Set this to your cleanup behavior you wish to have with
+    # taskrunner.
+    #
+    # This attribute can also be configured by carbon run --cleanup always or
+    # from the config with the ``CLEANUP`` configuration key.
+    cleanup = ConfigAttribute('CLEANUP')
+
     # The pipeline of pipelines. All pipelines in the lists starts an
     # empty tasks list and tasks will be added later when the
     # :function:`~carbon.Carbon.run` is executed. The framework will run
@@ -138,9 +145,11 @@ class Carbon(LoggerMixin):
         'LOGGER_NAME': __carbon_name__,
         'LOG_LEVEL': 'info',
         'SECRET_KEY': 'secret-key',
+        'CLEANUP': 'always'
     }
 
-    def __init__(self, import_name, root_path=None, log_level=None):
+    def __init__(self, import_name, root_path=None, log_level=None,
+                 cleanup=None):
 
         # The name of the package or module.  Do not change this once
         # it was set by the constructor.
@@ -158,6 +167,9 @@ class Carbon(LoggerMixin):
         if log_level:
             self.log_level = log_level
 
+        if cleanup:
+            self.cleanup = cleanup
+
         # Load/process carbon configuration settings in the following order:
         #    /etc/carbon/carbon.cfg
         #    ./carbon.cfg (location where carbon is run)
@@ -168,9 +180,9 @@ class Carbon(LoggerMixin):
         self.config.from_envvar('CARBON_SETTINGS', silent=True)
 
         # Setup logging handlers
-        self.create_carbon_logger(name=self.config['LOGGER_NAME'],
-                                  log_level=self.config['LOG_LEVEL'])
-        self.create_taskrunner_logger(log_level=self.config['LOG_LEVEL'])
+        self.create_carbon_logger(name=self.logger_name,
+                                  log_level=self.log_level)
+        self.create_taskrunner_logger(log_level=self.log_level)
 
         self.scenario = Scenario()
         self.creds = {}
@@ -365,7 +377,7 @@ class Carbon(LoggerMixin):
                 if not pipeline.tasks:
                     self.logger.warn("   ... nothing to be executed here ...")
                 else:
-                    taskrunner.execute(pipeline.tasks, cleanup='always')
+                    taskrunner.execute(pipeline.tasks, cleanup=self.cleanup)
                 self.logger.info("." * 50)
         except taskrunner.TaskExecutionException as ex:
             self.logger.error(ex)

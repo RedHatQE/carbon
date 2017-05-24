@@ -135,7 +135,7 @@ def validate(ctx, scenario):
 @click.option("-c", "--cleanup",
               type=click.Choice(_TASK_CLEANUP_CHOICES),
               default='always',
-              help="taskrunner cleanup behaviour. Default: 'always'")
+              help="taskrunner cleanup behavior. Default: 'always'")
 @click.option("--log-level",
               type=click.Choice(_TASK_LOGLEVEL_CHOICES),
               default='info',
@@ -163,7 +163,7 @@ def run(ctx, task, scenario, cleanup, log_level):
         ctx.exit()
 
     # Create a new carbon compound
-    cbn = Carbon(__name__, log_level=log_level)
+    cbn = Carbon(__name__, log_level=log_level, cleanup=cleanup)
 
     # This is the easiest way to configure a full scenario.
     cbn.load_from_yaml(scenario)
