@@ -24,81 +24,35 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import datetime
-import logging
 import os
+import random
 import time
 import yaml
-import random
 
-from ..core import CarbonProvisioner
-from ..constants import CARBON_ROOT
-from keystoneauth1.identity import v2
-from keystoneauth1 import session
-from keystoneclient.v2_0 import client as keystone_client
+from glanceclient.client import Client as glance_client
+from keystoneauth1 import identity, session
 from neutronclient.v2_0 import client as neutron_client
-from novaclient import client as nova_client
-from novaclient import exceptions as nova_exceptions
-from glanceclient import client as glance_client
+from novaclient.client import Client as nova_client
+from novaclient.exceptions import NotFound, OverLimit
 
-LOG = logging.getLogger('service')
-LOG.setLevel(logging.DEBUG)
-fmtr = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-sh = logging.StreamHandler()
-sh.setFormatter(fmtr)
-LOG.addHandler(sh)
+from ..core import CarbonException, CarbonProvisioner
+from ..constants import CARBON_ROOT
 
-VERSION = '2'
 MAX_WAIT_TIME = 100
 
+# TODO: Update docstrings that say DOCSTRING
+# TODO: Maybe split up code inside create and delete methods into other methods
+# TODO: Handle the use case of count > 1
 
-class ProvisionerException(Exception):
+
+class OpenstackProvisionerException(CarbonException):
+    """Base class for openstack provisioner exceptions."""
     pass
 
 
-class ProviderException(Exception):
+class InvalidParameter(OpenstackProvisionerException):
+    """Base class for all invalid parameter exceptions."""
     pass
-
-
-class HostException(Exception):
-    pass
-
-
-class ObjectNotFound(ProviderException):
-    pass
-
-
-class InvalidParameter(ProviderException):
-    pass
-
-
-class ForbiddenOperation(ProviderException):
-    pass
-
-
-def wait_for(label, condition, obj_getter, timeout_sec=120, wait_sec=1):
-    """Wait for condition to be true until timeout.
-
-    :param label: used for logging
-    :param condition: function that takes the object from obj_getter and
-        returns True or False
-    :param obj_getter: function that returns the object on which the condition
-        is tested
-    :param timeout_sec: how many seconds to wait until a TimeoutError
-    :param wait_sec: how many seconds to wait between testing the condition
-    :raises: TimeoutError when timeout_sec is exceeded
-             and condition isn't true
-    """
-    obj = obj_getter()
-    timeout = datetime.timedelta(seconds=timeout_sec)
-    start = datetime.datetime.now()
-    LOG.debug('%s - START' % label)
-    while not condition(obj):
-        if (datetime.datetime.now() - start) > timeout:
-            raise Exception(label, timeout_sec)
-        time.sleep(wait_sec)
-        obj = obj_getter()
-    LOG.debug('%s - DONE' % label)
-    return obj
 
 
 class OpenstackProvisioner(CarbonProvisioner):
@@ -106,35 +60,21 @@ class OpenstackProvisioner(CarbonProvisioner):
     Carbon's own openstack provisioner
     """
     __provisioner_name__ = 'openstack'
+    __api_version__ = '2'
 
-    # connectors
     _nova = None
-    _keystone = None
     _neutron = None
     _glance = None
+    _session = None
 
     def __init__(self, host_desc):
+        """Constructor.
+
+        :param host_desc: A host description in (dict form) based on a Carbon
+            host object.
+        """
         super(OpenstackProvisioner, self).__init__()
         self.host_desc = host_desc
-
-        auth = v2.Password(auth_url=self.host_desc['provider_creds']['auth_url'],
-                           tenant_name=self.host_desc['provider_creds']['tenant_name'],
-                           tenant_id=self.host_desc['provider_creds']['tenant_id'],
-                           username=self.host_desc['provider_creds']['username'],
-                           password=self.host_desc['provider_creds']['password'],)
-        self._session = session.Session(auth=auth)
-
-        # initiate clients
-        self._keystone = keystone_client.Client(session=self._session)
-        # LOG.debug('Keystone client initialized')
-        self._nova = nova_client.Client(VERSION, session=self._session)
-        # LOG.debug('Nova client initialized')
-        self._neutron = neutron_client.Client(session=self._session)
-        # LOG.debug('Neutron client initialized')
-        self._glance = glance_client.Client(VERSION, session=self._session)
-
-        # LOG.debug('Glance client initialized')
-
         self._networks = self.get_networks(self.host_desc['os_networks'])
 
         self._image = self.get_image(self.host_desc['os_image'])
@@ -159,41 +99,123 @@ class OpenstackProvisioner(CarbonProvisioner):
         if not os.path.exists(self._tmp):
             os.makedirs(self._tmp)
 
+    @property
+    def key_session(self):
+        """Create a keystone authenticated session (when needed) and return
+        keystone session object.
+
+        :return: The keystone session object.
+        """
+        if not self._session:
+            self._session = session.Session(
+                auth=identity.v2.Password(
+                    auth_url=self.host_desc['provider_creds']['auth_url'],
+                    tenant_name=self.host_desc['provider_creds']['tenant_name'],
+                    tenant_id=self.host_desc['provider_creds']['tenant_id'],
+                    username=self.host_desc['provider_creds']['username'],
+                    password=self.host_desc['provider_creds']['password']
+                )
+            )
+        return self._session
+
+    @property
+    def nova(self):
+        """Instantiate novaclient (when needed) and return novaclient object.
+        :return: The novaclient object
+        """
+        if not self._nova:
+            self._nova = nova_client(
+                self.__api_version__,
+                session=self.key_session
+            )
+        return self._nova
+
+    @property
+    def glance(self):
+        """Instantiate glanceclient (when needed) and return glanceclient
+        object.
+        :return: The glanceclient object.
+        """
+        if not self._glance:
+            self._glance = glance_client(
+                self.__api_version__,
+                session=self.key_session
+            )
+        return self._glance
+
+    @property
+    def neutron(self):
+        """Instantiate neutronclient (when needed) and return neutronclient
+        object.
+        :return: The neutronclient object.
+        """
+        if not self._neutron:
+            self._neutron = neutron_client.Client(session=self.key_session)
+        return self._neutron
+
     def _get_flavor(self, flavor_name):
+        """DOCSTRING."""
         try:
-            return self._nova.flavors.find(name=flavor_name)
-        except nova_exceptions.NotFound:
-            LOG.error('Flavor {flavor_name} not found or invalid'
-                      .format(flavor_name=flavor_name))
-            raise InvalidParameter('Flavor {flavor_name} not found or invalid'
-                                   .format(flavor_name=flavor_name))
+            return self.nova.flavors.find(name=flavor_name)
+        except NotFound as ex:
+            self.logger.error('Flavor %s not found or invalid.', flavor_name)
+            self.logger.debug('Traceback: %s', ex)
+            raise InvalidParameter
 
     def get_flavor(self, flavor_name):
+        """DOCSTRING."""
         return self._get_flavor(flavor_name)
 
     def _get_image(self, image_name):
+        """DOCSTRING."""
         try:
-            return self._nova.glance.find_image(image_name)
-        except nova_exceptions.NotFound:
-            LOG.error('Image {image_name} not found or invalid'
-                      .format(image_name=image_name))
-            raise InvalidParameter('Image {image_name} not found or invalid'
-                                   .format(image_name=image_name))
+            return self.nova.glance.find_image(image_name)
+        except NotFound as ex:
+            self.logger.error('Image %s not found or invalid.', image_name)
+            self.logger.debug('Traceback: %s', ex)
+            raise InvalidParameter
 
     def get_image(self, image_name):
+        """DOCSTRING."""
         return self._get_image(image_name)
 
     def _get_network(self, net_name):
+        """DOCSTRING."""
         try:
-            return self._nova.neutron.find_network(net_name)
-        except nova_exceptions.NotFound:
-            LOG.error('Network {net_name} not found or invalid'
-                      .format(net_name=net_name))
-            raise InvalidParameter('Network {net_name} not found or invalid'
-                                   .format(net_name=net_name))
+            return self.nova.neutron.find_network(net_name)
+        except NotFound as ex:
+            self.logger.error('Network %s not found or invalid.', net_name)
+            self.logger.debug('Traceback: %s', ex)
+            raise InvalidParameter
 
     def get_networks(self, networks):
+        """DOCSTRING."""
         return [self._get_network(network_name) for network_name in networks]
+
+    def _wait_for(self, label, condition, obj_getter, timeout_sec=120, wait_sec=1):
+        """Wait for condition to be true until timeout.
+
+        :param label: used for logging
+        :param condition: function that takes the object from obj_getter and
+            returns True or False
+        :param obj_getter: function that returns the object on which the condition
+            is tested
+        :param timeout_sec: how many seconds to wait until a TimeoutError
+        :param wait_sec: how many seconds to wait between testing the condition
+        :raises: TimeoutError when timeout_sec is exceeded
+                and condition isn't true
+        """
+        obj = obj_getter()
+        timeout = datetime.timedelta(seconds=timeout_sec)
+        start = datetime.datetime.now()
+        self.logger.debug('%s - START', label)
+        while not condition(obj):
+            if (datetime.datetime.now() - start) > timeout:
+                raise Exception(label, timeout_sec)
+            time.sleep(wait_sec)
+            obj = obj_getter()
+        self.logger.debug('%s - DONE', label)
+        return obj
 
     def _create_node(self,
                      name,
@@ -203,10 +225,11 @@ class OpenstackProvisioner(CarbonProvisioner):
                      keypair,
                      userdata={},
                      max_attempts=3):
+        """DOCSTRING."""
         attempt = 1
         while attempt <= max_attempts:
             try:
-                node = self._nova.servers.create(
+                node = self.nova.servers.create(
                     name=name,
                     key_name=keypair,
                     image=image,
@@ -214,66 +237,74 @@ class OpenstackProvisioner(CarbonProvisioner):
                     nics=nics,
                     userdata=userdata)
                 return node
-            except nova_exceptions.OverLimit:
-                LOG.info('Still not enough quota available for {name}'
-                         .format(name=name))
+            except OverLimit:
+                self.logger.warn('Still not enough quota available for %s',
+                                 name)
                 wait_time = random.randint(10, MAX_WAIT_TIME)
-                LOG.info('Attempt {attempt} of {max_attempts}'
-                         'waiting for {wait_time} seconds'
-                         .format(attempt=attempt,
-                                 max_attempts=max_attempts,
-                                 wait_time=wait_time))
+                self.logger.info('Attempt %s of %s, waiting for %s seconds.',
+                                 attempt, max_attempts, wait_time)
                 time.sleep(wait_time)
 
     def get_node_by_id(self, node_id):
-        node = self._nova.servers.get(node_id)
-        if node:
-            return node
-        return None
+        """Return the node object based on a node id.
+        :return: Node object.
+        """
+        try:
+            return self.nova.servers.get(node_id)
+        except NotFound as ex:
+            self.logger.warn('Unable to get node from node id: %s', node_id)
+            self.logger.debug('Traceback: %s', ex)
+            return None
 
     def get_node_by_name(self, node_name):
-        nodes = self._nova.servers.list()
-        for node in nodes:
-            name = getattr(node, 'name', None)
-            if name == node_name:
+        """Return the node object based on a node name.
+        :return: Node object.
+        """
+        for node in self.nova.servers.list():
+            if node.name == node_name:
                 return node
         return None
 
     def wait_for_nonexist_state(self, node):
+        """DOCSTRING."""
         node = self._wait_till_node_not_deleting(node)
         if node is None:
             return node
         if node is not None:
-            raise ProvisionerException("Issue in deletion of node '%s'"
-                                       % node.name)
+            self.logger.error('Issue in deletion of node %s', node.name)
+            raise OpenstackProvisionerException
         return node
 
     def wait_for_active_state(self, node):
+        """DOCSTRING."""
         node = self._wait_till_node_not_building(node)
         if node is None:
-            raise ProvisionerException("Failed to boot node")
+            self.logger.error('Failed to boot node')
+            raise OpenstackProvisionerException
         if node.status != 'ACTIVE' and node.status != 'ERROR':
-            raise ProvisionerException("Wrong status '%s' of node '%s'"
-                                       % (node.status, node.name))
+            self.logger.error('Wrong status %s of node %s', node.status,
+                              node.name)
         return node
 
     def _wait_till_node_not_building(self, node):
-        return wait_for(
+        """DOCSTRING."""
+        return self._wait_for(
             ('Waiting for end of BUILD state of %s' % node.name),
             lambda node: node.status != 'BUILD',
             lambda: self.get_node_by_id(node.id),
             timeout_sec=120)
 
     def _wait_till_node_not_deleting(self, node):
-        return wait_for(
+        """DOCSTRING."""
+        return self._wait_for(
             ('Waiting for Delete to complete. End of DELETE state of %s' % node.name),
             lambda node: node is None,
             lambda: self.get_node_by_name(node.name),
             timeout_sec=300)
 
     def create(self):
-        LOG.info('Provisioning machines from {klass}'
-                 .format(klass=self.__class__))
+        """DOCSTRING."""
+        self.logger.info('Provisioning machines from %s', self.__class__)
         instance = None
         try:
             instance = self._create_node(
@@ -288,21 +319,22 @@ class OpenstackProvisioner(CarbonProvisioner):
 
             # Add floating ip
             # Get Floating pool network info. For user supplied floating ip pool
-            os_pools = self._neutron.list_networks(name=self.host_desc['os_floating_ip_pool'])
+            os_pools = self.neutron.list_networks(name=self.host_desc['os_floating_ip_pool'])
             os_pool = os_pools['networks'][0]
 
             # Get port info for instance created
-            os_ports = self._neutron.list_ports(device_id=instance.id)
+            os_ports = self.neutron.list_ports(device_id=instance.id)
             os_port = os_ports['ports'][0]
 
             # Create and add floating ip
-            float_ip = self._neutron.create_floatingip(
+            float_ip = self.neutron.create_floatingip(
                 {'floatingip': {'floating_network_id': os_pool['id'],
                                 'port_id': os_port['id']}})
 
             # Add info to host
             host_desc_m = self.host_desc
-            host_desc_m.update({"ip_address": "%s" % str(float_ip['floatingip']['floating_ip_address'])})
+            host_desc_m.update({"ip_address": "%s" % str(float_ip[
+                'floatingip']['floating_ip_address'])})
             host_desc_m.pop("provider_creds", None)
             host_desc_m.pop("scenario_id", None)
             host_desc_m["os_node_id"] = "%s" % str(instance.id)
@@ -312,36 +344,38 @@ class OpenstackProvisioner(CarbonProvisioner):
             with open(output_yaml, 'w') as fp:
                 yaml.dump(host_update, fp, allow_unicode=True)
 
-        except ProvisionerException:
-            LOG.error('Error creating host.')
-            raise Exception("Failed to provision resources. Check logs or job resources status's")
+        except OpenstackProvisionerException:
+            self.logger.error('Error creating host.')
+            self.logger.error('Failed to provision resources. Check logs or '
+                              'job resources status')
+            raise Exception
 
-        LOG.info('Node %s created.' % self.host_desc['os_name'])
+        self.logger.info('Node %s created.', self.host_desc['os_name'])
         return instance
 
     def delete(self):
-        LOG.info('Tearing down machines from {klass}'
-                 .format(klass=self.__class__))
+        """DOCSTRING."""
+        self.logger.info('Tearing down machines from %s', self.__class__)
         try:
             server_exists = False
             node = self.get_node_by_name(self.host_desc['os_name'])
             if node:
-                LOG.debug("This server %s exists" % self.host_desc['os_name'])
+                self.logger.debug("This server %s exists", self.host_desc['os_name'])
                 server_exists = True
 
             if not server_exists:
-                LOG.info("server %s does not exist" % self.host_desc['os_name'])
+                self.logger.info("server %s does not exist", self.host_desc['os_name'])
             else:
-                LOG.info("deleting server..........")
+                self.logger.info("deleting server..........")
 
                 # Get floating ips for networks
-                floating_ips_dict = self._neutron.list_floatingips()
+                floating_ips_dict = self.neutron.list_floatingips()
                 floating_ips = [x['floating_ip_address'] for x in floating_ips_dict['floatingips']]
 
                 # Get systems ips
                 for host_network in self.host_desc['os_networks']:
                     # Get systems ips
-                    sys_ips_dict = self._nova.servers.ips(node)
+                    sys_ips_dict = self.nova.servers.ips(node)
                     sys_ips = [x['addr'] for x in sys_ips_dict[host_network]]
 
                     # Get system floating ips
@@ -351,12 +385,14 @@ class OpenstackProvisioner(CarbonProvisioner):
                          in floating_ips_dict['floatingips'] if x == y['floating_ip_address']]
 
                     # Disassociate and release floating ip
-                    for x in sys_floating_ids:
-                        self._neutron.delete_floatingip(x)
+                    for fip in sys_floating_ids:
+                        self.neutron.delete_floatingip(fip)
 
-                self._nova.servers.delete(node)
+                self.nova.servers.delete(node)
                 self.wait_for_nonexist_state(node)
-                LOG.info('Node %s deleted.' % node.name)
-        except ProvisionerException:
-            LOG.error('Error deleting host.')
-            raise Exception("Failed to tear down all provisioned resources. Check logs or job resources status's")
+                self.logger.info('Node %s deleted.', node.name)
+        except OpenstackProvisionerException:
+            self.logger.error('Error deleting host.')
+            self.logger.error('Failed to tear down all provisioned resources. '
+                              'Check logs or job resources status')
+            raise Exception

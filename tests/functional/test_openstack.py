@@ -21,25 +21,25 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from carbon.provisioners import OpenstackProvisioner
-from carbon import Scenario, Host
-from carbon.helpers import file_mgmt
-from carbon.constants import CARBON_ROOT
+import os
 from copy import deepcopy
 from distutils import dir_util
-from nose.tools import assert_equal, assert_is_instance, assert_is_not_none
-from nose.tools import raises, assert_raises_regexp, nottest
-import os
-import shutil
+from nose.tools import assert_is_instance, nottest
+
+from carbon import __name__ as carbon_name
+from carbon import Host
+from carbon.constants import CARBON_ROOT
+from carbon.core import LoggerMixin
+from carbon.helpers import file_mgmt
+from carbon.provisioners import OpenstackProvisioner
 
 scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 
 
-@nottest
 def scrub_os_setup(base_dir, ws_dir, ws_subdir=""):
     """ Scrub Openstack configuration setup to desired stage
-    before running test. Remove passed workspace directory if exists 
-    Return full workspace path 
+    before running test. Remove passed workspace directory if exists
+    Return full workspace path
     """
     workspace = os.path.join(base_dir, ws_dir)
     deldir = os.path.join(workspace, ws_subdir)
@@ -49,6 +49,7 @@ def scrub_os_setup(base_dir, ws_dir, ws_subdir=""):
 
 
 class TestOpenstackProvisioner(object):
+    """Unit tests to test carbon provisioner ~ openstack."""
 
     _cp_scenario_description = dict(scenario_description)
     _parameters = _cp_scenario_description['provision'][0]
@@ -58,41 +59,42 @@ class TestOpenstackProvisioner(object):
     _parameters_res2['provider_creds'] = {_credentials['name']: _credentials}
     _base_path = os.path.join(CARBON_ROOT, "jobs")
 
-    @nottest
-    def test_preparation(self):
-        pass
+    def setUp(self):
+        """Tasks to be performed before each test case."""
+        # Setup carbon logger
+        LoggerMixin.create_carbon_logger(carbon_name, 'debug')
+
+        # Call scrub_os_setup function
+        scrub_os_setup(self._base_path, '5678')
 
     @nottest
-    def test_instantiate_openstackprovisioner(self):
+    def test_instantiate_provisioner(self):
         """Test instantiating an OpenstackProvisioner class and
-        verifying the object created is an instance of the 
+        verifying the object created is an instance of the
         OpenstackProvisioner class.
         """
-        scrub_os_setup(self._base_path, '5678')
         cp_parameters = deepcopy(self._parameters)
         host = Host(parameters=cp_parameters, scenario_id='5678')
-        os = OpenstackProvisioner(host.profile())
-        assert_is_instance(os, OpenstackProvisioner)
+        obj = OpenstackProvisioner(host.profile())
+        assert_is_instance(obj, OpenstackProvisioner)
 
     @nottest
     def test_openstack_create_count_1(self):
         """Test LinchpinProvisioner rise/up method os_count 1
-        Check result successful.  
+        Check result successful.
         """
-        scrub_os_setup(self._base_path, '5678')
         cp_parameters = deepcopy(self._parameters)
         host = Host(parameters=cp_parameters, scenario_id='5678')
-        os = OpenstackProvisioner(host.profile())
-        os.create()
+        obj = OpenstackProvisioner(host.profile())
+        obj.create()
 
     @nottest
     def test_openstack_delete_count_1(self):
         """Test LinchpinProvisioner rise/up method os_count 1
-        Check result successful.  
+        Check result successful.
         """
-        scrub_os_setup(self._base_path, '5678')
         cp_parameters = deepcopy(self._parameters)
         host = Host(parameters=cp_parameters, scenario_id='5678')
-        os = OpenstackProvisioner(host.profile())
-        os.create()
-        os.delete()
+        obj = OpenstackProvisioner(host.profile())
+        obj.create()
+        obj.delete()
