@@ -27,12 +27,13 @@ from ..core import CarbonTask
 
 
 class ValidateTask(CarbonTask):
+
     def __init__(self, resource, **kwargs):
         super(ValidateTask, self).__init__(**kwargs)
         self.resource = resource
 
     def run(self, context):
-        print('Validating {}'.format(self.resource.name))
+        self.logger.info('Validating %s', self.resource.name)
         self.resource.validate()
 
     def cleanup(self, context):

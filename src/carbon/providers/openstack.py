@@ -208,20 +208,19 @@ class OpenstackProvider(CarbonProvider):
         sess = session.Session(auth=auth)
         self._neutron = neutronclient(session=sess)
 
-    @classmethod
-    def validate_name(cls, value):
+    def validate_name(self, value):
         """Validate the resource name.
         :param value: The resource name
         :return: A boolean, true = valid, false = invalid
         """
         # Quit when no value given
         if not value:
-            print('Invalid data for name!')
+            self.logger.warn('Invalid data for name!')
             return False
 
         # Name must be a string
         if not isinstance(value, string_types):
-            print("Name is required to be a string type!")
+            self.logger.warn('Name is required to be a string type!')
             return False
 
         return True
@@ -236,7 +235,7 @@ class OpenstackProvider(CarbonProvider):
         """
         # Quit when no value given
         if not value:
-            print('Invalid data for flavor!')
+            self.logger.warn('Invalid data for flavor!')
             return False
 
         try:
@@ -245,10 +244,11 @@ class OpenstackProvider(CarbonProvider):
             elif isinstance(value, int):
                 self.nova.flavors.find(id=str(value))
             else:
-                print('Flavor is required to be an integer or string type!')
+                self.logger.warn('Flavor is required to be an integer or '
+                                 'string type!')
                 return False
         except ClientException as ex:
-            print(ex)
+            self.logger.error(ex)
             return False
 
         return True
@@ -266,12 +266,12 @@ class OpenstackProvider(CarbonProvider):
 
         # Quit when no value given
         if not value:
-            print('Invalid data for image!')
+            self.logger.warn('Invalid data for image!')
             return False
 
         # Image must be a string
         if not isinstance(value, string_types):
-            print('Image is required to be a string type!')
+            self.logger.warn('Image is required to be a string type!')
             return False
 
         for image in self.glance.images.list():
@@ -281,7 +281,7 @@ class OpenstackProvider(CarbonProvider):
                 break
 
         if not _name and not _id:
-            print('Image %s does not exist!' % value)
+            self.logger.warn('Image %s does not exist!', value)
             return False
 
         return True
@@ -293,19 +293,20 @@ class OpenstackProvider(CarbonProvider):
         """
         # Quit when no value given
         if not value:
-            print('Invalid data for networks!')
+            self.logger.warn('Invalid data for networks!')
             return False
 
         # Networks must be a list
         if not isinstance(value, list):
-            print('Networks is required to be a list type!')
+            self.logger.warn('Networks is required to be a list type!')
             return False
 
         try:
             for network in value:
                 data = self.neutron.list_networks(name=network)
                 if len(data['networks']) <= 0:
-                    print('Network: %s does not exist in tenant!' % network)
+                    self.logger.error('Network %s does not exist in tenant!',
+                                      network)
                     raise RuntimeError
         except RuntimeError:
             return False
@@ -319,18 +320,18 @@ class OpenstackProvider(CarbonProvider):
         """
         # Quit when no value given
         if not value:
-            print('Invalid data for keypair!')
+            self.logger.warn('Invalid data for keypair!')
             return False
 
         # Keypair must be a string
         if not isinstance(value, string_types):
-            print('Keypair is required to be a string type!')
+            self.logger.warn('Keypair is required to be a string type!')
             return False
 
         try:
             self.nova.keypairs.find(name=value)
         except ClientException as ex:
-            print(ex)
+            self.logger.error(ex)
             return False
 
         return True
@@ -363,25 +364,24 @@ class OpenstackProvider(CarbonProvider):
         else:
             return True
 
-    @classmethod
-    def validate_count(cls, value):
+    def validate_count(self, value):
         """Validate the resource count.
         :param value: The resource count
         :return: A boolean, true = valid, false = invalid
         """
         # Quit when no value given
         if not value:
-            print('Invalid data for count!')
+            self.logger.warn('Invalid data for count!')
             return False
 
         # Count must be an integer
         if not isinstance(value, int):
-            print('Count is required to be a integer type!')
+            self.logger.warn('Count is required to be a integer type!')
             return False
 
         # Count may not be a negative number
         if value <= 0:
-            print('Count cannot be a negative number!')
+            self.logger.warn('Count cannot be a negative number!')
             return False
 
         return True
@@ -393,18 +393,20 @@ class OpenstackProvider(CarbonProvider):
         """
         # Quit when no value given
         if not value:
-            print('Invalid data for floating ip pool!')
+            self.logger.warn('Invalid data for floating ip pool!')
             return False
 
         # Floating ip pool must be a string
         if not isinstance(value, string_types):
-            print('Floating ip pool is required to be a string type!')
+            self.logger.warn('Floating ip pool is required to be a string '
+                             'type!')
             return False
 
         try:
             data = self.neutron.list_networks(name=value)
             if len(data['networks']) <= 0:
-                print('Floating IP pool: %s does not exist in tenant!' % value)
+                self.logger.error('Floating IP pool: %s does not exist in '
+                                  'tenant!' % value)
                 raise RuntimeError
         except RuntimeError:
             return False

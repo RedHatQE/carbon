@@ -181,12 +181,14 @@ class Scenario(CarbonResource):
         return profile
 
     def validate(self):
-        print("Validate the file %s" % self.filename)
+        self.logger.info("Validate the file %s", self.filename)
         val = self.yaml_validate(self.filename)
         if val[0]:
-            print("error occurred during file validation: %s" % val[1])
+            self.logger.error("error occurred during file validation: %s",
+                              val[1])
         else:
-            print("Successful validation of the yaml according to our schema")
+            self.logger.info("Successful validation of the yaml according to "
+                             "our schema")
 
     def _construct_validate_task(self):
         task = {

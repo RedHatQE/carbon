@@ -163,14 +163,7 @@ def run(ctx, task, scenario, cleanup, log_level):
         ctx.exit()
 
     # Create a new carbon compound
-    cbn = Carbon(__name__)
-
-    # Read configuration first from etc, then overwrite from CARBON_SETTINGS
-    # environment variable and the look gor a carbon.cfg from within the
-    # directory where this command is running from.
-    cbn.config.from_pyfile('/etc/carbon/carbon.cfg', silent=True)
-    cbn.config.from_envvar('CARBON_SETTINGS', silent=True)
-    cbn.config.from_pyfile(os.path.join(os.getcwd(), 'carbon.cfg'), silent=True)
+    cbn = Carbon(__name__, log_level=log_level)
 
     # This is the easiest way to configure a full scenario.
     cbn.load_from_yaml(scenario)

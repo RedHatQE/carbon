@@ -23,6 +23,7 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+from logging import getLogger
 from subprocess import Popen, PIPE
 
 import sys
@@ -36,6 +37,8 @@ import threading
 import yaml
 
 from .constants import PROVISIONERS
+
+LOG = getLogger(__name__)
 
 # sentinel
 _missing = object()
@@ -278,7 +281,7 @@ def get_ansible_inventory_script(provider):
     _script = '%s_inventory.py' % provider
     inventory = os.path.join(get_root_path(utils.__name__), _script)
     if not os.path.isfile(inventory):
-        print('Ansible inventory script not found for provider %s' % provider)
+        LOG.warn('Ansible inventory script not found for provider %s', provider)
         inventory = None
     return inventory
 
@@ -357,11 +360,12 @@ def check_is_gitrepo_fine(git_repo_url):
         p = Popen(["git", "ls-remote", git_repo_url], stdout=PIPE)
         output = p.communicate()[0]
         if p.returncode != 0:
-            print("Error: Unable to access {} - Returncode {} - Output {}".format(git_repo_url, p.returncode, output))
+            LOG.warn('Unable to access %s - Returncode %s - Output %s',
+                     git_repo_url, p.returncode, output)
             return False
     except:
-        print("Error: {}".format(sys.exc_info()[0]))
-        print("Error: Unable to access {}".format(git_repo_url))
+        LOG.error(sys.exc_info()[0])
+        LOG.error('Unable to access %s', git_repo_url)
         return False
 
     return True

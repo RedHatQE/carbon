@@ -282,11 +282,11 @@ class AnsibleController(CarbonController):
             _stdout = item['results']['stdout']
             if status != 0:
                 if _stderr:
-                    print('Standard error:')
-                    print(item['results']['stderr'])
+                    self.logger.info('Standard error:')
+                    self.logger.error(item['results']['stderr'])
             if _stdout:
-                print('Standard output:')
-                print(item['results']['stdout'])
+                self.logger.info('Standard output:')
+                self.logger.info(item['results']['stdout'])
 
 
 class DockerControllerException(CarbonException):
@@ -323,8 +323,8 @@ class DockerController(CarbonController):
             raise DockerControllerException(
                 'Container %s is %s! Re-use container.' % (name, status))
         elif status == 'exited':
-            print('Container %s is %s! Remove container before starting a '
-                  'new one.' % (name, status))
+            self.logger.warn('Container %s is %s! Remove container before '
+                             'starting a new one.', name, status)
             self.remove_container(name)
 
         try:
@@ -338,7 +338,7 @@ class DockerController(CarbonController):
             )
         except (APIError, ContainerError, ImageNotFound) as ex:
             raise DockerControllerException(ex)
-        print('Successfully started container: %s' % name)
+        self.logger.info('Successfully started container: %s', name)
 
     def remove_container(self, name):
         """Remove a container.
@@ -351,7 +351,7 @@ class DockerController(CarbonController):
             container.remove()
         except APIError as ex:
             raise DockerControllerException(ex)
-        print('Container %s successfully removed.' % name)
+        self.logger.info('Container %s successfully removed.', name)
 
     def start_container(self, name):
         """Start a stopped container.
@@ -360,7 +360,8 @@ class DockerController(CarbonController):
         """
         status = self.get_container_status(name)
         if status != 'exited':
-            print('Container %s is not stopped (status=%s).' % (name, status))
+            self.logger.warn('Container %s is not stopped (status=%s).', name,
+                             status)
             return
 
         container = self.get_container(name)
@@ -369,7 +370,7 @@ class DockerController(CarbonController):
             container.start()
         except APIError as ex:
             raise DockerControllerException(ex)
-        print('Container %s successfully started.' % name)
+        self.logger.info('Container %s successfully started.', name)
 
     def stop_container(self, name):
         """Stop a running container.
@@ -378,7 +379,8 @@ class DockerController(CarbonController):
         """
         status = self.get_container_status(name)
         if status != 'running':
-            print('Container %s is not running (status=%s).' % (name, status))
+            self.logger.warn('Container %s is not running (status=%s).', name,
+                             status)
             return
 
         container = self.get_container(name)
@@ -387,7 +389,7 @@ class DockerController(CarbonController):
             container.stop()
         except APIError as ex:
             raise DockerControllerException(ex)
-        print('Container: %s successfully stopped.' % name)
+        self.logger.info('Container: %s successfully stopped.', name)
 
     def pull_image(self, name, tag='latest'):
         """Pull an image from a registry.
@@ -399,7 +401,7 @@ class DockerController(CarbonController):
             self.client.images.pull(name, tag=tag)
         except APIError as ex:
             raise DockerControllerException(ex)
-        print('Successfully pulled image %s:%s.' % (name, tag))
+        self.logger.info('Successfully pulled image %s:%s.', name, tag)
 
     def remove_image(self, name, tag='latest'):
         """Remove an image.
@@ -413,7 +415,7 @@ class DockerController(CarbonController):
             self.client.images.remove(image=_image)
         except APIError as ex:
             raise DockerControllerException(ex)
-        print('Successfully removed image %s.' % _image)
+        self.logger.info('Successfully removed image %s.', _image)
 
     def get_container_status(self, name):
         """Get the status for the name of the container given.

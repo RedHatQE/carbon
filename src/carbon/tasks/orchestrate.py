@@ -27,13 +27,14 @@ from ..core import CarbonTask
 
 
 class OrchestrateTask(CarbonTask):
+
     def __init__(self, msg, clean_msg, **kwargs):
         super(OrchestrateTask, self).__init__(**kwargs)
         self.msg = msg
         self.clean_msg = clean_msg
 
     def run(self, context):
-        print(self.msg)
+        self.logger.info(self.msg)
 
     def cleanup(self, context):
-        print(self.clean_msg)
+        self.logger.info(self.msg)

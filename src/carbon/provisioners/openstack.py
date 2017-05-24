@@ -36,9 +36,7 @@ class OpenstackProvisioner(CarbonProvisioner):
         super(OpenstackProvisioner, self).__init__(**kwargs)
 
     def create(self):
-        print('Provisioning machines from {klass}'
-              .format(klass=self.__class__))
+        self.logger.info('Provisioning machines from %s', self.__class__)
 
     def delete(self):
-        print('Tearing down machines from {klass}'
-              .format(klass=self.__class__))
+        self.logger.info('Tearing down machines from %s', self.__class__)

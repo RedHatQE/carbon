@@ -21,10 +21,11 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import sys
 import inspect
-
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
+from logging import Formatter, getLogger, StreamHandler
 from taskrunner import Task
+
 from .helpers import get_core_tasks_classes
 
 
@@ -33,7 +34,86 @@ class CarbonException(Exception):
     pass
 
 
-class CarbonTask(Task):
+class LoggerMixin(object):
+    """Carbons logger mixin class.
+
+    This class provides an easy interface for other classes throughout carbon
+    to utilize the carbon logger.
+
+    When a carbon object is created, the carbon logger will be created also.
+    Allowing easy access to the logger as follows:
+
+        cbn = Carbon()
+        cbn.logger.info('Carbon!')
+
+    Carbon packages (classes) can either include the logger mixin or create
+    their own object.
+
+        class Host(CarbonResource):
+            self.logger.info('Carbon Resource!')
+
+    Modules that want to use carbon logger per function base and not per class,
+    can access the carbon logger as follows:
+
+        from logging import getLogger
+        LOG = getLogger(__name__)
+        LOG.info('Carbon!')
+
+    New loggers for other libraries can easily be added. A create_lib_logger
+    method will need to be create to setup the logger. Then lastly you can set
+    a property to return that specific logger for easy access.
+    """
+
+    _LOG_FORMAT = ("%(asctime)s %(levelname)s "
+                   "[%(name)s.%(funcName)s:%(lineno)d] %(message)s")
+
+    _LOG_LEVELS = {
+        'debug': DEBUG,
+        'info': INFO,
+        'warning': WARNING,
+        'error': ERROR,
+        'critical': CRITICAL
+    }
+
+    @classmethod
+    def create_carbon_logger(cls, name, log_level=None):
+        """Create carbons logger.
+
+        :param name: Logger name.
+        :param log_level: Log level to set for logger.
+        :return: Carbon logger object.
+        """
+        chandler = StreamHandler()
+        chandler.setLevel(cls._LOG_LEVELS[log_level])
+        chandler.setFormatter(Formatter(cls._LOG_FORMAT))
+        clogger = getLogger(name)
+        clogger.setLevel(cls._LOG_LEVELS[log_level])
+        clogger.addHandler(chandler)
+        return clogger
+
+    @classmethod
+    def create_taskrunner_logger(cls, name='taskrunner', log_level=None):
+        """Create taskrunners logger.
+
+        :param name: Logger name.
+        :param log_level: Log level to set for logger.
+        :return: Taskrunner logger object.
+        """
+        thandler = StreamHandler()
+        thandler.setLevel(cls._LOG_LEVELS[log_level])
+        thandler.setFormatter(Formatter(cls._LOG_FORMAT))
+        tlogger = getLogger(name)
+        tlogger.setLevel(cls._LOG_LEVELS[log_level])
+        tlogger.addHandler(thandler)
+        return tlogger
+
+    @property
+    def logger(self):
+        """Returns the default logger (carbon logger) object."""
+        return getLogger(inspect.getmodule(inspect.stack()[1][0]).__name__)
+
+
+class CarbonTask(Task, LoggerMixin):
     """
     This is the base class for every task created for Carbon framework.
     All instances of this class can be found within the ~carbon.tasks
@@ -58,7 +138,7 @@ class CarbonTask(Task):
         return self.name
 
 
-class CarbonResource(object):
+class CarbonResource(LoggerMixin):
     """
     This is the base class for every resource created for Carbon Framework.
     All instances of this class can be found within ~carbon.resources
@@ -146,7 +226,7 @@ class CarbonResource(object):
         pass
 
 
-class CarbonProvisioner(object):
+class CarbonProvisioner(LoggerMixin):
     """
     This is the base class for all provisioners for provisioning machines
     """
@@ -159,7 +239,7 @@ class CarbonProvisioner(object):
         raise NotImplementedError
 
 
-class CarbonProvider(object):
+class CarbonProvider(LoggerMixin):
     """
     This is the base class for all providers.
 
@@ -340,7 +420,7 @@ class CarbonProvider(object):
         return profile
 
 
-class CarbonController(object):
+class CarbonController(LoggerMixin):
     """This is the base class for all controllers.
 
     Every controller will need to inherit the carbon controller. Controllers

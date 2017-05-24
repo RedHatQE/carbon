@@ -24,12 +24,13 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import os
+
+from ..constants import CARBON_ROOT
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
 from ..core import CarbonProvisioner, CarbonException
 from ..helpers import get_ansible_inventory_script
-from ..constants import CARBON_ROOT
-import os
 
 
 class OpenshiftProvisionerException(CarbonException):
@@ -122,7 +123,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         try:
             self.run_container(self.name, self._oc_image, entrypoint='bash')
         except DockerControllerException as ex:
-            print(ex)
+            self.logger.warn(ex)
 
         # Authenticate with openshift
         self.authenticate()
@@ -226,7 +227,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         application types declared, an exception will be raised. We are not
         able to tell which one the user actually wanted to use.
         """
-        print('Create application from {klass}'.format(klass=self.__class__))
+        self.logger.info('Create application from %s', self.__class__)
 
         newapp = None
         count = 0
@@ -261,7 +262,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         delete all resources for an application using the label assocaited to
         it. This ensures no stale resources are left laying around.
         """
-        print('Deleting application from {klass}'.format(klass=self.__class__))
+        self.logger.info('Deleting application from %s', self.__class__)
 
         _cmd = 'oc delete all -l {0}'.\
             format(self._finallabel)
@@ -358,7 +359,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         _cmd = 'oc new-app {0} -l {1} {2}'.\
             format(value, self._finallabel, self._env_opts)
 
-        print(_cmd)
+        self.logger.debug(_cmd)
         results = self.run_module(
             dict(name='oc new-app {}'.format(oc_type), hosts=self.name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])

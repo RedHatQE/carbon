@@ -41,8 +41,8 @@ class ProvisionTask(CarbonTask):
         self.provisioner = self._provisioner(host.profile())
 
     def run(self, context):
-        print(self.msg)
+        self.logger.info(self.msg)
         self.provisioner.create()
 
     def cleanup(self, context):
-        print(self.clean_msg)
+        self.logger.info(self.clean_msg)

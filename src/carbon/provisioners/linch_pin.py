@@ -445,8 +445,7 @@ class LinchpinProvisioner(CarbonProvisioner):
         """The main method to start resource creation. It will call linch-pin
         rise command.
         """
-        print('Provisioning machines from {klass}'
-              .format(klass=self.__class__))
+        self.logger.info('Provisioning machines from %s', self.__class__)
         if not self._up():
             raise Exception("Failed to provision resources. Check logs or job resources status's")
 
@@ -454,8 +453,7 @@ class LinchpinProvisioner(CarbonProvisioner):
         """The main method to start resource deletion. It will call linch-pin
         drop command.
         """
-        print('Tearing down machines from {klass}'
-              .format(klass=self.__class__))
+        self.logger.info('Tearing down machines from %s', self.__class__)
         if not self._destroy():
             raise Exception("Failed to tear down all provisioned resources. Check logs or job resources status's")
 

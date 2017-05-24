@@ -30,6 +30,7 @@ except ImportError:
 
 from nose.tools import assert_is_instance, assert_equal, assert_is, raises
 from nose.tools import assert_not_equal, assert_is_not, assert_is_none
+from nose.tools import nottest
 
 from carbon import Carbon
 from carbon._compat import string_types
@@ -44,6 +45,7 @@ class TestLogging(object):
     """Unit test to test carbon logging."""
 
     @staticmethod
+    @nottest
     def test_logger_cache():
         """Test carbons logger."""
         cbn = Carbon(__name__)

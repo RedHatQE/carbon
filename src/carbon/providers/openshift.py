@@ -84,45 +84,42 @@ class OpenshiftProvider(CarbonProvider):
     def __init__(self, **kwargs):
         super(OpenshiftProvider, self).__init__(**kwargs)
 
-    @classmethod
-    def validate_name(cls, value):
+    def validate_name(self, value):
         """Validate the resource name.
         :param value: The resource name
         :return: A boolean, true = valid, false = invalid
         """
-        print("Validating Name: {}".format(value))
+        self.logger.info("Validating Name: %s", value)
         # Quit when no value given
         if not value:
-            print('Invalid data for name!')
+            self.logger.warn('Invalid data for name!')
             return False
 
         # Name must be a string
         if not isinstance(value, string_types):
-            print("Name is required to be a string type!")
+            self.logger.warn("Name is required to be a string type!")
             return False
 
         return True
 
-    @classmethod
-    def validate_image(cls, value):
+    def validate_image(self, value):
         """Validate the image, if set.
         :param value: The resource image name
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            print("Validating image: {}".format(value))
+            self.logger.info("Validating image: %s", value)
             return isinstance(value, string_types)
         else:
             return True
 
-    @classmethod
-    def validate_git(cls, value):
+    def validate_git(self, value):
         """Validate the git, if set.
         :param value: The resource git name
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            print("Validating git: {}".format(value))
+            self.logger.info("Validating git: %s", value)
             if isinstance(value, string_types):
                 return check_is_gitrepo_fine(value)
             else:
@@ -131,38 +128,35 @@ class OpenshiftProvider(CarbonProvider):
         else:
             return True
 
-    @classmethod
-    def validate_template(cls, value):
+    def validate_template(self, value):
         """Validate the template, if set.
         :param value: The resource template name
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            #             print("Validating template name: {}".format(value))
+            self.logger.info("Validating template name: %s", value)
             return isinstance(value, string_types)
         else:
             return True
 
-    @classmethod
-    def validate_env_vars(cls, value):
+    def validate_env_vars(self, value):
         """Validate the environment variables.
         :param value: The environment variables
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            #             print("Validating env vars: {}".format(value))
+            self.logger.info("Validating env vars: %s", value)
             return isinstance(value, dict)
         else:
             return True
 
-    @classmethod
-    def validate_labels(cls, value):
+    def validate_labels(self, value):
         """Validate the labels, list of single dictionaries.
         :param value: The label list
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            #             print("Validating labels: {}".format(value))
+            self.logger.info("Validating labels: %s", value)
             if isinstance(value, list):
                 for val in value:
                     if isinstance(val, dict):

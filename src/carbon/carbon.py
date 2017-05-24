@@ -25,16 +25,17 @@
 """
 import os
 import sys
-import yaml
 import collections
 from threading import Lock
+import yaml
 import taskrunner
 
-from .constants import TASKLIST
-from .core import CarbonException
-from .resources import Scenario, Host, Action, Report, Execute
+from . import __name__ as __carbon_name__
 from .config import Config, ConfigAttribute
-from .helpers import LockedCachedProperty, CustomDict, get_root_path
+from .constants import TASKLIST
+from .core import CarbonException, LoggerMixin
+from .helpers import LockedCachedProperty, get_root_path
+from .resources import Scenario, Host, Action, Report, Execute
 from .tasks import ValidateTask, ProvisionTask
 from .tasks import OrchestrateTask, ExecuteTask
 from .tasks import ReportTask, CleanupTask
@@ -50,7 +51,7 @@ _logger_lock = Lock()
 Pipeline = collections.namedtuple('Pipeline', ('name', 'type', 'tasks'))
 
 
-class Carbon(object):
+class Carbon(LoggerMixin):
     """
     The Carbon object acts as the central object. We call this object
     'the carbon compound'. Like in chemistry, a carbon molecule helps on the
@@ -104,6 +105,14 @@ class Carbon(object):
     # package name passed to the constructor.
     logger_name = ConfigAttribute('LOGGER_NAME')
 
+    # The log level. Set this to your log level of choice to display less or
+    # more log messages.
+    #
+    # This attribute can also be configured by carbon run --log-level info or
+    # from the config with the ``LOG_LEVEL`` configuration key. Defaults to
+    # ``info``.
+    log_level = ConfigAttribute('LOG_LEVEL')
+
     # If a secret key is set, cryptographic components can use this to
     # sign messages and other things.
     secret_key = ConfigAttribute('SECRET_KEY')
@@ -126,12 +135,12 @@ class Carbon(object):
     # Default configuration parameters.
     default_config = {
         'DEBUG': False,
-        'LOGGER_NAME': None,
-        'LOGGER_HANDLER_POLICY': 'always',
+        'LOGGER_NAME': __carbon_name__,
+        'LOG_LEVEL': 'info',
         'SECRET_KEY': 'secret-key',
     }
 
-    def __init__(self, import_name, root_path=None):
+    def __init__(self, import_name, root_path=None, log_level=None):
 
         # The name of the package or module.  Do not change this once
         # it was set by the constructor.
@@ -146,9 +155,22 @@ class Carbon(object):
 
         self.config = self.make_config()
 
-        # Prepare the deferred setup of the logger.
-        self._logger = None
-        self.logger_name = self.import_name
+        if log_level:
+            self.log_level = log_level
+
+        # Load/process carbon configuration settings in the following order:
+        #    /etc/carbon/carbon.cfg
+        #    ./carbon.cfg (location where carbon is run)
+        #    export CARBON_SETTINGS = {} (environment variable)
+        self.config.from_pyfile('/etc/carbon/carbon.cfg', silent=True)
+        self.config.from_pyfile(os.path.join(os.getcwd(), 'carbon.cfg'),
+                                silent=True)
+        self.config.from_envvar('CARBON_SETTINGS', silent=True)
+
+        # Setup logging handlers
+        self.create_carbon_logger(name=self.config['LOGGER_NAME'],
+                                  log_level=self.config['LOG_LEVEL'])
+        self.create_taskrunner_logger(log_level=self.config['LOG_LEVEL'])
 
         self.scenario = Scenario()
         self.creds = {}
@@ -167,30 +189,6 @@ class Carbon(object):
                 return '__main__'
             return os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
-
-    @property
-    def logger(self):
-        """
-        A :class:`logging.Logger` object for this application.  The
-        default configuration is to log to stderr if the application is
-        in debug mode. This is used to log messages.
-
-        Here some examples::
-
-            app.logger.debug('A value for debugging')
-            app.logger.warning('A warning occurred (%d apples)', 42)
-            app.logger.error('An error occurred')
-
-        :copyright: (c) 2015 by Armin Ronacher.
-        """
-        if self._logger and self._logger.name == self.logger_name:
-            return self._logger
-        with _logger_lock:
-            if self._logger and self._logger.name == self.logger_name:
-                return self._logger
-            from .logging import create_logger
-            self._logger = rv = create_logger(self)
-            return rv
 
     def make_config(self):
         """
@@ -361,13 +359,13 @@ class Carbon(object):
                 else:
                     continue
 
-                print(" ")
-                print("." * 50)
-                print("=> Starting tasks on pipeline: %s" % pipeline.name)
+                self.logger.info("." * 50)
+                self.logger.info("=> Starting tasks on pipeline: %s",
+                                 pipeline.name)
                 if not pipeline.tasks:
-                    print("   ... nothing to be executed here ...")
+                    self.logger.warn("   ... nothing to be executed here ...")
                 else:
                     taskrunner.execute(pipeline.tasks, cleanup='always')
-                print("." * 50)
+                self.logger.info("." * 50)
         except taskrunner.TaskExecutionException as ex:
-            print(ex)
+            self.logger.error(ex)
