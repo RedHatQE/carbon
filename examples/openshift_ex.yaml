@@ -23,13 +23,15 @@ provision:
       var2: var2
     oc_labels:  # Need to see if we can pass multiple labels by oc client
       - label1: label1
-      - label2: label2
+      - label2: image_app
 
   - name: Application by git
     provider: openshift
     provisioner: openshift
     credential: openshift
     oc_name: application2
+    # timeout for builds to complete, in seconds, default 30mins = 1800 sec
+    oc_build_timeout: 3600
     role: application2
     oc_git: https://github.com/openshift/django-ex  # Define url to git repository
     oc_env_vars:
@@ -37,7 +39,7 @@ provision:
       var2: var2
     oc_labels:  # Need to see if we can pass multiple labels by oc client
       - label1: label1
-      - label2: label2
+      - label2: git_app
 
   - name: Application by pre-defined template
     provider: openshift
@@ -51,7 +53,7 @@ provision:
       APPLICATION_NAME: tomcat-app
     oc_labels:  # Need to see if we can pass multiple labels by oc client
       - label1: label1
-      - label2: label2
+      - label2: predefinedtemplate_app
 
   - name: Application by custom template
     provider: openshift
@@ -59,9 +61,9 @@ provision:
     credential: openshift
     oc_name: application4
     role: application4
-    oc_template: my_template # We append file ext, file should be in dir where scenario exists
+    oc_template: mytemplate # We append file ext, file should be in dir where scenario exists
     oc_env_vars:
       var1: var1
       var2: var2
     oc_labels:
-      - another_label: another_val
+      - another_label: customtemplate_app

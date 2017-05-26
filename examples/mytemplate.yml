@@ -1,447 +1,366 @@
-apiVersion: v1
-kind: Template
-metadata:
-  creationTimestamp: null
-  name: test_template
-objects:
-- apiVersion: v1
-  kind: BuildConfig
-  metadata:
-    annotations:
-      openshift.io/generated-by: OpenShiftNewApp
-    creationTimestamp: null
-    labels:
-      app: jws30-tomcat7-basic-s2i
-      application: sometest
-      my_label: tomcat_test
-      template: jws30-tomcat7-basic-s2i
-      test2: hello
-      xpaas: 1.2.0
-    name: sometest
-  spec:
-    nodeSelector: null
-    output:
-      to:
-        kind: ImageStreamTag
-        name: sometest:latest
-    postCommit: {}
-    resources: {}
-    runPolicy: Serial
-    source:
-      contextDir: tomcat-websocket-chat
-      git:
-        ref: "1.2"
-        uri: https://github.com/jboss-openshift/openshift-quickstarts.git
-      type: Git
-    strategy:
-      sourceStrategy:
-        forcePull: true
-        from:
-          kind: ImageStreamTag
-          name: jboss-webserver30-tomcat7-openshift:1.2
-          namespace: openshift
-      type: Source
-    triggers:
-    - github:
-        secret: MpH3DX5r
-      type: GitHub
-    - generic:
-        secret: 4JYxWYE0
-      type: Generic
-    - imageChange: {}
-      type: ImageChange
-    - type: ConfigChange
-  status:
-    lastVersion: 0
-- apiVersion: v1
-  kind: Build
-  metadata:
-    creationTimestamp: null
-    labels:
-      app: jws30-tomcat7-basic-s2i
-      application: sometest
-      buildconfig: sometest
-      my_label: tomcat_test
-      openshift.io/build-config.name: sometest
-      openshift.io/build.start-policy: Serial
-      template: jws30-tomcat7-basic-s2i
-      test2: hello
-      xpaas: 1.2.0
-    name: sometest-1
-  spec:
-    nodeSelector: null
-    output:
-      pushSecret:
-        name: builder-dockercfg-ckbzy
-      to:
-        kind: ImageStreamTag
-        name: sometest:latest
-    postCommit: {}
-    resources: {}
-    revision:
-      git:
-        author:
-          email: marko.luksa@gmail.com
-          name: Marko Luksa
-        commit: caec20220374804b2cb3d3622a754f9091af7c57
-        committer:
-          email: marko.luksa@gmail.com
-          name: Marko Luksa
-        message: 'Fixed bug: summary is displayed instead of description (cherry picked
-          from com..'
-      type: Git
-    serviceAccount: builder
-    source:
-      contextDir: tomcat-websocket-chat
-      git:
-        ref: "1.2"
-        uri: https://github.com/jboss-openshift/openshift-quickstarts.git
-      type: Git
-    strategy:
-      sourceStrategy:
-        forcePull: true
-        from:
-          kind: DockerImage
-          name: registry.access.redhat.com/jboss-webserver-3/webserver30-tomcat7-openshift@sha256:cacb2099dec1ec3618d0f13ff9e54677179ca8a66bbaf7700317567d049eb6e3
-      type: Source
-    triggeredBy:
-    - message: Build configuration change
-  status:
-    config:
-      name: sometest
-    outputDockerImageReference: 172.30.113.129:5000/vipatel-test/sometest:latest
-    phase: New
-- apiVersion: v1
-  kind: ImageStream
-  metadata:
-    annotations:
-      openshift.io/generated-by: OpenShiftNewApp
-    creationTimestamp: null
-    generation: 1
-    labels:
-      app: jws30-tomcat7-basic-s2i
-      application: sometest
-      my_label: tomcat_test
-      template: jws30-tomcat7-basic-s2i
-      test2: hello
-      xpaas: 1.2.0
-    name: sometest
-  spec:
-    tags:
-    - annotations: null
-      from:
-        kind: DockerImage
-        name: 172.30.113.129:5000/vipatel-test/sometest:latest
-      generation: null
-      importPolicy: {}
-      name: latest
-  status:
-    dockerImageRepository: ""
-- apiVersion: v1
-  kind: DeploymentConfig
-  metadata:
-    annotations:
-      openshift.io/generated-by: OpenShiftNewApp
-    creationTimestamp: null
-    generation: 1
-    labels:
-      app: jws30-tomcat7-basic-s2i
-      application: sometest
-      my_label: tomcat_test
-      template: jws30-tomcat7-basic-s2i
-      test2: hello
-      xpaas: 1.2.0
-    name: sometest
-  spec:
-    replicas: 1
-    selector:
-      deploymentConfig: sometest
-    strategy:
-      recreateParams:
-        timeoutSeconds: 600
-      resources: {}
-      type: Recreate
-    template:
-      metadata:
-        annotations:
-          openshift.io/generated-by: OpenShiftNewApp
-        creationTimestamp: null
-        labels:
-          app: jws30-tomcat7-basic-s2i
-          application: sometest
-          deploymentConfig: sometest
-          my_label: tomcat_test
-          test2: hello
-        name: sometest
-      spec:
-        containers:
-        - env:
-          - name: JWS_ADMIN_USERNAME
-            value: jwsadmin
-          - name: JWS_ADMIN_PASSWORD
-            value: jwsadmin
-            name: APPLICATION_NAME
-            value: sometest
-          image: 172.30.113.129:5000/vipatel-test/sometest@sha256:66131eb3d7b64b2b2e092103cf69da1ddbef66bee7ce28f97885ab7e7fcdd920
-          imagePullPolicy: Always
-          name: sometest
-          ports:
-          - containerPort: 8778
-            name: jolokia
-            protocol: TCP
-          - containerPort: 8080
-            name: http
-            protocol: TCP
-          readinessProbe:
-            exec:
-              command:
-              - /bin/bash
-              - -c
-              - curl -s -u jwsadmin:jwsadmin 'http://localhost:8080/manager/jmxproxy/?get=Catalina%3Atype%3DServer&att=stateName'
-                |grep -iq 'stateName *= *STARTED'
-            failureThreshold: 3
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
-          resources: {}
-          terminationMessagePath: /dev/termination-log
-        dnsPolicy: ClusterFirst
-        restartPolicy: Always
-        securityContext: {}
-        terminationGracePeriodSeconds: 60
-    test: false
-    triggers:
-    - imageChangeParams:
-        automatic: true
-        containerNames:
-        - sometest
-        from:
-          kind: ImageStreamTag
-          name: sometest:latest
-          namespace: vipatel-test
-      type: ImageChange
-    - type: ConfigChange
-  status: {}
-- apiVersion: v1
-  kind: ReplicationController
-  metadata:
-    annotations:
-      kubectl.kubernetes.io/desired-replicas: "1"
-      openshift.io/deployer-pod.name: sometest-1-deploy
-      openshift.io/deployment-config.latest-version: "1"
-      openshift.io/deployment-config.name: sometest
-      openshift.io/deployment.phase: Running
-      openshift.io/deployment.replicas: "0"
-      openshift.io/deployment.status-reason: image change
-      openshift.io/encoded-deployment-config: |
-        {"kind":"DeploymentConfig","apiVersion":"v1","metadata":{"name":"sometest","namespace":"vipatel-test","selfLink":"/oapi/v1/namespaces/vipatel-test/deploymentconfigs/sometest","uid":"7efd6772-3f55-11e7-8429-001a4a0aa1f5","resourceVersion":"8753263","generation":2,"creationTimestamp":"2017-05-23T01:16:49Z","labels":{"app":"jws30-tomcat7-basic-s2i","application":"sometest","my_label":"tomcat_test","template":"jws30-tomcat7-basic-s2i","test2":"hello","xpaas":"1.2.0"},"annotations":{"openshift.io/generated-by":"OpenShiftNewApp"}},"spec":{"strategy":{"type":"Recreate","recreateParams":{"timeoutSeconds":600},"resources":{}},"triggers":[{"type":"ImageChange","imageChangeParams":{"automatic":true,"containerNames":["sometest"],"from":{"kind":"ImageStreamTag","namespace":"vipatel-test","name":"sometest:latest"},"lastTriggeredImage":"172.30.113.129:5000/vipatel-test/sometest@sha256:66131eb3d7b64b2b2e092103cf69da1ddbef66bee7ce28f97885ab7e7fcdd920"}},{"type":"ConfigChange"}],"replicas":1,"test":false,"selector":{"deploymentConfig":"sometest"},"template":{"metadata":{"name":"sometest","creationTimestamp":null,"labels":{"app":"jws30-tomcat7-basic-s2i","application":"sometest","deploymentConfig":"sometest","my_label":"tomcat_test","test2":"hello"},"annotations":{"openshift.io/generated-by":"OpenShiftNewApp"}},"spec":{"containers":[{"name":"sometest","image":"172.30.113.129:5000/vipatel-test/sometest@sha256:66131eb3d7b64b2b2e092103cf69da1ddbef66bee7ce28f97885ab7e7fcdd920","ports":[{"name":"jolokia","containerPort":8778,"protocol":"TCP"},{"name":"http","containerPort":8080,"protocol":"TCP"}],"env":[{"name":"JWS_ADMIN_USERNAME","value":"jwsadmin"},{"name":"JWS_ADMIN_PASSWORD","value":"jwsadmin"}],"resources":{},"readinessProbe":{"exec":{"command":["/bin/bash","-c","curl -s -u jwsadmin:jwsadmin 'http://localhost:8080/manager/jmxproxy/?get=Catalina%3Atype%3DServer\u0026att=stateName' |grep -iq 'stateName *= *STARTED'"]},"timeoutSeconds":1,"periodSeconds":10,"successThreshold":1,"failureThreshold":3},"terminationMessagePath":"/dev/termination-log","imagePullPolicy":"Always"}],"restartPolicy":"Always","terminationGracePeriodSeconds":60,"dnsPolicy":"ClusterFirst","securityContext":{}}}},"status":{"latestVersion":1,"observedGeneration":1,"details":{"message":"image change","causes":[{"type":"ImageChange","imageTrigger":{"from":{"kind":"ImageStreamTag","namespace":"vipatel-test","name":"sometest:latest"}}}]},"conditions":[{"type":"Available","status":"False","lastTransitionTime":"2017-05-23T01:16:49Z","message":"Deployment config does not have minimum availability."}]}}
-    creationTimestamp: null
-    generation: 1
-    labels:
-      app: jws30-tomcat7-basic-s2i
-      application: sometest
-      my_label: tomcat_test
-      openshift.io/deployment-config.name: sometest
-      template: jws30-tomcat7-basic-s2i
-      test2: hello
-      xpaas: 1.2.0
-    name: sometest-1
-  spec:
-    replicas: 1
-    selector:
-      deployment: sometest-1
-      deploymentConfig: sometest
-      deploymentconfig: sometest
-    template:
-      metadata:
-        annotations:
-          openshift.io/deployment-config.latest-version: "1"
-          openshift.io/deployment-config.name: sometest
-          openshift.io/deployment.name: sometest-1
-          openshift.io/generated-by: OpenShiftNewApp
-        creationTimestamp: null
-        labels:
-          app: jws30-tomcat7-basic-s2i
-          application: sometest
-          deployment: sometest-1
-          deploymentConfig: sometest
-          deploymentconfig: sometest
-          my_label: tomcat_test
-          test2: hello
-      spec:
-        containers:
-        - env:
-          - name: JWS_ADMIN_USERNAME
-            value: jwsadmin
-          - name: JWS_ADMIN_PASSWORD
-            value: jwsadmin
-          - name: APPLICATION_NAME
-            value: sometest
-          image: 172.30.113.129:5000/vipatel-test/sometest@sha256:66131eb3d7b64b2b2e092103cf69da1ddbef66bee7ce28f97885ab7e7fcdd920
-          imagePullPolicy: Always
-          name: sometest
-          ports:
-          - containerPort: 8778
-            name: jolokia
-            protocol: TCP
-          - containerPort: 8080
-            name: http
-            protocol: TCP
-          readinessProbe:
-            exec:
-              command:
-              - /bin/bash
-              - -c
-              - curl -s -u jwsadmin:jwsadmin 'http://localhost:8080/manager/jmxproxy/?get=Catalina%3Atype%3DServer&att=stateName'
-                |grep -iq 'stateName *= *STARTED'
-            failureThreshold: 3
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
-          resources: {}
-          terminationMessagePath: /dev/termination-log
-        dnsPolicy: ClusterFirst
-        restartPolicy: Always
-        securityContext: {}
-        terminationGracePeriodSeconds: 60
-  status:
-    replicas: 0
-- apiVersion: v1
-  kind: Route
-  metadata:
-    annotations:
-      description: Route for application's http service.
-      openshift.io/generated-by: OpenShiftNewApp
-      openshift.io/host.generated: "true"
-    creationTimestamp: null
-    labels:
-      app: jws30-tomcat7-basic-s2i
-      application: sometest
-      my_label: tomcat_test
-      template: jws30-tomcat7-basic-s2i
-      test2: hello
-      xpaas: 1.2.0
-    name: sometest
-  spec:
-    host:
-    to:
-      kind: Service
-      name: sometest
-      weight: 100
-    wildcardPolicy: None
-  status:
-    ingress:
-    - conditions:
-      - lastTransitionTime: 2017-05-23T01:16:49Z
-        status: "True"
-        type: Admitted
-      host: 
-      routerName: router
-      wildcardPolicy: None
-- apiVersion: v1
-  kind: Service
-  metadata:
-    annotations:
-      description: The web server's http port.
-      openshift.io/generated-by: OpenShiftNewApp
-    creationTimestamp: null
-    labels:
-      app: jws30-tomcat7-basic-s2i
-      application: sometest
-      my_label: tomcat_test
-      template: jws30-tomcat7-basic-s2i
-      test2: hello
-      xpaas: 1.2.0
-    name: sometest
-  spec:
-    ports:
-    - port: 8080
-      protocol: TCP
-      targetPort: 8080
-    selector:
-      deploymentConfig: sometest
-    sessionAffinity: None
-    type: ClusterIP
-  status:
-    loadBalancer: {}
-- apiVersion: v1
-  kind: Pod
-  metadata:
-    annotations:
-      kubernetes.io/created-by: |
-        {"kind":"SerializedReference","apiVersion":"v1","reference":{"kind":"ReplicationController","namespace":"vipatel-test","name":"sometest-1","uid":"9dfc3e00-3f55-11e7-b02c-001a4a0aa1f3","apiVersion":"v1","resourceVersion":"8753286"}}
-      openshift.io/deployment-config.latest-version: "1"
-      openshift.io/deployment-config.name: sometest
-      openshift.io/deployment.name: sometest-1
-      openshift.io/generated-by: OpenShiftNewApp
-      openshift.io/scc: restricted
-    creationTimestamp: null
-    generateName: sometest-1-
-    labels:
-      app: jws30-tomcat7-basic-s2i
-      application: sometest
-      deployment: sometest-1
-      deploymentConfig: sometest
-      deploymentconfig: sometest
-      my_label: tomcat_test
-      test2: hello
-  spec:
-    containers:
-    - env:
-      - name: JWS_ADMIN_USERNAME
-        value: jwsadmin
-      - name: JWS_ADMIN_PASSWORD
-        value: jwsadmin
-      - name: APPLICATION_NAME
-        value: sometest
-      image: 172.30.113.129:5000/vipatel-test/sometest@sha256:66131eb3d7b64b2b2e092103cf69da1ddbef66bee7ce28f97885ab7e7fcdd920
-      imagePullPolicy: Always
-      name: sometest
-      ports:
-      - containerPort: 8778
-        name: jolokia
-        protocol: TCP
-      - containerPort: 8080
-        name: http
-        protocol: TCP
-      readinessProbe:
-        exec:
-          command:
-          - /bin/bash
-          - -c
-          - curl -s -u jwsadmin:jwsadmin 'http://localhost:8080/manager/jmxproxy/?get=Catalina%3Atype%3DServer&att=stateName'
-            |grep -iq 'stateName *= *STARTED'
-        failureThreshold: 3
-        periodSeconds: 10
-        successThreshold: 1
-        timeoutSeconds: 1
-      resources: {}
-      securityContext:
-        capabilities:
-          drop:
-          - KILL
-          - MKNOD
-          - SETGID
-          - SETUID
-          - SYS_CHROOT
-        privileged: false
-      terminationMessagePath: /dev/termination-log
-      volumeMounts:
-      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
-        name: default-token-1qoh3
-        readOnly: true
-    dnsPolicy: ClusterFirst
-    imagePullSecrets:
-    - name: default-dockercfg-nff4o
-    nodeName: cmpt-03.openshift.centralci.eng.rdu2.redhat.com
-    restartPolicy: Always
-    serviceAccount: default
-    serviceAccountName: default
-    terminationGracePeriodSeconds: 60
-    volumes:
-    - name: default-token-1qoh3
-      secret:
-        defaultMode: 420
-        secretName: default-token-1qoh3
-  status:
-    phase: Pending
+{
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+        "annotations": {
+            "iconClass": "icon-jboss",
+            "description": "Application template for EAP 7 applications built using S2I.",
+            "tags": "eap,javaee,java,jboss,xpaas",
+            "version": "1.3.2",
+            "openshift.io/display-name": "Red Hat JBoss EAP 7.0 (no https)"
+        },
+        "name": "eap70-basic-s2i"
+    },
+    "labels": {
+        "template": "eap70-basic-s2i",
+        "xpaas": "1.3.2"
+    },
+    "message": "A new EAP 7 based application has been created in your project.",
+    "parameters": [
+        {
+            "displayName": "Application Name",
+            "description": "The name for the application.",
+            "name": "APPLICATION_NAME",
+            "value": "eap-app",
+            "required": true
+        },
+        {
+            "displayName": "Custom http Route Hostname",
+            "description": "Custom hostname for http service route.  Leave blank for default hostname, e.g.: <application-name>-<project>.<default-domain-suffix>",
+            "name": "HOSTNAME_HTTP",
+            "value": "",
+            "required": false
+        },
+        {
+            "displayName": "Git Repository URL",
+            "description": "Git source URI for application",
+            "name": "SOURCE_REPOSITORY_URL",
+            "value": "https://github.com/jboss-developer/jboss-eap-quickstarts",
+            "required": true
+        },
+        {
+            "displayName": "Git Reference",
+            "description": "Git branch/tag reference",
+            "name": "SOURCE_REPOSITORY_REF",
+            "value": "7.0.0.GA",
+            "required": false
+        },
+        {
+            "displayName": "Context Directory",
+            "description": "Path within Git project to build; empty for root project directory.",
+            "name": "CONTEXT_DIR",
+            "value": "kitchensink",
+            "required": false
+        },
+        {
+            "displayName": "Queues",
+            "description": "Queue names",
+            "name": "MQ_QUEUES",
+            "value": "",
+            "required": false
+        },
+        {
+            "displayName": "Topics",
+            "description": "Topic names",
+            "name": "MQ_TOPICS",
+            "value": "",
+            "required": false
+        },
+        {
+            "displayName": "A-MQ cluster password",
+            "description": "A-MQ cluster admin password",
+            "name": "MQ_CLUSTER_PASSWORD",
+            "from": "[a-zA-Z0-9]{8}",
+            "generate": "expression",
+            "required": true
+        },
+        {
+            "displayName": "Github Webhook Secret",
+            "description": "GitHub trigger secret",
+            "name": "GITHUB_WEBHOOK_SECRET",
+            "from": "[a-zA-Z0-9]{8}",
+            "generate": "expression",
+            "required": true
+        },
+        {
+            "displayName": "Generic Webhook Secret",
+            "description": "Generic build trigger secret",
+            "name": "GENERIC_WEBHOOK_SECRET",
+            "from": "[a-zA-Z0-9]{8}",
+            "generate": "expression",
+            "required": true
+        },
+        {
+            "displayName": "ImageStream Namespace",
+            "description": "Namespace in which the ImageStreams for Red Hat Middleware images are installed. These ImageStreams are normally installed in the openshift namespace. You should only need to modify this if you've installed the ImageStreams in a different namespace/project.",
+            "name": "IMAGE_STREAM_NAMESPACE",
+            "value": "openshift",
+            "required": true
+        },
+        {
+            "displayName": "JGroups Cluster Password",
+            "description": "JGroups cluster password",
+            "name": "JGROUPS_CLUSTER_PASSWORD",
+            "from": "[a-zA-Z0-9]{8}",
+            "generate": "expression",
+            "required": true
+        },
+        {
+            "displayName": "Deploy Exploded Archives",
+            "description": "Controls whether exploded deployment content should be automatically deployed",
+            "name": "AUTO_DEPLOY_EXPLODED",
+            "value": "false",
+            "required": false
+        }
+    ],
+    "objects": [
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "spec": {
+                "ports": [
+                    {
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "deploymentConfig": "${APPLICATION_NAME}"
+                }
+            },
+            "metadata": {
+                "name": "${APPLICATION_NAME}",
+                "labels": {
+                    "application": "${APPLICATION_NAME}"
+                },
+                "annotations": {
+                    "description": "The web server's http port."
+                }
+            }
+        },
+        {
+            "kind": "Route",
+            "apiVersion": "v1",
+            "id": "${APPLICATION_NAME}-http",
+            "metadata": {
+                "name": "${APPLICATION_NAME}",
+                "labels": {
+                    "application": "${APPLICATION_NAME}"
+                },
+                "annotations": {
+                    "description": "Route for application's http service."
+                }
+            },
+            "spec": {
+                "host": "${HOSTNAME_HTTP}",
+                "to": {
+                    "name": "${APPLICATION_NAME}"
+                }
+            }
+        },
+        {
+            "kind": "ImageStream",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "${APPLICATION_NAME}",
+                "labels": {
+                    "application": "${APPLICATION_NAME}"
+                }
+            }
+        },
+        {
+            "kind": "BuildConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "${APPLICATION_NAME}",
+                "labels": {
+                    "application": "${APPLICATION_NAME}"
+                }
+            },
+            "spec": {
+                "source": {
+                    "type": "Git",
+                    "git": {
+                        "uri": "${SOURCE_REPOSITORY_URL}",
+                        "ref": "${SOURCE_REPOSITORY_REF}"
+                    },
+                    "contextDir": "${CONTEXT_DIR}"
+                },
+                "strategy": {
+                    "type": "Source",
+                    "sourceStrategy": {
+                        "forcePull": true,
+                        "from": {
+                            "kind": "ImageStreamTag",
+                            "namespace": "${IMAGE_STREAM_NAMESPACE}",
+                            "name": "jboss-eap70-openshift:1.4"
+                        }
+                    }
+                },
+                "output": {
+                    "to": {
+                        "kind": "ImageStreamTag",
+                        "name": "${APPLICATION_NAME}:latest"
+                    }
+                },
+                "triggers": [
+                    {
+                        "type": "GitHub",
+                        "github": {
+                            "secret": "${GITHUB_WEBHOOK_SECRET}"
+                        }
+                    },
+                    {
+                        "type": "Generic",
+                        "generic": {
+                            "secret": "${GENERIC_WEBHOOK_SECRET}"
+                        }
+                    },
+                    {
+                        "type": "ImageChange",
+                        "imageChange": {}
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ]
+            }
+        },
+        {
+            "kind": "DeploymentConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "${APPLICATION_NAME}",
+                "labels": {
+                    "application": "${APPLICATION_NAME}"
+                }
+            },
+            "spec": {
+                "strategy": {
+                    "type": "Recreate"
+                },
+                "triggers": [
+                    {
+                        "type": "ImageChange",
+                        "imageChangeParams": {
+                            "automatic": true,
+                            "containerNames": [
+                                "${APPLICATION_NAME}"
+                            ],
+                            "from": {
+                                "kind": "ImageStreamTag",
+                                "name": "${APPLICATION_NAME}:latest"
+                            }
+                        }
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
+                "replicas": 1,
+                "selector": {
+                    "deploymentConfig": "${APPLICATION_NAME}"
+                },
+                "template": {
+                    "metadata": {
+                        "name": "${APPLICATION_NAME}",
+                        "labels": {
+                            "deploymentConfig": "${APPLICATION_NAME}",
+                            "application": "${APPLICATION_NAME}"
+                        }
+                    },
+                    "spec": {
+                        "terminationGracePeriodSeconds": 75,
+                        "containers": [
+                            {
+                                "name": "${APPLICATION_NAME}",
+                                "image": "${APPLICATION_NAME}",
+                                "imagePullPolicy": "Always",
+                                "lifecycle": {
+                                    "preStop": {
+                                        "exec": {
+                                            "command": [
+                                                "/opt/eap/bin/jboss-cli.sh",
+                                                "-c",
+                                                ":shutdown(timeout=60)"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "livenessProbe": {
+                                    "exec": {
+                                        "command": [
+                                            "/bin/bash",
+                                            "-c",
+                                            "/opt/eap/bin/livenessProbe.sh"
+                                        ]
+                                    }
+                                },
+                                "readinessProbe": {
+                                    "exec": {
+                                        "command": [
+                                            "/bin/bash",
+                                            "-c",
+                                            "/opt/eap/bin/readinessProbe.sh"
+                                        ]
+                                    }
+                                },
+                                "ports": [
+                                    {
+                                        "name": "jolokia",
+                                        "containerPort": 8778,
+                                        "protocol": "TCP"
+                                    },
+                                    {
+                                        "name": "http",
+                                        "containerPort": 8080,
+                                        "protocol": "TCP"
+                                    },
+                                    {
+                                        "name": "ping",
+                                        "containerPort": 8888,
+                                        "protocol": "TCP"
+                                    }
+                                ],
+                                "env": [
+                                    {
+                                        "name": "OPENSHIFT_KUBE_PING_LABELS",
+                                        "value": "application=${APPLICATION_NAME}"
+                                    },
+                                    {
+                                        "name": "OPENSHIFT_KUBE_PING_NAMESPACE",
+                                        "valueFrom": {
+                                            "fieldRef": {
+                                                "fieldPath": "metadata.namespace"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "name": "MQ_CLUSTER_PASSWORD",
+                                        "value": "${MQ_CLUSTER_PASSWORD}"
+                                    },
+                                    {
+                                        "name": "MQ_QUEUES",
+                                        "value": "${MQ_QUEUES}"
+                                    },
+                                    {
+                                        "name": "MQ_TOPICS",
+                                        "value": "${MQ_TOPICS}"
+                                    },
+                                    {
+                                        "name": "JGROUPS_CLUSTER_PASSWORD",
+                                        "value": "${JGROUPS_CLUSTER_PASSWORD}"
+                                    },
+                                    {
+                                        "name": "AUTO_DEPLOY_EXPLODED",
+                                        "value": "${AUTO_DEPLOY_EXPLODED}"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}

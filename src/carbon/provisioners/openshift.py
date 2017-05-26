@@ -25,6 +25,8 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
+import time
+import yaml
 
 from ..constants import CARBON_ROOT
 from ..controllers import AnsibleController
@@ -115,6 +117,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # Set name for container
         # TODO: Set actual name based on scenario name + uuid
         self._name = 'KEVIN'
+        self._routes = []
+        self._app_name = ""
 
         # Set ansible inventory file
         self.ansible_inventory = get_ansible_inventory_script('docker')
@@ -287,6 +291,15 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # call oc new-app
         self.newapp("image", image_call)
 
+        # wait for all pods to be up
+        self.wait_for_pods()
+
+        # expose routes
+        self.expose_route()
+
+        # return the application name and routes(if part of the app)
+        self.show_results()
+
     def app_by_git(self):
         """Create a new application in an openshift server from a git
         repository (source code).
@@ -297,6 +310,15 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
         # call oc new-app
         self.newapp("git", git_url)
+
+        # wait for all pods to be up
+        self.wait_for_pods()
+
+        # expose routes
+        self.expose_route()
+
+        # return the application name and routes(if part of the app)
+        self.show_results()
 
     def app_by_template(self):
         """Create a new application in openshift from a template. This can
@@ -349,6 +371,12 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         else:
             self.newapp("template", _template)
 
+        # wait for all pods to be up
+        self.wait_for_pods()
+
+        # return the application name and routes(if part of the app)
+        self.show_results()
+
     def newapp(self, oc_type, value):
         """
         generic newapp call that should work for almost all use cases that we support
@@ -379,14 +407,173 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 self._env_opts = self._env_opts + "-p " + env_key + "=" + env_vars[env_key] + " "
             self._env_opts = self._env_opts.strip().replace("=", "\=")
 
+    def wait_for_pods(self):
+        """ waiting for all pods to be up
+        also need to check to see if any builds are running, as they need
+        to be complete before any pods will come up.
+        """
+        self.logger.info("Sleeping for 10 secs for buildconfigs to be started")
+        time.sleep(10)
+
+        # default max wait time of 30 mins
+        if self.host_desc["oc_build_timeout"]:
+            wait = self.host_desc["oc_build_timeout"]
+        else:
+            wait = 1800
+        # new attempt every 10 seconds
+        total_attempts = wait / 10
+
+        attempt = 0
+        while wait > 0:
+            buildcheck = True
+            podcheck = True
+            attempt += 1
+            self.logger.info("Attempt {0} of {1}: Checking for pods to all be running".format(attempt, total_attempts))
+
+            # check the build status, which needs to be No resources found or Complete
+
+            _cmd = 'oc get builds -l {0} -o yaml'.\
+                format(self._finallabel)
+
+#             self.logger.debug(_cmd)
+            results = self.run_module(
+                dict(name='oc get builds {}', hosts=self.name, gather_facts='no',
+                     tasks=[dict(action=dict(module='shell', args=_cmd))])
+            )
+            self.results_analyzer(results['status'])
+            parsed_results = results["callback"].contacted[0]["results"]
+            if "stdout" in parsed_results and "stderr" in parsed_results["stdout"]:
+                if "No resources" in parsed_results["stdout"]["stderr"]:
+                    pass
+                else:
+                    raise Exception("Unexpected Error checking builds: " + parsed_results["stdout"]["stderr"])
+            elif "stdout" in parsed_results:
+                mydict = {}
+                mydict = yaml.load(parsed_results["stdout"])
+                for item in mydict["items"]:
+                    build_status = item['status']['phase']
+                    if build_status == "Complete":
+                        buildcheck = buildcheck and True
+                    else:
+                        # Build is still in progress
+                        buildcheck = False
+                # if all builds are not Complete, retry, else continue
+                if not buildcheck:
+                    self.logger.info("Sleeping for 10 secs for all builds to complete")
+                    time.sleep(10)
+                    continue
+            elif "stderr_lines" in parsed_results and parsed_results["stderr_lines"]:
+                raise Exception("Unexpected Error when Checking the build:: " + parsed_results["stderr_lines"])
+            else:
+                raise Exception("Unexpected Error when Checking the build:" + parsed_results)
+
+            # Wait for 10 seconds after the builds are complete to make sure the pod objects get instantiated.
+            time.sleep(10)
+
+            _cmd = 'oc get pods -l {0} -o yaml'.\
+                format(self._finallabel)
+
+#             self.logger.debug(_cmd)
+            results = self.run_module(
+                dict(name='oc get pods', hosts=self.name, gather_facts='no',
+                     tasks=[dict(action=dict(module='shell', args=_cmd))])
+            )
+
+            parsed_results2 = results["callback"].contacted[0]["results"]
+            if "stderr" in parsed_results2 and parsed_results2["stderr"]:
+                raise Exception("Unexpected output when checking for created pods" + parsed_results2["stderr"])
+            elif "stdout" in parsed_results2 and parsed_results2["stdout"]:
+                mydict = {}
+                mydict = yaml.load(parsed_results2["stdout"])
+
+#                 self.logger.debug(len(mydict["items"]))
+                for item in mydict["items"]:
+                    build_status = item['status']['phase']
+                    if build_status == "Running":
+                        # set the app name
+                        self._app_name = item["metadata"]["labels"]["app"]
+                        podcheck = podcheck and True
+                    else:
+                        # Build is still in progress
+                        podcheck = False
+                # if all pods are Running, retry, else continue
+                if not podcheck:
+                    self.logger.debug("Sleeping for 10 secs waiting for all pods to be Running")
+                    time.sleep(10)
+                    continue
+            elif "stderr_lines" in parsed_results2 and parsed_results2["stderr_lines"]:
+                raise Exception("Unexpected Error when Checking the pod:: " + parsed_results["stderr_lines"])
+            else:
+                raise Exception("Unexpected Error when Checking the build:" + parsed_results)
+
+            # complete if all conditions passed and no Exceptions thrown
+            break
+
     def expose_route(self):
         """Expose an existing container externally via routes.
 
         E.g. $ oc expose server <name>
+        oc get svc -l -> extract app name
+        oc expose svc <app_name>
         """
-        # TODO: Setup the oc new-app command
-        # TODO: Run the command inside container by Ansible
-        raise NotImplementedError
+        _cmd = 'oc get svc -l {0} -o yaml'.\
+            format(self._finallabel)
+
+#             self.logger.debug(_cmd)
+        results = self.run_module(
+            dict(name='oc get svc -l', hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args=_cmd))])
+        )
+
+        parsed_results = results["callback"].contacted[0]["results"]
+        mydict = yaml.load(parsed_results["stdout"])
+        try:
+            app_name = mydict["items"][0]["metadata"]["name"]
+        except:
+            # this may be the case where there is no svc for the application
+            self.logger.warn("unable to get application name " + parsed_results)
+
+        if app_name:
+            _cmd = 'oc expose svc {0}'.format(self._app_name)
+
+            results = self.run_module(
+                dict(name='oc expose svc', hosts=self.name, gather_facts='no',
+                     tasks=[dict(action=dict(module='shell', args=_cmd))])
+            )
+            self.results_analyzer(results['status'])
+
+    def show_results(self):
+        '''return the data from the creation of pods (App name & routes if exist)
+        oc get pod -l -> extract app name from any pod
+        oc get route -l -> extract all routes that are set
+        TODO: this function should set these vals in a temporary yaml of the input
+              will wait for the implementation of where to update before adding that
+              functionality.
+        '''
+        # app name should already be set
+        self.logger.debug("return app name: {}".format(self._app_name))
+
+        _cmd = 'oc get route -l {0} -o yaml'.\
+            format(self._finallabel)
+
+#             self.logger.debug(_cmd)
+        results = self.run_module(
+            dict(name='oc get route', hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args=_cmd))])
+        )
+
+        parsed_results = results["callback"].contacted[0]["results"]
+        self.results_analyzer(results['status'])
+        mydict = {}
+        mydict = yaml.load(parsed_results["stdout"])
+
+        if mydict["items"]:
+            for item in mydict["items"]:
+                if "spec" in item and "host" in item["spec"]:
+                    self._routes.append(item["spec"]["host"])
+            self.logger.debug("returning routes: {}".format(self._routes))
+        else:
+            self.logger.debug("returning no routes: {}".format(self._routes))
 
     def get_final_label(self):
         '''get the required label(s) in the format expected by oc

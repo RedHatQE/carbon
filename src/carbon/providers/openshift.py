@@ -72,6 +72,7 @@ class OpenshiftProvider(CarbonProvider):
         'git',
         'template',
         'env_vars',
+        'build_timeout'
     )
 
     _mandatory_creds_parameters = (
@@ -89,7 +90,7 @@ class OpenshiftProvider(CarbonProvider):
         :param value: The resource name
         :return: A boolean, true = valid, false = invalid
         """
-        self.logger.info("Validating Name: %s", value)
+        self.logger.info("Validating Name: {0}".format(value))
         # Quit when no value given
         if not value:
             self.logger.warn('Invalid data for name!')
@@ -108,7 +109,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating image: %s", value)
+            self.logger.info("Validating image: {0}".format(value))
             return isinstance(value, string_types)
         else:
             return True
@@ -119,7 +120,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating git: %s", value)
+            self.logger.info("Validating git: {0}".format(value))
             if isinstance(value, string_types):
                 return check_is_gitrepo_fine(value)
             else:
@@ -134,7 +135,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating template name: %s", value)
+            self.logger.info("Validating template name: {0}".format(value))
             return isinstance(value, string_types)
         else:
             return True
@@ -145,8 +146,22 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating env vars: %s", value)
+            self.logger.info("Validating env vars: {0}".format(value))
             return isinstance(value, dict)
+        else:
+            return True
+
+    def validate_build_timeout(self, value):
+        """Validate the build timeout, how long to wait for the build to complete.
+        :param value: A timeout value if specified
+        :return: A boolean, true = valid, false = invalid
+        """
+        if value:
+            self.logger.info("Validating env vars: {0}".format(value))
+            if isinstance(value, int) and value > 0:
+                return True
+            else:
+                return False
         else:
             return True
 
@@ -156,7 +171,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating labels: %s", value)
+            self.logger.info("Validating labels: {0}".format(value))
             if isinstance(value, list):
                 for val in value:
                     if isinstance(val, dict):
