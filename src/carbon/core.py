@@ -83,12 +83,13 @@ class LoggerMixin(object):
         :param log_level: Log level to set for logger.
         :return: Carbon logger object.
         """
-        chandler = StreamHandler()
-        chandler.setLevel(cls._LOG_LEVELS[log_level])
-        chandler.setFormatter(Formatter(cls._LOG_FORMAT))
         clogger = getLogger(name)
-        clogger.setLevel(cls._LOG_LEVELS[log_level])
-        clogger.addHandler(chandler)
+        if not clogger.handlers:
+            chandler = StreamHandler()
+            chandler.setLevel(cls._LOG_LEVELS[log_level])
+            chandler.setFormatter(Formatter(cls._LOG_FORMAT))
+            clogger.setLevel(cls._LOG_LEVELS[log_level])
+            clogger.addHandler(chandler)
         return clogger
 
     @classmethod
