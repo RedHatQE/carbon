@@ -309,13 +309,17 @@ class DockerController(CarbonController):
         super(DockerController, self).__init__()
         self.client = DockerClient()
 
-    def run_container(self, name, image, command=None, entrypoint=None):
+    def run_container(self, name, image, command=None, entrypoint=None,
+                      volumes=None):
         """Run a command in new container.
 
         :param name: Name for the container.
         :param image: Image to create container.
         :param command: Command to run inside the container.
         :param entrypoint: Override the default entrypoint.
+        :param volumes: Volumes (dict form) to mount inside container. You
+            can declare multiple volumes.
+            {'/home/user': {'bind': '/tmp', 'mode': 'rw'}, ..}
         :return: A dict of the return code and ansible callback object.
         """
         status = self.get_container_status(name)
@@ -334,7 +338,8 @@ class DockerController(CarbonController):
                 detach=True,
                 tty=True,
                 entrypoint=entrypoint,
-                command=command
+                command=command,
+                volumes=volumes
             )
         except (APIError, ContainerError, ImageNotFound) as ex:
             raise DockerControllerException(ex)
