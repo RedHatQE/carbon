@@ -131,12 +131,12 @@ class Carbon(LoggerMixin):
     # variables that start with `_task_`. If found, it will verify what
     # type of task it is and add into its respective task_list.
     _pipelines = [
-        Pipeline('validate', ValidateTask, list()),
-        Pipeline('provision', ProvisionTask, list()),
-        Pipeline('orchestrate', OrchestrateTask, list()),
-        Pipeline('execute', ExecuteTask, list()),
-        Pipeline('report', ReportTask, list()),
-        Pipeline('cleanup', CleanupTask, list()),
+        Pipeline(TASKLIST[0], ValidateTask, list()),
+        Pipeline(TASKLIST[1], ProvisionTask, list()),
+        Pipeline(TASKLIST[2], OrchestrateTask, list()),
+        Pipeline(TASKLIST[3], ExecuteTask, list()),
+        Pipeline(TASKLIST[4], ReportTask, list()),
+        Pipeline(TASKLIST[5], CleanupTask, list()),
     ]
 
     # Default configuration parameters.

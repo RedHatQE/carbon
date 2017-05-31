@@ -34,6 +34,18 @@ TASKLIST = ["validate",
             "report",
             "cleanup"]
 
+TASK_CLEANUP_CHOICES = ["always",
+                        "never",
+                        "pronto",
+                        "on_success",
+                        "on_failure"]
+
+TASK_LOGLEVEL_CHOICES = ["debug",
+                         "info",
+                         "warning",
+                         "error",
+                         "critical"]
+
 PROVISIONERS = {
     "openstack": "linchpin",
     "beaker": "linchpin",

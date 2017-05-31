@@ -30,29 +30,9 @@ import click
 
 from . import __version__
 from .carbon import Carbon
+from .constants import TASKLIST, TASK_CLEANUP_CHOICES, TASK_LOGLEVEL_CHOICES
 
 _VERBOSITY = 0
-
-_TASK_CHOICES = ['validate',
-                 'check',
-                 'create',
-                 'config',
-                 'install',
-                 'test',
-                 'report',
-                 'teardown']
-
-_TASK_CLEANUP_CHOICES = ['always',
-                         'never',
-                         'pronto',
-                         'on_success',
-                         'on_failure']
-
-_TASK_LOGLEVEL_CHOICES = ['debug',
-                          'info',
-                          'warning',
-                          'error',
-                          'critical']
 
 
 def print_version(ctx, param, value):
@@ -127,17 +107,17 @@ def validate(ctx, scenario):
 @cli.command()
 @click.option("--task",
               default=None,
-              type=click.Choice(_TASK_CHOICES),
+              type=click.Choice(TASKLIST),
               help="Select a specific task to run. Default all tasks run.")
 @click.option("-s", "--scenario",
               default=None,
               help="Scenario definition file to be executed.")
 @click.option("-c", "--cleanup",
-              type=click.Choice(_TASK_CLEANUP_CHOICES),
+              type=click.Choice(TASK_CLEANUP_CHOICES),
               default='always',
               help="taskrunner cleanup behavior. Default: 'always'")
 @click.option("--log-level",
-              type=click.Choice(_TASK_LOGLEVEL_CHOICES),
+              type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default='info',
               help="Select logging level. Default is 'INFO'")
 @click.pass_context
