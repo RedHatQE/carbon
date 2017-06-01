@@ -29,6 +29,7 @@ import yaml
 import click
 
 from . import __version__
+from ._compat import string_types
 from .carbon import Carbon
 from .constants import TASKLIST, TASK_CLEANUP_CHOICES, TASK_LOGLEVEL_CHOICES
 
@@ -148,9 +149,15 @@ def run(ctx, task, scenario, cleanup, log_level):
     # This is the easiest way to configure a full scenario.
     cbn.load_from_yaml(scenario)
 
-    # The scenario will start the main pipeline and run through the ordered list
-    # of pipelines. See :function:`~carbon.Carbon.run` for more details.
-    cbn.run()
+    # Setup the list of tasks to run
+    if task is None:
+        task = TASKLIST
+    elif isinstance(task, string_types):
+        task = [task]
+
+    # The scenario will start the main pipeline and run through the task
+    # pipelines declared. See :function:`~carbon.Carbon.run` for more details.
+    cbn.run(tasklist=task)
 
 
 @cli.command('help')
