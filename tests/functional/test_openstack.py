@@ -36,7 +36,7 @@ from carbon.provisioners import OpenstackProvisioner
 scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 
 
-def scrub_os_setup(base_dir, ws_dir, ws_subdir=""):
+def scrub_os_setup(base_dir, ws_dir, credentials, ws_subdir=""):
     """ Scrub Openstack configuration setup to desired stage
     before running test. Remove passed workspace directory if exists
     Return full workspace path
@@ -44,8 +44,31 @@ def scrub_os_setup(base_dir, ws_dir, ws_subdir=""):
     workspace = os.path.join(base_dir, ws_dir)
     deldir = os.path.join(workspace, ws_subdir)
     if os.path.exists(deldir):
+        # Delete any left over hosts
+        directory = deldir + "/tmp"
+        for filename in os.listdir(directory):
+            if filename.endswith(".yaml"):
+                parameters = set_parameters(filename, directory,
+                                            credentials,
+                                            "openstack_ciops")
+                cp_parameters = deepcopy(parameters)
+                host = Host(parameters=cp_parameters, scenario_id=ws_dir)
+                obj = OpenstackProvisioner(host.profile())
+                obj.delete()
         dir_util.remove_tree(deldir)
     return workspace
+
+
+def set_parameters(filename, directory, credentials, credential):
+    """ Create parameters for Host from host yaml file
+    """
+    yaml_file = os.path.join(directory, filename)
+    host_file = file_mgmt('r', yaml_file)
+    host_description = dict(host_file)
+    host_description['provision']['credential'] = credential
+    parameters = host_description['provision']
+    parameters['provider_creds'] = {credentials['name']: credentials}
+    return parameters
 
 
 class TestOpenstackProvisioner(object):
@@ -65,7 +88,7 @@ class TestOpenstackProvisioner(object):
         LoggerMixin.create_carbon_logger(carbon_name, 'debug')
 
         # Call scrub_os_setup function
-        scrub_os_setup(self._base_path, '5678')
+        scrub_os_setup(self._base_path, '5678', self._credentials)
 
     @nottest
     def test_instantiate_provisioner(self):
@@ -80,21 +103,58 @@ class TestOpenstackProvisioner(object):
 
     @nottest
     def test_openstack_create_count_1(self):
-        """Test LinchpinProvisioner rise/up method os_count 1
+        """Test OpenstackProvisioner create method os_count 1
         Check result successful.
         """
+        scrub_os_setup(self._base_path, '5678', self._credentials)
         cp_parameters = deepcopy(self._parameters)
         host = Host(parameters=cp_parameters, scenario_id='5678')
         obj = OpenstackProvisioner(host.profile())
         obj.create()
 
     @nottest
-    def test_openstack_delete_count_1(self):
-        """Test LinchpinProvisioner rise/up method os_count 1
+    def test_openstack_create_count_3(self):
+        """Test OpenstackProvisioner create method os_count > 3
         Check result successful.
         """
+        scrub_os_setup(self._base_path, '5678', self._credentials)
+        cp_parameters = deepcopy(self._parameters_res2)
+        host = Host(parameters=cp_parameters, scenario_id='5678')
+        obj = OpenstackProvisioner(host.profile())
+        obj.create()
+
+    @nottest
+    def test_openstack_delete_count_1(self):
+        """Test OpenstackProvisioner delete method os_count 1
+        Check result successful.
+        """
+        scrub_os_setup(self._base_path, '5678', self._credentials)
         cp_parameters = deepcopy(self._parameters)
         host = Host(parameters=cp_parameters, scenario_id='5678')
         obj = OpenstackProvisioner(host.profile())
         obj.create()
         obj.delete()
+
+    @nottest
+    def test_openstack_delete_count_3(self):
+        """Test OpenstackProvisioner delete method os_count 1
+        Check result successful.
+        """
+        scrub_os_setup(self._base_path, '5678', self._credentials)
+        directory = os.path.join(self._base_path, '5678', 'tmp')
+
+        cp_parameters = deepcopy(self._parameters_res2)
+        host = Host(parameters=cp_parameters, scenario_id='5678')
+        obj = OpenstackProvisioner(host.profile())
+        obj.create()
+
+        # Loop through hosts created and delete
+        for filename in os.listdir(directory):
+            if filename.endswith(".yaml"):
+                parameters = set_parameters(filename, directory,
+                                            self._credentials,
+                                            "openstack_ciops")
+                cp_parameters = deepcopy(parameters)
+                host = Host(parameters=cp_parameters, scenario_id='5678')
+                obj = OpenstackProvisioner(host.profile())
+                obj.delete()
