@@ -1,0 +1,55 @@
+---
+scenario: Scenario Example with Openstack and Openshift
+description: Description of the scenario example.
+
+credentials:
+
+  - name: openshift
+    auth_url: https://cci-ose-master-vip.rhev-ci-vms.eng.rdu2.redhat.com:8443
+    project: my-project
+    username: test
+    token: yourtoken
+
+  - name: openstack_ciops
+    auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
+    tenant_name: pit-jenkins
+    tenant_id: bf4de4c330bb47d6937af31fd5c71a18
+    username: username
+    password: password
+
+
+provision:
+
+  - name: machine_1
+    provider: openstack
+    provisioner: openstack
+    credential: openstack_ciops
+    os_count: 1
+    os_image: rhel-7.3-workstation-x86_64-released
+    os_flavor: m1.medium
+    os_networks: [pit-jenkins]
+    os_floating_ip_pool: 10.8.172.0/22
+    os_keypair: pit-jenkins
+    os_admin_pass:
+    os_description:
+    os_files:
+    os_security_groups:
+    ip_address:
+    role: w_client
+
+  - name: Application by git
+    provider: openshift
+    provisioner: openshift
+    credential: openshift
+    oc_name: application2
+    # timeout for builds to complete, in seconds, default 30mins = 1800 sec
+    oc_build_timeout: 3600
+    role: application2
+    oc_git: https://github.com/openshift/django-ex  # Define url to git repository
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:  # Need to see if we can pass multiple labels by oc client
+      - label1: label1
+      - label2: git_app
+

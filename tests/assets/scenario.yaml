@@ -15,7 +15,7 @@ provision:
 
   - name: machine_1
     provider: openstack
-    provisioner: linchpin
+    provisioner: openstack
     credential: openstack_ciops
     os_count: 1
     os_name:

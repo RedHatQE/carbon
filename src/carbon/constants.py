@@ -47,7 +47,7 @@ TASK_LOGLEVEL_CHOICES = ["debug",
                          "critical"]
 
 PROVISIONERS = {
-    "openstack": "linchpin",
+    "openstack": "openstack",
     "beaker": "linchpin",
     "openshift": "openshift"
 }
