@@ -39,10 +39,7 @@ from ..core import CarbonException, CarbonProvisioner
 from ..constants import CARBON_ROOT
 
 MAX_WAIT_TIME = 100
-
-# TODO: Update docstrings that say DOCSTRING
-# TODO: Maybe split up code inside create and delete methods into other methods
-# TODO: Handle the use case of count > 1
+ALPHA_LIST = 'abcdefghijklmnopqrstuvwxyz'
 
 
 class OpenstackProvisionerException(CarbonException):
@@ -74,11 +71,17 @@ class OpenstackProvisioner(CarbonProvisioner):
             host object.
         """
         super(OpenstackProvisioner, self).__init__()
+
+        # host description
         self.host_desc = host_desc
+
+        # Set os networks
         self._networks = self.get_networks(self.host_desc['os_networks'])
 
+        # Set os image
         self._image = self.get_image(self.host_desc['os_image'])
 
+        # Set os flavor
         self._flavor = self.get_flavor(self.host_desc['os_flavor'])
 
         # Set workspace
@@ -154,7 +157,11 @@ class OpenstackProvisioner(CarbonProvisioner):
         return self._neutron
 
     def _get_flavor(self, flavor_name):
-        """DOCSTRING."""
+        """Get desired flavor from nova client
+        :param flavor_name: OS Flavor of resource specified in host resource description
+        :return: The nova client flavor object
+        :raises: InvalidParameter when flavor not found on nova client
+        """
         try:
             return self.nova.flavors.find(name=flavor_name)
         except NotFound as ex:
@@ -163,11 +170,18 @@ class OpenstackProvisioner(CarbonProvisioner):
             raise InvalidParameter
 
     def get_flavor(self, flavor_name):
-        """DOCSTRING."""
+        """Get flavor
+        :param flavor_name: OS Flavor of resource specified in host description
+        :return: Nova client flavor object
+        """
         return self._get_flavor(flavor_name)
 
     def _get_image(self, image_name):
-        """DOCSTRING."""
+        """Get desired image from glance client
+        :param image_name: OS image name of resource specified in host description
+        :return: The glance client image object
+        :raises: InvalidParameter when image not found on glance client
+        """
         try:
             return self.nova.glance.find_image(image_name)
         except NotFound as ex:
@@ -176,11 +190,18 @@ class OpenstackProvisioner(CarbonProvisioner):
             raise InvalidParameter
 
     def get_image(self, image_name):
-        """DOCSTRING."""
+        """Get image
+        :param image_name: OS image name of resource specified in host descripiton
+        :return: Glance client image object
+        """
         return self._get_image(image_name)
 
     def _get_network(self, net_name):
-        """DOCSTRING."""
+        """Get desired network from neutron client
+        :param net_name: Network name for resource specified in host description
+        :return: The Neutron client network object
+        :raises: InvalidParameter if network not found on neutron client
+        """
         try:
             return self.nova.neutron.find_network(net_name)
         except NotFound as ex:
@@ -189,7 +210,10 @@ class OpenstackProvisioner(CarbonProvisioner):
             raise InvalidParameter
 
     def get_networks(self, networks):
-        """DOCSTRING."""
+        """Get networks
+        :param networks: List of network names for resource specified in host description
+        :return: List of neutron client network objects
+        """
         return [self._get_network(network_name) for network_name in networks]
 
     def _wait_for(self, label, condition, obj_getter, timeout_sec=120, wait_sec=1):
@@ -225,7 +249,15 @@ class OpenstackProvisioner(CarbonProvisioner):
                      keypair,
                      userdata={},
                      max_attempts=3):
-        """DOCSTRING."""
+        """Create vm in openstack
+        :param name: Name of vm
+        :param image: Image to use to create vm
+        :param flavor: Flavor of vm to create
+        :param nics: NICS to configure for vm
+        :param keypair:
+        :param userdata: User data to configure on vm
+        :param max_attempts: Number of tries to attempt to create vm
+        :returns: Node object"""
         attempt = 1
         while attempt <= max_attempts:
             try:
@@ -266,7 +298,12 @@ class OpenstackProvisioner(CarbonProvisioner):
         return None
 
     def wait_for_nonexist_state(self, node):
-        """DOCSTRING."""
+        """Wait for node to be deleted and does not exist
+        :param node: Node to teardown
+        :return: Node object
+        :raises: OpenstackProvisionerException
+        """
+
         node = self._wait_till_node_not_deleting(node)
         if node is None:
             return node
@@ -276,7 +313,11 @@ class OpenstackProvisioner(CarbonProvisioner):
         return node
 
     def wait_for_active_state(self, node):
-        """DOCSTRING."""
+        """Wait for created vm to be active
+        :param: node to create on openstack
+        :returns: Node object
+        :raises: OpenstackProvisionerExecption
+        """
         node = self._wait_till_node_not_building(node)
         if node is None:
             self.logger.error('Failed to boot node')
@@ -287,7 +328,10 @@ class OpenstackProvisioner(CarbonProvisioner):
         return node
 
     def _wait_till_node_not_building(self, node):
-        """DOCSTRING."""
+        """Wait for node to be done building
+        :param node: Node building
+        :returns: Node object
+        """
         return self._wait_for(
             ('Waiting for end of BUILD state of %s' % node.name),
             lambda node: node.status != 'BUILD',
@@ -295,66 +339,183 @@ class OpenstackProvisioner(CarbonProvisioner):
             timeout_sec=120)
 
     def _wait_till_node_not_deleting(self, node):
-        """DOCSTRING."""
+        """Wait for node to be done deleting. Does not exist
+        :param node: Node being deleted
+        :returns: Node object
+        """
         return self._wait_for(
             ('Waiting for Delete to complete. End of DELETE state of %s' % node.name),
             lambda node: node is None,
             lambda: self.get_node_by_name(node.name),
             timeout_sec=300)
 
-    def create(self):
-        """DOCSTRING."""
-        self.logger.info('Provisioning machines from %s', self.__class__)
-        instance = None
+    def increase(self, s):
+        new_s = []
+        continue_change = True
+        for c in s[::-1].lower():
+            if continue_change:
+                if c == 'z':
+                    new_s.insert(0, 'a')
+                else:
+                    new_s.insert(0, ALPHA_LIST[ALPHA_LIST.index(c) + 1])
+                    continue_change = False
+            else:
+                new_s.insert(0, c)
+
+        return ''.join(new_s)
+
+    def add_floating_ip(self, instance):
+        """Add floating ip to instance
+        :param instance: instance obj
+        :returns: List of ips for resource"""
+
+        float_ips = []
+
         try:
-            instance = self._create_node(
-                name=self.host_desc['os_name'],
-                image=self._image,
-                flavor=self._flavor,
-                nics=[{'net-id': net.id} for net in self._networks],
-                keypair=self.host_desc['os_keypair'])
+            instance_id = instance.id
 
-            # Wait for system to be active
-            self.wait_for_active_state(instance)
-
-            # Add floating ip
             # Get Floating pool network info. For user supplied floating ip pool
             os_pools = self.neutron.list_networks(name=self.host_desc['os_floating_ip_pool'])
-            os_pool = os_pools['networks'][0]
 
-            # Get port info for instance created
-            os_ports = self.neutron.list_ports(device_id=instance.id)
-            os_port = os_ports['ports'][0]
+            for os_pool in os_pools['networks']:
 
-            # Create and add floating ip
-            float_ip = self.neutron.create_floatingip(
-                {'floatingip': {'floating_network_id': os_pool['id'],
-                                'port_id': os_port['id']}})
+                # Get port info for instance created
+                os_ports = self.neutron.list_ports(device_id=instance_id)
 
-            # Add info to host
-            host_desc_m = self.host_desc
-            host_desc_m.update({"ip_address": "%s" % str(float_ip[
-                'floatingip']['floating_ip_address'])})
-            host_desc_m.pop("provider_creds", None)
-            host_desc_m.pop("scenario_id", None)
-            host_desc_m["os_node_id"] = "%s" % str(instance.id)
-            host_update = {'provision': host_desc_m}
+                for os_port in os_ports['ports']:
 
-            output_yaml = self._tmp + "/" + self.host_desc['name'] + ".yaml"
-            with open(output_yaml, 'w') as fp:
-                yaml.dump(host_update, fp, allow_unicode=True)
+                    # Create and add floating ip
+                    float_ip = self.neutron.create_floatingip(
+                        {'floatingip': {'floating_network_id': os_pool['id'],
+                                        'port_id': os_port['id']}})
+                    float_ips.append(float_ip)
+        except:
+            self.logger.error('Error assigning floating ip to host %s.' % str(instance.name))
+            raise OpenstackProvisionerException
 
-        except OpenstackProvisionerException:
-            self.logger.error('Error creating host.')
-            self.logger.error('Failed to provision resources. Check logs or '
+        return float_ips
+
+    def update_host(self, instance, ip_list):
+        """ Update host with ip information and data
+        If multiple resource being created will create
+        a host description for each and set os_count for
+        all to 1
+        :param instance: Instance object of resource
+        :ip_list: List of floating ips for resource
+        """
+        ips = []
+
+        # Get names from instance split on token
+        instance_names = str(instance.name).split('-')
+
+        # Get name
+        name = instance_names[0]
+
+        # Get os_name
+        os_name = str(instance.name)
+
+        # Obtain list of ips
+        for ip in ip_list:
+            f_ip = str(ip[
+                'floatingip']['floating_ip_address'])
+            ips.append(f_ip)
+
+        # Get host description
+        host_desc_m = self.host_desc
+
+        # Set updated names if host had multiple count
+        if name is not self.host_desc['name'] and name.endswith('a') is False:
+            host_desc_m.update({"name": name})
+        if os_name is not self.host_desc['os_name']:
+            host_desc_m.update({"os_name": os_name})
+
+        # Update host description with new data
+        host_desc_m.update({"os_count": int('1')})
+        host_desc_m.update({"ip_address": ips})
+        host_desc_m.pop("provider_creds", None)
+        host_desc_m.pop("scenario_id", None)
+        host_desc_m["os_node_id"] = "%s" % str(instance.id)
+        host_update = {'provision': host_desc_m}
+
+        # Output to yaml file
+        output_yaml = self._tmp + "/" + host_desc_m['name'] + ".yaml"
+        with open(output_yaml, 'w') as fp:
+            yaml.dump(host_update, fp, allow_unicode=True)
+
+    def create(self):
+        """Create vm on openstack
+        :returns: instance object
+        :raises: Exception
+        """
+        error = False
+        alpha_counter = 'a'
+        self.logger.info('Provisioning machines from %s', self.__class__)
+        instance_list = []
+
+        # Create instances
+        for count in range(1, int(self.host_desc['os_count'] + 1)):
+            # More than one host requested to be created
+            # Update names for each. machine_1-125xdpep becomes
+            # machine_1a-125xdpep, machine_1b-125xdpep, etc...
+            # Depending on the number requested
+            if int(self.host_desc['os_count'] > 1):
+                if count is 1:
+                    new_name = self.host_desc['os_name'].split('-')
+                    cnt_name = new_name[0] + alpha_counter
+                    if 1 < len(new_name):
+                        cnt_name = cnt_name + '-' + new_name[1]
+                elif count > 1:
+                    new_name = self.host_desc['os_name'].split('-')
+                    alpha_counter = self.increase(alpha_counter)
+                    cnt_name = new_name[0] + alpha_counter
+                    if 1 < len(new_name):
+                        cnt_name = cnt_name + '-' + new_name[1]
+            else:
+                cnt_name = self.host_desc['os_name']
+
+            try:
+                # Create instance on openstack
+                instance_list.append(self._create_node(
+                    name=cnt_name,
+                    image=self._image,
+                    flavor=self._flavor,
+                    nics=[{'net-id': net.id} for net in self._networks],
+                    keypair=self.host_desc['os_keypair']))
+
+            except:
+                error = True
+                self.logger.error('Error creating a host %s.' % cnt_name)
+
+        # Wait for systems to be active
+        for instance in instance_list:
+            try:
+                # Wait for instance to be active
+                self.wait_for_active_state(instance)
+
+                # Add floating ip
+                float_ips = self.add_floating_ip(instance)
+
+                self.logger.info('Node %s created.', str(instance.name))
+
+            except OpenstackProvisionerException:
+                error = True
+                self.logger.error('Error activating/assigning ip to host %s.' % str(instance.name))
+
+            # Update host description
+            self.update_host(instance, float_ips)
+
+        if error:
+            self.logger.error('Error creating host/s.')
+            self.logger.error('Failed to provision all resources. Check logs or '
                               'job resources status')
             raise Exception
 
-        self.logger.info('Node %s created.', self.host_desc['os_name'])
-        return instance
+        return instance_list
 
     def delete(self):
-        """DOCSTRING."""
+        """Teardown vm on openstack
+        :raises: Exception
+        """
         self.logger.info('Tearing down machines from %s', self.__class__)
         try:
             server_exists = False
