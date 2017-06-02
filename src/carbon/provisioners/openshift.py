@@ -26,6 +26,7 @@
 """
 import os
 import time
+import uuid
 import yaml
 
 from ..constants import CARBON_ROOT
@@ -115,8 +116,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self.host_desc = host_desc
 
         # Set name for container
-        # TODO: Set actual name based on scenario name + uuid
-        self._name = 'KEVIN'
+        self._name = self.host_desc['%sname' % self.__provisioner_prefix__]\
+            + '_' + str(uuid.uuid4())[:4]
         self._routes = []
         self._app_name = ""
 
@@ -202,8 +203,14 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         )
 
         self.results_analyzer(results['status'])
-        if results['status'] != 0:
-            raise OpenshiftProvisionerException
+        try:
+            if results['status'] != 0:
+                # Stop/remove container
+                self.stop_container(self.name)
+                self.remove_container(self.name)
+                raise OpenshiftProvisionerException
+        except DockerControllerException as ex:
+            raise OpenshiftProvisionerException(ex)
 
     def select_project(self):
         """Switch to another project.
@@ -219,8 +226,14 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         )
 
         self.results_analyzer(results['status'])
-        if results['status'] != 0:
-            raise OpenshiftProvisionerException
+        try:
+            if results['status'] != 0:
+                # Stop/remove container
+                self.stop_container(self.name)
+                self.remove_container(self.name)
+                raise OpenshiftProvisionerException
+        except DockerControllerException as ex:
+            raise OpenshiftProvisionerException(ex)
 
     def create(self):
         """Create a new application in openshift based on the type of
@@ -241,25 +254,27 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 count += 1
                 newapp = app
 
-        if count > 1:
-            raise OpenshiftProvisionerException(
-                'More than one application type are declard for resource. '
-                'Unable to determine which one to use.')
-
-        if newapp is None:
-            raise OpenshiftProvisionerException(
-                'Application type not defined for resource. Available choices'
-                ' ~ %s' % self._app_choices)
-
         try:
-            getattr(self, 'app_by_%s' % newapp)()
-        except AttributeError:
-            raise OpenshiftProvisionerException(
-                'Openshift provisioner does not have a method for application'
-                ' by %s' % newapp)
+            try:
+                if count > 1:
+                    self.logger.error('More than one application type are '
+                                      'declared for resource. Unable to '
+                                      'determine which one to use.')
+                    raise OpenshiftProvisionerException
 
-        # added temporarily to delete while testing
-#         self.delete()
+                if newapp is None:
+                    self.logger.error('Application type not defined for '
+                                      'resource. Available choices ~ %s' %
+                                      self._app_choices)
+                    raise OpenshiftProvisionerException
+
+                getattr(self, 'app_by_%s' % newapp)()
+            finally:
+                # Stop/remove container
+                self.stop_container(self.name)
+                self.remove_container(self.name)
+        except (DockerControllerException, OpenshiftProvisionerException):
+            raise OpenshiftProvisionerException
 
     def delete(self):
         """Delete all resources associated with an application. It will
@@ -277,8 +292,14 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         )
 
         self.results_analyzer(results['status'])
-        if results['status'] != 0:
-            raise OpenshiftProvisionerException
+        try:
+            if results['status'] != 0:
+                # Stop/remove container
+                self.stop_container(self.name)
+                self.remove_container(self.name)
+                raise OpenshiftProvisionerException
+        except DockerControllerException as ex:
+            raise OpenshiftProvisionerException(ex)
 
     def app_by_image(self):
         """Create a new application in an openshift server from a docker image.
