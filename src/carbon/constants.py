@@ -51,3 +51,5 @@ PROVISIONERS = {
     "beaker": "linchpin",
     "openshift": "openshift"
 }
+
+HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]

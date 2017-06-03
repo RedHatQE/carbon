@@ -27,6 +27,7 @@ from ..core import CarbonResource, CarbonException
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
 from ..helpers import get_provisioner_class, get_default_provisioner, get_provisioners_list
+from ..constants import HOST_UPDATE_FIELDS
 
 
 class CarbonHostException(CarbonException):
@@ -215,6 +216,16 @@ class Host(CarbonResource):
             'scenario_id': self._scenario_id
         })
         return d
+
+    def updatehost(self, host_desc):
+        """
+        :param host_desc: dictionary of values that could possibly update the host
+        """
+        fields_to_update = HOST_UPDATE_FIELDS
+        for key in host_desc:
+            if key in fields_to_update:
+                setkey = "_" + key
+                setattr(self, setkey, host_desc[key])
 
     def validate(self):
         """Validate the host."""

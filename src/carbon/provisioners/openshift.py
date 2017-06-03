@@ -268,7 +268,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                                       self._app_choices)
                     raise OpenshiftProvisionerException
 
-                getattr(self, 'app_by_%s' % newapp)()
+                return getattr(self, 'app_by_%s' % newapp)()
             finally:
                 # Stop/remove container
                 self.stop_container(self.name)
@@ -319,7 +319,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self.expose_route()
 
         # return the application name and routes(if part of the app)
-        self.show_results()
+        return self.show_results()
 
     def app_by_git(self):
         """Create a new application in an openshift server from a git
@@ -339,7 +339,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self.expose_route()
 
         # return the application name and routes(if part of the app)
-        self.show_results()
+        return self.show_results()
 
     def app_by_template(self):
         """Create a new application in openshift from a template. This can
@@ -396,7 +396,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self.wait_for_pods()
 
         # return the application name and routes(if part of the app)
-        self.show_results()
+        return self.show_results()
 
     def newapp(self, oc_type, value):
         """
@@ -595,6 +595,11 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             self.logger.debug("returning routes: {}".format(self._routes))
         else:
             self.logger.debug("returning no routes: {}".format(self._routes))
+        host_desc = self.host_desc
+        # update values
+        host_desc["routes"] = self._routes
+        host_desc["app_name"] = self._app_name
+        return host_desc
 
     def get_final_label(self):
         '''get the required label(s) in the format expected by oc
