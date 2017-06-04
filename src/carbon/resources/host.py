@@ -23,6 +23,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import os
+
 from ..core import CarbonResource, CarbonException
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
@@ -40,6 +42,7 @@ class Host(CarbonResource):
     _valid_fields = ['name', 'ip_address']
 
     def __init__(self,
+                 config=None,
                  name=None,
                  parameters={},
                  validate_task_cls=ValidateTask,
@@ -47,7 +50,7 @@ class Host(CarbonResource):
                  cleanup_task_cls=CleanupTask,
                  **kwargs):
 
-        super(Host, self).__init__(name, **kwargs)
+        super(Host, self).__init__(config=config, name=name, **kwargs)
 
         # name can't be set after the host is instanciated
         # if no name is given, a uuid4 will be generated.
@@ -63,7 +66,7 @@ class Host(CarbonResource):
             raise Exception('A role must be set for host %s.' % str(self.name))
 
         # Set the scenario id
-        self._scenario_id = kwargs['scenario_id']
+        self._scenario_uid = kwargs['scenario_uid']
 
         # we must set provider initially and it can't be
         # changed afterwards.
@@ -178,12 +181,12 @@ class Host(CarbonResource):
         raise AttributeError('You cannot set provider after class is instanciated.')
 
     @property
-    def scenario_id(self):
+    def scenario_uid(self):
         """Return the scenario id the host is associated too."""
-        return self._scenario_id
+        return self._scenario_uid
 
-    @scenario_id.setter
-    def scenario_id(self, value):
+    @scenario_uid.setter
+    def scenario_uid(self, value):
         """Raises an exception when trying to set the scenario id the host is
         associated too after the class has been instanciated.
         :param value: The scenario id for the host
@@ -213,7 +216,8 @@ class Host(CarbonResource):
             'provider': self.provider.name(),
             'role': self._role,
             'provider_creds': self.provider.credentials,
-            'scenario_id': self._scenario_id
+            'scenario_id': self._scenario_uid,
+            'data_folder': self.data_folder()
         })
         return d
 
@@ -236,6 +240,9 @@ class Host(CarbonResource):
 
         if status > 0:
             raise CarbonException('Host %s validation failed!' % self.name)
+
+    def data_folder(self):
+        return os.path.join(self.config['DATA_FOLDER'], self._scenario_uid)
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.

@@ -23,12 +23,13 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import uuid
+import os
 import sys
 
 from pykwalify.core import Core
 from ..constants import SCENARIO_SCHEMA
 from ..core import CarbonResource
+from ..helpers import gen_random_str
 from ..tasks import ValidateTask
 from .actions import Action
 from .host import Host
@@ -47,16 +48,18 @@ class Scenario(CarbonResource):
     ]
 
     def __init__(self,
+                 config=None,
                  name=None,
                  parameters={},
                  validate_task_cls=ValidateTask,
                  **kwargs):
 
-        super(Scenario, self).__init__(name, **kwargs)
+        super(Scenario, self).__init__(config=config, name=name, **kwargs)
 
         if not name:
-            self._name = str(uuid.uuid4())
-            self.scenario_id = self._name
+            self._name = gen_random_str(15)
+
+        self._uid = gen_random_str(20)
 
         self._hosts = list()
         self._actions = list()
@@ -68,6 +71,13 @@ class Scenario(CarbonResource):
 
         if parameters:
             self.load(parameters)
+
+        # create a scenario data folder where all hosts, actions, executes, reports
+        # will live during the scenario life cycle
+        # TODO: cleanup task should clean this directory after report collects it
+        self._data_folder = os.path.join(self.config['DATA_FOLDER'], self._uid)
+        if not os.path.exists(self._data_folder):
+            os.makedirs(self._data_folder)
 
     def add_resource(self, item):
         if isinstance(item, Host):
@@ -81,6 +91,22 @@ class Scenario(CarbonResource):
         else:
             raise ValueError('Resource must be of a valid Resource type.'
                              'Check the type of the given item: %s' % item)
+
+    @property
+    def uid(self):
+        return self._uid
+
+    @uid.setter
+    def uid(self, value):
+        raise ValueError('Scenario UID is generated automatically.')
+
+    @property
+    def data_folder(self):
+        return self._data_folder
+
+    @data_folder.setter
+    def data_folder(self, value):
+        raise ValueError('Data folder is set automatically.')
 
     @property
     def hosts(self):
@@ -138,19 +164,8 @@ class Scenario(CarbonResource):
             raise ValueError('Execute must be of type %s ' % type(Execute))
         self._reports.append(h)
 
-    def set_scenario_id(self):
-        """Set the scenario ID.
-
-        Every scenario has a scenario name declared in the YAML. Each time
-        the scenario is run by Carbon, it will have its own unique scenario id.
-        This allows for easily storing files from provisioning to execution.
-
-        Scenario id is generated as follows: scenario name + 5 chars of uuid.
-        """
-        self.scenario_id = \
-            self._name.replace(' ', '_').lower() + '_' + self.scenario_id[0:5]
-
-    def yaml_validate(self, yaml_file):
+    @staticmethod
+    def yaml_validate(yaml_file):
         """
         Validating the scenario yaml
         """
@@ -160,8 +175,8 @@ class Scenario(CarbonResource):
             c.validate(raise_exception=True)
         except:
             e = sys.exc_info()[1]
-            return(1, e)
-        return(0, "Successful validation of the yaml file")
+            return 1, e
+        return 0, "Successful validation of the yaml file"
 
     def profile(self):
         """

@@ -39,13 +39,14 @@ class Action(CarbonResource):
     ]
 
     def __init__(self,
+                 config=None,
                  name=None,
                  parameters={},
                  validate_task_cls=ValidateTask,
                  orchestrate_task_cls=OrchestrateTask,
                  **kwargs):
 
-        super(Action, self).__init__(name, **kwargs)
+        super(Action, self).__init__(config=config, name=name, **kwargs)
 
         self._validate_task_cls = validate_task_cls
         self._orchestrate_task_cls = orchestrate_task_cls

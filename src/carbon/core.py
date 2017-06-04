@@ -148,13 +148,16 @@ class CarbonResource(LoggerMixin):
     _valid_tasks_types = []
     _fields = []
 
-    def __init__(self, name=None, **kwargs):
+    def __init__(self, config=None, name=None, **kwargs):
 
         # every resource has a name
         self._name = name
 
         # A list of tasks that will be executed upon the reource.
         self._tasks = []
+
+        # Carbon configuration
+        self._config = config
 
     @property
     def name(self):
@@ -163,6 +166,14 @@ class CarbonResource(LoggerMixin):
     @name.setter
     def name(self, value):
         raise AttributeError('You can set name after class is instanciated.')
+
+    @property
+    def config(self):
+        return self._config
+
+    @config.setter
+    def config(self, value):
+        raise AttributeError('You can set config after resource is created.')
 
     def _add_task(self, t):
         """

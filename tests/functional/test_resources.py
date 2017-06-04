@@ -25,7 +25,7 @@ from copy import deepcopy
 from nose.tools import assert_equal, assert_is_instance, assert_is_not_none
 from nose.tools import assert_not_equal, assert_false, raises
 
-from carbon import Scenario, Host
+from carbon import Carbon, Scenario, Host
 from carbon.constants import PROVISIONERS
 from carbon.helpers import file_mgmt
 from carbon.providers import OpenstackProvider
@@ -42,16 +42,18 @@ class TestScenario(object):
         """Test creating a new scenario object from a data structure read in
         from a yaml file.
         """
-        scenario = Scenario(scenario_description)
-        assert_is_instance(scenario, Scenario)
-        assert_equal(len(scenario.hosts), 0)
+        cbn = Carbon(__name__)
+        cbn.scenario = Scenario(config=cbn.config, name='MyScenario')
+        assert_is_instance(cbn.scenario, Scenario)
+        assert_equal(len(cbn.scenario.hosts), 0)
 
     @staticmethod
     def test_new_attribute():
         """Test setting a new scenario object attribute."""
-        scenario = Scenario(scenario_description)
-        scenario.newattribute = 'value'
-        assert_equal(scenario.newattribute, str('value'))
+        cbn = Carbon(__name__)
+        cbn.scenario = Scenario(config=cbn.config, name="MyScenario")
+        cbn.scenario.newattribute = 'value'
+        assert_equal(cbn.scenario.newattribute, str('value'))
 
 
 class TestHost(object):
@@ -75,21 +77,21 @@ class TestHost(object):
         an instance of the host class.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         assert_is_instance(host, Host)
 
     def test_set_name(self):
         """Test setting the host name when instantiating the host class."""
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('name')
-        host = Host('client1', parameters=cp_parameters, scenario_id='1234')
+        host = Host(name='client1', parameters=cp_parameters, scenario_uid='1234')
         assert_equal(host.name, 'client1')
 
     def test_set_random_name(self):
         """Test setting a random host name when no name declared for a host."""
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('name')
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         assert_is_not_none(host.name)
 
     @raises(AttributeError)
@@ -99,13 +101,13 @@ class TestHost(object):
         object was created.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         host.name = 'my_machine1'
 
     def test_get_role(self):
         """Test getting the host role from created host object."""
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         assert_equal(host.role, 'w_client')
 
     @raises(AttributeError)
@@ -115,24 +117,24 @@ class TestHost(object):
         object was created.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         host.role = "client1"
 
-    def test_get_scenario_id(self):
+    def test_get_scenario_uid(self):
         """Test geting the host scenario id from created host object."""
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
-        assert_equal(host.scenario_id, '1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        assert_equal(host.scenario_uid, '1234')
 
     @raises(AttributeError)
-    def test_set_scenario_id(self):
+    def test_set_scenario_uid(self):
         """Test setting the host scenario id after host class was instaniated.
         An exception will be raised since you cannot update the scenario id
         after host object was created.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
-        host.scenario_id = '1234'
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host.scenario_uid = '1234'
 
     @raises(AttributeError)
     def test_set_provider(self):
@@ -141,7 +143,7 @@ class TestHost(object):
         after host object was created.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         host.provider = 'openstack'
 
     def test_get_provider(self):
@@ -149,14 +151,14 @@ class TestHost(object):
         check if the provider is an instance of the provider class.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         assert_is_instance(host.provider, OpenstackProvider)
 
     def test_set_provisioner_valid(self):
         """Test a valid setting of the provisioner.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         assert_equal(host.provisioner.__provisioner_name__, self._parameters["provisioner"])
 
     def test_update_host_valid(self):
@@ -164,7 +166,7 @@ class TestHost(object):
         valid_update_dict = {"ip_address": "10.186.31.41"}
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('name')
-        host = Host('client1', parameters=cp_parameters, scenario_id='1234')
+        host = Host('client1', parameters=cp_parameters, scenario_uid='1234')
         host.updatehost(valid_update_dict)
         assert_equal(host._ip_address, "10.186.31.41")
 
@@ -174,7 +176,7 @@ class TestHost(object):
         invalid_update_dict = {"ip_address_invalid": "10.186.31.41"}
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('name')
-        host = Host('client1', parameters=cp_parameters, scenario_id='1234')
+        host = Host('client1', parameters=cp_parameters, scenario_uid='1234')
         host.updatehost(invalid_update_dict)
         host._ip_address_invalid
 
@@ -184,14 +186,14 @@ class TestHost(object):
         is still set to a valid provisioner, but rejects the input.
         """
         cp_parameters = deepcopy(self._invalid_parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
 
     def test_provisioner_notset(self):
         """Test not setting a provisioner.  The provisioner
         uses the constants to set the provisioner.
         """
         cp_parameters = deepcopy(self._parameters3)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         assert_is_not_none(host.provisioner)
         assert_false("provisioner" in self._parameters3)
         assert_equal(host.provisioner.__provisioner_name__, PROVISIONERS[self._parameters3["provider"]])
@@ -203,7 +205,7 @@ class TestHost(object):
         after host object was created.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(parameters=cp_parameters, scenario_uid='1234')
         host.provisioner = 'linchpin'
 
     @raises(Exception)
@@ -213,7 +215,7 @@ class TestHost(object):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('role')
-        Host(parameters=cp_parameters, scenario_id='1234')
+        Host(parameters=cp_parameters, scenario_uid='1234')
 
     @raises(Exception)
     def test_provider_undeclared(self):
@@ -222,7 +224,7 @@ class TestHost(object):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('provider')
-        Host(parameters=cp_parameters, scenario_id='1234')
+        Host(parameters=cp_parameters, scenario_uid='1234')
 
     @raises(Exception)
     def test_invalid_provider(self):
@@ -231,7 +233,7 @@ class TestHost(object):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters['provider'] = 'provider123'
-        Host(parameters=cp_parameters, scenario_id='1234')
+        Host(parameters=cp_parameters, scenario_uid='1234')
 
     @raises(Exception)
     def test_provider_creds_undeclared(self):
@@ -240,7 +242,7 @@ class TestHost(object):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('provider_creds')
-        Host(parameters=cp_parameters, scenario_id='1234')
+        Host(parameters=cp_parameters, scenario_uid='1234')
 
     @raises(Exception)
     def test_provider_miss_cred_param(self):
@@ -250,7 +252,7 @@ class TestHost(object):
         cp_parameters = deepcopy(self._parameters)
         cp_parameters['provider_creds'][cp_parameters['credential']].\
             pop('auth_url')
-        Host(parameters=cp_parameters, scenario_id='1234')
+        Host(parameters=cp_parameters, scenario_uid='1234')
 
     @raises(Exception)
     def test_provider_miss_param(self):
@@ -259,13 +261,14 @@ class TestHost(object):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('os_image')
-        Host(parameters=cp_parameters, scenario_id='1234')
+        Host(parameters=cp_parameters, scenario_uid='1234')
 
     def test_profile(self):
         """Test creating a host profile data structure from the host object. It
         will check if the profile data structure is an dictionary.
         """
+        cbn = Carbon(__name__)
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_id='1234')
+        host = Host(config=cbn.config, parameters=cp_parameters, scenario_uid='1234')
         profile = host.profile()
         assert_is_instance(profile, dict)

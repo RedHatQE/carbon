@@ -35,13 +35,14 @@ class Report(CarbonResource):
     _fields = ['name', 'type']
 
     def __init__(self,
+                 config=None,
                  name=None,
                  parameters={},
                  validate_task_cls=ValidateTask,
                  report_task_cls=ReportTask,
                  **kwargs):
 
-        super(Report, self).__init__(name, **kwargs)
+        super(Report, self).__init__(config=config, name=name, **kwargs)
 
         self._validate_task_cls = validate_task_cls
         self._report_task_cls = report_task_cls

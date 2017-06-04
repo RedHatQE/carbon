@@ -142,6 +142,7 @@ class Carbon(LoggerMixin):
     # Default configuration parameters.
     default_config = {
         'DEBUG': False,
+        'DATA_FOLDER': '/tmp',
         'LOGGER_NAME': __carbon_name__,
         'LOG_LEVEL': 'info',
         'SECRET_KEY': 'secret-key',
@@ -184,7 +185,8 @@ class Carbon(LoggerMixin):
                                   log_level=self.log_level)
         self.create_taskrunner_logger(log_level=self.log_level)
 
-        self.scenario = Scenario()
+        self.scenario = Scenario(config=self.config)
+
         self.creds = {}
 
     @LockedCachedProperty
@@ -244,9 +246,6 @@ class Carbon(LoggerMixin):
 
         data["filename"] = filepath
         self.scenario.load(data)
-
-        # Set scenario id
-        self.scenario.set_scenario_id()
 
         self._load_credentials(cred_items)
 
@@ -308,8 +307,10 @@ class Carbon(LoggerMixin):
             if res_type == Host:
                 # Set all available provider credentials into host object
                 item['provider_creds'] = self.creds
-            self.scenario.add_resource(res_type(
-                parameters=item, scenario_id=self.scenario.scenario_id))
+            self.scenario.add_resource(
+                res_type(config=self.config,
+                         parameters=item,
+                         scenario_uid=self.scenario.uid))
 
     def _add_task_into_pipeline(self, t):
         """

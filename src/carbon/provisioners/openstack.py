@@ -85,22 +85,13 @@ class OpenstackProvisioner(CarbonProvisioner):
         self._flavor = self.get_flavor(self.host_desc['os_flavor'])
 
         # Set workspace
-        self._workspace = os.path.join(CARBON_ROOT, "jobs",
-                                       self.host_desc['scenario_id'])
+        self._workspace = self.host_desc['data_folder']
         # Set logspace
-        self._logspace = os.path.join(CARBON_ROOT, "jobs",
-                                      self.host_desc['scenario_id'], "logs")
+        self._logspace = os.path.join(self.host_desc['data_folder'], "logs")
+
         # Create logs directory if needed
         if not os.path.exists(self._logspace):
             os.makedirs(self._logspace)
-
-        # Set tmp directory if needed
-        self._tmp = os.path.join(CARBON_ROOT, "jobs",
-                                 self.host_desc['scenario_id'], "tmp")
-
-        # Create tmp directory if needed
-        if not os.path.exists(self._tmp):
-            os.makedirs(self._tmp)
 
     @property
     def key_session(self):
@@ -401,7 +392,7 @@ class OpenstackProvisioner(CarbonProvisioner):
         a host description for each and set os_count for
         all to 1
         :param instance: Instance object of resource
-        :ip_list: List of floating ips for resource
+        :param ip_list: List of floating ips for resource
         """
         ips = []
 
@@ -435,12 +426,12 @@ class OpenstackProvisioner(CarbonProvisioner):
         host_desc_m.pop("provider_creds", None)
         host_desc_m.pop("scenario_id", None)
         host_desc_m["os_node_id"] = "%s" % str(instance.id)
-        host_update = {'provision': host_desc_m}
 
         # Output to yaml file
-        output_yaml = self._tmp + "/" + host_desc_m['name'] + ".yaml"
+        output_yaml = os.path.join(
+            self.host_desc['data_folder'], (host_desc_m['name'] + ".yaml"))
         with open(output_yaml, 'w') as fp:
-            yaml.dump(host_update, fp, allow_unicode=True)
+            yaml.dump(host_desc_m, fp, allow_unicode=True)
 
     def create(self):
         """Create vm on openstack
