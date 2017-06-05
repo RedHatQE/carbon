@@ -98,7 +98,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
     _app_choices = ['image', 'git', 'template']
 
-    def __init__(self, host_desc):
+    def __init__(self, host):
         """Constructor.
 
         When the carbon openshift provisioner class is instantiated, it will
@@ -109,15 +109,13 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         * Change projects to use the one declared in the scenario.
         * Setup the label to associate an application and its resources with.
 
-        :param host_desc: A host description in (dict form) based on a Carbon
-            host object.
+        :param host: The host object.
         """
         super(OpenshiftProvisioner, self).__init__()
-        self.host_desc = host_desc
+        self.host = host
 
         # Set name for container
-        self._name = self.host_desc['%sname' % self.__provisioner_prefix__]\
-            + '_' + str(uuid.uuid4())[:4]
+        self._name = self.host.oc_name + '_' + str(uuid.uuid4())[:4]
         self._routes = []
         self._app_name = ""
 
@@ -177,7 +175,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         Sets a normalized list of key, values for the label, which is a list
         The keys cannot have spaces, they will be replaced w/an underscore
         """
-        label_list_original = self.host_desc["oc_labels"]
+        label_list_original = self.host.oc_labels
         label_list_final = []
 
         for label in label_list_original:
@@ -192,8 +190,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         Connection will be saved to the default configuration file under the
         users home directory.
         """
-        _auth_url = self.host_desc['provider_creds']['auth_url']
-        _token = self.host_desc['provider_creds']['token']
+        _auth_url = self.host.provider.credentials['auth_url']
+        _token = self.host.provider.credentials['token']
 
         _cmd = "oc login {0} --insecure-skip-tls-verify\=True --token\={1}".\
             format(_auth_url, _token)
@@ -219,7 +217,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         Once project is switched it will become the default project.
         """
         _cmd = "oc project {0}".format(
-            self.host_desc['provider_creds']['project'])
+            self.host.provider.credentials['project'])
         results = self.run_module(
             dict(name='oc project', hosts=self.name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
@@ -250,7 +248,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         count = 0
         for app in self._app_choices:
             _app = self.__provisioner_prefix__ + app
-            if _app in self.host_desc and not self.host_desc[_app] is None:
+            val = getattr(self.host, _app, None)
+            if val and val is not None:
                 count += 1
                 newapp = app
 
@@ -268,7 +267,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                                       self._app_choices)
                     raise OpenshiftProvisionerException
 
-                return getattr(self, 'app_by_%s' % newapp)()
+                getattr(self, 'app_by_%s' % newapp)()
             finally:
                 # Stop/remove container
                 self.stop_container(self.name)
@@ -306,7 +305,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
         E.g. $ oc new-app --docker-image=<image> -l app=<label>
         """
-        image = self.host_desc["oc_image"]
+        image = self.host.oc_image
         image_call = "--docker-image\={}".format(image)
 
         # call oc new-app
@@ -318,8 +317,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # expose routes
         self.expose_route()
 
-        # return the application name and routes(if part of the app)
-        return self.show_results()
+        # show results for the app
+        self.show_results()
 
     def app_by_git(self):
         """Create a new application in an openshift server from a git
@@ -327,7 +326,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
         E.g. $ oc new-app <git_url> -l app=<label>
         """
-        git_url = self.host_desc["oc_git"]
+        git_url = self.host.oc_git
 
         # call oc new-app
         self.newapp("git", git_url)
@@ -338,8 +337,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # expose routes
         self.expose_route()
 
-        # return the application name and routes(if part of the app)
-        return self.show_results()
+        # show results for the app
+        self.show_results()
 
     def app_by_template(self):
         """Create a new application in openshift from a template. This can
@@ -349,7 +348,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         E.g. $ oc new-app --template=<name> --env=[] -l app=<label>
         E.g. $ oc new-app --file=./template --env=[] -l app=<label>
         """
-        _template = self.host_desc["oc_template"]
+        _template = self.host.oc_template
         _template_file = None
         _template_filename = None
 
@@ -395,8 +394,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # wait for all pods to be up
         self.wait_for_pods()
 
-        # return the application name and routes(if part of the app)
-        return self.show_results()
+        # show results for the app
+        self.show_results()
 
     def newapp(self, oc_type, value):
         """
@@ -421,9 +420,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
     def env_opts(self):
         self._env_opts = ""
         # get the env vars if set
-        if "oc_env_vars" in self.host_desc:
-            env_vars = self.host_desc["oc_env_vars"]
-
+        env_vars = getattr(self.host, 'oc_env_vars', None)
+        if env_vars is not None:
             for env_key in env_vars:
                 self._env_opts = self._env_opts + "-p " + env_key + "=" + env_vars[env_key] + " "
             self._env_opts = self._env_opts.strip().replace("=", "\=")
@@ -437,10 +435,10 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         time.sleep(10)
 
         # default max wait time of 30 mins
-        if self.host_desc["oc_build_timeout"]:
-            wait = self.host_desc["oc_build_timeout"]
-        else:
+        wait = getattr(self.host, 'oc_build_timeout', None)
+        if wait is None:
             wait = 1800
+
         # new attempt every 10 seconds
         total_attempts = wait / 10
 
@@ -564,13 +562,13 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             self.results_analyzer(results['status'])
 
     def show_results(self):
-        '''return the data from the creation of pods (App name & routes if exist)
+        """return the data from the creation of pods (App name & routes if exist)
         oc get pod -l -> extract app name from any pod
         oc get route -l -> extract all routes that are set
         TODO: this function should set these vals in a temporary yaml of the input
               will wait for the implementation of where to update before adding that
               functionality.
-        '''
+        """
         # app name should already be set
         self.logger.debug("return app name: {}".format(self._app_name))
 
@@ -595,11 +593,10 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             self.logger.debug("returning routes: {}".format(self._routes))
         else:
             self.logger.debug("returning no routes: {}".format(self._routes))
-        host_desc = self.host_desc
-        # update values
-        host_desc["routes"] = self._routes
-        host_desc["app_name"] = self._app_name
-        return host_desc
+
+        # update output values for the user
+        self.host.oc_app_name = self._app_name
+        self.host.oc_routes = self._routes
 
     def get_final_label(self):
         '''get the required label(s) in the format expected by oc

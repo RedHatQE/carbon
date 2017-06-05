@@ -161,25 +161,6 @@ class TestHost(object):
         host = Host(parameters=cp_parameters, scenario_uid='1234')
         assert_equal(host.provisioner.__provisioner_name__, self._parameters["provisioner"])
 
-    def test_update_host_valid(self):
-        """Test setting updating the host information w/valid keys."""
-        valid_update_dict = {"ip_address": "10.186.31.41"}
-        cp_parameters = deepcopy(self._parameters)
-        cp_parameters.pop('name')
-        host = Host('client1', parameters=cp_parameters, scenario_uid='1234')
-        host.updatehost(valid_update_dict)
-        assert_equal(host._ip_address, "10.186.31.41")
-
-    @raises(AttributeError)
-    def test_update_host_invalid(self):
-        """Test setting updating the host information w/invalid keys."""
-        invalid_update_dict = {"ip_address_invalid": "10.186.31.41"}
-        cp_parameters = deepcopy(self._parameters)
-        cp_parameters.pop('name')
-        host = Host('client1', parameters=cp_parameters, scenario_uid='1234')
-        host.updatehost(invalid_update_dict)
-        host._ip_address_invalid
-
     @raises(Exception)
     def test_set_provisioner_invalid(self):
         """Test an invalid setting of the provisioner.  The provisioner

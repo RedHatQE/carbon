@@ -215,21 +215,10 @@ class Host(CarbonResource):
             'name': self.name,
             'provider': self.provider.name(),
             'role': self._role,
-            'provider_creds': self.provider.credentials,
             'scenario_id': self._scenario_uid,
             'data_folder': self.data_folder()
         })
         return d
-
-    def updatehost(self, host_desc):
-        """
-        :param host_desc: dictionary of values that could possibly update the host
-        """
-        fields_to_update = HOST_UPDATE_FIELDS
-        for key in host_desc:
-            if key in fields_to_update:
-                setkey = "_" + key
-                setattr(self, setkey, host_desc[key])
 
     def validate(self):
         """Validate the host."""

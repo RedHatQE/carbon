@@ -273,6 +273,7 @@ class CarbonProvider(LoggerMixin):
 
     _mandatory_parameters = ()
     _optional_parameters = ()
+    _output_parameters = ()
     _mandatory_creds_parameters = ()
 
     _credentials = {}
@@ -372,7 +373,8 @@ class CarbonProvider(LoggerMixin):
         :return: a tuple with all parameters
         """
         all_params = {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters} \
-            .union({'{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters})
+            .union({'{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters},
+                   {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._output_parameters})
         return (param for param in all_params)
 
     @classmethod

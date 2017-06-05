@@ -34,7 +34,7 @@ from . import __name__ as __carbon_name__
 from .config import Config, ConfigAttribute
 from .constants import TASKLIST
 from .core import CarbonException, LoggerMixin
-from .helpers import LockedCachedProperty, get_root_path
+from .helpers import LockedCachedProperty, get_root_path, file_mgmt
 from .resources import Scenario, Host, Action, Report, Execute
 from .tasks import ValidateTask, ProvisionTask
 from .tasks import OrchestrateTask, ExecuteTask
@@ -382,3 +382,8 @@ class Carbon(LoggerMixin):
                 self.logger.info("." * 50)
         except taskrunner.TaskExecutionException as ex:
             self.logger.error(ex)
+        finally:
+            sfile = os.path.join(self.scenario.data_folder, '%s_updated.yaml' %
+                                 self.scenario.uid)
+            file_mgmt('w', sfile, self.scenario.profile())
+            self.logger.info('Successfully created updated scenario YAML.')

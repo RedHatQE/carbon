@@ -28,22 +28,18 @@ from ..core import CarbonTask
 
 class ProvisionTask(CarbonTask):
     """The provision task object will call a provisioner to provision
-    resources in their declared provider. By default Carbon will be
-    using the linch-pin provisioner if no provisioner was declared.
+    resources in their declared provider.
     """
 
     def __init__(self, msg, clean_msg, host, **kwargs):
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
         self.clean_msg = clean_msg
-        self.host = host
-        self._provisioner = host.provisioner
-        self.provisioner = self._provisioner(host.profile())
+        self.provisioner = host.provisioner(host)
 
     def run(self, context):
         self.logger.info(self.msg)
-        host_desc = self.provisioner.create()
-        self.host.updatehost(host_desc)
+        self.provisioner.create()
 
     def cleanup(self, context):
         self.logger.info(self.clean_msg)

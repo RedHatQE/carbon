@@ -40,7 +40,7 @@ class OpenshiftProvider(CarbonProvider):
         oc_git: (optional) The git url (source code) used to create an
                 application.
 
-        oc_template_name: (optional) The template name used to create an
+        oc_template: (optional) The template name used to create an
                           application.
 
         oc_env_vars: (optional) A dict of environment variables that are
@@ -51,6 +51,9 @@ class OpenshiftProvider(CarbonProvider):
                    application. The labels will be associated with all
                    components of the application.
 
+        oc_build_timeout: (optional) The duration to wait for a pod to be
+                          up and running.
+
         To add more fields for the provider, you have to also create a
         validate_* function for the field. The signature for the function
         must be validate_<paramenter_name> and the return must be True for
@@ -58,6 +61,11 @@ class OpenshiftProvider(CarbonProvider):
 
         For instance, the field 'image' has the function 'validate_image'.
 
+        The following fields are returned for provisioned applications:
+
+            oc_app_name: The application name for the provisioned application.
+
+            oc_routes: The routes for the application provisioned.
     """
     __provider_name__ = 'openshift'
     __provider_prefix__ = 'oc_'
@@ -73,6 +81,11 @@ class OpenshiftProvider(CarbonProvider):
         'template',
         'env_vars',
         'build_timeout'
+    )
+
+    _output_parameters = (
+        'app_name',
+        'routes'
     )
 
     _mandatory_creds_parameters = (
