@@ -25,10 +25,11 @@
 """
 import os
 import sys
+import errno
 
 from pykwalify.core import Core
 from ..constants import SCENARIO_SCHEMA
-from ..core import CarbonResource
+from ..core import CarbonResource, CarbonException
 from ..helpers import gen_random_str
 from ..tasks import ValidateTask
 from .actions import Action
@@ -76,8 +77,16 @@ class Scenario(CarbonResource):
         # will live during the scenario life cycle
         # TODO: cleanup task should clean this directory after report collects it
         self._data_folder = os.path.join(self.config['DATA_FOLDER'], self._uid)
-        if not os.path.exists(self._data_folder):
-            os.makedirs(self._data_folder)
+        try:
+            if not os.path.exists(self._data_folder):
+                os.makedirs(self._data_folder)
+        except OSError as ex:
+            if ex.errno == errno.EACCES:
+                raise CarbonException('You do not have permission to create'
+                                      ' the workspace.')
+            else:
+                raise CarbonException('Error creating scenario workspace: '
+                                      '%s' % ex.message)
 
     def add_resource(self, item):
         if isinstance(item, Host):
