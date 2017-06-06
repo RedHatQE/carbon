@@ -17,7 +17,6 @@ provision:
     provider: openstack
     provisioner: openstack
     credential: openstack_ciops
-    os_count: 1
     os_name:
     os_image: rhel-7.3-workstation-x86_64-released
     os_flavor: m1.medium
@@ -34,7 +33,6 @@ provision:
   - name: machine_2
     provider: openstack
     credential: openstack_ciops
-    os_count: 3
     os_name:
     os_image: rhel-7.3-server-x86_64-released
     os_flavor: m1.medium
@@ -51,7 +49,6 @@ provision:
   - name: machine_3
     provider: openstack
     credential: openstack_ciops
-    os_count: 1
     os_name:
     os_image: rhel-7.3-workstation-x86_64-released
     os_flavor: m1.medium

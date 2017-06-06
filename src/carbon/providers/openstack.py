@@ -50,8 +50,6 @@ class OpenstackProvider(CarbonProvider):
                  not available. The ‘none’ value tells the Compute service
                  to not allocate any networking for the server.
 
-        os_count: (mandatory) The number of resources to create.
-
         os_floating_ip_pool: (mandatory) The floating ip pool to use to create
                              a floating IP.
 
@@ -83,7 +81,6 @@ class OpenstackProvider(CarbonProvider):
 
     _mandatory_parameters = (
         'name',
-        'count',
         'flavor',
         'image',
         'networks',
@@ -96,6 +93,12 @@ class OpenstackProvider(CarbonProvider):
         'description',
         'files',
         'security_groups',
+    )
+
+    _output_parameters = (
+        'name',
+        'node_id',
+        'ip_address'
     )
 
     _mandatory_creds_parameters = (
@@ -363,28 +366,6 @@ class OpenstackProvider(CarbonProvider):
             return isinstance(value, string_types)
         else:
             return True
-
-    def validate_count(self, value):
-        """Validate the resource count.
-        :param value: The resource count
-        :return: A boolean, true = valid, false = invalid
-        """
-        # Quit when no value given
-        if not value:
-            self.logger.warn('Invalid data for count!')
-            return False
-
-        # Count must be an integer
-        if not isinstance(value, int):
-            self.logger.warn('Count is required to be a integer type!')
-            return False
-
-        # Count may not be a negative number
-        if value <= 0:
-            self.logger.warn('Count cannot be a negative number!')
-            return False
-
-        return True
 
     def validate_floating_ip_pool(self, value):
         """Validate the resource floating ip pool.

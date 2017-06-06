@@ -64,30 +64,29 @@ class OpenstackProvisioner(CarbonProvisioner):
     _glance = None
     _session = None
 
-    def __init__(self, host_desc):
+    def __init__(self, host):
         """Constructor.
 
-        :param host_desc: A host description in (dict form) based on a Carbon
-            host object.
+        :param host: The host object.
         """
         super(OpenstackProvisioner, self).__init__()
 
         # host description
-        self.host_desc = host_desc
+        self.host = host
 
         # Set os networks
-        self._networks = self.get_networks(self.host_desc['os_networks'])
+        self._networks = self.get_networks(self.host.os_networks)
 
         # Set os image
-        self._image = self.get_image(self.host_desc['os_image'])
+        self._image = self.get_image(self.host.os_image)
 
         # Set os flavor
-        self._flavor = self.get_flavor(self.host_desc['os_flavor'])
+        self._flavor = self.get_flavor(self.host.os_flavor)
 
         # Set workspace
-        self._workspace = self.host_desc['data_folder']
+        self._workspace = self.host.data_folder()
         # Set logspace
-        self._logspace = os.path.join(self.host_desc['data_folder'], "logs")
+        self._logspace = os.path.join(self.host.data_folder(), "logs")
 
         # Create logs directory if needed
         if not os.path.exists(self._logspace):
@@ -103,11 +102,11 @@ class OpenstackProvisioner(CarbonProvisioner):
         if not self._session:
             self._session = session.Session(
                 auth=identity.v2.Password(
-                    auth_url=self.host_desc['provider_creds']['auth_url'],
-                    tenant_name=self.host_desc['provider_creds']['tenant_name'],
-                    tenant_id=self.host_desc['provider_creds']['tenant_id'],
-                    username=self.host_desc['provider_creds']['username'],
-                    password=self.host_desc['provider_creds']['password']
+                    auth_url=self.host.provider.credentials['auth_url'],
+                    tenant_name=self.host.provider.credentials['tenant_name'],
+                    tenant_id=self.host.provider.credentials['tenant_id'],
+                    username=self.host.provider.credentials['username'],
+                    password=self.host.provider.credentials['password']
                 )
             )
         return self._session
@@ -366,7 +365,7 @@ class OpenstackProvisioner(CarbonProvisioner):
             instance_id = instance.id
 
             # Get Floating pool network info. For user supplied floating ip pool
-            os_pools = self.neutron.list_networks(name=self.host_desc['os_floating_ip_pool'])
+            os_pools = self.neutron.list_networks(name=self.host.os_floating_ip_pool)
 
             for os_pool in os_pools['networks']:
 
@@ -387,51 +386,21 @@ class OpenstackProvisioner(CarbonProvisioner):
         return float_ips
 
     def update_host(self, instance, ip_list):
-        """ Update host with ip information and data
-        If multiple resource being created will create
-        a host description for each and set os_count for
-        all to 1
+        """Update host with ip information and data
+
         :param instance: Instance object of resource
         :param ip_list: List of floating ips for resource
         """
         ips = []
 
-        # Get names from instance split on token
-        instance_names = str(instance.name).split('-')
-
-        # Get name
-        name = instance_names[0]
-
-        # Get os_name
-        os_name = str(instance.name)
+        self.host.os_name = str(instance.name)
+        self.host.os_node_id = str(instance.id)
 
         # Obtain list of ips
         for ip in ip_list:
-            f_ip = str(ip[
-                'floatingip']['floating_ip_address'])
+            f_ip = str(ip['floatingip']['floating_ip_address'])
             ips.append(f_ip)
-
-        # Get host description
-        host_desc_m = self.host_desc
-
-        # Set updated names if host had multiple count
-        if name is not self.host_desc['name'] and name.endswith('a') is False:
-            host_desc_m.update({"name": name})
-        if os_name is not self.host_desc['os_name']:
-            host_desc_m.update({"os_name": os_name})
-
-        # Update host description with new data
-        host_desc_m.update({"os_count": int('1')})
-        host_desc_m.update({"ip_address": ips})
-        host_desc_m.pop("provider_creds", None)
-        host_desc_m.pop("scenario_id", None)
-        host_desc_m["os_node_id"] = "%s" % str(instance.id)
-
-        # Output to yaml file
-        output_yaml = os.path.join(
-            self.host_desc['data_folder'], (host_desc_m['name'] + ".yaml"))
-        with open(output_yaml, 'w') as fp:
-            yaml.dump(host_desc_m, fp, allow_unicode=True)
+        self.host.os_ip_address = ips
 
     def create(self):
         """Create vm on openstack
@@ -439,69 +408,40 @@ class OpenstackProvisioner(CarbonProvisioner):
         :raises: Exception
         """
         error = False
-        alpha_counter = 'a'
         self.logger.info('Provisioning machines from %s', self.__class__)
-        instance_list = []
 
-        # Create instances
-        for count in range(1, int(self.host_desc['os_count'] + 1)):
-            # More than one host requested to be created
-            # Update names for each. machine_1-125xdpep becomes
-            # machine_1a-125xdpep, machine_1b-125xdpep, etc...
-            # Depending on the number requested
-            if int(self.host_desc['os_count'] > 1):
-                if count is 1:
-                    new_name = self.host_desc['os_name'].split('-')
-                    cnt_name = new_name[0] + alpha_counter
-                    if 1 < len(new_name):
-                        cnt_name = cnt_name + '-' + new_name[1]
-                elif count > 1:
-                    new_name = self.host_desc['os_name'].split('-')
-                    alpha_counter = self.increase(alpha_counter)
-                    cnt_name = new_name[0] + alpha_counter
-                    if 1 < len(new_name):
-                        cnt_name = cnt_name + '-' + new_name[1]
-            else:
-                cnt_name = self.host_desc['os_name']
+        try:
+            # Create instance on openstack
+            instance = self._create_node(
+                name=self.host.os_name,
+                image=self._image,
+                flavor=self._flavor,
+                nics=[{'net-id': net.id} for net in self._networks],
+                keypair=self.host.os_keypair)
+        except:
+            error = True
+            self.logger.error('Error creating a host %s.' % self.host.os_name)
 
-            try:
-                # Create instance on openstack
-                instance_list.append(self._create_node(
-                    name=cnt_name,
-                    image=self._image,
-                    flavor=self._flavor,
-                    nics=[{'net-id': net.id} for net in self._networks],
-                    keypair=self.host_desc['os_keypair']))
+        try:
+            # Wait for instance to be active
+            self.wait_for_active_state(instance)
 
-            except:
-                error = True
-                self.logger.error('Error creating a host %s.' % cnt_name)
+            # Add floating ip
+            float_ips = self.add_floating_ip(instance)
 
-        # Wait for systems to be active
-        for instance in instance_list:
-            try:
-                # Wait for instance to be active
-                self.wait_for_active_state(instance)
+            self.logger.info('Node %s created.' % str(instance.name))
+        except OpenstackProvisionerException:
+            error = True
+            self.logger.error('Error activating/assigning ip to host %s.' % str(instance.name))
 
-                # Add floating ip
-                float_ips = self.add_floating_ip(instance)
-
-                self.logger.info('Node %s created.', str(instance.name))
-
-            except OpenstackProvisionerException:
-                error = True
-                self.logger.error('Error activating/assigning ip to host %s.' % str(instance.name))
-
-            # Update host description
-            self.update_host(instance, float_ips)
+        # Update host object with useful information for user
+        self.update_host(instance, float_ips)
 
         if error:
             self.logger.error('Error creating host/s.')
             self.logger.error('Failed to provision all resources. Check logs or '
                               'job resources status')
             raise Exception
-
-        return instance_list
 
     def delete(self):
         """Teardown vm on openstack
@@ -510,13 +450,13 @@ class OpenstackProvisioner(CarbonProvisioner):
         self.logger.info('Tearing down machines from %s', self.__class__)
         try:
             server_exists = False
-            node = self.get_node_by_name(self.host_desc['os_name'])
+            node = self.get_node_by_name(self.host.os_name)
             if node:
-                self.logger.debug("This server %s exists", self.host_desc['os_name'])
+                self.logger.debug("This server %s exists", self.host.os_name)
                 server_exists = True
 
             if not server_exists:
-                self.logger.info("server %s does not exist", self.host_desc['os_name'])
+                self.logger.info("server %s does not exist", self.host.os_name)
             else:
                 self.logger.info("deleting server..........")
 
@@ -525,7 +465,7 @@ class OpenstackProvisioner(CarbonProvisioner):
                 floating_ips = [x['floating_ip_address'] for x in floating_ips_dict['floatingips']]
 
                 # Get systems ips
-                for host_network in self.host_desc['os_networks']:
+                for host_network in self.host.os_networks:
                     # Get systems ips
                     sys_ips_dict = self.nova.servers.ips(node)
                     sys_ips = [x['addr'] for x in sys_ips_dict[host_network]]

@@ -18,7 +18,6 @@ provision:
   - name: machine_1
     provider: openstack
     credential: openstack_ciops
-    os_count: 1
     os_name:
     os_image: rhel-6.9-workstation-x86_64-latest
     os_flavor: m1.medium
@@ -57,7 +56,6 @@ provision:
   - name: machine_4
     provider: openstack
     credential: openstack_ciops
-    os_count: 1
     os_name:
     os_image: rhel-6.9-server-x86_64-latest
     os_flavor: m1.medium

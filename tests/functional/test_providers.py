@@ -143,22 +143,6 @@ class TestOpenstack(object):
         cp_parameters[key] = ['machine1']
         assert_false(self._osp.validate_name(cp_parameters.pop(key)))
 
-    def test_count(self):
-        """Test the validate count method. This test performs the following:
-            1. Count undefined.
-            2. Count defined and is a valid count.
-            3. Count defined and is a invalid count (negative number).
-            4. Count defined and is a invalid count (float number).
-        """
-        key = '%scount' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_false(self._osp.validate_count(None))
-        assert_true(self._osp.validate_count(cp_parameters.pop(key)))
-        cp_parameters[key] = -1
-        assert_false(self._osp.validate_count(cp_parameters.pop(key)))
-        cp_parameters[key] = 1.5
-        assert_false(self._osp.validate_count(cp_parameters.pop(key)))
-
     def test_flavor(self):
         """Test the validate flavor method. This test performs the following:
             1. Flavor undefined.
