@@ -4,7 +4,7 @@ description: Description of the scenario example.
 
 credentials:
 
-  - NAME: openstack_ciops
+  - name: openstack_ciops
     auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
     tenant_name: pit-jenkins
     tenant_id: bf4de4c330bb47d6937af31fd5c71a18

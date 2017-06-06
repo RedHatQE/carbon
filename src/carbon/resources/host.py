@@ -90,10 +90,16 @@ class Host(CarbonResource):
             self._provisioner = get_provisioner_class(provisioner_set)
 
         # We must set the providers credentials initially
+        credential = parameters.pop('credential', None)
+        if credential is None:
+            raise Exception('A credential must be set for the hosts provider '
+                            '%s.' % provider)
         provider_creds = parameters.pop('provider_creds', None)
         if provider_creds is None:
             raise Exception('Provider credentials must be set for host %s.' %
                             str(self.name))
+        # Get the credentials for the host provider
+        cdata = next(i for i in provider_creds if i['name'] == credential)
 
         # every provider has a name as mandatory field.
         # first check if name exist (probably because of reusing machine).
@@ -120,8 +126,7 @@ class Host(CarbonResource):
         # Every provider must have credentials.
         # Check if provider credentials have all the mandatory fields set
         missing_mandatory_creds_fields = \
-            self.provider.check_mandatory_creds_parameters(
-                provider_creds[parameters['credential']])
+            self.provider.check_mandatory_creds_parameters(cdata)
         if len(missing_mandatory_creds_fields) > 0:
             raise Exception('Missing mandatory credentials fields for '
                             'credentials section %s, for node %s, based on '
@@ -130,7 +135,7 @@ class Host(CarbonResource):
                                self.provider.name, missing_mandatory_creds_fields))
 
         # create the provider credentials in provider object
-        self.provider.set_credentials(provider_creds[parameters['credential']])
+        self.provider.set_credentials(cdata)
 
         self._validate_task_cls = validate_task_cls
         self._provision_task_cls = provision_task_cls

@@ -67,8 +67,8 @@ class TestHost(object):
     _parameters = _hosts_description[0]
     _parameters2 = _hosts_description[1]
     _parameters3 = _hosts_description[2]
-    _credentials = _cp_scenario_description.pop('credentials')[0]
-    _parameters['provider_creds'] = {_credentials.pop('name'): _credentials}
+    _credentials = _cp_scenario_description.pop('credentials')
+    _parameters['provider_creds'] = _credentials
     _parameters3['provider_creds'] = _parameters2['provider_creds'] = _parameters['provider_creds']
     _invalid_parameters['provider_creds'] = _parameters['provider_creds']
 

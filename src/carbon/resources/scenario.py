@@ -61,6 +61,7 @@ class Scenario(CarbonResource):
             self._name = gen_random_str(15)
 
         self._uid = gen_random_str(20)
+        self._credentials = list()
 
         self._hosts = list()
         self._actions = list()
@@ -173,6 +174,18 @@ class Scenario(CarbonResource):
             raise ValueError('Execute must be of type %s ' % type(Execute))
         self._reports.append(h)
 
+    @property
+    def credentials(self):
+        return self._credentials
+
+    @credentials.setter
+    def credentials(self, value):
+        raise ValueError('You cannot set credentials directly. '
+                         'Use function ~Scenario.add_credentials')
+
+    def add_credentials(self, data):
+        self._credentials.append(data)
+
     @staticmethod
     def yaml_validate(yaml_file):
         """
@@ -196,7 +209,7 @@ class Scenario(CarbonResource):
         profile = dict(
             name=self.name,
             description=self.description,
-            credentials=[],
+            credentials=self.credentials,
             provision=[host.profile() for host in self.hosts],
             orchestrate=[],
             execute=[],

@@ -259,7 +259,8 @@ class Carbon(LoggerMixin):
         data["filename"] = filepath
         self.scenario.load(data)
 
-        self._load_credentials(cred_items)
+        for item in cred_items:
+            self.scenario.add_credentials(item)
 
         self._load_resources(Host, pro_items)
         self._load_resources(Action, orc_items)
@@ -276,22 +277,6 @@ class Carbon(LoggerMixin):
         #     for pkg in self._extract_packages(hst):
         #         host.packages.append(Action(pkg))
         #     self.scenario.add_hosts(host)
-
-    def _load_credentials(self, creds_list):
-        """Load all provider credentials for the scenario.
-
-        It will construct a dictionary containing entries for each credential
-        defined in the YAML.
-
-        :param creds_list: A list of provider credentials
-        :return: None
-        """
-        for item in creds_list:
-            try:
-                _name = item.pop('name')
-                self.creds[_name] = item
-            except KeyError as ex:
-                raise CarbonException(ex)
 
     def _load_resources(self, res_type, res_list):
         """
@@ -318,7 +303,7 @@ class Carbon(LoggerMixin):
         for item in res_list:
             if res_type == Host:
                 # Set all available provider credentials into host object
-                item['provider_creds'] = self.creds
+                item['provider_creds'] = self.scenario.credentials
             self.scenario.add_resource(
                 res_type(config=self.config,
                          parameters=item,

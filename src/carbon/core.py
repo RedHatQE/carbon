@@ -318,8 +318,6 @@ class CarbonProvider(LoggerMixin):
     _output_parameters = ()
     _mandatory_creds_parameters = ()
 
-    _credentials = {}
-
     def __init__(self, **kwargs):
         # I care only about the parameters set on ~self._parameters
         self._credentials = {}

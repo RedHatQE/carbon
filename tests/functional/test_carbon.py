@@ -58,29 +58,9 @@ class TestCarbon(object):
         obj.load_from_yaml('assets/scenario.yaml')
 
     @staticmethod
-    @raises(CarbonException)
     def test_load_yaml_with_missing_section():
         """Test carbons function to load a scenario descriptor (yaml) file with
         a missing required section. An exception will be raised.
         """
         obj = Carbon(__name__)
         obj.load_from_yaml('assets/invalid_scenario.yaml')
-
-    @staticmethod
-    def test_load_credentials():
-        """Test carbons function to load provider credentials from the scenario
-        descriptor (yaml) file.
-        """
-        obj = Carbon(__name__)
-        data = file_mgmt('r', 'assets/scenario.yaml')
-        obj._load_credentials(data.pop('credentials'))
-
-    @staticmethod
-    @raises(CarbonException)
-    def test_load_invalid_credentials():
-        """Test carbons function to load provider credentials from the scenario
-        descriptor (yaml) file with a missing required credentials key.
-        """
-        obj = Carbon(__name__)
-        data = file_mgmt('r', 'assets/invalid_scenario.yaml')
-        obj._load_credentials(data.pop('credentials'))
