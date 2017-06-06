@@ -280,6 +280,7 @@ class CarbonProvider(LoggerMixin):
 
     def __init__(self, **kwargs):
         # I care only about the parameters set on ~self._parameters
+        self._credentials = {}
         params = {k for k, v in kwargs.items()}\
             .intersection({'{}{}'.format(self.__provider_prefix__, k) for k in self._mandatory_parameters})
         for k, v in kwargs.items():
