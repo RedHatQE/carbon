@@ -1,0 +1,28 @@
+# $ carbon run --scenario examples/provision/openshift/default_template.yaml
+---
+name: Openshift example
+description: Provision applications in Openshift based on a default template
+
+credentials:
+
+  - name: openshift
+    auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
+    project: myproject
+    username: username
+    token: token
+
+provision:
+
+  - name: Application by pre-defined template
+    provider: openshift
+    credential: openshift
+    oc_name: application3
+    role: application3
+    oc_template: jws30-tomcat7-basic-s2i # Define existing template name
+    oc_env_vars:
+      JWS_ADMIN_USERNAME: jwsadmin
+      JWS_ADMIN_PASSWORD: jwsadmin
+      APPLICATION_NAME: tomcat-app
+    oc_labels:
+      - label1: label1
+      - label2: predefinedtemplate_app

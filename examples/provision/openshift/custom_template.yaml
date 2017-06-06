@@ -1,0 +1,27 @@
+# $ carbon run --scenario examples/provision/openshift/custom_template.yaml
+---
+name: Openshift example
+description: Provision applications in Openshift based on a custom template
+
+credentials:
+
+  - name: openshift
+    auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
+    project: myproject
+    username: username
+    token: token
+
+provision:
+
+  - name: Application by custom template
+    provider: openshift
+    provisioner: openshift
+    credential: openshift
+    oc_name: application4
+    role: application4
+    oc_template: mytemplate # File ext appended, template needs to be in root where carbon is run
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:
+      - another_label: customtemplate_app

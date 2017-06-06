@@ -1,0 +1,27 @@
+# $ carbon run --scenario examples/provision/openshift/image.yaml
+---
+name: Openshift example
+description: Provision application in Openshift based on a image
+
+credentials:
+
+  - name: openshift
+    auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
+    project: myproject
+    username: username
+    token: token
+
+provision:
+
+  - name: Application by image
+    provider: openshift
+    credential: openshift
+    oc_name: application1
+    role: application1
+    oc_image: rywillia/example
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:
+      - label1: label1
+      - label2: image_app

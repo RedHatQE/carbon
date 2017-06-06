@@ -1,0 +1,30 @@
+# $ carbon run --scenario examples/provision/openshift/git.yaml
+---
+name: Openshift example
+description: Provision application in Openshift based on a git
+
+credentials:
+
+  - name: openshift
+    auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
+    project: myproject
+    username: username
+    token: token
+
+provision:
+
+  - name: Application by git
+    provider: openshift
+    provisioner: openshift
+    credential: openshift
+    oc_name: application2
+    # timeout for builds to complete, in seconds, default 30mins = 1800 sec
+    oc_build_timeout: 3600
+    role: application2
+    oc_git: https://github.com/openshift/django-ex
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:
+      - label1: label1
+      - label2: git_app

@@ -1,3 +1,4 @@
+# $ carbon run --scenario examples/provision/mixed/openstack_openshift.yaml
 ---
 scenario: Scenario Example with Openstack and Openshift
 description: Description of the scenario example.
@@ -5,10 +6,10 @@ description: Description of the scenario example.
 credentials:
 
   - name: openshift
-    auth_url: https://cci-ose-master-vip.rhev-ci-vms.eng.rdu2.redhat.com:8443
-    project: my-project
-    username: test
-    token: yourtoken
+    auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
+    project: myproject
+    username: developer
+    token: token
 
   - name: openstack_ciops
     auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
@@ -16,7 +17,6 @@ credentials:
     tenant_id: bf4de4c330bb47d6937af31fd5c71a18
     username: username
     password: password
-
 
 provision:
 
@@ -38,17 +38,14 @@ provision:
 
   - name: Application by git
     provider: openshift
-    provisioner: openshift
     credential: openshift
-    oc_name: application2
-    # timeout for builds to complete, in seconds, default 30mins = 1800 sec
-    oc_build_timeout: 3600
-    role: application2
-    oc_git: https://github.com/openshift/django-ex  # Define url to git repository
+    oc_name: application1
+    role: application1
+    oc_image: rywillia/example  # Define registry and image
     oc_env_vars:
       var1: var1
       var2: var2
     oc_labels:  # Need to see if we can pass multiple labels by oc client
       - label1: label1
-      - label2: git_app
+      - label2: image_app
 
