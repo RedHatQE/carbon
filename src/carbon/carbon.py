@@ -34,7 +34,7 @@ from . import __name__ as __carbon_name__
 from .config import Config, ConfigAttribute
 from .constants import TASKLIST
 from .core import CarbonException, LoggerMixin
-from .helpers import LockedCachedProperty, get_root_path, file_mgmt
+from .helpers import LockedCachedProperty, get_root_path, file_mgmt, gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
 from .tasks import ValidateTask, ProvisionTask
 from .tasks import OrchestrateTask, ExecuteTask
@@ -124,6 +124,12 @@ class Carbon(LoggerMixin):
     # from the config with the ``CLEANUP`` configuration key.
     cleanup = ConfigAttribute('CLEANUP')
 
+    # set a workspace folder, for where files will be updated
+    data_folder = ConfigAttribute('DATA_FOLDER')
+
+    # set the log type
+    logger_type = ConfigAttribute('LOGGER_TYPE')
+
     # The pipeline of pipelines. All pipelines in the lists starts an
     # empty tasks list and tasks will be added later when the
     # :function:`~carbon.Carbon.run` is executed. The framework will run
@@ -143,6 +149,8 @@ class Carbon(LoggerMixin):
     default_config = {
         'DEBUG': False,
         'DATA_FOLDER': '/tmp',
+        # set to stream or file
+        'LOGGER_TYPE': 'file',
         'LOGGER_NAME': __carbon_name__,
         'LOG_LEVEL': 'info',
         'SECRET_KEY': 'secret-key',
@@ -150,7 +158,7 @@ class Carbon(LoggerMixin):
     }
 
     def __init__(self, import_name, root_path=None, log_level=None,
-                 cleanup=None):
+                 cleanup=None, data_folder='/tmp', log_type=None):
 
         # The name of the package or module.  Do not change this once
         # it was set by the constructor.
@@ -164,6 +172,11 @@ class Carbon(LoggerMixin):
         self.root_path = root_path
 
         self.config = self.make_config()
+
+        self.data_folder = os.path.join(data_folder, gen_random_str(10))
+
+        if log_type:
+            self.logger_type = log_type
 
         if log_level:
             self.log_level = log_level
@@ -181,9 +194,8 @@ class Carbon(LoggerMixin):
         self.config.from_envvar('CARBON_SETTINGS', silent=True)
 
         # Setup logging handlers
-        self.create_carbon_logger(name=self.logger_name,
-                                  log_level=self.log_level)
-        self.create_taskrunner_logger(log_level=self.log_level)
+        self.create_carbon_logger(self.config)
+        self.create_taskrunner_logger(self.config)
 
         self.scenario = Scenario(config=self.config)
 

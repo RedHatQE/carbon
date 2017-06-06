@@ -231,7 +231,7 @@ class Host(CarbonResource):
             raise CarbonException('Host %s validation failed!' % self.name)
 
     def data_folder(self):
-        return os.path.join(self.config['DATA_FOLDER'], self._scenario_uid)
+        return self.config['DATA_FOLDER']
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.

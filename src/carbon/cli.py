@@ -31,7 +31,7 @@ import click
 from . import __version__
 from ._compat import string_types
 from .carbon import Carbon
-from .constants import TASKLIST, TASK_CLEANUP_CHOICES, TASK_LOGLEVEL_CHOICES
+from .constants import TASKLIST, TASK_CLEANUP_CHOICES, TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
 
 _VERBOSITY = 0
 
@@ -113,6 +113,13 @@ def validate(ctx, scenario):
 @click.option("-s", "--scenario",
               default=None,
               help="Scenario definition file to be executed.")
+@click.option("-d", "--data-folder",
+              default="/tmp",
+              help="Scenario workspace path.")
+@click.option("--log-type",
+              default="file",
+              type=click.Choice(LOGTYPE_CHOICES),
+              help="log type")
 @click.option("-c", "--cleanup",
               type=click.Choice(TASK_CLEANUP_CHOICES),
               default='always',
@@ -122,7 +129,7 @@ def validate(ctx, scenario):
               default='info',
               help="Select logging level. Default is 'INFO'")
 @click.pass_context
-def run(ctx, task, scenario, cleanup, log_level):
+def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type):
     """
     Run a carbon scenario, given the scenario YAML file configuration.
     """
@@ -144,7 +151,7 @@ def run(ctx, task, scenario, cleanup, log_level):
         ctx.exit()
 
     # Create a new carbon compound
-    cbn = Carbon(__name__, log_level=log_level, cleanup=cleanup)
+    cbn = Carbon(__name__, log_level=log_level, cleanup=cleanup, data_folder=data_folder, log_type=log_type)
 
     # This is the easiest way to configure a full scenario.
     cbn.load_from_yaml(scenario)

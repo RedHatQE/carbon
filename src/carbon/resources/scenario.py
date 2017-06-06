@@ -76,7 +76,7 @@ class Scenario(CarbonResource):
         # create a scenario data folder where all hosts, actions, executes, reports
         # will live during the scenario life cycle
         # TODO: cleanup task should clean this directory after report collects it
-        self._data_folder = os.path.join(self.config['DATA_FOLDER'], self._uid)
+        self._data_folder = self.config['DATA_FOLDER']
         try:
             if not os.path.exists(self._data_folder):
                 os.makedirs(self._data_folder)

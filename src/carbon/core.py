@@ -21,9 +21,12 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import os
+import errno
 import inspect
+
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
-from logging import Formatter, getLogger, StreamHandler
+from logging import Formatter, getLogger, StreamHandler, FileHandler
 from taskrunner import Task
 
 from .helpers import get_core_tasks_classes
@@ -76,35 +79,74 @@ class LoggerMixin(object):
     }
 
     @classmethod
-    def create_carbon_logger(cls, name, log_level=None):
+    def create_carbon_logger(cls, carbon_config):
         """Create carbons logger.
 
         :param name: Logger name.
         :param log_level: Log level to set for logger.
         :return: Carbon logger object.
         """
-        clogger = getLogger(name)
+        clogger = getLogger(carbon_config["LOGGER_NAME"])
         if not clogger.handlers:
-            chandler = StreamHandler()
-            chandler.setLevel(cls._LOG_LEVELS[log_level])
+            if carbon_config["LOGGER_TYPE"] == "stream":
+                chandler = StreamHandler()
+            elif carbon_config["LOGGER_TYPE"] == "file":
+                logfile = os.path.join(carbon_config["DATA_FOLDER"], "logs", "carbon_scenario.log")
+                logdir = os.path.dirname(logfile)
+                if os.path.exists(logdir):
+                    pass
+                else:
+                    try:
+                        os.makedirs(logdir)
+                    except OSError as ex:
+                        if ex.errno == errno.EACCES:
+                            raise CarbonException('You do not have permission to create'
+                                                  ' the workspace.')
+                        else:
+                            raise CarbonException('Error creating scenario workspace: '
+                                                  '%s' % ex.message)
+
+                chandler = FileHandler(logfile)
+            else:
+                raise Exception("Please set a valid LOGGER_TYPE value")
+            chandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
             chandler.setFormatter(Formatter(cls._LOG_FORMAT))
-            clogger.setLevel(cls._LOG_LEVELS[log_level])
+            clogger.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
             clogger.addHandler(chandler)
         return clogger
 
     @classmethod
-    def create_taskrunner_logger(cls, name='taskrunner', log_level=None):
+    def create_taskrunner_logger(cls, carbon_config, name='taskrunner'):
         """Create taskrunners logger.
 
         :param name: Logger name.
         :param log_level: Log level to set for logger.
         :return: Taskrunner logger object.
         """
-        thandler = StreamHandler()
-        thandler.setLevel(cls._LOG_LEVELS[log_level])
+        if carbon_config["LOGGER_TYPE"] == "stream":
+            thandler = StreamHandler()
+        elif carbon_config["LOGGER_TYPE"] == "file":
+            logfile = os.path.join(carbon_config["DATA_FOLDER"], "logs", "carbon_scenario.log")
+            logdir = os.path.dirname(logfile)
+            if os.path.exists(logdir):
+                pass
+            else:
+                try:
+                    os.makedirs(logdir)
+                except OSError as ex:
+                    if ex.errno == errno.EACCES:
+                        raise CarbonException('You do not have permission to create'
+                                              ' the workspace.')
+                    else:
+                        raise CarbonException('Error creating scenario workspace: '
+                                              '%s' % ex.message)
+            thandler = FileHandler(logfile)
+        else:
+            raise Exception("Please set a valid LOGGER_TYPE value")
+        thandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
         thandler.setFormatter(Formatter(cls._LOG_FORMAT))
         tlogger = getLogger(name)
-        tlogger.setLevel(cls._LOG_LEVELS[log_level])
+        tlogger.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
         tlogger.addHandler(thandler)
         return tlogger
 
