@@ -255,6 +255,7 @@ class Host(CarbonResource):
             'name': str(self.name),
             'host': self,
             'msg': '   cleanup host %s' % self.name,
-            'clean_msg': '   cleanup after cleanup host %s' % self.name
+            'clean_msg': '   cleanup after cleanup host %s' % self.name,
+            'cleanup': self.config['CLEANUP']
         }
         return task

@@ -47,24 +47,21 @@ class TestScenario(TestCase):
     def setUp(self):
         self.env = EnvironmentVarGuard()
         self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+        self.cbn = Carbon(__name__)
 
-    @staticmethod
-    def test_new_scenario_from_yaml():
+    def test_new_scenario_from_yaml(self):
         """Test creating a new scenario object from a data structure read in
         from a yaml file.
         """
-        cbn = Carbon(__name__)
-        cbn.scenario = Scenario(config=cbn.config, name='MyScenario')
-        assert_is_instance(cbn.scenario, Scenario)
-        assert_equal(len(cbn.scenario.hosts), 0)
+        self.cbn.scenario = Scenario(config=self.cbn.config, name='MyScenario')
+        assert_is_instance(self.cbn.scenario, Scenario)
+        assert_equal(len(self.cbn.scenario.hosts), 0)
 
-    @staticmethod
-    def test_new_attribute():
+    def test_new_attribute(self):
         """Test setting a new scenario object attribute."""
-        cbn = Carbon(__name__)
-        cbn.scenario = Scenario(config=cbn.config, name="MyScenario")
-        cbn.scenario.newattribute = 'value'
-        assert_equal(cbn.scenario.newattribute, str('value'))
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.newattribute = 'value'
+        assert_equal(self.cbn.scenario.newattribute, str('value'))
 
 
 class TestHost(TestCase):
@@ -86,27 +83,28 @@ class TestHost(TestCase):
     def setUp(self):
         self.env = EnvironmentVarGuard()
         self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+        self.cbn = Carbon(__name__)
 
     def test_instantiate_host(self):
         """Test instantiating a host class and verify the object created is
         an instance of the host class.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         assert_is_instance(host, Host)
 
     def test_set_name(self):
         """Test setting the host name when instantiating the host class."""
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('name')
-        host = Host(name='client1', parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, name='client1', parameters=cp_parameters)
         assert_equal(host.name, 'client1')
 
     def test_set_random_name(self):
         """Test setting a random host name when no name declared for a host."""
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('name')
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         assert_is_not_none(host.name)
 
     @raises(AttributeError)
@@ -116,13 +114,13 @@ class TestHost(TestCase):
         object was created.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         host.name = 'my_machine1'
 
     def test_get_role(self):
         """Test getting the host role from created host object."""
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         assert_equal(host.role, 'w_client')
 
     @raises(AttributeError)
@@ -132,7 +130,7 @@ class TestHost(TestCase):
         object was created.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         host.role = "client1"
 
     @raises(AttributeError)
@@ -142,7 +140,7 @@ class TestHost(TestCase):
         after host object was created.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         host.provider = 'openstack'
 
     def test_get_provider(self):
@@ -150,14 +148,14 @@ class TestHost(TestCase):
         check if the provider is an instance of the provider class.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         assert_is_instance(host.provider, OpenstackProvider)
 
     def test_set_provisioner_valid(self):
         """Test a valid setting of the provisioner.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         assert_equal(host.provisioner.__provisioner_name__, self._parameters["provisioner"])
 
     @raises(Exception)
@@ -166,14 +164,14 @@ class TestHost(TestCase):
         is still set to a valid provisioner, but rejects the input.
         """
         cp_parameters = deepcopy(self._invalid_parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
 
     def test_provisioner_notset(self):
         """Test not setting a provisioner.  The provisioner
         uses the constants to set the provisioner.
         """
         cp_parameters = deepcopy(self._parameters3)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         assert_is_not_none(host.provisioner)
         assert_false("provisioner" in self._parameters3)
         assert_equal(host.provisioner.__provisioner_name__, PROVISIONERS[self._parameters3["provider"]])
@@ -185,7 +183,7 @@ class TestHost(TestCase):
         after host object was created.
         """
         cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         host.provisioner = 'linchpin'
 
     @raises(Exception)
@@ -195,7 +193,7 @@ class TestHost(TestCase):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('role')
-        Host(parameters=cp_parameters, scenario_uid='1234')
+        Host(config=self.cbn.config, parameters=cp_parameters)
 
     @raises(Exception)
     def test_provider_undeclared(self):
@@ -204,7 +202,7 @@ class TestHost(TestCase):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('provider')
-        Host(parameters=cp_parameters, scenario_uid='1234')
+        Host(config=self.cbn.config, parameters=cp_parameters)
 
     @raises(Exception)
     def test_invalid_provider(self):
@@ -213,7 +211,7 @@ class TestHost(TestCase):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters['provider'] = 'provider123'
-        Host(parameters=cp_parameters, scenario_uid='1234')
+        Host(config=self.cbn.config, parameters=cp_parameters)
 
     @raises(Exception)
     def test_provider_creds_undeclared(self):
@@ -222,7 +220,7 @@ class TestHost(TestCase):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('provider_creds')
-        Host(parameters=cp_parameters, scenario_uid='1234')
+        Host(config=self.cbn.config, parameters=cp_parameters)
 
     @raises(Exception)
     def test_provider_miss_cred_param(self):
@@ -232,7 +230,7 @@ class TestHost(TestCase):
         cp_parameters = deepcopy(self._parameters)
         cp_parameters['provider_creds'][cp_parameters['credential']].\
             pop('auth_url')
-        Host(parameters=cp_parameters, scenario_uid='1234')
+        Host(config=self.cbn.config, parameters=cp_parameters)
 
     @raises(Exception)
     def test_provider_miss_param(self):
@@ -241,14 +239,13 @@ class TestHost(TestCase):
         """
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('os_image')
-        Host(parameters=cp_parameters, scenario_uid='1234')
+        Host(config=self.cbn.config, parameters=cp_parameters)
 
     def test_profile(self):
         """Test creating a host profile data structure from the host object. It
         will check if the profile data structure is an dictionary.
         """
-        cbn = Carbon(__name__)
         cp_parameters = deepcopy(self._parameters)
-        host = Host(config=cbn.config, parameters=cp_parameters, scenario_uid='1234')
+        host = Host(config=self.cbn.config, parameters=cp_parameters)
         profile = host.profile()
         assert_is_instance(profile, dict)
