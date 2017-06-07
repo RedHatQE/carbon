@@ -277,7 +277,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
     def delete(self):
         """Delete all resources associated with an application. It will
-        delete all resources for an application using the label assocaited to
+        delete all resources for an application using the label associated to
         it. This ensures no stale resources are left laying around.
         """
         self.logger.info('Deleting application from %s', self.__class__)
@@ -291,11 +291,13 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         )
 
         self.results_analyzer(results['status'])
+
         try:
+            # Stop/remove container
+            self.stop_container(self.name)
+            self.remove_container(self.name)
+
             if results['status'] != 0:
-                # Stop/remove container
-                self.stop_container(self.name)
-                self.remove_container(self.name)
                 raise OpenshiftProvisionerException
         except DockerControllerException as ex:
             raise OpenshiftProvisionerException(ex)

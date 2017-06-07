@@ -87,8 +87,8 @@ class Host(CarbonResource):
             self._provisioner = get_provisioner_class(provisioner_set)
 
         # We must set the providers credentials initially
-        credential = parameters.pop('credential', None)
-        if credential is None:
+        self._credential = parameters.pop('credential', None)
+        if self._credential is None:
             raise Exception('A credential must be set for the hosts provider '
                             '%s.' % provider)
         provider_creds = parameters.pop('provider_creds', None)
@@ -96,7 +96,7 @@ class Host(CarbonResource):
             raise Exception('Provider credentials must be set for host %s.' %
                             str(self.name))
         # Get the credentials for the host provider
-        cdata = next(i for i in provider_creds if i['name'] == credential)
+        cdata = next(i for i in provider_creds if i['name'] == self._credential)
 
         # every provider has a name as mandatory field.
         # first check if name exist (probably because of reusing machine).
@@ -203,6 +203,8 @@ class Host(CarbonResource):
         d.update({
             'name': self.name,
             'provider': self.provider.name(),
+            'credential': self._credential,
+            'provisioner': self.provisioner.__provisioner_name__,
             'role': self._role,
             'data_folder': self.data_folder()
         })
@@ -219,7 +221,7 @@ class Host(CarbonResource):
             raise CarbonException('Host %s validation failed!' % self.name)
 
     def data_folder(self):
-        return self.config['DATA_FOLDER']
+        return str(self.config['DATA_FOLDER'])
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.

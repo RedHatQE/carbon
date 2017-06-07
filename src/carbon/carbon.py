@@ -399,7 +399,6 @@ class Carbon(LoggerMixin):
         except taskrunner.TaskExecutionException as ex:
             self.logger.error(ex)
         finally:
-            sfile = os.path.join(self.scenario.data_folder, '%s_updated.yaml' %
-                                 self.scenario.uid)
-            file_mgmt('w', sfile, self.scenario.profile())
-            self.logger.info('Successfully created updated scenario YAML.')
+            updated_yaml = os.path.join(self.data_folder, 'results.yaml')
+            file_mgmt('w', updated_yaml, self.scenario.profile())
+            self.logger.info('Updated scenario file ~ %s' % updated_yaml)
