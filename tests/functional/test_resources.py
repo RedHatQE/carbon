@@ -21,9 +21,16 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import os
 from copy import deepcopy
 from nose.tools import assert_equal, assert_is_instance, assert_is_not_none
 from nose.tools import assert_not_equal, assert_false, raises
+from unittest import TestCase
+
+try:
+    from test.test_support import EnvironmentVarGuard
+except ImportError:
+    from test.support import EnvironmentVarGuard
 
 from carbon import Carbon, Scenario, Host
 from carbon.constants import PROVISIONERS
@@ -34,8 +41,12 @@ scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 scenario_description_invalid = file_mgmt('r', 'assets/invalid_scenario.yaml')
 
 
-class TestScenario(object):
+class TestScenario(TestCase):
     """Unit tests to test carbon scenarios."""
+
+    def setUp(self):
+        self.env = EnvironmentVarGuard()
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
 
     @staticmethod
     def test_new_scenario_from_yaml():
@@ -56,7 +67,7 @@ class TestScenario(object):
         assert_equal(cbn.scenario.newattribute, str('value'))
 
 
-class TestHost(object):
+class TestHost(TestCase):
     """Unit tests to test carbon host."""
 
     _cp_scenario_description = dict(scenario_description)
@@ -71,6 +82,10 @@ class TestHost(object):
     _parameters['provider_creds'] = _credentials
     _parameters3['provider_creds'] = _parameters2['provider_creds'] = _parameters['provider_creds']
     _invalid_parameters['provider_creds'] = _parameters['provider_creds']
+
+    def setUp(self):
+        self.env = EnvironmentVarGuard()
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
 
     def test_instantiate_host(self):
         """Test instantiating a host class and verify the object created is
@@ -119,22 +134,6 @@ class TestHost(object):
         cp_parameters = deepcopy(self._parameters)
         host = Host(parameters=cp_parameters, scenario_uid='1234')
         host.role = "client1"
-
-    def test_get_scenario_uid(self):
-        """Test geting the host scenario id from created host object."""
-        cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
-        assert_equal(host.scenario_uid, '1234')
-
-    @raises(AttributeError)
-    def test_set_scenario_uid(self):
-        """Test setting the host scenario id after host class was instaniated.
-        An exception will be raised since you cannot update the scenario id
-        after host object was created.
-        """
-        cp_parameters = deepcopy(self._parameters)
-        host = Host(parameters=cp_parameters, scenario_uid='1234')
-        host.scenario_uid = '1234'
 
     @raises(AttributeError)
     def test_set_provider(self):

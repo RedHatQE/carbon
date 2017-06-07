@@ -24,6 +24,12 @@
 import os
 from copy import deepcopy
 from distutils import dir_util
+from unittest import TestCase
+
+try:
+    from test.test_support import EnvironmentVarGuard
+except ImportError:
+    from test.support import EnvironmentVarGuard
 
 from carbon import Host
 from carbon.constants import CARBON_ROOT
@@ -40,8 +46,8 @@ scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 @nottest
 def scrub_lp_setup(base_dir, ws_dir, ws_subdir=""):
     """ Scrub Linch-pin configuration setup to desired stage
-    before running test. Remove passed workspace directory if exists 
-    Return full workspace path 
+    before running test. Remove passed workspace directory if exists
+    Return full workspace path
     """
     workspace = os.path.join(base_dir, ws_dir)
     deldir = os.path.join(workspace, ws_subdir)
@@ -50,7 +56,7 @@ def scrub_lp_setup(base_dir, ws_dir, ws_subdir=""):
     return workspace
 
 
-class TestLinchpinProvisioner(object):
+class TestLinchpinProvisioner(TestCase):
 
     _cp_scenario_description = dict(scenario_description)
     _parameters = _cp_scenario_description['provision'][0]
@@ -67,7 +73,7 @@ class TestLinchpinProvisioner(object):
     @nottest
     def test_instantiate_linchpinprovisioner(self):
         """Test instantiating a LinchpinProvisioner class and
-        verifying the object created is an instance of the 
+        verifying the object created is an instance of the
         LinchpinProvisioner class.
         """
         scrub_lp_setup(self._base_path, '1234')

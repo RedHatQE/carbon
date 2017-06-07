@@ -60,7 +60,6 @@ class Scenario(CarbonResource):
         if not name:
             self._name = gen_random_str(15)
 
-        self._uid = gen_random_str(20)
         self._credentials = list()
 
         self._hosts = list()

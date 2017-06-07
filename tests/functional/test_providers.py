@@ -23,6 +23,12 @@
 """
 from copy import deepcopy
 from nose.tools import assert_true, assert_false, assert_is_instance, raises
+from unittest import TestCase
+
+try:
+    from test.test_support import EnvironmentVarGuard
+except ImportError:
+    from test.support import EnvironmentVarGuard
 
 from carbon.helpers import file_mgmt
 from carbon.providers import OpenstackProvider, OpenshiftProvider
@@ -36,7 +42,7 @@ from carbon.providers import AwsProvider, BeakerProvider
 scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 
 
-class TestRackspace(object):
+class TestRackspace(TestCase):
     """Unit tests to test carbon provider ~ rackspace."""
     _rspace = RackspaceProvider()
 
@@ -46,7 +52,7 @@ class TestRackspace(object):
         assert_is_instance(self._rspace, RackspaceProvider)
 
 
-class TestOpenshift(object):
+class TestOpenshift(TestCase):
     """Unit tests to test carbon provider ~ openshift."""
     _ocp = OpenshiftProvider()
 
@@ -56,7 +62,7 @@ class TestOpenshift(object):
         assert_is_instance(self._ocp, OpenshiftProvider)
 
 
-class TestDigitalocean(object):
+class TestDigitalocean(TestCase):
     """Unit tests to test carbon provider ~ digital ocean."""
     _docean = DigitalOceanProvider()
 
@@ -66,7 +72,7 @@ class TestDigitalocean(object):
         assert_is_instance(self._docean, DigitalOceanProvider)
 
 
-class TestBeaker(object):
+class TestBeaker(TestCase):
     """Unit tests to test carbon provider ~ beaker."""
     _beaker = BeakerProvider()
 
@@ -76,7 +82,7 @@ class TestBeaker(object):
         assert_is_instance(self._beaker, BeakerProvider)
 
 
-class TestAws(object):
+class TestAws(TestCase):
     """Unit tests to test carbon provider ~ aws."""
     _aws = AwsProvider()
 
@@ -86,7 +92,7 @@ class TestAws(object):
         assert_is_instance(self._aws, AwsProvider)
 
 
-class TestOpenstack(object):
+class TestOpenstack(TestCase):
     """Unit tests to test carbon provider ~ openstack.
 
     Majority of the tests for Openstack provider are validating the parameters

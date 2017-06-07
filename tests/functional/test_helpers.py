@@ -22,6 +22,12 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
+from unittest import TestCase
+
+try:
+    from test.test_support import EnvironmentVarGuard
+except ImportError:
+    from test.support import EnvironmentVarGuard
 
 try:
     from ConfigParser import ConfigParser
@@ -41,8 +47,12 @@ from carbon.providers import OpenstackProvider
 from carbon.provisioners import LinchpinProvisioner
 
 
-class TestLogging(object):
+class TestLogging(TestCase):
     """Unit test to test carbon logging."""
+
+    def setUp(self):
+        self.env = EnvironmentVarGuard()
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
 
     @staticmethod
     @nottest
@@ -56,7 +66,7 @@ class TestLogging(object):
         assert_is_not(cbn.logger, logger1)
 
 
-class TestFileManagement(object):
+class TestFileManagement(TestCase):
     """Unit tests to test carbons file management function."""
 
     @staticmethod
@@ -131,7 +141,7 @@ class TestFileManagement(object):
             os.remove(_file)
 
 
-class TestGetModuleClasses(object):
+class TestGetModuleClasses(TestCase):
     """Unit tests to test carbon functions that get classes or a class from
     carbon modules.
     """

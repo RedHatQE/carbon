@@ -21,6 +21,15 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import os
+import sys
+from unittest import TestCase
+
+try:
+    from test.test_support import EnvironmentVarGuard
+except ImportError:
+    from test.support import EnvironmentVarGuard
+
 from nose.tools import assert_equal, assert_is_instance, raises
 
 from carbon import Carbon
@@ -28,19 +37,21 @@ from carbon.core import CarbonException
 from carbon.helpers import file_mgmt
 
 
-class TestCarbon(object):
+class TestCarbon(TestCase):
     """Unit test to test carbon module."""
 
-    @staticmethod
-    def test_create_carbon_object():
+    def setUp(self):
+        self.env = EnvironmentVarGuard()
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+
+    def test_create_carbon_object(self):
         """Test creating a new carbon object. It will verify the object
         created is an instance of the carbon class.
         """
         obj = Carbon(__name__)
         assert_is_instance(obj, Carbon)
 
-    @staticmethod
-    def test_change_carbon_name():
+    def test_change_carbon_name(self):
         """Test changing the carbon name after the carbon object was created.
         It will verify the name attribute has the same value that was set.
         """

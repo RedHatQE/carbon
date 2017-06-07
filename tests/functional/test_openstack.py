@@ -25,6 +25,12 @@ import os
 from copy import deepcopy
 from distutils import dir_util
 from nose.tools import assert_is_instance, nottest
+from unittest import TestCase
+
+try:
+    from test.test_support import EnvironmentVarGuard
+except ImportError:
+    from test.support import EnvironmentVarGuard
 
 from carbon import __name__ as carbon_name
 from carbon import Host
@@ -71,7 +77,7 @@ def set_parameters(filename, directory, credentials, credential):
     return parameters
 
 
-class TestOpenstackProvisioner(object):
+class TestOpenstackProvisioner(TestCase):
     """Unit tests to test carbon provisioner ~ openstack."""
 
     _cp_scenario_description = dict(scenario_description)
@@ -82,13 +88,18 @@ class TestOpenstackProvisioner(object):
     _parameters_res2['provider_creds'] = {_credentials['name']: _credentials}
     _base_path = os.path.join(CARBON_ROOT, "jobs")
 
+
     def setUp(self):
         """Tasks to be performed before each test case."""
+        self.env = EnvironmentVarGuard()
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+
         # Setup carbon logger
         LoggerMixin.create_carbon_logger(carbon_name, 'debug')
 
         # Call scrub_os_setup function
         scrub_os_setup(self._base_path, '5678', self._credentials)
+
 
     @nottest
     def test_instantiate_provisioner(self):

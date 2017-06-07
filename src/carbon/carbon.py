@@ -25,6 +25,7 @@
 """
 import os
 import sys
+import errno
 import collections
 from threading import Lock
 import yaml
@@ -158,11 +159,13 @@ class Carbon(LoggerMixin):
     }
 
     def __init__(self, import_name, root_path=None, log_level=None,
-                 cleanup=None, data_folder='/tmp', log_type=None):
+                 cleanup=None, data_folder=None, log_type=None):
 
         # The name of the package or module.  Do not change this once
         # it was set by the constructor.
         self.import_name = import_name
+
+        self._uid = gen_random_str(10)
 
         if root_path is None:
             root_path = get_root_path(self.import_name)
@@ -172,8 +175,6 @@ class Carbon(LoggerMixin):
         self.root_path = root_path
 
         self.config = self.make_config()
-
-        self.data_folder = os.path.join(data_folder, gen_random_str(10))
 
         if log_type:
             self.logger_type = log_type
@@ -193,13 +194,28 @@ class Carbon(LoggerMixin):
                                 silent=True)
         self.config.from_envvar('CARBON_SETTINGS', silent=True)
 
+        # Set custom data folder, if data_folder is pass as parameter to Carbon
+        if data_folder:
+            self.config['DATA_FOLDER'] = data_folder
+
+        # Generate the UID for the carbon life-cycle based on data_folder
+        self.config['DATA_FOLDER'] = os.path.join(self.config['DATA_FOLDER'],
+                                                  self._uid)
+        try:
+            os.makedirs(self.config['DATA_FOLDER'])
+        except IOError as ex:
+            if ex.errno == errno.EACCES:
+                raise CarbonException("You don't have permission to create '"
+                                      "the data folder.")
+            else:
+                raise CarbonException('Error creating data folder - '
+                                      '%s'.format(ex.message))
+
         # Setup logging handlers
         self.create_carbon_logger(self.config)
         self.create_taskrunner_logger(self.config)
 
         self.scenario = Scenario(config=self.config)
-
-        self.creds = {}
 
     @LockedCachedProperty
     def name(self):
@@ -215,6 +231,10 @@ class Carbon(LoggerMixin):
                 return '__main__'
             return os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
+
+    @LockedCachedProperty
+    def data_folder(self):
+        return self.config['DATA_FOLDER']
 
     def make_config(self):
         """
@@ -306,8 +326,7 @@ class Carbon(LoggerMixin):
                 item['provider_creds'] = self.scenario.credentials
             self.scenario.add_resource(
                 res_type(config=self.config,
-                         parameters=item,
-                         scenario_uid=self.scenario.uid))
+                         parameters=item))
 
     def _add_task_into_pipeline(self, t):
         """

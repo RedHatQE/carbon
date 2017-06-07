@@ -83,15 +83,6 @@ class OpenstackProvisioner(CarbonProvisioner):
         # Set os flavor
         self._flavor = self.get_flavor(self.host.os_flavor)
 
-        # Set workspace
-        self._workspace = self.host.data_folder()
-        # Set logspace
-        self._logspace = os.path.join(self.host.data_folder(), "logs")
-
-        # Create logs directory if needed
-        if not os.path.exists(self._logspace):
-            os.makedirs(self._logspace)
-
     @property
     def key_session(self):
         """Create a keystone authenticated session (when needed) and return

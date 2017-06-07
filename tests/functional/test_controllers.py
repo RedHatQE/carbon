@@ -22,6 +22,12 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
+from unittest import TestCase
+
+try:
+    from test.test_support import EnvironmentVarGuard
+except ImportError:
+    from test.support import EnvironmentVarGuard
 
 try:
     from ConfigParser import ConfigParser
@@ -37,7 +43,7 @@ from carbon.controllers import DockerController, DockerControllerException
 from carbon.helpers import file_mgmt
 
 
-class TestDockerController(object):
+class TestDockerController(TestCase):
     """Unit tests to test docker controller."""
 
     @staticmethod
@@ -170,7 +176,7 @@ class TestDockerController(object):
         obj.remove_container(_name)
 
 
-class TestAnsibleController(object):
+class TestAnsibleController(TestCase):
     """Unit tests to test Ansible controller class."""
 
     @staticmethod

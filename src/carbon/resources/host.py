@@ -65,9 +65,6 @@ class Host(CarbonResource):
         if self._role is None:
             raise Exception('A role must be set for host %s.' % str(self.name))
 
-        # Set the scenario id
-        self._scenario_uid = kwargs['scenario_uid']
-
         # we must set provider initially and it can't be
         # changed afterwards.
         provider = parameters.pop('provider', None)
@@ -186,19 +183,6 @@ class Host(CarbonResource):
         raise AttributeError('You cannot set provider after class is instanciated.')
 
     @property
-    def scenario_uid(self):
-        """Return the scenario id the host is associated too."""
-        return self._scenario_uid
-
-    @scenario_uid.setter
-    def scenario_uid(self, value):
-        """Raises an exception when trying to set the scenario id the host is
-        associated too after the class has been instanciated.
-        :param value: The scenario id for the host
-        """
-        raise AttributeError('You cannot set scenario id after class is instanciated.')
-
-    @property
     def role(self):
         """Return the role for the host."""
         return self._role
@@ -220,7 +204,6 @@ class Host(CarbonResource):
             'name': self.name,
             'provider': self.provider.name(),
             'role': self._role,
-            'scenario_id': self._scenario_uid,
             'data_folder': self.data_folder()
         })
         return d

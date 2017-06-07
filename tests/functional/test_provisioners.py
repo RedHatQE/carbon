@@ -21,13 +21,19 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+from unittest import TestCase
+
+try:
+    from test.test_support import EnvironmentVarGuard
+except ImportError:
+    from test.support import EnvironmentVarGuard
 
 
-class TestOpenshiftProvisioner(object):
+class TestOpenshiftProvisioner(TestCase):
     """Unit tests to test carbon provisioner ~ openshift."""
     pass
 
 
-class TestOpenstackProvisioner(object):
+class TestOpenstackProvisioner(TestCase):
     """Unit tests to test carbon provisioner ~ openstack."""
     pass

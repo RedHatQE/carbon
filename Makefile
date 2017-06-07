@@ -22,6 +22,7 @@ clean:
 clean-tests:
 	rm -rf tests/coverage-report*
 	rm -rf tests/.coverage*
+	rm -rf tests/.workspace
 	rm -rf tests/__pycache__
 	rm -rf tests/cover
 	rm -rf tests/coverage.xml
