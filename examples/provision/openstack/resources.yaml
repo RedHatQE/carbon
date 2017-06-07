@@ -1,6 +1,6 @@
 # $ carbon run --scenario examples/provision/openstack/resources.yaml
 ---
-scenario: Openstack example
+name: Openstack example
 description: Provision more than one resource in an Openstack tenant
 
 credentials:

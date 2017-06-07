@@ -1,6 +1,6 @@
 # $ carbon run --scenario examples/provision/mixed/openstack_openshift.yaml
 ---
-scenario: Scenario Example with Openstack and Openshift
+name: Scenario Example with Openstack and Openshift
 description: Description of the scenario example.
 
 credentials:

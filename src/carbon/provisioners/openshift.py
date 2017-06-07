@@ -449,7 +449,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             buildcheck = True
             podcheck = True
             attempt += 1
-            self.logger.info("Attempt {0} of {1}: Checking for pods to all be running".format(attempt, total_attempts))
+            self.logger.info("Attempt {0} of {1}: Checking for pods to all "
+                             "be running".format(attempt, total_attempts))
 
             # check the build status, which needs to be No resources found or Complete
 
@@ -467,14 +468,17 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 if "No resources" in parsed_results["stdout"]["stderr"]:
                     pass
                 else:
-                    raise Exception("Unexpected Error checking builds: " + parsed_results["stdout"]["stderr"])
+                    raise Exception("Unexpected Error checking builds: "
+                                    "{}".format(parsed_results["stdout"]["stderr"]))
             elif "stdout" in parsed_results:
-                mydict = {}
                 mydict = yaml.load(parsed_results["stdout"])
                 for item in mydict["items"]:
                     build_status = item['status']['phase']
                     if build_status == "Complete":
                         buildcheck = buildcheck and True
+                    elif build_status == "Failed":
+                        self.logger.error("The build failed")
+                        raise OpenshiftProvisionerException
                     else:
                         # Build is still in progress
                         buildcheck = False
@@ -484,11 +488,14 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                     time.sleep(10)
                     continue
             elif "stderr_lines" in parsed_results and parsed_results["stderr_lines"]:
-                raise Exception("Unexpected Error when Checking the build:: " + parsed_results["stderr_lines"])
+                raise Exception("Unexpected Error when Checking the build:: "
+                                "{}".format(parsed_results["stderr_lines"]))
             else:
-                raise Exception("Unexpected Error when Checking the build:" + parsed_results)
+                raise Exception("Unexpected Error when Checking the build: "
+                                "{}".format(parsed_results))
 
-            # Wait for 10 seconds after the builds are complete to make sure the pod objects get instantiated.
+            # Wait for 10 seconds after the builds are complete
+            # to make sure the pod objects get instantiated.
             time.sleep(10)
 
             _cmd = 'oc get pods -l {0} -o yaml'.\
@@ -502,7 +509,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
             parsed_results2 = results["callback"].contacted[0]["results"]
             if "stderr" in parsed_results2 and parsed_results2["stderr"]:
-                raise Exception("Unexpected output when checking for created pods" + parsed_results2["stderr"])
+                raise Exception("Unexpected output when checking for created "
+                                "pods: {}".format(parsed_results2["stderr"]))
             elif "stdout" in parsed_results2 and parsed_results2["stdout"]:
                 mydict = {}
                 mydict = yaml.load(parsed_results2["stdout"])
@@ -523,9 +531,11 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                     time.sleep(10)
                     continue
             elif "stderr_lines" in parsed_results2 and parsed_results2["stderr_lines"]:
-                raise Exception("Unexpected Error when Checking the pod:: " + parsed_results["stderr_lines"])
+                raise Exception("Unexpected Error when Checking the pod: "
+                                "{}".format(parsed_results["stderr_lines"]))
             else:
-                raise Exception("Unexpected Error when Checking the build:" + parsed_results)
+                raise Exception("Unexpected Error when Checking the build: "
+                                "{}".format(parsed_results))
 
             # complete if all conditions passed and no Exceptions thrown
             break
@@ -585,7 +595,6 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
         parsed_results = results["callback"].contacted[0]["results"]
         self.results_analyzer(results['status'])
-        mydict = {}
         mydict = yaml.load(parsed_results["stdout"])
 
         if mydict["items"]:

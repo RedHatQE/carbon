@@ -116,11 +116,12 @@ class LoggerMixin(object):
         return clogger
 
     @classmethod
-    def create_taskrunner_logger(cls, carbon_config, name='taskrunner'):
-        """Create taskrunners logger.
+    def create_custom_logger(cls, carbon_config, name):
+        """Create custom logger.
 
         :param name: Logger name.
         :param log_level: Log level to set for logger.
+        :param name: name of a python class to log
         :return: Taskrunner logger object.
         """
         if carbon_config["LOGGER_TYPE"] == "stream":

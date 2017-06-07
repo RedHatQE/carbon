@@ -213,7 +213,9 @@ class Carbon(LoggerMixin):
 
         # Setup logging handlers
         self.create_carbon_logger(self.config)
-        self.create_taskrunner_logger(self.config)
+        self.create_custom_logger(self.config, "taskrunner")
+        # commented out pykwalify as it logged too much
+#        self.create_custom_logger(self.config, "pykwalify.core")
 
         self.scenario = Scenario(config=self.config)
 
@@ -362,6 +364,10 @@ class Carbon(LoggerMixin):
 
         # get the list of resources for each main section, including
         # the ~self.scenario object itself.
+        # adding in scenario taks first so scenario validation occurs first
+        for scenario_task in self.scenario.get_tasks():
+            self._add_task_into_pipeline(scenario_task)
+
         for host in self.scenario.hosts:
             for host_task in host.get_tasks():
                 self._add_task_into_pipeline(host_task)
@@ -377,9 +383,6 @@ class Carbon(LoggerMixin):
         for report in self.scenario.reports:
             for report_task in report.get_tasks():
                 self._add_task_into_pipeline(report_task)
-
-        for scenario_task in self.scenario.get_tasks():
-            self._add_task_into_pipeline(scenario_task)
 
         try:
             for pipeline in self._pipelines:

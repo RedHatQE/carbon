@@ -222,6 +222,7 @@ class Scenario(CarbonResource):
         if val[0]:
             self.logger.error("error occurred during file validation: %s",
                               val[1])
+            raise CarbonException('Error occurred during file schema validation')
         else:
             self.logger.info("Successful validation of the yaml according to "
                              "our schema")
