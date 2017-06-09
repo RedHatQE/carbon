@@ -85,6 +85,7 @@ class Host(CarbonResource):
             raise Exception('Invalid provisioner for host %s.' % str(self.name))
         else:
             self._provisioner = get_provisioner_class(provisioner_set)
+        self._assets = self._provisioner._assets
 
         # We must set the providers credentials initially
         self._credential = parameters.pop('credential', None)

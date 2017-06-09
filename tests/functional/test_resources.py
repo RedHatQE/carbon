@@ -36,6 +36,7 @@ from carbon import Carbon, Scenario, Host
 from carbon.constants import PROVISIONERS
 from carbon.helpers import file_mgmt
 from carbon.providers import OpenstackProvider
+from carbon.core import CarbonException
 
 scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 scenario_description_invalid = file_mgmt('r', 'assets/invalid_scenario.yaml')
@@ -47,7 +48,7 @@ class TestScenario(TestCase):
     def setUp(self):
         self.env = EnvironmentVarGuard()
         self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
-        self.cbn = Carbon(__name__)
+        self.cbn = Carbon(__name__, assets_path="assets")
 
     def test_new_scenario_from_yaml(self):
         """Test creating a new scenario object from a data structure read in
@@ -62,6 +63,26 @@ class TestScenario(TestCase):
         self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
         self.cbn.scenario.newattribute = 'value'
         assert_equal(self.cbn.scenario.newattribute, str('value'))
+
+    def test_copy_assets(self):
+        """Test copying an asset into the data folder."""
+        self.cbn.load_from_yaml('assets/openshift_assets.yaml')
+        assert_equal(len(self.cbn.scenario.get_asset_list()), 1)
+        self.cbn.scenario.copy_assets()
+        assert_equal(os.path.exists(os.path.join(self.cbn.data_folder, "mytemplate.yaml")), 1)
+
+    @raises(CarbonException)
+    def test_copy_assets_invalid(self):
+        """Test assets defined, but not set in the assets path."""
+        self.cbn.load_from_yaml('assets/openshift_invalid_assets.yaml')
+        assert_equal(len(self.cbn.scenario.get_asset_list()), 1)
+        self.cbn.scenario.copy_assets()
+
+    def test_copy_assets_no_assets(self):
+        """Test assets defined, but not set in the assets path."""
+        self.cbn.load_from_yaml('assets/scenario.yaml')
+        assert_equal(len(self.cbn.scenario.get_asset_list()), 0)
+        self.cbn.scenario.copy_assets()
 
 
 class TestHost(TestCase):
@@ -99,6 +120,12 @@ class TestHost(TestCase):
         cp_parameters.pop('name')
         host = Host(config=self.cbn.config, name='client1', parameters=cp_parameters)
         assert_equal(host.name, 'client1')
+
+    def test_host_asset(self):
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters.pop('name')
+        host = Host(config=self.cbn.config, name='client1', parameters=cp_parameters)
+        assert_equal(host._assets, [''])
 
     def test_set_random_name(self):
         """Test setting a random host name when no name declared for a host."""

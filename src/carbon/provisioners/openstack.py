@@ -58,6 +58,7 @@ class OpenstackProvisioner(CarbonProvisioner):
     """
     __provisioner_name__ = 'openstack'
     __api_version__ = '2'
+    _assets = [""]
 
     _nova = None
     _neutron = None

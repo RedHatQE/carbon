@@ -31,6 +31,7 @@ class CiopsProvisioner(CarbonProvisioner):
     Ciops version 1 for provisioning machines
     """
     __provisioner_name__ = "ciops"
+    _assets = ["credentials", "input_yaml"]
 
     def __init__(self, **kwargs):
         super(CiopsProvisioner, self).__init__(**kwargs)

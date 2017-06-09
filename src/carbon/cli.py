@@ -116,6 +116,9 @@ def validate(ctx, scenario):
 @click.option("-d", "--data-folder",
               default="/tmp",
               help="Scenario workspace path.")
+@click.option("-a", "--assets-path",
+              default="/tmp",
+              help="Scenario workspace path.")
 @click.option("--log-type",
               default="file",
               type=click.Choice(LOGTYPE_CHOICES),
@@ -129,7 +132,7 @@ def validate(ctx, scenario):
               default='info',
               help="Select logging level. Default is 'INFO'")
 @click.pass_context
-def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type):
+def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type, assets_path):
     """
     Run a carbon scenario, given the scenario YAML file configuration.
     """
@@ -151,7 +154,8 @@ def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type):
         ctx.exit()
 
     # Create a new carbon compound
-    cbn = Carbon(__name__, log_level=log_level, cleanup=cleanup, data_folder=data_folder, log_type=log_type)
+    cbn = Carbon(__name__, log_level=log_level, cleanup=cleanup,
+                 data_folder=data_folder, log_type=log_type, assets_path=assets_path)
 
     # This is the easiest way to configure a full scenario.
     cbn.load_from_yaml(scenario)
@@ -161,6 +165,9 @@ def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type):
         task = TASKLIST
     elif isinstance(task, string_types):
         task = [task]
+
+    if assets_path:
+        cbn.scenario.copy_assets(assets_path)
 
     # The scenario will start the main pipeline and run through the task
     # pipelines declared. See :function:`~carbon.Carbon.run` for more details.

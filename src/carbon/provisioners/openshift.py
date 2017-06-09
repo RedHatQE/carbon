@@ -94,6 +94,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
     __provisioner_name__ = "openshift"
     __provisioner_prefix__ = 'oc_'
 
+    _assets = ["oc_template"]
+
     _oc_image = "rywillia/openshift-client"
 
     _app_choices = ['image', 'git', 'template']

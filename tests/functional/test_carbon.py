@@ -100,6 +100,13 @@ class TestCarbon(TestCase):
         assert_equal(cbn.data_folder, os.path.join(data_folder, cbn.uid))
 
     @staticmethod
+    def test_set_carbon_assets():
+        """Test creating a carbon object with the assets path set."""
+        assets_path = "assets"
+        cbn = Carbon(__name__, assets_path=assets_path)
+        assert_equal(cbn.assets_path, assets_path)
+
+    @staticmethod
     def test_status_file_property():
         """Test carbons property for returning its scenario status file."""
         cbn = Carbon(__name__)
@@ -112,6 +119,7 @@ class TestCarbon(TestCase):
         cbn = Carbon(__name__)
         f = os.path.join(os.getcwd(), '.workspace', cbn.uid, RESULTS_FILE)
         assert_equal(cbn.results_file, f)
+
 
 class TestResultsMixin(TestCase):
     """Unit tests to test carbon results mixin class."""

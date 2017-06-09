@@ -21,9 +21,12 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import shutil
+import sys
 import os
 import errno
 import inspect
+from distutils.dir_util import copy_tree
 
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
@@ -262,6 +265,40 @@ class CarbonResource(LoggerMixin):
     def _get_task_constructors(self):
         return [getattr(self, "_construct_%s_task" % task_type)
                 for task_type in self._valid_tasks_types]
+
+    def get_asset_list(self):
+        assets = []
+        for host in self.hosts:
+            # check for possible assets, and add filename if set
+            for asset in host._assets:
+                if asset:
+                    if getattr(host, asset):
+                        assets.append(getattr(host, asset))
+        return assets
+
+    def copy_assets(self):
+        assets_dir = self.config["ASSETS_PATH"]
+        data_folder = self.config["DATA_FOLDER"]
+        for asset in self.get_asset_list():
+            asset_src = os.path.join(assets_dir, asset)
+            self.logger.debug("Attempt copy {0} {1}".format(asset_src, data_folder))
+            try:
+                shutil.copy(asset_src, data_folder)
+            except IOError as e:
+                # case where the source is a directory of files
+                if e.errno == errno.EISDIR:
+                    try:
+                        copy_tree(asset_src, data_folder)
+                    except:
+                        e = sys.exc_info()[0]
+                        raise CarbonException("Unexpected error, copying assets "
+                                              "dir: {}".format(e))
+                else:
+                    raise CarbonException("Unexpected error, copying assets: "
+                                          "{}".format(e))
+            except:
+                e = sys.exc_info()[0]
+                raise CarbonException("unexpected error: {}".format(e))
 
     def reload_tasks(self):
         self._tasks = []

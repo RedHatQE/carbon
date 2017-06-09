@@ -215,6 +215,9 @@ class Carbon(LoggerMixin, ResultsMixin):
     # set the log type
     logger_type = ConfigAttribute('LOGGER_TYPE')
 
+    # set the assets path
+    assets_path = ConfigAttribute('ASSETS_PATH')
+
     # The pipeline of pipelines. All pipelines in the lists starts an
     # empty tasks list and tasks will be added later when the
     # :function:`~carbon.Carbon.run` is executed. The framework will run
@@ -234,6 +237,7 @@ class Carbon(LoggerMixin, ResultsMixin):
     default_config = {
         'DEBUG': False,
         'DATA_FOLDER': '/tmp',
+        'ASSETS_PATH': None,
         # set to stream or file
         'LOGGER_TYPE': 'file',
         'LOGGER_NAME': __carbon_name__,
@@ -243,7 +247,8 @@ class Carbon(LoggerMixin, ResultsMixin):
     }
 
     def __init__(self, import_name, root_path=None, log_level=None,
-                 cleanup=None, data_folder=None, log_type=None):
+                 cleanup=None, data_folder=None, log_type=None,
+                 assets_path=None):
 
         # The name of the package or module.  Do not change this once
         # it was set by the constructor.
@@ -265,6 +270,9 @@ class Carbon(LoggerMixin, ResultsMixin):
 
         if log_level:
             self.log_level = log_level
+
+        if assets_path:
+            self.assets_path = assets_path
 
         if cleanup:
             self.cleanup = cleanup
