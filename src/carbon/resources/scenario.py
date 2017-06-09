@@ -102,14 +102,6 @@ class Scenario(CarbonResource):
                              'Check the type of the given item: %s' % item)
 
     @property
-    def uid(self):
-        return self._uid
-
-    @uid.setter
-    def uid(self, value):
-        raise ValueError('Scenario UID is generated automatically.')
-
-    @property
     def data_folder(self):
         return self._data_folder
 
