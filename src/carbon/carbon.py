@@ -33,7 +33,7 @@ import taskrunner
 
 from . import __name__ as __carbon_name__
 from .config import Config, ConfigAttribute
-from .constants import TASKLIST
+from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
 from .core import CarbonException, LoggerMixin
 from .helpers import LockedCachedProperty, get_root_path, file_mgmt, gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
@@ -52,7 +52,91 @@ _logger_lock = Lock()
 Pipeline = collections.namedtuple('Pipeline', ('name', 'type', 'tasks'))
 
 
-class Carbon(LoggerMixin):
+class ResultsMixin(object):
+    """Carbons results mixin class.
+
+    This class provides an easy interface for processing results from task
+    executions per resources.
+    """
+    _results = dict(tasks=[],
+                    last_executed=None,
+                    last_executed_status=None,
+                    executed_tasks=None)
+
+    _task_results = dict()
+
+    @property
+    def results(self):
+        """Return the results for the scenario."""
+        return self._results
+
+    @results.setter
+    def results(self, value):
+        """Raise exception when setting scenario results directly."""
+        raise ValueError('You cannot set scenario results directly.')
+
+    def update_results(self, task_name, task, status, context):
+        """Update scenario results.
+
+        :param task_name: Name of executed task.
+        :param task: Task configuration.
+        :param status: Status of executed task.
+        :param context: Context shared by taskrunner.
+        """
+        self._results['last_executed'] = task_name
+        self._results['last_executed_status'] = status
+
+        if task_name not in self._task_results:
+            self._task_results[task_name] = dict(resources=[])
+
+        self._task_results[task_name]['status'] = status
+
+        try:
+            _res = task['resource']
+        except KeyError:
+            _res = task['host']
+
+        self._task_results[task_name]['resources'].append(
+            {
+                _res.__class__.__name__.lower(): {
+                    'name': _res.name,
+                    'taskrunner': context['_taskrunner']
+                }
+            }
+        )
+
+        self._results['executed_tasks'] = self._task_results
+
+    @property
+    def tasks(self):
+        """Return the tasks to run for the scenario."""
+        return self._results['tasks']
+
+    @tasks.setter
+    def tasks(self, value):
+        """Set the tasks to run for the scenario.
+
+        :param value: List of tasks to run.
+        """
+        self._results['tasks'] = value
+
+    def read_status_file(self, status_file):
+        """Read an existing scenario status file.
+
+        :param status_file: Absolute path to the status file.
+        """
+        if os.path.isfile(status_file):
+            self._results = file_mgmt('r', status_file)
+
+    def write_status_file(self, status_file):
+        """Write a scenario status file.
+
+        :param status_file: Absolute path for the status file.
+        """
+        file_mgmt('w', status_file, self.results)
+
+
+class Carbon(LoggerMixin, ResultsMixin):
     """
     The Carbon object acts as the central object. We call this object
     'the carbon compound'. Like in chemistry, a carbon molecule helps on the
@@ -200,7 +284,7 @@ class Carbon(LoggerMixin):
 
         # Generate the UID for the carbon life-cycle based on data_folder
         self.config['DATA_FOLDER'] = os.path.join(self.config['DATA_FOLDER'],
-                                                  self._uid)
+                                                  self.uid)
         try:
             os.makedirs(self.config['DATA_FOLDER'])
         except IOError as ex:
@@ -235,8 +319,20 @@ class Carbon(LoggerMixin):
         return self.import_name
 
     @LockedCachedProperty
+    def uid(self):
+        return self._uid
+
+    @LockedCachedProperty
     def data_folder(self):
         return self.config['DATA_FOLDER']
+
+    @LockedCachedProperty
+    def status_file(self):
+        return os.path.join(self.data_folder, STATUS_FILE)
+
+    @LockedCachedProperty
+    def results_file(self):
+        return os.path.join(self.data_folder, RESULTS_FILE)
 
     def make_config(self):
         """
@@ -356,6 +452,7 @@ class Carbon(LoggerMixin):
         pipeline and then each pipeline is sent to taskrunner execution.
         For every pipeline within ~self.pipelines,
         """
+        self.tasks = tasklist
 
         # check if scenario was set
         if self.scenario is None:
@@ -386,9 +483,7 @@ class Carbon(LoggerMixin):
 
         try:
             for pipeline in self._pipelines:
-                if pipeline.name in tasklist:
-                    pass
-                else:
+                if pipeline.name not in self.tasks:
                     continue
 
                 self.logger.info("." * 50)
@@ -397,11 +492,16 @@ class Carbon(LoggerMixin):
                 if not pipeline.tasks:
                     self.logger.warn("   ... nothing to be executed here ...")
                 else:
-                    taskrunner.execute(pipeline.tasks, cleanup=self.cleanup)
+                    for task in pipeline.tasks:
+                        ctx = taskrunner.execute([task], cleanup=self.cleanup)
+                        self.update_results(pipeline.name, task, 0, ctx)
                 self.logger.info("." * 50)
         except taskrunner.TaskExecutionException as ex:
             self.logger.error(ex)
+            self.update_results(pipeline.name, task, 1, ex.context)
         finally:
-            updated_yaml = os.path.join(self.data_folder, 'results.yaml')
-            file_mgmt('w', updated_yaml, self.scenario.profile())
-            self.logger.info('Updated scenario file ~ %s' % updated_yaml)
+            self.write_status_file(self.status_file)
+            self.logger.info('Scenario status file ~ %s' % self.status_file)
+
+            file_mgmt('w', self.results_file, self.scenario.profile())
+            self.logger.info('Scenario results file ~ %s' % self.results_file)

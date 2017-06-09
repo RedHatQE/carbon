@@ -56,3 +56,7 @@ LOGTYPE_CHOICES = ["file",
                    "stream"]
 
 HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]
+
+STATUS_FILE = "status.yaml"
+
+RESULTS_FILE = "results.yaml"

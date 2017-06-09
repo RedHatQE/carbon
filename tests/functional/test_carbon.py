@@ -22,7 +22,6 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
-import sys
 from unittest import TestCase
 
 try:
@@ -30,11 +29,10 @@ try:
 except ImportError:
     from test.support import EnvironmentVarGuard
 
-from nose.tools import assert_equal, assert_is_instance, raises
+from nose.tools import assert_equal, assert_is_instance, raises, assert_true
 
 from carbon import Carbon
-from carbon.core import CarbonException
-from carbon.helpers import file_mgmt
+from carbon.constants import STATUS_FILE, RESULTS_FILE
 
 
 class TestCarbon(TestCase):
@@ -75,3 +73,96 @@ class TestCarbon(TestCase):
         """
         obj = Carbon(__name__)
         obj.load_from_yaml('assets/invalid_scenario.yaml')
+
+    @staticmethod
+    def test_set_carbon_log_type():
+        """Test creating a carbon object with declaring the log type."""
+        cbn = Carbon(__name__, log_type='stream')
+        assert_equal(cbn.logger_type, 'stream')
+
+    @staticmethod
+    def test_set_carbon_log_level():
+        """Test creating a carbon object with declaring the log level."""
+        cbn = Carbon(__name__, log_level='debug')
+        assert_equal(cbn.log_level, 'debug')
+
+    @staticmethod
+    def test_set_carbon_cleanup_level():
+        """Test creating a carbon object with declaring the cleanup level."""
+        cbn = Carbon(__name__, cleanup='always')
+        assert_equal(cbn.cleanup, 'always')
+
+    @staticmethod
+    def test_set_carbon_data_folder():
+        """Test creating a carbon object with declaring the data folder."""
+        data_folder = os.path.join(os.getcwd(), '.workspace')
+        cbn = Carbon(__name__, data_folder=data_folder)
+        assert_equal(cbn.data_folder, os.path.join(data_folder, cbn.uid))
+
+    @staticmethod
+    def test_status_file_property():
+        """Test carbons property for returning its scenario status file."""
+        cbn = Carbon(__name__)
+        f = os.path.join(os.getcwd(), '.workspace', cbn.uid, STATUS_FILE)
+        assert_equal(cbn.status_file, f)
+
+    @staticmethod
+    def test_results_file_property():
+        """Test carbons property for returning its scenario results file."""
+        cbn = Carbon(__name__)
+        f = os.path.join(os.getcwd(), '.workspace', cbn.uid, RESULTS_FILE)
+        assert_equal(cbn.results_file, f)
+
+class TestResultsMixin(TestCase):
+    """Unit tests to test carbon results mixin class."""
+
+    def setUp(self):
+        self.env = EnvironmentVarGuard()
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+
+    @staticmethod
+    def test_get_results():
+        """Test getting results for carbon scenario."""
+        cbn = Carbon(__name__)
+        assert_is_instance(cbn.results, dict)
+
+    @staticmethod
+    @raises(ValueError)
+    def test_set_results():
+        """Test setting results for carbon scenario."""
+        cbn = Carbon(__name__)
+        cbn.results = dict()
+
+    @staticmethod
+    def test_get_tasks():
+        """Test getting tasks for carbon scenario."""
+        cbn = Carbon(__name__)
+        assert_is_instance(cbn.tasks, list)
+
+    @staticmethod
+    def test_set_tasks():
+        """Test setting tasks for carbon scenario."""
+        cbn = Carbon(__name__)
+        cbn.tasks = ['provision']
+        assert_true('provision', cbn.tasks)
+
+    @staticmethod
+    def test_read_write_status_file():
+        """Test read/write status file for carbon scenario."""
+        cbn = Carbon(__name__)
+        status_file = 'status.yaml'
+        cbn.write_status_file(status_file)
+        assert_true(os.path.isfile(status_file))
+        cbn.read_status_file(status_file)
+        assert_is_instance(cbn.results, dict)
+        os.remove(status_file)
+
+    @staticmethod
+    def test_update_results():
+        """Test method to update results for carbon scenario."""
+        cbn = Carbon(__name__)
+        task1 = dict(resource=cbn.scenario)
+        task2 = dict(host=cbn.scenario)
+        context = dict(_taskrunner=dict())
+        cbn.update_results('provision', task1, 0, context)
+        cbn.update_results('provision', task2, 0, context)
