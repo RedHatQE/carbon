@@ -54,12 +54,103 @@ class TestRackspace(TestCase):
 
 class TestOpenshift(TestCase):
     """Unit tests to test carbon provider ~ openshift."""
+    _cp_scenario_description = dict(scenario_description)
+    _host1 = _cp_scenario_description['provision'][3]
+    _host2 = _cp_scenario_description['provision'][4]
     _ocp = OpenshiftProvider()
 
     def test_instantiate_class(self):
         """Test whether the instantiated provider class object is an actual
         instance of the provider class."""
         assert_is_instance(self._ocp, OpenshiftProvider)
+
+    def test_name(self):
+        """Test the validate name method. This test performs the following:
+            1. Name undefined.
+            2. Name defined and is a valid name.
+            3. Name defined and is a invalid data type.
+        """
+        key = '%sname' % self._ocp.__provider_prefix__
+        cp_parameters = deepcopy(self._host1)
+        assert_false(self._ocp.validate_name(None))
+        assert_true(self._ocp.validate_name(cp_parameters.pop(key)))
+        cp_parameters[key] = ['machine1']
+        assert_false(self._ocp.validate_name(cp_parameters.pop(key)))
+
+    def test_image(self):
+        """Test the validate image method. This test performs the following:
+            1. Image undefined.
+            2. Image is a string data type.
+        """
+        key = '%simage' % self._ocp.__provider_prefix__
+        cp_parameters = deepcopy(self._host1)
+        assert_true(self._ocp.validate_image(None))
+        assert_true(self._ocp.validate_image(cp_parameters.pop(key)))
+
+    def test_git(self):
+        """Test the validate git method. This test performs the following:
+            1. Git undefined.
+            2. Git defined and is a valid git.
+            3. Git defined and is a invalid data type.
+        """
+        key = '%sgit' % self._ocp.__provider_prefix__
+        cp_parameters = deepcopy(self._host2)
+        assert_true(self._ocp.validate_git(None))
+        assert_true(self._ocp.validate_git(cp_parameters.pop(key)))
+        cp_parameters[key] = ['http://github.com']
+        assert_false(self._ocp.validate_git(cp_parameters.pop(key)))
+
+    def test_template(self):
+        """Test the validate template method. This test performs the following:
+            1. Template undefined.
+            2. Template is a string data type.
+        """
+        assert_true(self._ocp.validate_template(None))
+        assert_true(self._ocp.validate_template('my_template.yaml'))
+
+    def test_env_vars(self):
+        """Test the validate env vars method. This test performs the following:
+            1. Env vars undefined.
+            2. Env vars is a dict data type.
+        """
+        key = '%senv_vars' % self._ocp.__provider_prefix__
+        cp_parameters = deepcopy(self._host1)
+        assert_true(self._ocp.validate_env_vars(None))
+        assert_true(self._ocp.validate_env_vars(cp_parameters.pop(key)))
+
+    def test_build_timeout(self):
+        """Test the validate build timeout method. This test performs the
+        following:
+            1. Build timeout undefined.
+            2. Build timeout is a int data type & > 0
+            3. Build timeout is a non int data type
+        """
+        key = '%sbuild_timeout' % self._ocp.__provider_prefix__
+        cp_parameters = deepcopy(self._host2)
+        assert_true(self._ocp.validate_build_timeout(None))
+        assert_true(self._ocp.validate_build_timeout(cp_parameters.pop(key)))
+        assert_false(self._ocp.validate_build_timeout(2.5))
+
+    def test_labels(self):
+        """Test teh validate labels method. This test performs the following:
+            1. Labels undefined.
+            2. Labels is not a list.
+            3. Labels list does not contain dict values.
+            4. Labels list does contain dict values.
+            5. Labels list dict contains more than one key:value.
+            6. Labels list dict contains one key:value but key:value is not
+                defined correctly.
+        """
+        key = '%slabels' % self._ocp.__provider_prefix__
+        cp_parameters = deepcopy(self._host1)
+        assert_true(self._ocp.validate_labels(None))
+        assert_false(self._ocp.validate_labels('label1'))
+        assert_false(self._ocp.validate_labels(['label1']))
+        assert_true(self._ocp.validate_labels(cp_parameters.pop(key)))
+        assert_false(self._ocp.validate_labels(
+            [dict(label1='label1', label2='label2')]))
+        assert_false(self._ocp.validate_labels(
+            [dict(label1='')]))
 
 
 class TestDigitalocean(TestCase):
@@ -80,6 +171,27 @@ class TestBeaker(TestCase):
         """Test whether the instantiated provider class object is an actual
         instance of the provider class."""
         assert_is_instance(self._beaker, BeakerProvider)
+
+    def test_instantiate_class(self):
+        """Test whether the instantiated provider class object is an actual
+        instance of the provider class."""
+        assert_is_instance(self._beaker, BeakerProvider)
+
+    def test_arch(self):
+        """Test the validate arch method."""
+        assert_true(self._beaker.validate_arch('x86_64'))
+
+    def test_tag(self):
+        """Test the validate tag method."""
+        assert_true(self._beaker.validate_tag(['RTT_ACCEPTED']))
+
+    def test_family(self):
+        """Test the validate family method."""
+        assert_true(self._beaker.validate_family('FEDORA26'))
+
+    def test_variant(self):
+        """Test the validate variant method."""
+        assert_true(self._beaker.validate_variant('workstation'))
 
 
 class TestAws(TestCase):

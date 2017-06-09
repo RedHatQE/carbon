@@ -11,6 +11,12 @@ credentials:
     username: username
     password: password
 
+  - name: openshift
+    auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
+    project: myproject
+    username: username
+    token: token
+
 provision:
 
   - name: machine_1
@@ -61,6 +67,35 @@ provision:
     os_security_groups:
     ip_address:
     role: w_client
+
+  - name: Application by image
+    provider: openshift
+    credential: openshift
+    oc_name: application1
+    role: application1
+    oc_image: rywillia/example
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:
+      - label1: label1
+      - label2: image_app
+
+  - name: Application by git
+    provider: openshift
+    provisioner: openshift
+    credential: openshift
+    oc_name: application2
+    # timeout for builds to complete, in seconds, default 30mins = 1800 sec
+    oc_build_timeout: 3600
+    role: application2
+    oc_git: https://github.com/openshift/django-ex
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:
+      - label1: label1
+      - label2: git_app
 
 orchestrate:
 

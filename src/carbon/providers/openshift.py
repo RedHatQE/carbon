@@ -138,7 +138,6 @@ class OpenshiftProvider(CarbonProvider):
                 return check_is_gitrepo_fine(value)
             else:
                 return False
-            return isinstance(value, string_types)
         else:
             return True
 
@@ -185,19 +184,24 @@ class OpenshiftProvider(CarbonProvider):
         """
         if value:
             self.logger.info("Validating labels: {0}".format(value))
-            if isinstance(value, list):
-                for val in value:
-                    if isinstance(val, dict):
-                        k, v = val.items()[0]
-                        # check valid values and the list only has one item
-                        if k and v and len(val.items()) == 1:
-                            pass
-                        else:
-                            return False
-                    else:
-                        return False
-                return True
-            else:
+
+            # Labels must be a list data type
+            if not isinstance(value, list):
                 return False
+
+            for val in value:
+                # Elements in labels list must be a dict data type
+                if not isinstance(val, dict):
+                    return False
+
+                # Dict cannot have more than one key:value declared
+                if len(list(val)) != 1:
+                    return False
+
+                # Check key:value is valid
+                for k, v in val.items():
+                    if not k or not v:
+                        return False
+            return True
         else:
             return True
