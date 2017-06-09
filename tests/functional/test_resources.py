@@ -24,7 +24,7 @@
 import os
 from copy import deepcopy
 from nose.tools import assert_equal, assert_is_instance, assert_is_not_none
-from nose.tools import assert_not_equal, assert_false, raises
+from nose.tools import assert_false, raises
 from unittest import TestCase
 
 try:
@@ -33,10 +33,12 @@ except ImportError:
     from test.support import EnvironmentVarGuard
 
 from carbon import Carbon, Scenario, Host
+from carbon._compat import string_types
 from carbon.constants import PROVISIONERS
+from carbon.core import CarbonException, CarbonResource
 from carbon.helpers import file_mgmt
 from carbon.providers import OpenstackProvider
-from carbon.core import CarbonException
+from carbon.resources import Action, Execute, Report
 
 scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 scenario_description_invalid = file_mgmt('r', 'assets/invalid_scenario.yaml')
@@ -84,6 +86,141 @@ class TestScenario(TestCase):
         assert_equal(len(self.cbn.scenario.get_asset_list()), 0)
         self.cbn.scenario.copy_assets()
 
+    def test_get_data_folder(self):
+        """Test getting data folder for carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        assert_is_instance(self.cbn.scenario.data_folder, string_types)
+
+    @raises(ValueError)
+    def test_set_data_folder(self):
+        """Test setting data folder for carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.data_folder = '/tmp/data_folder'
+
+    def test_get_hosts(self):
+        """Test getting hosts for carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        assert_is_instance(self.cbn.scenario.hosts, list)
+
+    @raises(ValueError)
+    def test_set_hosts(self):
+        """Test setting hosts for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.hosts = ['host1', 'host2']
+
+    @raises(ValueError)
+    def test_add_invalid_host(self):
+        """Test adding an invalid host for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.add_hosts(CarbonResource())
+
+    def test_add_valid_host(self):
+        """Test adding a valid host for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+
+        _cp_scenario_description = dict(scenario_description)
+        _hosts_description = _cp_scenario_description.pop('provision')[0]
+        _hosts_description['provider_creds'] = _cp_scenario_description.pop('credentials')
+        host = Host(config=self.cbn.config, parameters=_hosts_description)
+        self.cbn.scenario.add_hosts(host)
+        assert_equal(len(self.cbn.scenario.hosts), 1)
+
+    @raises(ValueError)
+    def test_set_credentials(self):
+        """Test setting credentials for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.credentials = {'user': 'user','passwd': 'passwd'}
+
+    def test_get_actions(self):
+        """Test getting actions for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        assert_is_instance(self.cbn.scenario.actions, list)
+
+    @raises(ValueError)
+    def test_set_actions(self):
+        """Test setting actions for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.actions = ['action1', 'action2']
+
+    @raises(ValueError)
+    def test_add_invalid_action(self):
+        """Test adding an invalid action for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.add_actions(CarbonResource())
+
+    def test_add_valid_action(self):
+        """Test adding a valid action for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.add_actions(Action())
+        assert_equal(len(self.cbn.scenario.actions), 1)
+
+    def test_get_executes(self):
+        """Test getting executes for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        assert_is_instance(self.cbn.scenario.executes, list)
+
+    @raises(ValueError)
+    def test_set_executes(self):
+        """Test setting executes for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.executes = ['execute1', 'execute2']
+
+    @raises(ValueError)
+    def test_add_invalid_executes(self):
+        """Test adding an invalid executes for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.add_executes(CarbonResource())
+
+    def test_add_valid_executes(self):
+        """Test adding a valid executes for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.add_executes(Execute())
+        assert_equal(len(self.cbn.scenario.executes), 1)
+
+    def test_get_reports(self):
+        """Test getting reports for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        assert_is_instance(self.cbn.scenario.reports, list)
+
+    @raises(ValueError)
+    def test_set_reports(self):
+        """Test setting reports for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.reports = ['report1', 'report2']
+
+    @raises(ValueError)
+    def test_add_invalid_reports(self):
+        """Test adding an invalid reports for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.add_reports(CarbonResource())
+
+    def test_add_valid_reports(self):
+        """Test adding a valid reports for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.add_reports(Report())
+        assert_equal(len(self.cbn.scenario.reports), 1)
+
+    @raises(ValueError)
+    def test_add_invalid_resource(self):
+        """Test adding an invalid resource for the carbon scenario."""
+        self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
+        self.cbn.scenario.add_resource(CarbonResource())
+
+    def test_validate_valid_scenario_yaml(self):
+        """Test validating a valid carbon scenario yaml."""
+        self.cbn.load_from_yaml('assets/scenario.yaml')
+        self.cbn.scenario.validate()
+
+    @raises(CarbonException)
+    def test_validate_invalid_scenario_yaml(self):
+        """Test validating an invalid carbon scenario yaml."""
+        self.cbn.load_from_yaml('assets/invalid_scenario.yaml')
+        self.cbn.scenario.validate()
+
+    def test_build_profile(self):
+        """Test building a scenario profile with all its properties."""
+        self.cbn.load_from_yaml('assets/scenario.yaml')
+        assert_is_instance(self.cbn.scenario.profile(), dict)
 
 class TestHost(TestCase):
     """Unit tests to test carbon host."""
@@ -251,12 +388,23 @@ class TestHost(TestCase):
 
     @raises(Exception)
     def test_provider_miss_cred_param(self):
-        """Test instantiating a host class with a mising key for provider
+        """Test instantiating a host class with a missing key for provider
         credentials. An exception will be raised.
         """
         cp_parameters = deepcopy(self._parameters)
-        cp_parameters['provider_creds'][cp_parameters['credential']].\
-            pop('auth_url')
+        cdata = next(i for i in cp_parameters['provider_creds'] if i['name']\
+                     == cp_parameters['credential'])
+        cdata.pop('auth_url')
+        cp_parameters['provider_creds'] = [cdata]
+        Host(config=self.cbn.config, parameters=cp_parameters)
+
+    @raises(Exception)
+    def test_host_missing_credentials(self):
+        """Test instantiating a host class with credential undeclared. An
+        exception will be raised.
+        """
+        cp_parameters = deepcopy(self._parameters)
+        cp_parameters.pop('credential')
         Host(config=self.cbn.config, parameters=cp_parameters)
 
     @raises(Exception)

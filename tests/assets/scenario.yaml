@@ -1,5 +1,5 @@
 ---
-scenario: Scenario Example
+name: Scenario Example
 description: Description of the scenario example.
 
 credentials:
@@ -127,6 +127,7 @@ orchestrate:
 execute:
 
   - framework: restraint
+    name: restraint
     vars:
       execute_xml: http://file.bos.redhat.com/~vipatel/FFinterop-rhel6.xml
       role: ['w_client', 's390x_client']

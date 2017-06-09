@@ -119,8 +119,8 @@ class Scenario(CarbonResource):
                          'Use function ~Scenario.add_hosts')
 
     def add_hosts(self, h):
-        if not isinstance(h, Report):
-            raise ValueError('Report must be of type %s ' % type(Report))
+        if not isinstance(h, Host):
+            raise ValueError('Host must be of type %s ' % type(Host))
         self._hosts.append(h)
 
     @property
