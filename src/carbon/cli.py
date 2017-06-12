@@ -167,7 +167,7 @@ def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type, assets_p
         task = [task]
 
     if assets_path:
-        cbn.scenario.copy_assets(assets_path)
+        cbn.scenario.copy_assets()
 
     # The scenario will start the main pipeline and run through the task
     # pipelines declared. See :function:`~carbon.Carbon.run` for more details.
