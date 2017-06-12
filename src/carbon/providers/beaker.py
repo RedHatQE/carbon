@@ -18,8 +18,6 @@
 """
     carbon.providers.beaker
 
-    Here you add brief description of what this module is about
-
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
@@ -35,16 +33,55 @@ class BeakerProvider(CarbonProvider):
     __provider_prefix__ = 'bkr_'
 
     _mandatory_parameters = (
+        'name',
         'arch',
-        'tag',
+        'variant'
+    )
+
+    _optional_parameters = (
+        'distro',
         'family',
-        'variant',
+        'whiteboard',
+        'kernel_options',
+        'kernel_post_options',
+        'host_requires_options',
+        'distro_requires_options',
+        'virtual_machine',
+        'virt_capable',
+        'retention_tag',
+        'tag',
+        'priority',
+        'kdump',
+        'ndump'
+    )
+
+    _output_parameters = (
+        'name',
+        'ip_address'
     )
 
     _mandatory_creds_parameters = ()
 
     def __init__(self, **kwargs):
         super(BeakerProvider, self).__init__(**kwargs)
+
+    def validate_name(self, value):
+        """Validate the resource name.
+        :param value: The resource name
+        :return: A boolean, true = valid, false = invalid
+        """
+        self.logger.info("Validating Name: {0}".format(value))
+        # Quit when no value given
+        if not value:
+            self.logger.warn('Invalid data for name!')
+            return False
+
+        # Name must be a string
+        if not isinstance(value, string_types):
+            self.logger.warn("Name is required to be a string type!")
+            return False
+
+        return True
 
     @classmethod
     def validate_arch(cls, value):
@@ -56,8 +93,92 @@ class BeakerProvider(CarbonProvider):
 
     @classmethod
     def validate_family(cls, value):
-        return isinstance(value, string_types)
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
 
     @classmethod
     def validate_variant(cls, value):
         return isinstance(value, string_types)
+
+    @classmethod
+    def validate_distro(cls, value):
+        return isinstance(value, string_types)
+
+    @classmethod
+    def validate_kernel_options(cls, value):
+        if value:
+            return isinstance(value, list)
+        else:
+            return True
+
+    @classmethod
+    def validate_kernel_post_options(cls, value):
+        if value:
+            return isinstance(value, list)
+        else:
+            return True
+
+    @classmethod
+    def validate_host_requires_options(cls, value):
+        if value:
+            return isinstance(value, list)
+        else:
+            return True
+
+    @classmethod
+    def validate_distro_requires_options(cls, value):
+        if value:
+            return isinstance(value, list)
+        else:
+            return True
+
+    @classmethod
+    def validate_virtual_machine(cls, value):
+        if value:
+            return isinstance(value, bool)
+        else:
+            return True
+
+    @classmethod
+    def validate_virt_capable(cls, value):
+        if value:
+            return isinstance(value, bool)
+        else:
+            return True
+
+    @classmethod
+    def validate_retention_tag(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_kdump(cls, value):
+        if value:
+            return isinstance(value, bool)
+        else:
+            return True
+
+    @classmethod
+    def validate_ndump(cls, value):
+        if value:
+            return isinstance(value, bool)
+        else:
+            return True
+
+    @classmethod
+    def validate_priority(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_whiteboard(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True

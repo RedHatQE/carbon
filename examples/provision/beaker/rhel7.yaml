@@ -1,0 +1,22 @@
+# $ carbon run --scenario examples/provision/beaker/rhel7.yaml
+---
+name: Beaker example
+description: Get a machine from Beaker
+
+credentials:
+
+  - name: beaker
+    keytab: group_keytab
+
+provision:
+
+  - name: Machine from Beaker
+    provider: beaker
+    credential: beaker
+    bkr_name: my_bkr_machine
+    role: bkr-machine
+    bkr_arch: x86_64
+    bkr_variant: Server
+    bkr_whiteboard: Testing machine provisioning from Carbon
+    bkr_distro: RHEL-7.3
+    bkr_tag: ["RTT_ACCEPTED"]
