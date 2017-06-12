@@ -90,9 +90,13 @@ class OpenshiftProvider(CarbonProvider):
 
     _mandatory_creds_parameters = (
         'auth_url',
-        'project',
+        'project'
+    )
+
+    _optional_creds_parameters = (
+        'token',
         'username',
-        'token'
+        'password'
     )
 
     def __init__(self, **kwargs):

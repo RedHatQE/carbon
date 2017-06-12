@@ -45,5 +45,7 @@ class AwsProvider(CarbonProvider):
 
     _mandatory_creds_parameters = ()
 
+    _optional_creds_parameters = ()
+
     def __init__(self, **kwargs):
         super(AwsProvider, self).__init__(**kwargs)

@@ -355,6 +355,7 @@ class CarbonProvider(LoggerMixin):
     _optional_parameters = ()
     _output_parameters = ()
     _mandatory_creds_parameters = ()
+    _optional_creds_parameters = ()
 
     def __init__(self, **kwargs):
         # I care only about the parameters set on ~self._parameters
@@ -395,6 +396,10 @@ class CarbonProvider(LoggerMixin):
         for p in self.get_mandatory_creds_parameters():
             self._credentials[p] = cdata[p]
 
+        for p in self.get_optional_creds_parameters():
+            if p in cdata:
+                self._credentials[p] = cdata[p]
+
     @classmethod
     def check_mandatory_parameters(cls, parameters):
         """
@@ -428,6 +433,13 @@ class CarbonProvider(LoggerMixin):
         :return: a tuple of the mandatory credential paramaters.
         """
         return (k for k in cls._mandatory_creds_parameters)
+
+    @classmethod
+    def get_optional_creds_parameters(cls):
+        """Get the list of the optional credential parameters.
+        :return: A tuple of the optional credential parameters.
+        """
+        return (k for k in cls._optional_creds_parameters)
 
     @classmethod
     def get_mandatory_parameters(cls):

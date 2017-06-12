@@ -192,11 +192,21 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         Connection will be saved to the default configuration file under the
         users home directory.
         """
-        _auth_url = self.host.provider.credentials['auth_url']
-        _token = self.host.provider.credentials['token']
+        _cmd = 'oc login %s --insecure-skip-tls-verify\=True' % \
+               self.host.provider.credentials['auth_url']
 
-        _cmd = "oc login {0} --insecure-skip-tls-verify\=True --token\={1}".\
-            format(_auth_url, _token)
+        # Choose which authentication to use. Token will always be used first.
+        if 'token' in self.host.provider.credentials:
+            _cmd += ' --token\=%s' % self.host.provider.credentials['token']
+        elif 'username' and 'password' in self.host.provider.credentials:
+            _cmd += ' --username\=%s --password\=%s' % \
+                    (self.host.provider.credentials['username'],
+                     self.host.provider.credentials['password'])
+        else:
+            self.logger.error('Authentication type not found. Supported types:'
+                              ' <token|username/password>.')
+            raise OpenshiftProvisionerException
+
         results = self.run_module(
             dict(name='oc authenticate', hosts=self.name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])

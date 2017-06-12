@@ -109,6 +109,8 @@ class OpenstackProvider(CarbonProvider):
         'password'
     )
 
+    _optional_creds_parameters = ()
+
     def __init__(self, **kwargs):
         super(OpenstackProvider, self).__init__(**kwargs)
         self._nova = None
