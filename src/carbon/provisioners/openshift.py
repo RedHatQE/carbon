@@ -29,7 +29,6 @@ import time
 import uuid
 import yaml
 
-from ..constants import CARBON_ROOT
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
 from ..core import CarbonProvisioner, CarbonException
@@ -94,7 +93,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
     __provisioner_name__ = "openshift"
     __provisioner_prefix__ = 'oc_'
 
-    _assets = ["oc_template"]
+    _assets = ["oc_custom_template"]
 
     _oc_image = "rywillia/openshift-client"
 
@@ -107,14 +106,12 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         perform the following tasks:
 
         * Create the container to handle executing all oc commands.
-        * Authenticate with the openshift server.
-        * Change projects to use the one declared in the scenario.
-        * Setup the label to associate an application and its resources with.
 
         :param host: The host object.
         """
         super(OpenshiftProvisioner, self).__init__()
         self.host = host
+        self._data_folder = host.data_folder()
 
         # Set name for container
         self._name = self.host.oc_name + '_' + str(uuid.uuid4())[:4]
@@ -279,10 +276,14 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                     raise OpenshiftProvisionerException
 
                 if newapp is None:
-                    self.logger.error('Application type not defined for '
-                                      'resource. Available choices ~ %s' %
-                                      self._app_choices)
-                    raise OpenshiftProvisionerException
+                    # check for custom template
+                    if getattr(self.host, "oc_custom_template", None):
+                        newapp = "template"
+                    else:
+                        self.logger.error('Application type not defined for '
+                                          'resource. Available choices ~ %s' %
+                                          self._app_choices)
+                        raise OpenshiftProvisionerException
 
                 getattr(self, 'app_by_%s' % newapp)()
             finally:
@@ -379,21 +380,18 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         E.g. $ oc new-app --template=<name> --env=[] -l app=<label>
         E.g. $ oc new-app --file=./template --env=[] -l app=<label>
         """
-        _template = self.host.oc_template
+        if self.host.oc_template:
+            _template = self.host.oc_template
+        else:
+            _template = self.host.oc_custom_template
         _template_file = None
         _template_filename = None
 
-        # check in the carbon root dir for the file as .yml or yaml
-        filepath1 = os.path.join(CARBON_ROOT, _template + ".yaml")
-        filepath2 = os.path.join(CARBON_ROOT, _template + ".yml")
+        filepath = os.path.join(self._data_folder, _template)
 
-        # checks for a custom template
-        if os.path.isfile(filepath1):
-            _template_file = filepath1
-            _template_filename = os.path.basename(filepath1)
-        elif os.path.isfile(filepath2):
-            _template_file = filepath2
-            _template_filename = os.path.basename(filepath2)
+        if os.path.isfile(filepath):
+            _template_file = filepath
+            _template_filename = os.path.basename(filepath)
 
         # copy file to container
         if _template_file:
@@ -473,8 +471,11 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # new attempt every 10 seconds
         total_attempts = wait / 10
 
+        errcheck = 0
         attempt = 0
         while wait > 0:
+            if errcheck > 4:
+                raise OpenshiftProvisionerException("pods never came up")
             buildcheck = True
             podcheck = True
             attempt += 1
@@ -492,7 +493,10 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                      tasks=[dict(action=dict(module='shell', args=_cmd))])
             )
             self.results_analyzer(results['status'])
-            parsed_results = results["callback"].contacted[0]["results"]
+            if len(results["callback"].contacted) == 1:
+                parsed_results = results["callback"].contacted[0]["results"]
+            else:
+                raise OpenshiftProvisionerException("Unexpected Error")
             if "stdout" in parsed_results and "stderr" in parsed_results["stdout"]:
                 if "No resources" in parsed_results["stdout"]["stderr"]:
                     pass
@@ -523,10 +527,6 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 raise Exception("Unexpected Error when Checking the build: "
                                 "{}".format(parsed_results))
 
-            # Wait for 10 seconds after the builds are complete
-            # to make sure the pod objects get instantiated.
-            time.sleep(10)
-
             _cmd = 'oc get pods -l {0} -o yaml'.\
                 format(self._finallabel)
 
@@ -536,10 +536,20 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                      tasks=[dict(action=dict(module='shell', args=_cmd))])
             )
 
-            parsed_results2 = results["callback"].contacted[0]["results"]
+            if len(results["callback"].contacted) == 1:
+                parsed_results2 = results["callback"].contacted[0]["results"]
+            else:
+                raise OpenshiftProvisionerException("Unexpected Error")
             if "stderr" in parsed_results2 and parsed_results2["stderr"]:
-                raise Exception("Unexpected output when checking for created "
-                                "pods: {}".format(parsed_results2["stderr"]))
+                # check if pods have not been created yet
+                if "No resources" in parsed_results2["stderr"]:
+                    self.logger.info("Pod not created yet")
+                    errcheck += 1
+                    time.sleep(10)
+                    continue
+                else:
+                    raise Exception("Unexpected output when checking for created "
+                                    "pods: {}".format(parsed_results2["stderr"]))
             elif "stdout" in parsed_results2 and parsed_results2["stdout"]:
                 mydict = {}
                 mydict = yaml.load(parsed_results2["stdout"])
@@ -585,7 +595,10 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
-        parsed_results = results["callback"].contacted[0]["results"]
+        if len(results["callback"].contacted) == 1:
+            parsed_results = results["callback"].contacted[0]["results"]
+        else:
+            raise OpenshiftProvisionerException("Unexpected Error")
         mydict = yaml.load(parsed_results["stdout"])
         try:
             app_name = mydict["items"][0]["metadata"]["name"]
@@ -622,7 +635,10 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
-        parsed_results = results["callback"].contacted[0]["results"]
+        if len(results["callback"].contacted) == 1:
+            parsed_results = results["callback"].contacted[0]["results"]
+        else:
+            raise OpenshiftProvisionerException("Unexpected Error")
         self.results_analyzer(results['status'])
         mydict = yaml.load(parsed_results["stdout"])
 

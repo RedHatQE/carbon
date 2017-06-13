@@ -272,8 +272,11 @@ class CarbonResource(LoggerMixin):
             # check for possible assets, and add filename if set
             for asset in host._assets:
                 if asset:
-                    if getattr(host, asset):
-                        assets.append(getattr(host, asset))
+                    # verify host has the key
+                    if hasattr(host, asset):
+                        # verify key value is set
+                        if getattr(host, asset):
+                            assets.append(getattr(host, asset))
         return assets
 
     def copy_assets(self):

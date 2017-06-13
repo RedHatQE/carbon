@@ -16,7 +16,7 @@ provision:
     provider: openshift
     credential: openshift
     oc_name: application1
-    oc_template: mytemplate.yaml
+    oc_custom_template: mytemplate.yaml
     role: application1
     oc_image: rywillia/example  # Define registry and image
     oc_env_vars:

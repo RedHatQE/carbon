@@ -19,7 +19,7 @@ provision:
     credential: openshift
     oc_name: application4
     role: application4
-    oc_template: mytemplate # File ext appended, template needs to be in root where carbon is run
+    oc_custom_template: mytemplate.yaml
     oc_env_vars:
       var1: var1
       var2: var2

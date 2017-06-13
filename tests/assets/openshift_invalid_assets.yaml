@@ -17,7 +17,7 @@ provision:
     credential: openshift
     oc_name: application1
     # setting an asset that doesn't exist
-    oc_template: mytemplate2.yaml
+    oc_custom_template: mytemplate2.yaml
     role: application1
     oc_image: rywillia/example  # Define registry and image
     oc_env_vars:

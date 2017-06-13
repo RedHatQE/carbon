@@ -43,6 +43,9 @@ class OpenshiftProvider(CarbonProvider):
         oc_template: (optional) The template name used to create an
                           application.
 
+        oc_custom_template (optional) A template file that will be used to
+                                      create the application.
+
         oc_env_vars: (optional) A dict of environment variables that are
                      needed by the components created when creating a new
                      application.
@@ -79,6 +82,7 @@ class OpenshiftProvider(CarbonProvider):
         'image',
         'git',
         'template',
+        'custom_template',
         'env_vars',
         'build_timeout'
     )
@@ -147,6 +151,17 @@ class OpenshiftProvider(CarbonProvider):
 
     def validate_template(self, value):
         """Validate the template, if set.
+        :param value: The resource template name
+        :return: A boolean, true = valid, false = invalid
+        """
+        if value:
+            self.logger.info("Validating template name: {0}".format(value))
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    def validate_custom_template(self, value):
+        """Validate the custom template, if set.
         :param value: The resource template name
         :return: A boolean, true = valid, false = invalid
         """
