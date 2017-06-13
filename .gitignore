@@ -15,8 +15,6 @@ _mailinglist
 # Test state / virtualenvs
 .tox
 .coverage
-coverage.xml
-nosetests.xml
 
 # Common virtualenv names
 venv

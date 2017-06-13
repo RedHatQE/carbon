@@ -2,12 +2,17 @@
 # -*- coding: utf-8 -*-
 import os
 from subprocess import check_call
-from sys import platform
+from sys import platform, version_info
 
 _dname = os.path.dirname
+_pyver = 'cover/integration/py%s%s' % (version_info.major, version_info.minor)
 
 REPO_ROOT = _dname(_dname(os.path.abspath(__file__)))
 os.chdir(os.path.join(REPO_ROOT, 'tests'))
+
+# Create nosetests coverage folder
+if not os.path.isdir(_pyver):
+    os.makedirs(_pyver)
 
 
 def run(command):
@@ -24,4 +29,6 @@ if platform == "darwin":
     os.environ["LC_TIME"] = "UTF-8"
 
 run('nosetests --with-coverage --cover-erase --cover-package carbon '
-    '--with-xunit --cover-xml --cover-html -v --disabledoc integration/')
+    '--with-xunit --xunit-file {0}/nosetests.xml --cover-xml '
+    '--cover-xml-file {0}/coverage.xml --cover-html --cover-html-dir {0} -v '
+    '--disabledoc integration/'.format(_pyver))

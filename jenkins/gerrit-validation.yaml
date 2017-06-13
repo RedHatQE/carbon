@@ -85,11 +85,11 @@
       - workspace-cleanup
     publishers:
       - archive:
-          artifacts: 'tests/*.xml,tests/cover/*'
+          artifacts: 'tests/cover/**'
       - junit:
-          results: 'tests/nosetests.xml'
+          results: 'tests/cover/functional/py27/nosetests.xml, tests/cover/functional/py36/nosetests.xml'
       - shining-panda:
-          html-reports-directory: '**/tests/cover'
+          html-reports-directory: '**/tests/cover/**'
       - ircbot:
           strategy: failure-and-fixed
           message-type: summary-scm
