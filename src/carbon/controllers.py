@@ -278,15 +278,16 @@ class AnsibleController(CarbonController):
         :param status: Status code of ansible call
         """
         for item in self.callback.contacted:
-            _stderr = item['results']['stderr']
-            _stdout = item['results']['stdout']
             if status != 0:
-                if _stderr:
+                if 'stderr' in item['results']:
                     self.logger.info('Standard error:')
                     self.logger.error(item['results']['stderr'])
-            if _stdout:
+            if 'stdout' in item['results']:
                 self.logger.info('Standard output:')
                 self.logger.info(item['results']['stdout'])
+            if 'msg' in item['results']:
+                self.logger.info('Message:')
+                self.logger.info(item['results']['msg'])
 
 
 class DockerControllerException(CarbonException):

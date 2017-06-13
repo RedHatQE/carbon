@@ -118,32 +118,23 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
         # Set name for container
         self._name = self.host.oc_name + '_' + str(uuid.uuid4())[:4]
+
         self._routes = []
+        self._label = []
+        self._finallabel = []
         self._app_name = ""
 
         # Set ansible inventory file
         self.ansible_inventory = get_ansible_inventory_script('docker')
+        # Set file permissions: pip install . does not give right permissions
+        # to allow ansible to execute the script under site-packages.
+        os.chmod(self.ansible_inventory, 0o775)
 
         # Run container
         try:
             self.run_container(self.name, self._oc_image, entrypoint='bash')
         except DockerControllerException as ex:
             self.logger.warn(ex)
-
-        # Authenticate with openshift
-        self.authenticate()
-
-        # Select project to use
-        self.select_project()
-
-        # Set a normalized label list
-        self.setup_label()
-
-        # set the labels
-        self.get_final_label()
-
-        # set the env_vars if set
-        self.env_opts()
 
     @property
     def name(self):
@@ -173,18 +164,14 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                              'application after the class is instanciated.')
 
     def setup_label(self):
-        """
-        Sets a normalized list of key, values for the label, which is a list
+        """Sets a normalized list of key:values for the label, which is a list.
         The keys cannot have spaces, they will be replaced w/an underscore
         """
-        label_list_original = self.host.oc_labels
-        label_list_final = []
-
-        for label in label_list_original:
-            k, v = label.items()[0]
-            normalized_key = k.strip().replace(" ", "_")
-            label_list_final.append(str(normalized_key) + "=" + str(v))
-        self._label = label_list_final
+        for label in self.host.oc_labels:
+            for k, v in label.items():
+                self._label.append(
+                    str(k.strip().replace(' ', '_')) + '=' + str(v)
+                )
 
     def authenticate(self):
         """Establish an authenticated session with openshift server.
@@ -205,6 +192,9 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         else:
             self.logger.error('Authentication type not found. Supported types:'
                               ' <token|username/password>.')
+            # Stop/remove container
+            self.stop_container(self.name)
+            self.remove_container(self.name)
             raise OpenshiftProvisionerException
 
         results = self.run_module(
@@ -256,6 +246,21 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         """
         self.logger.info('Create application from %s', self.__class__)
 
+        # Authenticate with openshift
+        self.authenticate()
+
+        # Select project to use
+        self.select_project()
+
+        # Set a normalized label list
+        self.setup_label()
+
+        # set the labels
+        self.get_final_label()
+
+        # set the env_vars if set
+        self.env_opts()
+
         newapp = None
         count = 0
         for app in self._app_choices:
@@ -293,6 +298,18 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         it. This ensures no stale resources are left laying around.
         """
         self.logger.info('Deleting application from %s', self.__class__)
+
+        # Authenticate with openshift
+        self.authenticate()
+
+        # Select project to use
+        self.select_project()
+
+        # Set a normalized label list
+        self.setup_label()
+
+        # set the labels
+        self.get_final_label()
 
         _cmd = 'oc delete all -l {0}'.\
             format(self._finallabel)
@@ -622,8 +639,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self.host.oc_routes = self._routes
 
     def get_final_label(self):
-        '''get the required label(s) in the format expected by oc
-        '''
+        """get the required label(s) in the format expected by oc."""
         labels = ""
         for label in self.label:
             labels = labels + label + ","

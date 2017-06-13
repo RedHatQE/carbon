@@ -36,7 +36,7 @@ provision:
     ip_address:
     role: w_client
 
-  - name: Application by git
+  - name: Application by image
     provider: openshift
     credential: openshift
     oc_name: application1
