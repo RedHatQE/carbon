@@ -7,6 +7,9 @@ credentials:
 
   - name: beaker
     keytab: group_keytab
+    keytab_principal: my_principal
+    username:
+    password:
 
 provision:
 
