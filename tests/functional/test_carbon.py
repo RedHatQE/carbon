@@ -32,6 +32,7 @@ except ImportError:
 from nose.tools import assert_equal, assert_is_instance, raises, assert_true
 
 from carbon import Carbon
+from carbon.core import CarbonException
 from carbon.constants import STATUS_FILE, RESULTS_FILE
 
 
@@ -58,16 +59,26 @@ class TestCarbon(TestCase):
         obj.name = 'my_scenario'
         assert_equal(obj.name, 'my_scenario')
 
-    @staticmethod
-    def test_load_yaml():
+    def test_load_yaml(self):
         """Test carbons function to load a scenario descriptor (yaml) file into
         the carbon object.
         """
         obj = Carbon(__name__)
         obj.load_from_yaml('assets/scenario.yaml')
 
-    @staticmethod
-    def test_load_yaml_with_missing_section():
+    def test_load_scenario_with_host_name_set_wrongly(self):
+        """Test carbons function to load a scenario descriptor (yaml) file into
+        the carbon object.
+        """
+        obj = Carbon(__name__)
+        with self.assertRaises(CarbonException) as cm:
+            obj.load_from_yaml('assets/invalid_scenario_provider_name_error.yaml')
+        raised_exception = cm.exception
+        self.assertEqual(raised_exception.message,
+                         ('The os_name parameter for machine1 should not be set'
+                          ' as it is under the framework\'s control'))
+
+    def test_load_yaml_with_missing_section(self):
         """Test carbons function to load a scenario descriptor (yaml) file with
         a missing required section. An exception will be raised.
         """

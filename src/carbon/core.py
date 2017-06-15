@@ -35,9 +35,14 @@ from taskrunner import Task
 from .helpers import get_core_tasks_classes
 
 
-# TODO: we must implement core exceptions
+# TODO: we must implement core exceptions based on the base class
 class CarbonException(Exception):
-    pass
+    """
+    Carbon's base Exception class
+    """
+    def __init__(self, message):
+        self.message = message
+        super(CarbonException, self).__init__(message)
 
 
 class LoggerMixin(object):

@@ -94,9 +94,6 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
 
         # Set ansible inventory file
         self.ansible_inventory = get_ansible_inventory_script('docker')
-        # Set file permissions: pip install . does not give right permissions
-        # to allow ansible to execute the script under site-packages.
-        os.chmod(self.ansible_inventory, 0o775)
 
         # Run container
         try:

@@ -21,6 +21,7 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import os
 from copy import deepcopy
 from nose.tools import assert_true, assert_false, assert_is_instance, raises
 from unittest import TestCase
@@ -30,6 +31,7 @@ try:
 except ImportError:
     from test.support import EnvironmentVarGuard
 
+from carbon import Carbon
 from carbon.helpers import file_mgmt
 from carbon.providers import OpenstackProvider, OpenshiftProvider
 from carbon.providers import DigitalOceanProvider, RackspaceProvider
@@ -53,11 +55,16 @@ class TestRackspace(TestCase):
 
 
 class TestOpenshift(TestCase):
+
     """Unit tests to test carbon provider ~ openshift."""
     _cp_scenario_description = dict(scenario_description)
     _host1 = _cp_scenario_description['provision'][3]
     _host2 = _cp_scenario_description['provision'][4]
     _ocp = OpenshiftProvider()
+
+    def setUp(self):
+        self.env = EnvironmentVarGuard()
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
 
     def test_instantiate_class(self):
         """Test whether the instantiated provider class object is an actual
@@ -70,12 +77,14 @@ class TestOpenshift(TestCase):
             2. Name defined and is a valid name.
             3. Name defined and is a invalid data type.
         """
-        key = '%sname' % self._ocp.__provider_prefix__
-        cp_parameters = deepcopy(self._host1)
-        assert_false(self._ocp.validate_name(None))
-        assert_true(self._ocp.validate_name(cp_parameters.pop(key)))
-        cp_parameters[key] = ['machine1']
-        assert_false(self._ocp.validate_name(cp_parameters.pop(key)))
+        obj = Carbon(__name__)
+        obj.load_from_yaml('assets/scenario_openshift.yaml')
+
+        host = obj.scenario.hosts[0]
+
+        assert_true(host.provider.name, 'openshift')
+        assert_false(host.provider.validate_name(None))
+        assert_true(host.provider.validate_name('applicationbyimage'))
 
     def test_image(self):
         """Test the validate image method. This test performs the following:

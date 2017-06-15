@@ -15,7 +15,6 @@ provision:
   - name: Application by image
     provider: openshift
     credential: openshift
-    oc_name: application1
     oc_custom_template: mytemplate.yaml
     role: application1
     oc_image: rywillia/example  # Define registry and image

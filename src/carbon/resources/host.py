@@ -23,13 +23,14 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
+import re
+import string
 
 from ..core import CarbonResource, CarbonException
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
 from ..helpers import get_provisioner_class, get_default_provisioner, get_provisioners_list
-from ..constants import HOST_UPDATE_FIELDS
+from ..constants import RULE_HOST_NAMING
 
 
 class CarbonHostException(CarbonException):
@@ -44,6 +45,8 @@ class Host(CarbonResource):
     def __init__(self,
                  config=None,
                  name=None,
+                 provider=None,
+                 provisioner=None,
                  parameters={},
                  validate_task_cls=ValidateTask,
                  provision_task_cls=ProvisionTask,
@@ -52,39 +55,46 @@ class Host(CarbonResource):
 
         super(Host, self).__init__(config=config, name=name, **kwargs)
 
-        # name can't be set after the host is instanciated
-        # if no name is given, a uuid4 will be generated.
+        # The name set in the constructor has precedence over other names.
+        # If no name is set in the constructor, then it will look for the
+        # name set in the parameters (usually done via YAML descriptor).
+        # If no name is set in the parameters, then it generates a 20
+        # characters name. Any way it is set, it will pass through the
+        # filter. See `self._filter_host_name` for more info.
         if name is None:
             self._name = parameters.pop('name', None)
             if self._name is None:
-                self._name = gen_random_str(12)
+                self._name = 'hst{0}'.format(gen_random_str(10))
         else:
             self._name = name
+        self._name = self._filter_host_name(self._name)
 
+        # TODO: we must define what role means for a host and document it.
         self._role = parameters.pop('role', None)
         if self._role is None:
-            raise Exception('A role must be set for host %s.' % str(self.name))
+            raise CarbonException('A role must be set for host '
+                                  '%s.' % str(self.name))
 
-        # we must set provider initially and it can't be
-        # changed afterwards.
-        provider = parameters.pop('provider', None)
-        if provider is None:
-            raise Exception('A provider must be set for the host %s.' %
-                            str(self.name))
-        if provider not in get_providers_list():
-            raise Exception('Invalid provider for host %s.' % str(self.name))
+        # we must have a provider set
+        provider_param = parameters.pop('provider', provider)
+        if provider_param is None:
+            raise CarbonException('A provider must be set for the host '
+                                  '%s.' % str(self.name))
+        if provider_param not in get_providers_list():
+            raise CarbonException('Invalid provider for host '
+                                  '%s.' % str(self.name))
         else:
-            self._provider = get_provider_class(provider)()
+            self._provider = get_provider_class(provider_param)()
 
         # We must set the provisioner and validate it
-        provisioner_set = parameters.pop('provisioner', None)
-
-        if provisioner_set is None:
+        provisioner_param = parameters.pop('provisioner', provisioner)
+        if provisioner_param is None:
             self._provisioner = get_default_provisioner(self.provider)
-        elif provisioner_set not in get_provisioners_list():
-            raise Exception('Invalid provisioner for host %s.' % str(self.name))
+        elif provisioner_param not in get_provisioners_list():
+            raise CarbonException('Invalid provisioner for host '
+                                  '%s.' % str(self.name))
         else:
-            self._provisioner = get_provisioner_class(provisioner_set)
+            self._provisioner = get_provisioner_class(provisioner_param)
         self._assets = self._provisioner._assets
 
         # We must set the providers credentials initially
@@ -104,9 +114,14 @@ class Host(CarbonResource):
         # otherwise generate random bits to be added to provider instance name
         # and create the provider name
         p_name_param = '{}{}'.format(self.provider.__provider_prefix__, 'name')
-        if not parameters.get(p_name_param, None):
+        p_name_set = parameters.get(p_name_param, None)
+        if not p_name_set:
             parameters.update(
-                {p_name_param: '{}-{}'.format(self.name, gen_random_str())})
+                {p_name_param: 'cbn_{}_{}'.format(self.name, gen_random_str(5))})
+        elif not p_name_set[:4] == 'cbn_':
+            raise CarbonException('The {0} parameter for {1} should not be set'
+                                  ' as it is under the framework\'s control'
+                                  .format(p_name_param, self._name))
 
         # check if we have all the mandatory fields set
         missing_mandatory_fields = \
@@ -195,6 +210,19 @@ class Host(CarbonResource):
         :param value: The role for the host
         """
         raise AttributeError('You cant set role after class is instanciated.')
+
+    @staticmethod
+    def _filter_host_name(given_name):
+        """
+        A host name is limited to max 30 characters and ruled
+        by the RULE_HOST_NAMING regex pattern defined in
+        constants.
+
+        :param given_name: the name to be filtered
+        :return: 20 characters filtered name
+        """
+        result = RULE_HOST_NAMING.sub('', given_name)
+        return str(result[:20]).lower()
 
     def profile(self):
         """Builds a profile for the host.

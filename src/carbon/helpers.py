@@ -23,10 +23,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from logging import getLogger
-from subprocess import Popen, PIPE
-
 import sys
+import stat
 import os
 import inspect
 import json
@@ -35,6 +33,9 @@ import random
 import string
 import threading
 import yaml
+
+from logging import getLogger
+from subprocess import Popen, PIPE
 
 from .constants import PROVISIONERS
 
@@ -280,9 +281,19 @@ def get_ansible_inventory_script(provider):
 
     _script = '%s_inventory.py' % provider
     inventory = os.path.join(get_root_path(utils.__name__), _script)
+
+    # ensure the invetory file exists
     if not os.path.isfile(inventory):
         LOG.warn('Ansible inventory script not found for provider %s', provider)
-        inventory = None
+        return None
+
+    # ensure the inventory is marked executable for owners, group and others
+    # exactly like -rwxrwxr-x.
+    os.chmod(inventory,
+             stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH |
+             stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH |
+             stat.S_IWUSR | stat.S_IWGRP)
+
     return inventory
 
 
