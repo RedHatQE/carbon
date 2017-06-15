@@ -80,7 +80,7 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
     __provisioner_name__ = "beaker"
     __provisioner_prefix__ = 'bkr_'
 
-    _assets = ["bkr_arch"]
+    _assets = ["keytab"]
 
     _bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
@@ -124,15 +124,90 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         1. username/password
         2. keytab (file and kerberos principal)
         """
-        pass
-#         _cmd = "bkr whoami"
-#
-#         results = self.run_module(
-#             dict(name='bkr authenticate', hosts=self.name, gather_facts='no',
-#                  tasks=[dict(action=dict(module='shell', args=_cmd))])
-#         )
-#
-#         self.results_analyzer(results['status'])
+        bkr_config = "/etc/beaker/client.conf"
+        # Case 1: user has username and password set
+        if ["username", "password"] <= self.host.provider.credentials.keys() \
+                and self.host.provider.credentials["username"] and \
+                self.host.provider.credentials["password"]:
+            self.logger.info("Authentication w/ username/pass")
+
+            # Modify the config file with correct data
+            summary = "update beaker config - username"
+            username = self.host.provider.credentials["username"]
+            replace_line = 'USERNAME=\"{0}\"'.format(username)
+            cmd = 'path={0} regexp=^#USERNAME line={1}'.format(bkr_config, replace_line)
+            self.lineinfile_call(summary, replace_line, cmd)
+
+            summary = "update beaker config - password"
+            password = self.host.provider.credentials["password"]
+            replace_line = 'PASSWORD=\"{0}\"'.format(password)
+            cmd = 'path={0} regexp=^#PASSWORD line={1}'.format(bkr_config, replace_line)
+            self.lineinfile_call(summary, replace_line, cmd)
+
+        # Case 2: user has a keytab and principal set
+        elif ["keytab", "keytab_principal"] <= self.host.provider.credentials.keys() \
+                and self.host.provider.credentials["keytab"] and \
+                self.host.provider.credentials["keytab_principal"]:
+            self.logger.info("Authentication w/ keytab/keytab_principal")
+
+            # copy the keytab file to container
+            src_file_path = os.path.join(self._data_folder, self.host.provider.credentials["keytab"])
+            dest_full_path_file = '/etc/beaker'
+
+            cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
+
+            results = self.run_module(
+                dict(name='copy file', hosts=self.name, gather_facts='no',
+                     tasks=[dict(action=dict(module='copy', args=cp_args))])
+            )
+
+            if results['status'] != 0:
+                raise BeakerProvisionerException("Error when copying file to container")
+
+            # Modify the config file with correct data
+            summary = "update beaker config - authmethod"
+            replace_line = 'AUTH_METHOD=\"krbv\"'
+            cmd = 'path={0} regexp=^AUTH_METHOD line={1}'.format(bkr_config, replace_line)
+            self.lineinfile_call(summary, replace_line, cmd)
+
+            summary = "update beaker config: keytab filename"
+            keytab_path = os.path.join(dest_full_path_file, self.host.provider.credentials["keytab"])
+            replace_line = 'KRB_KEYTAB=\"{0}\"'.format(keytab_path)
+            cmd = 'path={0} regexp=^#KRB_KEYTAB line={1}'.format(bkr_config, replace_line)
+            self.lineinfile_call(summary, replace_line, cmd)
+
+            summary = "update beaker config: keytab principal"
+            replace_line = 'KRB_PRINCIPAL=\"{0}\"'.format(self.host.provider.credentials["keytab_principal"])
+            cmd = 'path={0} regexp=^#KRB_PRINCIPAL line={1}'.format(bkr_config, replace_line)
+            self.lineinfile_call(summary, replace_line, cmd)
+
+        # Case 3: invalid authentication vals
+        else:
+            raise BeakerProvisionerException("Unable to Authenticate, please set"
+                                             " username/password or keytab/keytab_principal.")
+
+        # verify that the authentication worked
+        _cmd = "bkr whoami"
+
+        results = self.run_module(
+            dict(name='bkr authenticate', hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args=_cmd))])
+        )
+
+        self.results_analyzer(results['status'])
+        if results['status'] != 0:
+            raise BeakerProvisionerException("Authentication was not successful")
+
+    def lineinfile_call(self, summary, replace_line, lineinfilecmd):
+        self.logger.debug(lineinfilecmd)
+
+        results = self.run_module(
+            dict(name=summary, hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='lineinfile', args=lineinfilecmd))])
+        )
+
+        if results['status'] != 0:
+            raise BeakerProvisionerException("Error when {0}".format(summary))
 
     def gen_bkr_xml(self):
         """ generate the Beaker xml from the host input
@@ -182,7 +257,20 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         # get the logs of the Beaker provisioning
         self.get_bkr_logs()
 
+        try:
+            # Stop/remove container
+            self.stop_container(self.name)
+            self.remove_container(self.name)
+        except DockerControllerException as ex:
+            raise BeakerProvisionerException(ex)
+
     def delete(self):
         """ Return the bkr machine back to the pool"""
         self.logger.info('Tearing down machines from %s', self.__class__)
+        try:
+            # Stop/remove container
+            self.stop_container(self.name)
+            self.remove_container(self.name)
+        except DockerControllerException as ex:
+            raise BeakerProvisionerException(ex)
         raise NotImplementedError

@@ -277,6 +277,11 @@ class CarbonResource(LoggerMixin):
                         # verify key value is set
                         if getattr(host, asset):
                             assets.append(getattr(host, asset))
+                    # check creds
+                    else:
+                        for cred in self._credentials:
+                            if asset in cred and cred[asset]:
+                                assets.append(cred[asset])
         return assets
 
     def copy_assets(self):

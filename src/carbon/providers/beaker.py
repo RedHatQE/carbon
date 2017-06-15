@@ -62,7 +62,12 @@ class BeakerProvider(CarbonProvider):
 
     _mandatory_creds_parameters = ()
 
-    _optional_creds_parameters = ()
+    _optional_creds_parameters = (
+        'keytab',
+        'keytab_principal',
+        'username',
+        'password'
+    )
 
     def __init__(self, **kwargs):
         super(BeakerProvider, self).__init__(**kwargs)
