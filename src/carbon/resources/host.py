@@ -214,7 +214,7 @@ class Host(CarbonResource):
     @staticmethod
     def _filter_host_name(given_name):
         """
-        A host name is limited to max 30 characters and ruled
+        A host name is limited to max 20 characters and ruled
         by the RULE_HOST_NAMING regex pattern defined in
         constants.
 

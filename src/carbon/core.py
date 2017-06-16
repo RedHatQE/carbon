@@ -343,6 +343,15 @@ class CarbonProvisioner(LoggerMixin):
     def delete(self):
         raise NotImplementedError
 
+    @property
+    def name(self):
+        return self.__provisioner__name__
+
+    @name.setter
+    def name(self, value):
+        raise CarbonException('You can not set provisioner name property.'
+                              ' This value is set by the instance ')
+
 
 class CarbonProvider(LoggerMixin):
     """

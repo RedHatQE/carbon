@@ -26,13 +26,12 @@
 """
 import os
 import time
-import uuid
 import yaml
 
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
 from ..core import CarbonProvisioner, CarbonException
-from ..helpers import get_ansible_inventory_script
+from ..helpers import get_ansible_inventory_script, gen_random_str
 
 
 class OpenshiftProvisionerException(CarbonException):
@@ -113,57 +112,55 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self.host = host
         self._data_folder = host.data_folder()
 
-        # Set name for container
-        self._name = self.host.oc_name + '_' + str(uuid.uuid4())[:4]
-
         self._routes = []
-        self._label = []
-        self._finallabel = []
+        self._labels = []
+        self._finallabels = []
         self._app_name = ""
+        self._env_opts = ""
 
         # Set ansible inventory file
         self.ansible_inventory = get_ansible_inventory_script('docker')
 
         # Run container
         try:
-            self.run_container(self.name, self._oc_image, entrypoint='bash')
+            self.run_container(self.host.oc_name, self._oc_image, entrypoint='bash')
         except DockerControllerException as ex:
             self.logger.warn(ex)
 
     @property
     def name(self):
         """Return the name for the container."""
-        return self._name
+        return self.__provisioner_name__
 
     @name.setter
     def name(self, value):
-        """Raises an exception when trying to set the name for the container
-        after the class has been instanciated.
-        :param value: The name for container.
         """
-        raise AttributeError('You cannot set name for container after the '
-                             'class is instanciated.')
+        Returns the name of the provisioner
+        :param value: The name for the provisioner.
+        """
+        raise AttributeError('You cannot set name for the provisioner.')
 
     @property
-    def label(self):
+    def labels(self):
         """Return the label name to be associated with an apps resources."""
-        return self._label
+        return self._labels
 
-    @label.setter
-    def label(self, value):
-        """Raises an exception when trying to set label name for application
+    @labels.setter
+    def labels(self, value):
+        """Raises an exception when trying to set lebels for application
         after the class has been instanciated.
         """
-        raise AttributeError('You cannot set the label name for the '
-                             'application after the class is instanciated.')
+        raise AttributeError('You cannot set the labels through the '
+                             'provisioning classes. Use the scenario '
+                             'descriptor instead.')
 
-    def setup_label(self):
+    def setup_labels(self):
         """Sets a normalized list of key:values for the label, which is a list.
         The keys cannot have spaces, they will be replaced w/an underscore
         """
         for label in self.host.oc_labels:
             for k, v in label.items():
-                self._label.append(
+                self._labels.append(
                     str(k.strip().replace(' ', '_')) + '=' + str(v)
                 )
 
@@ -187,24 +184,28 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             self.logger.error('Authentication type not found. Supported types:'
                               ' <token|username/password>.')
             # Stop/remove container
-            self.stop_container(self.name)
-            self.remove_container(self.name)
-            raise OpenshiftProvisionerException
+            self.stop_container(self.host.oc_name)
+            self.remove_container(self.host.oc_name)
+            raise OpenshiftProvisionerException(
+                'Authentication type not found. Supported types:'
+                ' <token|username/password>.')
 
         results = self.run_module(
-            dict(name='oc authenticate', hosts=self.name, gather_facts='no',
+            dict(name='oc authenticate', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
         self.results_analyzer(results['status'])
-        try:
-            if results['status'] != 0:
+        if results['status'] != 0:
+            try:
                 # Stop/remove container
-                self.stop_container(self.name)
-                self.remove_container(self.name)
-                raise OpenshiftProvisionerException
-        except DockerControllerException as ex:
-            raise OpenshiftProvisionerException(ex)
+                self.stop_container(self.host.oc_name)
+                self.remove_container(self.host.oc_name)
+            except DockerControllerException as ex:
+                raise OpenshiftProvisionerException(ex.message)
+            finally:
+                raise OpenshiftProvisionerException(
+                    'Could not authenticate. Please check credentials.')
 
     def select_project(self):
         """Switch to another project.
@@ -215,7 +216,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         _cmd = "oc project {0}".format(
             self.host.provider.credentials['project'])
         results = self.run_module(
-            dict(name='oc project', hosts=self.name, gather_facts='no',
+            dict(name='oc project', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
@@ -223,8 +224,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         try:
             if results['status'] != 0:
                 # Stop/remove container
-                self.stop_container(self.name)
-                self.remove_container(self.name)
+                self.stop_container(self.host.oc_name)
+                self.remove_container(self.host.oc_name)
                 raise OpenshiftProvisionerException
         except DockerControllerException as ex:
             raise OpenshiftProvisionerException(ex)
@@ -247,10 +248,10 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self.select_project()
 
         # Set a normalized label list
-        self.setup_label()
+        self.setup_labels()
 
         # set the labels
-        self.get_final_label()
+        self.get_final_labels()
 
         # set the env_vars if set
         self.env_opts()
@@ -270,7 +271,9 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                     self.logger.error('More than one application type are '
                                       'declared for resource. Unable to '
                                       'determine which one to use.')
-                    raise OpenshiftProvisionerException
+                    raise OpenshiftProvisionerException('More than one application type are '
+                                                        'declared for resource. Unable to '
+                                                        'determine which one to use.')
 
                 if newapp is None:
                     # check for custom template
@@ -280,15 +283,16 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                         self.logger.error('Application type not defined for '
                                           'resource. Available choices ~ %s' %
                                           self._app_choices)
-                        raise OpenshiftProvisionerException
+                        raise OpenshiftProvisionerException('Application type not '
+                                                            'defined for resource.')
 
                 getattr(self, 'app_by_%s' % newapp)()
             finally:
                 # Stop/remove container
-                self.stop_container(self.name)
-                self.remove_container(self.name)
-        except (DockerControllerException, OpenshiftProvisionerException):
-            raise OpenshiftProvisionerException
+                self.stop_container(self.host.oc_name)
+                self.remove_container(self.host.oc_name)
+        except DockerControllerException as ex:
+            raise OpenshiftProvisionerException('Docker error. - %s' % ex.message)
 
     def delete(self):
         """Delete all resources associated with an application. It will
@@ -304,16 +308,16 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self.select_project()
 
         # Set a normalized label list
-        self.setup_label()
+        self.setup_labels()
 
         # set the labels
-        self.get_final_label()
+        self.get_final_labels()
 
-        _cmd = 'oc delete all -l {0}'.\
-            format(self._finallabel)
+        _cmd = 'oc delete all -l app\={appname}'. \
+            format(appname=str(self.host.oc_name).replace("_", "-"))
 
         results = self.run_module(
-            dict(name='oc delete all', hosts=self.name, gather_facts='no',
+            dict(name='oc delete all', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
@@ -321,8 +325,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
         try:
             # Stop/remove container
-            self.stop_container(self.name)
-            self.remove_container(self.name)
+            self.stop_container(self.host.oc_name)
+            self.remove_container(self.host.oc_name)
 
             if results['status'] != 0:
                 raise OpenshiftProvisionerException
@@ -399,7 +403,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
 
             results = self.run_module(
-                dict(name='copy file', hosts=self.name, gather_facts='no',
+                dict(name='copy file', hosts=self.host.oc_name, gather_facts='no',
                      tasks=[dict(action=dict(module='copy', args=cp_args))])
             )
 
@@ -411,7 +415,6 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
             # we will not use env vars for custom templates
             # as they can be set in the template itself
-            self._env_opts = ""
             self.newapp("custom_template", custom_template_call)
 
         else:
@@ -430,18 +433,21 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         :param oc_type: used for the name of the call
         :param value: data that will be passed in after oc new-app <value>
         """
-        _cmd = 'oc new-app {0} -l {1} {2}'.\
-            format(value, self._finallabel, self._env_opts)
+        _cmd = 'oc new-app {value} -l {labels} --name\={appname} {opts}'.\
+            format(value=value,
+                   labels=self._finallabels,
+                   opts=self._env_opts,
+                   appname=str(self.host.oc_name).replace("_", "-"))
 
         self.logger.debug(_cmd)
         results = self.run_module(
-            dict(name='oc new-app {}'.format(oc_type), hosts=self.name, gather_facts='no',
+            dict(name='oc new-app {}'.format(oc_type), hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
         self.results_analyzer(results['status'])
         if results['status'] != 0:
-            raise OpenshiftProvisionerException
+            raise OpenshiftProvisionerException('Error creating app. %s' % results)
 
     def env_opts(self):
         self._env_opts = ""
@@ -481,12 +487,12 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
             # check the build status, which needs to be No resources found or Complete
 
-            _cmd = 'oc get builds -l {0} -o yaml'.\
-                format(self._finallabel)
+            _cmd = 'oc get builds -l app\={appname} -o yaml'. \
+                format(appname=str(self.host.oc_name).replace("_", "-"))
 
 #             self.logger.debug(_cmd)
             results = self.run_module(
-                dict(name='oc get builds {}', hosts=self.name, gather_facts='no',
+                dict(name='oc get builds {}', hosts=self.host.oc_name, gather_facts='no',
                      tasks=[dict(action=dict(module='shell', args=_cmd))])
             )
             self.results_analyzer(results['status'])
@@ -524,12 +530,12 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 raise Exception("Unexpected Error when Checking the build: "
                                 "{}".format(parsed_results))
 
-            _cmd = 'oc get pods -l {0} -o yaml'.\
-                format(self._finallabel)
+            _cmd = 'oc get pods -l app\={appname} -o yaml'. \
+                format(appname=str(self.host.oc_name).replace("_", "-"))
 
 #             self.logger.debug(_cmd)
             results = self.run_module(
-                dict(name='oc get pods', hosts=self.name, gather_facts='no',
+                dict(name='oc get pods', hosts=self.host.oc_name, gather_facts='no',
                      tasks=[dict(action=dict(module='shell', args=_cmd))])
             )
 
@@ -583,12 +589,12 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         oc get svc -l -> extract app name
         oc expose svc <app_name>
         """
-        _cmd = 'oc get svc -l {0} -o yaml'.\
-            format(self._finallabel)
+        _cmd = 'oc get svc -l app\={appname} -o yaml'. \
+            format(appname=str(self.host.oc_name).replace("_", "-"))
 
 #             self.logger.debug(_cmd)
         results = self.run_module(
-            dict(name='oc get svc -l', hosts=self.name, gather_facts='no',
+            dict(name='oc get svc -l', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
@@ -607,7 +613,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             _cmd = 'oc expose svc {0}'.format(self._app_name)
 
             results = self.run_module(
-                dict(name='oc expose svc', hosts=self.name, gather_facts='no',
+                dict(name='oc expose svc', hosts=self.host.oc_name, gather_facts='no',
                      tasks=[dict(action=dict(module='shell', args=_cmd))])
             )
             self.results_analyzer(results['status'])
@@ -623,12 +629,11 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         # app name should already be set
         self.logger.debug("return app name: {}".format(self._app_name))
 
-        _cmd = 'oc get route -l {0} -o yaml'.\
-            format(self._finallabel)
+        _cmd = 'oc get route -l app\={appname} -o yaml'.\
+            format(appname=str(self.host.oc_name).replace("_", "-"))
 
-#             self.logger.debug(_cmd)
         results = self.run_module(
-            dict(name='oc get route', hosts=self.name, gather_facts='no',
+            dict(name='oc get route', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
@@ -651,12 +656,12 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self.host.oc_app_name = self._app_name
         self.host.oc_routes = self._routes
 
-    def get_final_label(self):
+    def get_final_labels(self):
         """get the required label(s) in the format expected by oc."""
         labels = ""
-        for label in self.label:
+        for label in self.labels:
             labels = labels + label + ","
         labels = labels[:-1]
         finallabel = "'" + labels + "'"
         finallabel = finallabel.replace("=", "\=")
-        self._finallabel = finallabel
+        self._finallabels = finallabel

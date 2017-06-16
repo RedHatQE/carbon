@@ -26,6 +26,7 @@ from nose.tools import assert_is_instance, nottest, raises
 from unittest import TestCase
 
 from carbon import Carbon
+from carbon.core import CarbonException
 from carbon._compat import is_py3
 from carbon.helpers import file_mgmt
 from carbon.provisioners.openshift import OpenshiftProvisioner
@@ -86,10 +87,10 @@ class TestOpenshiftProvisioner(TestCase):
         """Create a openshift provisioner object."""
         obj = OpenshiftProvisioner(self.host)
         assert_is_instance(obj, OpenshiftProvisioner)
-        obj.stop_container(obj.name)
-        obj.remove_container(obj.name)
+        obj.stop_container(obj.host.oc_name)
+        obj.remove_container(obj.host.oc_name)
 
-    @raises(AttributeError)
+    @raises(CarbonException)
     def test_set_container_name(self):
         """Test setting the name for the container after the openshift
         provisioner class was instantiated.
@@ -110,18 +111,18 @@ class TestOpenshiftProvisioner(TestCase):
             obj = OpenshiftProvisioner(self.host)
             obj.label = 'label1'
         finally:
-            obj.stop_container(obj.name)
-            obj.remove_container(obj.name)
+            obj.stop_container(obj.host.oc_name)
+            obj.remove_container(obj.host_oc_name)
 
-    def test_setup_label(self):
-        """Test the setup_label method to create the list of labels to be
+    def test_setup_labels(self):
+        """Test the setup_labels method to create the list of labels to be
         assigned to the application when created.
         """
         obj = OpenshiftProvisioner(self.host)
-        obj.setup_label()
-        obj.stop_container(obj.name)
-        obj.remove_container(obj.name)
-        assert_is_instance(obj.label, list)
+        obj.setup_labels()
+        obj.stop_container(obj.host.oc_name)
+        obj.remove_container(obj.host.oc_name)
+        assert_is_instance(obj.labels, list)
 
     @nottest
     def test_passwd_authentication(self):
