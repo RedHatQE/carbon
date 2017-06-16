@@ -81,6 +81,8 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
     __provisioner_prefix__ = 'bkr_'
 
     _assets = ["keytab"]
+    _bkr_xml = "bkrjob.xml"
+    _job_id = None
 
     _bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
@@ -214,7 +216,45 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
     def submit_bkr_xml(self):
         """ submit the beaker xml and retrieve Beaker JOBID
         """
-        pass
+        self.logger.info("Submitting bkr job")
+        # copy the xml to container
+        src_file_path = os.path.join(self._data_folder, self._bkr_xml)
+        dest_full_path_file = '/tmp'
+
+        cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
+
+        results = self.run_module(
+            dict(name='copy file', hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='copy', args=cp_args))])
+        )
+
+        if results['status'] != 0:
+            raise BeakerProvisionerException("Error when copying bkr xml to container")
+
+        bkr_xml_path = os.path.join(dest_full_path_file, self._bkr_xml)
+        _cmd = "bkr job-submit --xml {0}".format(bkr_xml_path)
+
+        results = self.run_module(
+            dict(name='bkr job submit', hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args=_cmd))])
+        )
+
+        self.results_analyzer(results['status'])
+
+        if results['status'] != 0:
+            raise BeakerProvisionerException("Authentication was not successful")
+        else:
+            if len(results["callback"].contacted) == 1:
+                parsed_results = results["callback"].contacted[0]["results"]
+            else:
+                raise BeakerProvisionerException("Unexpected Error submitting job")
+
+            output = parsed_results["stdout"]
+            if output.find("Submitted:") != "-1":
+                self._job_id = output[output.find("[") + 2:output.find("]") - 1]
+                self.logger.info("just submitted: {}".format(self._job_id))
+            else:
+                raise BeakerProvisionerException("Unexpected Error submitting job")
 
     def wait_for_bkr_job(self):
         """ wait for the Beaker job to be complete and return if the provisioning was
