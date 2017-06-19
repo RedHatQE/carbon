@@ -24,18 +24,29 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
-import sys
 import errno
 
 from pykwalify.core import Core
+from pykwalify.errors import CoreError, SchemaError
 from ..constants import SCENARIO_SCHEMA
-from ..core import CarbonResource, CarbonException
+from ..core import CarbonResource, CarbonResourceException
 from ..helpers import gen_random_str
 from ..tasks import ValidateTask
 from .actions import Action
 from .host import Host
 from .executes import Execute
 from .reports import Report
+
+
+class ScenarioException(CarbonResourceException):
+    """Scenario's base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(ScenarioException, self).__init__(message)
 
 
 class Scenario(CarbonResource):
@@ -82,11 +93,11 @@ class Scenario(CarbonResource):
                 os.makedirs(self._data_folder)
         except OSError as ex:
             if ex.errno == errno.EACCES:
-                raise CarbonException('You do not have permission to create'
-                                      ' the workspace.')
+                raise ScenarioException('You do not have permission to create'
+                                        ' the workspace.')
             else:
-                raise CarbonException('Error creating scenario workspace: '
-                                      '%s' % ex.message)
+                raise ScenarioException('Error creating scenario workspace: '
+                                        '%s' % ex.message)
 
     def add_resource(self, item):
         if isinstance(item, Host):
@@ -177,19 +188,23 @@ class Scenario(CarbonResource):
     def add_credentials(self, data):
         self._credentials.append(data)
 
-    @staticmethod
-    def yaml_validate(yaml_file):
-        """
-        Validating the scenario yaml
-        """
-        c = Core(source_file=yaml_file, schema_files=[SCENARIO_SCHEMA])
+    def yaml_validate(self):
+        """Validate the carbon scenario yaml file."""
+        self.logger.info('Validating the scenario yaml file %s', self.filename)
 
         try:
+            c = Core(source_file=self.filename,
+                     schema_files=[SCENARIO_SCHEMA])
             c.validate(raise_exception=True)
-        except:
-            e = sys.exc_info()[1]
-            return 1, e
-        return 0, "Successful validation of the yaml file"
+
+            self.logger.info(
+                'Successfully validated scenario yaml based on schema.'
+            )
+        except (CoreError, SchemaError) as ex:
+            self.logger.error(
+                'Unsuccessfully validated scenario yaml based on schema.'
+            )
+            raise ScenarioException(ex.msg)
 
     def profile(self):
         """
@@ -209,15 +224,8 @@ class Scenario(CarbonResource):
         return profile
 
     def validate(self):
-        self.logger.info("Validate the file %s", self.filename)
-        val = self.yaml_validate(self.filename)
-        if val[0]:
-            self.logger.error("error occurred during file validation: %s",
-                              val[1])
-            raise CarbonException('Error occurred during file schema validation')
-        else:
-            self.logger.info("Successful validation of the yaml according to "
-                             "our schema")
+        # Perform scenario file validation based on carbon schema
+        self.yaml_validate()
 
     def _construct_validate_task(self):
         task = {

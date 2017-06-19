@@ -35,14 +35,71 @@ from taskrunner import Task
 from .helpers import get_core_tasks_classes
 
 
-# TODO: we must implement core exceptions based on the base class
 class CarbonException(Exception):
-    """
-    Carbon's base Exception class
-    """
+    """Carbon's base Exception class."""
+
     def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
         self.message = message
         super(CarbonException, self).__init__(message)
+
+
+class CarbonTaskException(CarbonException):
+    """Carbon's task base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonTaskException, self).__init__(message)
+
+
+class CarbonResourceException(CarbonException):
+    """Carbon's resource base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonResourceException, self).__init__(message)
+
+
+class CarbonProvisionerException(CarbonException):
+    """Carbon's provisioner base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonProvisionerException, self).__init__(message)
+
+
+class CarbonProviderException(CarbonException):
+    """Carbon's provider base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonProviderException, self).__init__(message)
+
+
+class CarbonControllerException(CarbonException):
+    """Carbon's controller base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonControllerException, self).__init__(message)
 
 
 class LoggerMixin(object):
@@ -231,8 +288,9 @@ class CarbonResource(LoggerMixin):
         Add a task to the list of tasks for the resource
         """
         if t['task'] not in set(get_core_tasks_classes()):
-            raise CarbonException('The task class "%s" used is not valid.'
-                                  % t['task'])
+            raise CarbonResourceException(
+                'The task class "%s" used is not valid.' % t['task']
+            )
         self._tasks.append(t)
 
     def _extract_tasks_from_resource(self):
@@ -349,8 +407,10 @@ class CarbonProvisioner(LoggerMixin):
 
     @name.setter
     def name(self, value):
-        raise CarbonException('You can not set provisioner name property.'
-                              ' This value is set by the instance ')
+        raise CarbonProvisionerException(
+            'You can not set provisioner name property. This value is set by '
+            'the instance.'
+        )
 
 
 class CarbonProvider(LoggerMixin):
@@ -520,7 +580,7 @@ class CarbonProvider(LoggerMixin):
             # It then returns the list of parameters that the validate
             # functions will return false.
             #
-            # It throws an CarbonException if the host doesn't have the
+            # It throws an CarbonProviderException if the host doesn't have the
             # attribute to be validated or if the provider has not implemented
             # the validate_<param> function.
             items = [
@@ -530,7 +590,7 @@ class CarbonProvider(LoggerMixin):
                 for param in (self._mandatory_parameters + self._optional_parameters)]
             return [(param, value) for param, value, func in [item for item in items] if not func(value)]
         except AttributeError as e:
-            raise CarbonException(e.args[0])
+            raise CarbonProviderException(e.args[0])
 
     @classmethod
     def build_profile(cls, host):
