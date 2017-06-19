@@ -16,7 +16,6 @@ provision:
   - name: Application by image
     provider: openshift
     credential: openshift
-    oc_name: application1
     role: application1
     oc_image: rywillia/example
     oc_env_vars:

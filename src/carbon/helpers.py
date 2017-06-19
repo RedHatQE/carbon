@@ -45,6 +45,17 @@ LOG = getLogger(__name__)
 _missing = object()
 
 
+class HelpersException(Exception):
+    """Base class for carbon helpers exceptions."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(HelpersException, self).__init__(message)
+
+
 def get_root_path(import_name):
     """Returns the path to a package or cwd if that cannot be found.  This
     returns the path of a package or the folder that contains a module.
@@ -357,7 +368,7 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
                 else:
                     f_raw.write(content)
     else:
-        raise Exception("Unknown file operation: %s." % operation)
+        raise HelpersException("Unknown file operation: %s." % operation)
 
 
 def check_is_gitrepo_fine(git_repo_url):

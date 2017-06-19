@@ -29,12 +29,20 @@ import uuid
 
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
-from ..core import CarbonProvisioner, CarbonException
+from ..core import CarbonProvisioner, CarbonProvisionerException
 from ..helpers import get_ansible_inventory_script
 
 
-class BeakerProvisionerException(CarbonException):
+class BeakerProvisionerException(CarbonProvisionerException):
     """ Base class for Beaker provisioner exceptions."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        self.message = message
+        super(BeakerProvisionerException, self).__init__(message)
 
 
 class BeakerProvisioner(CarbonProvisioner, AnsibleController,

@@ -35,7 +35,7 @@ from ansible.vars import VariableManager
 from docker import DockerClient
 from docker.errors import APIError, ContainerError, NotFound, ImageNotFound
 
-from .core import CarbonController, CarbonException
+from .core import CarbonController, CarbonControllerException
 
 
 class CarbonCallback(CallbackBase):
@@ -290,9 +290,16 @@ class AnsibleController(CarbonController):
                 self.logger.info(item['results']['msg'])
 
 
-class DockerControllerException(CarbonException):
+class DockerControllerException(CarbonControllerException):
     """Base class for docker controller exceptions."""
-    pass
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        self.message = message
+        super(DockerControllerException, self).__init__(message)
 
 
 class DockerController(CarbonController):

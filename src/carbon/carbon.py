@@ -464,8 +464,9 @@ class Carbon(LoggerMixin, ResultsMixin):
 
         # check if scenario was set
         if self.scenario is None:
-            raise Exception(
-                "You must set a scenario before run the framework.")
+            raise CarbonException(
+                'You must set a scenario before running the framework!'
+            )
 
         # get the list of resources for each main section, including
         # the ~self.scenario object itself.

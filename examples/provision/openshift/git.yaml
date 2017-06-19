@@ -17,7 +17,6 @@ provision:
     provider: openshift
     provisioner: openshift
     credential: openshift
-    oc_name: application2
     # timeout for builds to complete, in seconds, default 30mins = 1800 sec
     oc_build_timeout: 3600
     role: application2

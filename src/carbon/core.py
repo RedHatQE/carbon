@@ -36,7 +36,7 @@ from .helpers import get_core_tasks_classes
 
 
 class CarbonException(Exception):
-    """Carbon's base Exception class."""
+    """Carbon's base Exception class"""
 
     def __init__(self, message):
         """Constructor.
@@ -102,6 +102,17 @@ class CarbonControllerException(CarbonException):
         super(CarbonControllerException, self).__init__(message)
 
 
+class LoggerMixinException(CarbonException):
+    """Carbon's logger mixin base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonTaskException, self).__init__(message)
+
+
 class LoggerMixin(object):
     """Carbons logger mixin class.
 
@@ -165,15 +176,20 @@ class LoggerMixin(object):
                         os.makedirs(logdir)
                     except OSError as ex:
                         if ex.errno == errno.EACCES:
-                            raise CarbonException('You do not have permission to create'
-                                                  ' the workspace.')
+                            raise LoggerMixinException(
+                                'You do not have permission to create the '
+                                'workspace.'
+                            )
                         else:
-                            raise CarbonException('Error creating scenario workspace: '
-                                                  '%s' % ex.message)
-
+                            raise LoggerMixinException(
+                                'Error creating scenario workspace: %s' %
+                                ex.message
+                            )
                 chandler = FileHandler(logfile)
             else:
-                raise Exception("Please set a valid LOGGER_TYPE value")
+                raise LoggerMixinException(
+                    'Please set a valid LOGGER_TYPE value.'
+                )
             chandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
             chandler.setFormatter(Formatter(cls._LOG_FORMAT))
             clogger.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
@@ -201,14 +217,20 @@ class LoggerMixin(object):
                     os.makedirs(logdir)
                 except OSError as ex:
                     if ex.errno == errno.EACCES:
-                        raise CarbonException('You do not have permission to create'
-                                              ' the workspace.')
+                        raise LoggerMixinException(
+                            'You do not have permission to create the '
+                            'workspace.'
+                        )
                     else:
-                        raise CarbonException('Error creating scenario workspace: '
-                                              '%s' % ex.message)
+                        raise LoggerMixinException(
+                            'Error creating scenario workspace: %s' %
+                            ex.message
+                        )
             thandler = FileHandler(logfile)
         else:
-            raise Exception("Please set a valid LOGGER_TYPE value")
+            raise LoggerMixinException(
+                'Please set a valid LOGGER_TYPE value.'
+            )
         thandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
         thandler.setFormatter(Formatter(cls._LOG_FORMAT))
         tlogger = getLogger(name)

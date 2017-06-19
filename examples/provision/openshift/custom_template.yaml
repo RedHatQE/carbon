@@ -17,7 +17,6 @@ provision:
     provider: openshift
     provisioner: openshift
     credential: openshift
-    oc_name: application4
     role: application4
     oc_custom_template: mytemplate.yaml
     oc_env_vars:

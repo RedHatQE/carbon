@@ -16,7 +16,6 @@ provision:
   - name: Application by pre-defined template
     provider: openshift
     credential: openshift
-    oc_name: application3
     role: application3
     oc_template: jws30-tomcat7-basic-s2i # Define existing template name
     oc_env_vars:

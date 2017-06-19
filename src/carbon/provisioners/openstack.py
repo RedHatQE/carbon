@@ -34,15 +34,22 @@ from novaclient.client import Client as Nova_client
 from novaclient.exceptions import ClientException, NotFound, OverLimit
 
 from .._compat import string_types
-from ..core import CarbonException, CarbonProvisioner
+from ..core import CarbonProvisioner, CarbonProvisionerException
 
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
 
 
-class OpenstackProvisionerException(CarbonException):
+class OpenstackProvisionerException(CarbonProvisionerException):
     """Base class for openstack provisioner exceptions."""
-    pass
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        self.message = message
+        super(OpenstackProvisionerException, self).__init__(message)
 
 
 class OpenstackProvisioner(CarbonProvisioner):
@@ -193,7 +200,7 @@ class OpenstackProvisioner(CarbonProvisioner):
         self.logger.debug('%s - START', label)
         while not condition(obj):
             if (datetime.datetime.now() - start) > timeout:
-                raise Exception(label, timeout_sec)
+                raise OpenstackProvisionerException(label)
             time.sleep(wait_sec)
             obj = obj_getter()
         self.logger.debug('%s - DONE', label)

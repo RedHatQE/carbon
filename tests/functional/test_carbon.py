@@ -32,8 +32,8 @@ except ImportError:
 from nose.tools import assert_equal, assert_is_instance, raises, assert_true
 
 from carbon import Carbon
-from carbon.core import CarbonException
 from carbon.constants import STATUS_FILE, RESULTS_FILE
+from carbon.resources.host import CarbonHostException
 
 
 class TestCarbon(TestCase):
@@ -71,7 +71,7 @@ class TestCarbon(TestCase):
         the carbon object.
         """
         obj = Carbon(__name__)
-        with self.assertRaises(CarbonException) as cm:
+        with self.assertRaises(CarbonHostException) as cm:
             obj.load_from_yaml('assets/invalid_scenario_provider_name_error.yaml')
         raised_exception = cm.exception
         self.assertEqual(raised_exception.message,

@@ -30,13 +30,20 @@ import yaml
 
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
-from ..core import CarbonProvisioner, CarbonException
+from ..core import CarbonProvisioner, CarbonProvisionerException
 from ..helpers import get_ansible_inventory_script, gen_random_str
 
 
-class OpenshiftProvisionerException(CarbonException):
+class OpenshiftProvisionerException(CarbonProvisionerException):
     """Base class for openshift provisioner exceptions."""
-    pass
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        self.message = message
+        super(OpenshiftProvisionerException, self).__init__(message)
 
 
 class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
@@ -226,7 +233,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 # Stop/remove container
                 self.stop_container(self.host.oc_name)
                 self.remove_container(self.host.oc_name)
-                raise OpenshiftProvisionerException
+                raise OpenshiftProvisionerException('Failed to select project')
         except DockerControllerException as ex:
             raise OpenshiftProvisionerException(ex)
 
@@ -329,7 +336,9 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             self.remove_container(self.host.oc_name)
 
             if results['status'] != 0:
-                raise OpenshiftProvisionerException
+                raise OpenshiftProvisionerException(
+                    'Failed to delete application.'
+                )
         except DockerControllerException as ex:
             raise OpenshiftProvisionerException(ex)
 
@@ -408,7 +417,9 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             )
 
             if results['status'] != 0:
-                raise OpenshiftProvisionerException
+                raise OpenshiftProvisionerException(
+                    'Failed to create new application by template.'
+                )
 
             custom_template_file = os.path.join("/tmp", _template_filename)
             custom_template_call = "--file\={}".format(custom_template_file)
@@ -504,8 +515,10 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 if "No resources" in parsed_results["stdout"]["stderr"]:
                     pass
                 else:
-                    raise Exception("Unexpected Error checking builds: "
-                                    "{}".format(parsed_results["stdout"]["stderr"]))
+                    raise OpenshiftProvisionerException(
+                        "Unexpected Error checking builds: {}".format(
+                            parsed_results["stdout"]["stderr"])
+                    )
             elif "stdout" in parsed_results:
                 mydict = yaml.load(parsed_results["stdout"])
                 for item in mydict["items"]:
@@ -514,7 +527,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                         buildcheck = buildcheck and True
                     elif build_status == "Failed":
                         self.logger.error("The build failed")
-                        raise OpenshiftProvisionerException
+                        raise OpenshiftProvisionerException('The build failed')
                     else:
                         # Build is still in progress
                         buildcheck = False
@@ -524,11 +537,15 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                     time.sleep(10)
                     continue
             elif "stderr_lines" in parsed_results and parsed_results["stderr_lines"]:
-                raise Exception("Unexpected Error when Checking the build:: "
-                                "{}".format(parsed_results["stderr_lines"]))
+                raise OpenshiftProvisionerException(
+                    "Unexpected Error when Checking the build:: {}".format(
+                        parsed_results["stderr_lines"])
+                )
             else:
-                raise Exception("Unexpected Error when Checking the build: "
-                                "{}".format(parsed_results))
+                raise OpenshiftProvisionerException(
+                    "Unexpected Error when Checking the build: {}".format(
+                        parsed_results)
+                )
 
             _cmd = 'oc get pods -l app\={appname} -o yaml'. \
                 format(appname=str(self.host.oc_name).replace("_", "-"))
@@ -551,8 +568,9 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                     time.sleep(10)
                     continue
                 else:
-                    raise Exception("Unexpected output when checking for created "
-                                    "pods: {}".format(parsed_results2["stderr"]))
+                    raise OpenshiftProvisionerException(
+                        "Unexpected output when checking for created pods: "
+                        "{}".format(parsed_results2["stderr"]))
             elif "stdout" in parsed_results2 and parsed_results2["stdout"]:
                 mydict = {}
                 mydict = yaml.load(parsed_results2["stdout"])
@@ -573,11 +591,15 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                     time.sleep(10)
                     continue
             elif "stderr_lines" in parsed_results2 and parsed_results2["stderr_lines"]:
-                raise Exception("Unexpected Error when Checking the pod: "
-                                "{}".format(parsed_results["stderr_lines"]))
+                raise OpenshiftProvisionerException(
+                    "Unexpected Error when Checking the pod: {}".format(
+                        parsed_results["stderr_lines"])
+                )
             else:
-                raise Exception("Unexpected Error when Checking the build: "
-                                "{}".format(parsed_results))
+                raise OpenshiftProvisionerException(
+                    "Unexpected Error when Checking the build: {}".format(
+                        parsed_results)
+                )
 
             # complete if all conditions passed and no Exceptions thrown
             break
