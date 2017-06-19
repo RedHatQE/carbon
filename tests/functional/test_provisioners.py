@@ -99,29 +99,17 @@ class TestOpenshiftProvisioner(TestCase):
         obj.stop_container(obj.host.oc_name)
         obj.remove_container(obj.host.oc_name)
 
-    @raises(CarbonException)
-    def test_set_container_name(self):
-        """Test setting the name for the container after the openshift
-        provisioner class was instantiated.
-        """
-        obj = OpenshiftProvisioner(self.host)
-        try:
-            obj.name = 'container123'
-        finally:
-            obj.stop_container(obj.name)
-            obj.remove_container(obj.name)
-
-    @raises(AttributeError)
     def test_set_label(self):
         """Test setting the label for the application after the openshift
         provisioner class was instantiated.
         """
         obj = OpenshiftProvisioner(self.host)
         try:
-            obj.label = 'label1'
-        finally:
+            obj.labels = 'label1'
+        except AttributeError:
             obj.stop_container(obj.host.oc_name)
-            obj.remove_container(obj.host_oc_name)
+            obj.remove_container(obj.host.oc_name)
+            assert True
 
     def test_setup_labels(self):
         """Test the setup_labels method to create the list of labels to be
@@ -143,8 +131,8 @@ class TestOpenshiftProvisioner(TestCase):
 
         obj = OpenshiftProvisioner(self.host)
         obj.authenticate()
-        obj.stop_container(obj.name)
-        obj.remove_container(obj.name)
+        obj.stop_container(obj.host.oc_name)
+        obj.remove_container(obj.host.oc_name)
 
     @nottest
     @raises(OpenshiftProvisionerException)
