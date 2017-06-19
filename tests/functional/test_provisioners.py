@@ -22,8 +22,16 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
-from nose.tools import assert_is_instance, nottest, raises
+from nose.tools import assert_is_instance, assert_equal, nottest, raises
 from unittest import TestCase
+
+from glanceclient.v2.client import Client as Glance_client
+from keystoneauth1 import session
+from neutronclient.v2_0 import client as neutron_client
+from novaclient.v2.client import Client as Nova_client
+from novaclient.v2.flavors import Flavor as Nova_flavor
+from novaclient.v2.images import Image as Nova_image
+from novaclient.v2.networks import Network as Nova_network
 
 from carbon import Carbon
 from carbon.core import CarbonException
@@ -31,6 +39,7 @@ from carbon._compat import is_py3
 from carbon.helpers import file_mgmt
 from carbon.provisioners.openshift import OpenshiftProvisioner
 from carbon.provisioners.openshift import OpenshiftProvisionerException
+from carbon.provisioners.openstack import OpenstackProvisioner
 from carbon.resources import Host
 
 try:
@@ -95,8 +104,8 @@ class TestOpenshiftProvisioner(TestCase):
         """Test setting the name for the container after the openshift
         provisioner class was instantiated.
         """
+        obj = OpenshiftProvisioner(self.host)
         try:
-            obj = OpenshiftProvisioner(self.host)
             obj.name = 'container123'
         finally:
             obj.stop_container(obj.name)
@@ -107,8 +116,8 @@ class TestOpenshiftProvisioner(TestCase):
         """Test setting the label for the application after the openshift
         provisioner class was instantiated.
         """
+        obj = OpenshiftProvisioner(self.host)
         try:
-            obj = OpenshiftProvisioner(self.host)
             obj.label = 'label1'
         finally:
             obj.stop_container(obj.host.oc_name)
@@ -196,4 +205,145 @@ class TestOpenshiftProvisioner(TestCase):
 
 class TestOpenstackProvisioner(TestCase):
     """Unit tests to test carbon provisioner ~ openstack."""
-    pass
+
+    def setUp(self):
+        """Actions to be performed before each test case."""
+        global CARBON_CFG, CARBON_CFGS
+        global SCENARIO_CFG, SCENARIO_CFGS
+
+        # Determine abs path to carbon config
+        for f in CARBON_CFGS:
+            if os.path.exists(f):
+                CARBON_CFG = f
+
+        # Determine abs path to scenario config
+        for f in SCENARIO_CFGS:
+            if os.path.exists(f):
+                SCENARIO_CFG = f
+
+        # Set carbon settings env variable
+        self.env = EnvironmentVarGuard()
+        self.env.set('CARBON_SETTINGS', CARBON_CFG)
+
+        # Create carbon object
+        self.cbn = Carbon(__name__, assets_path="assets")
+
+        # Load scenario data
+        self.data = file_mgmt('r', SCENARIO_CFG)
+        params = self.data.pop('provision')[0]
+        params['provider_creds'] = self.data.pop('credentials')
+        self.host = Host(config=self.cbn.config, parameters=params)
+
+    def test_create_object(self):
+        """Create a openstack provisioner object. Verifies object is instance
+        of carbon.provisioners.OpenstackProvisioner.
+        """
+        obj = OpenstackProvisioner(self.host)
+        assert_is_instance(obj, OpenstackProvisioner)
+
+    def test_get_provisioner_name(self):
+        """Test getting the name of the provisioner class."""
+        obj = OpenstackProvisioner(self.host)
+        assert_equal(obj.name, 'openstack')
+
+    @raises(ValueError)
+    def test_set_provisioner_name(self):
+        """Test setting the name for the provisioner class."""
+        obj = OpenstackProvisioner(self.host)
+        obj.name = 'openstack'
+
+    @nottest
+    def test_key_session_property(self):
+        """Test creating a keystoneclient session. Verifies object is instance
+        of keystoneauth1.session.Session.
+        """
+        obj = OpenstackProvisioner(self.host)
+        assert_is_instance(obj.key_session, session.Session)
+
+    @nottest
+    def test_nova_property(self):
+        """Test creating a nova client object. Verifies object is instance
+        of novaclient.v2.client.Client.
+        """
+        obj = OpenstackProvisioner(self.host)
+        assert_is_instance(obj.nova, Nova_client)
+
+    @nottest
+    def test_glance_property(self):
+        """Test creating a glance client object. Verifies object is instance
+        of glanceclient.v2.client.Client."""
+        obj = OpenstackProvisioner(self.host)
+        assert_is_instance(obj.glance, Glance_client)
+
+    @nottest
+    def test_neutron_property(self):
+        """Test creating a neutron object. Verifies object is instance of
+        neutronclient.v2.0.client.Client.
+        """
+        obj = OpenstackProvisioner(self.host)
+        print(type(obj.neutron))
+        assert_is_instance(obj.neutron, neutron_client.Client)
+
+    @nottest
+    def test_get_image(self):
+        """Test getting image object for host image given. Verifies image
+        object is instance of novaclient.v2.images.Image.
+        """
+        obj = OpenstackProvisioner(self.host)
+        assert_is_instance(obj.image, Nova_image)
+
+    @nottest
+    @raises(ValueError)
+    def test_set_image(self):
+        """Test setting image for host. Exception should be raised since you
+        cannot set image for host after resource.host is instantiated."""
+        obj = OpenstackProvisioner(self.host)
+        obj.image = 'Fedora-Cloud-Base-25-compose-latest'
+
+    @nottest
+    def test_get_flavor(self):
+        """Test getting flavor object for host flavor given. Verifies flavor
+        object is instance of novaclient.v2.flavors.Flavor.
+        """
+        obj = OpenstackProvisioner(self.host)
+        assert_is_instance(obj.flavor, Nova_flavor)
+        obj.host.os_flavor = 2
+        assert_is_instance(obj.flavor, Nova_flavor)
+
+    @nottest
+    @raises(ValueError)
+    def test_set_flavor(self):
+        """Test setting flavor for host. Exception should be raised since you
+        cannot set flavor for host after resource.host is instantiated."""
+        obj = OpenstackProvisioner(self.host)
+        obj.flavor = 'm1.small'
+
+    @nottest
+    def test_get_networks(self):
+        """Test getting list of networks objects for host networks given.
+        Verifies the list of network objects is an instance of
+        novaclient.v2.networks.Network.
+        """
+        obj = OpenstackProvisioner(self.host)
+        for network in obj.networks:
+            assert_is_instance(network, Nova_network)
+
+    @nottest
+    @raises(ValueError)
+    def test_set_networks(self):
+        """Test setting networks for host. Exception should be raised since
+        you cannot set networks for host after resource.host is instantiated.
+        """
+        obj = OpenstackProvisioner(self.host)
+        obj.networks = ['network1']
+
+    @nottest
+    def test_create_delete(self):
+        """Test creating a individual node. Always will delete the node to
+        ensure proper cleanup.
+        """
+        obj = OpenstackProvisioner(self.host)
+        try:
+            obj.create()
+        finally:
+            obj.delete()

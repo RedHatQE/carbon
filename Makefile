@@ -25,8 +25,6 @@ clean-tests:
 	rm -rf tests/.workspace
 	rm -rf tests/__pycache__
 	rm -rf tests/cover
-	rm -rf tests/coverage.xml
-	rm -rf tests/nosetests.xml
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +

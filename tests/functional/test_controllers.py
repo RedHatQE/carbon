@@ -269,7 +269,6 @@ class TestAnsibleController(TestCase):
             5. Delete the mock playbook.
         """
         pb_file = '/tmp/example.yaml'
-        extra_vars = {'name': 'carbon'}
 
         # Create tmp playbook
         pbdata = [{'tasks': [{'shell': 'whoami', 'register': 'result'}],
@@ -277,7 +276,7 @@ class TestAnsibleController(TestCase):
         file_mgmt('w', pb_file, pbdata)
 
         obj = AnsibleController()
-        results = obj.run_playbook(pb_file, extra_vars=extra_vars)
+        results = obj.run_playbook(pb_file)
 
         assert_equal(results['status'], 0)
         assert_is_instance(results['callback'], CarbonCallback)
@@ -297,7 +296,6 @@ class TestAnsibleController(TestCase):
         """
         pb_file = '/tmp/example.yaml'
         pb_retry = '/tmp/example.retry'
-        extra_vars = {'name': 'carbon'}
 
         # Create tmp playbook
         pbdata = [{'tasks': [{'shell': 'whoamx', 'register': 'result'}],
@@ -305,7 +303,7 @@ class TestAnsibleController(TestCase):
         file_mgmt('w', pb_file, pbdata)
 
         obj = AnsibleController()
-        results = obj.run_playbook(pb_file, extra_vars=extra_vars)
+        results = obj.run_playbook(pb_file)
 
         assert_not_equal(results['status'], 0)
         assert_is_instance(results['callback'], CarbonCallback)

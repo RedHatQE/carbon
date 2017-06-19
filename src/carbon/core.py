@@ -335,7 +335,7 @@ class CarbonProvisioner(LoggerMixin):
     """
     This is the base class for all provisioners for provisioning machines
     """
-    __provisioner__name__ = None
+    __provisioner_name__ = None
 
     def create(self):
         raise NotImplementedError
