@@ -3,20 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Carbon's documentation!
-==================================
+Welcome to Carbon
+=================
 
-Contents:
-
-.. toctree::
-   :maxdepth: 2
+Welcome to Carbon's documentation.
 
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+.. include:: contents.rst.inc

@@ -33,7 +33,12 @@ import sphinx_rtd_theme
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
-    'sphinx.ext.viewcode',
+    'sphinx.ext.graphviz',
+    'sphinx.ext.todo',
+    'sphinx.ext.imgmath',
+    'sphinx.ext.ifconfig',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.autosummary',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -176,7 +181,7 @@ html_static_path = ['_static']
 #html_split_index = False
 
 # If true, links to the reST sources are added to the pages.
-#html_show_sourcelink = True
+html_show_sourcelink = False
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 #html_show_sphinx = True

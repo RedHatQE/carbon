@@ -32,4 +32,4 @@ clean-pyc:
 	find . -name '*~' -exec rm -f {} +
 
 docs:
-	$(MAKE) -C docs html
+	python setup.py build_sphinx
