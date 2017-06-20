@@ -22,3 +22,6 @@ provision:
     bkr_whiteboard: Testing machine provisioning from Carbon
     bkr_distro: RHEL-7.3
     bkr_tag: ["RTT_ACCEPTED"]
+    # timeout for the beaker job, default if not set is 8hrs = 28800
+    # can only set values between 1hr(3600) and 48hrs(172800)
+    bkr_timeout: 172800

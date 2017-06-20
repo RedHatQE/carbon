@@ -52,12 +52,14 @@ class BeakerProvider(CarbonProvider):
         'tag',
         'priority',
         'kdump',
-        'ndump'
+        'ndump',
+        'timeout'
     )
 
     _output_parameters = (
         'name',
-        'ip_address'
+        'ip_address',
+        'job_id'
     )
 
     _mandatory_creds_parameters = ()
@@ -89,6 +91,17 @@ class BeakerProvider(CarbonProvider):
             return False
 
         return True
+
+    def validate_timeout(self, value):
+        if value:
+            self.logger.info("Validating env vars: {0}".format(value))
+            if isinstance(value, int) and value >= 3600 and value <= 172800:
+                return True
+            else:
+                self.logger.warn("Beaker timeout must be between 3600(1hr) and 172800(48hrs)")
+                return False
+        else:
+            return True
 
     @classmethod
     def validate_arch(cls, value):

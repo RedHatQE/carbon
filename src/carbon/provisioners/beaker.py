@@ -26,6 +26,9 @@
 """
 import os
 import uuid
+import time
+
+from xml.dom.minidom import parseString
 
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
@@ -90,7 +93,6 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
 
     _assets = ["keytab"]
     _bkr_xml = "bkrjob.xml"
-    _job_id = None
 
     _bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
@@ -236,6 +238,7 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
                  tasks=[dict(action=dict(module='copy', args=cp_args))])
         )
 
+        self.results_analyzer(results['status'])
         if results['status'] != 0:
             raise BeakerProvisionerException("Error when copying bkr xml to container")
 
@@ -250,7 +253,7 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         self.results_analyzer(results['status'])
 
         if results['status'] != 0:
-            raise BeakerProvisionerException("Authentication was not successful")
+            raise BeakerProvisionerException("Error submitting Beaker job")
         else:
             if len(results["callback"].contacted) == 1:
                 parsed_results = results["callback"].contacted[0]["results"]
@@ -259,8 +262,9 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
 
             output = parsed_results["stdout"]
             if output.find("Submitted:") != "-1":
-                self._job_id = output[output.find("[") + 2:output.find("]") - 1]
-                self.logger.info("just submitted: {}".format(self._job_id))
+                # set the result as ascii instead of unicode
+                self.host.bkr_job_id = output[output.find("[") + 2:output.find("]") - 1].encode('ascii', 'ignore')
+                self.logger.info("just submitted: {}".format(self.host.bkr_job_id))
             else:
                 raise BeakerProvisionerException("Unexpected Error submitting job")
 
@@ -269,7 +273,57 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         successful or not, do we let user set a timeout, if timeout is reached, cancel the job,
         or always wait indefinitely for the machine to come up.
         """
-        pass
+        # default max wait time of 8 hrs
+        wait = getattr(self.host, 'bkr_timeout', None)
+        if wait is None:
+            wait = 28800
+
+        # check Beaker status every 60 seconds
+        total_attempts = wait / 60
+
+        attempt = 0
+        while wait > 0:
+            attempt += 1
+            self.logger.info("Waiting for machine to be ready, attempt {0} of"
+                             " {1}".format(attempt, total_attempts))
+
+            _cmd = "bkr job-results {0}".format(self.host.bkr_job_id)
+
+            results = self.run_module(
+                dict(name='bkr job status', hosts=self.name, gather_facts='no',
+                     tasks=[dict(action=dict(module='shell', args=_cmd))])
+            )
+
+            self.results_analyzer(results['status'])
+
+            if results['status'] != 0:
+                raise BeakerProvisionerException("Unable to check status of the beaker job")
+            else:
+                if len(results["callback"].contacted) == 1:
+                    parsed_results = results["callback"].contacted[0]["results"]
+                else:
+                    raise BeakerProvisionerException("Unexpected Error submitting job")
+
+                bkr_xml_output = parsed_results["stdout"]
+                bkr_job_status_dict = self.get_job_status(bkr_xml_output)
+                self.logger.debug("Beaker job status: {}".format(bkr_job_status_dict))
+                status = self.analyze_results(bkr_job_status_dict)
+
+                if status == "wait":
+                    wait -= 60
+                    time.sleep(60)
+                    continue
+                elif status == "success":
+                    self.logger.info("Machine is successfully provisioned from Beaker")
+                    return
+                elif status == "fail":
+                    raise BeakerProvisionerException("Machine provision failed: {}".format(self.host.bkr_job_id))
+                else:
+                    raise BeakerProvisionerException("Unknown status from Beaker job")
+        # timeout reached for Beaker job
+        self.logger.error("Timeout reached waiting for Beaker job to complete.")
+        self.cancel_job()
+        raise BeakerProvisionerException("Timeout reached for Beaker job")
 
     def get_bkr_logs(self):
         """ Retrieve the logs for the Beaker provisioning
@@ -309,13 +363,115 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         except DockerControllerException as ex:
             raise BeakerProvisionerException(ex)
 
+    def cancel_job(self):
+        """Cancel a Beaker job """
+        self.logger.info('Tearing down machines from %s', self.__class__)
+        _cmd = "bkr job-cancel {0}".format(self.host.bkr_job_id)
+
+        results = self.run_module(
+            dict(name='bkr job cancel', hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args=_cmd))])
+        )
+
+        self.results_analyzer(results['status'])
+
+        if results['status'] != 0:
+            raise BeakerProvisionerException("Error cancelling Beaker job")
+        else:
+            if len(results["callback"].contacted) == 1:
+                parsed_results = results["callback"].contacted[0]["results"]
+            else:
+                raise BeakerProvisionerException("Unexpected Error submitting job")
+
+            output = parsed_results["stdout"]
+            if "Cancelled" in output:
+                self.logger.info("Successfully cancelled: {}".format(self.host.bkr_job_id))
+            else:
+                raise BeakerProvisionerException("Unexpected Error cancelling job")
+
     def delete(self):
         """ Return the bkr machine back to the pool"""
         self.logger.info('Tearing down machines from %s', self.__class__)
+
+        # Authenticate to beaker
+        self.authenticate()
+
+        # cancel the job
+        self.cancel_job()
+
         try:
             # Stop/remove container
             self.stop_container(self.name)
             self.remove_container(self.name)
         except DockerControllerException as ex:
             raise BeakerProvisionerException(ex)
-        raise NotImplementedError
+
+    def get_job_status(self, xmldata):
+        """
+        Used to parse the Beaker results xml
+
+        :param xmldata: xmldata of a beaker job status
+        :return: dictionary of job and install task statuses
+        :raises BeakerProvisionerException: if results cannot be analyzed successfully
+        """
+
+        mydict = {}
+        try:
+            dom = parseString(xmldata)
+        except Exception as e:
+            raise BeakerProvisionerException("Error Issue reading xml data {}".format(e))
+
+        # check job status
+        joblist = dom.getElementsByTagName('job')
+        # verify it is a length of 1 else exception
+        if len(joblist) != 1:
+            raise BeakerProvisionerException("Unable to parse job results from "
+                                             "{}".format(self.host.bkr_job_id))
+        mydict["job_result"] = joblist[0].getAttribute("result")
+        mydict["job_status"] = joblist[0].getAttribute("status")
+
+        tasklist = dom.getElementsByTagName('task')
+        for task in tasklist:
+            cname = task.getAttribute('name')
+#             id = task.getAttribute('id')
+
+            if cname == '/distribution/install':
+                mydict["install_result"] = task.getAttribute('result')
+                mydict["install_status"] = task.getAttribute('status')
+
+        if "install_status" in mydict and mydict["install_status"]:
+            return mydict
+        else:
+            raise BeakerProvisionerException("Couldn't find install task status")
+
+    def analyze_results(self, resultsdict):
+        """
+        return success, fail, or warn based on the job and install task statuses
+
+        :param resultsdict: dictionary of job and install task statuses
+        :return: action str [wait, success, or fail]
+        :raises BeakerProvisionerException: if results cannot be analyzed successfully
+        """
+        # when is the job complete
+        if resultsdict["job_result"].strip().lower() == "new" and \
+           resultsdict["job_status"].strip().lower() in ["new", "waiting", "queued", "scheduled"]:
+            return "wait"
+        elif resultsdict["install_result"].strip().lower() == "new" and \
+                resultsdict["install_status"].strip().lower() in ["new", "waiting", "queued", "scheduled", "running"]:
+            return "wait"
+        elif resultsdict["job_result"].strip().lower() == "pass" and \
+            resultsdict["job_status"].strip().lower() == "running" and \
+            resultsdict["install_result"].strip().lower() == "pass" and \
+                resultsdict["install_status"].strip().lower() == "completed":
+            return "success"
+        elif resultsdict["job_result"].strip().lower() == "new" and \
+            resultsdict["job_status"].strip().lower() == "running" and \
+            resultsdict["install_result"].strip().lower() == "new" and \
+                resultsdict["install_status"].strip().lower() == "completed":
+            return "success"
+        elif resultsdict["job_result"].strip().lower() == "warn":
+            return "fail"
+        elif resultsdict["job_result"].strip().lower() == "fail":
+            return "fail"
+        else:
+            raise BeakerProvisionerException("Unexpected Job status {}".format(resultsdict))
