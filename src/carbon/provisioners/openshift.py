@@ -46,8 +46,7 @@ class OpenshiftProvisionerException(CarbonProvisionerException):
         super(OpenshiftProvisionerException, self).__init__(message)
 
 
-class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
-                           DockerController):
+class OpenshiftProvisioner(CarbonProvisioner):
     """The main class for carbon openshift provisioner.
 
     This provisioner will interact with an openshift server using the
@@ -125,12 +124,15 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         self._app_name = ""
         self._env_opts = ""
 
-        # Set ansible inventory file
-        self.ansible_inventory = get_ansible_inventory_script('docker')
+        # Create controller objects
+        self._docker = DockerController(cname=self.host.oc_name)
+        self._ansible = AnsibleController(
+            inventory=get_ansible_inventory_script(self.docker.name.lower())
+        )
 
         # Run container
         try:
-            self.run_container(self.host.oc_name, self._oc_image, entrypoint='bash')
+            self.docker.run_container(self._oc_image, entrypoint='bash')
         except DockerControllerException as ex:
             self.logger.warn(ex)
 
@@ -146,6 +148,36 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         :param value: The name for the provisioner.
         """
         raise AttributeError('You cannot set name for the provisioner.')
+
+    @property
+    def docker(self):
+        """Return the docker object."""
+        return self._docker
+
+    @docker.setter
+    def docker(self, value):
+        """Raises an exception when trying to instantiate docker controller
+        after provisioner class has been instantiated.
+
+        :param value: The name for docker container.
+        """
+        raise ValueError('You cannot create a docker controller object after '
+                         'provisioner class has been instantiated.')
+
+    @property
+    def ansible(self):
+        """Return the ansible object."""
+        return self._ansible
+
+    @ansible.setter
+    def ansible(self, value):
+        """Raises an exception when trying to instantiate the ansible
+        controller after provisioner class has been instantiated.
+        """
+        raise ValueError(
+            'You cannot create a ansible controller object after provisioner '
+            'class has been instantiated.'
+        )
 
     @property
     def labels(self):
@@ -191,23 +223,23 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             self.logger.error('Authentication type not found. Supported types:'
                               ' <token|username/password>.')
             # Stop/remove container
-            self.stop_container(self.host.oc_name)
-            self.remove_container(self.host.oc_name)
+            self.docker.stop_container()
+            self.docker.remove_container()
             raise OpenshiftProvisionerException(
                 'Authentication type not found. Supported types:'
                 ' <token|username/password>.')
 
-        results = self.run_module(
+        results = self.ansible.run_module(
             dict(name='oc authenticate', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
         if results['status'] != 0:
             try:
                 # Stop/remove container
-                self.stop_container(self.host.oc_name)
-                self.remove_container(self.host.oc_name)
+                self.docker.stop_container()
+                self.docker.remove_container()
             except DockerControllerException as ex:
                 raise OpenshiftProvisionerException(ex.message)
             finally:
@@ -222,17 +254,17 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         """
         _cmd = "oc project {0}".format(
             self.host.provider.credentials['project'])
-        results = self.run_module(
+        results = self.ansible.run_module(
             dict(name='oc project', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
         try:
             if results['status'] != 0:
                 # Stop/remove container
-                self.stop_container(self.host.oc_name)
-                self.remove_container(self.host.oc_name)
+                self.docker.stop_container()
+                self.docker.remove_container()
                 raise OpenshiftProvisionerException('Failed to select project')
         except DockerControllerException as ex:
             raise OpenshiftProvisionerException(ex)
@@ -296,8 +328,8 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 getattr(self, 'app_by_%s' % newapp)()
             finally:
                 # Stop/remove container
-                self.stop_container(self.host.oc_name)
-                self.remove_container(self.host.oc_name)
+                self.docker.stop_container()
+                self.docker.remove_container()
         except DockerControllerException as ex:
             raise OpenshiftProvisionerException('Docker error. - %s' % ex.message)
 
@@ -323,17 +355,17 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         _cmd = 'oc delete all -l app\={appname}'. \
             format(appname=str(self.host.oc_name).replace("_", "-"))
 
-        results = self.run_module(
+        results = self.ansible.run_module(
             dict(name='oc delete all', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
 
         try:
             # Stop/remove container
-            self.stop_container(self.host.oc_name)
-            self.remove_container(self.host.oc_name)
+            self.docker.stop_container()
+            self.docker.remove_container()
 
             if results['status'] != 0:
                 raise OpenshiftProvisionerException(
@@ -411,7 +443,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
 
             cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
 
-            results = self.run_module(
+            results = self.ansible.run_module(
                 dict(name='copy file', hosts=self.host.oc_name, gather_facts='no',
                      tasks=[dict(action=dict(module='copy', args=cp_args))])
             )
@@ -451,12 +483,12 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                    appname=str(self.host.oc_name).replace("_", "-"))
 
         self.logger.debug(_cmd)
-        results = self.run_module(
+        results = self.ansible.run_module(
             dict(name='oc new-app {}'.format(oc_type), hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
         if results['status'] != 0:
             raise OpenshiftProvisionerException('Error creating app. %s' % results)
 
@@ -502,11 +534,11 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 format(appname=str(self.host.oc_name).replace("_", "-"))
 
 #             self.logger.debug(_cmd)
-            results = self.run_module(
+            results = self.ansible.run_module(
                 dict(name='oc get builds {}', hosts=self.host.oc_name, gather_facts='no',
                      tasks=[dict(action=dict(module='shell', args=_cmd))])
             )
-            self.results_analyzer(results['status'])
+            self.ansible.results_analyzer(results['status'])
             if len(results["callback"].contacted) == 1:
                 parsed_results = results["callback"].contacted[0]["results"]
             else:
@@ -551,7 +583,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
                 format(appname=str(self.host.oc_name).replace("_", "-"))
 
 #             self.logger.debug(_cmd)
-            results = self.run_module(
+            results = self.ansible.run_module(
                 dict(name='oc get pods', hosts=self.host.oc_name, gather_facts='no',
                      tasks=[dict(action=dict(module='shell', args=_cmd))])
             )
@@ -615,7 +647,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             format(appname=str(self.host.oc_name).replace("_", "-"))
 
 #             self.logger.debug(_cmd)
-        results = self.run_module(
+        results = self.ansible.run_module(
             dict(name='oc get svc -l', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
@@ -634,11 +666,11 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         if app_name:
             _cmd = 'oc expose svc {0}'.format(self._app_name)
 
-            results = self.run_module(
+            results = self.ansible.run_module(
                 dict(name='oc expose svc', hosts=self.host.oc_name, gather_facts='no',
                      tasks=[dict(action=dict(module='shell', args=_cmd))])
             )
-            self.results_analyzer(results['status'])
+            self.ansible.results_analyzer(results['status'])
 
     def show_results(self):
         """return the data from the creation of pods (App name & routes if exist)
@@ -654,7 +686,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
         _cmd = 'oc get route -l app\={appname} -o yaml'.\
             format(appname=str(self.host.oc_name).replace("_", "-"))
 
-        results = self.run_module(
+        results = self.ansible.run_module(
             dict(name='oc get route', hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
@@ -663,7 +695,7 @@ class OpenshiftProvisioner(CarbonProvisioner, AnsibleController,
             parsed_results = results["callback"].contacted[0]["results"]
         else:
             raise OpenshiftProvisionerException("Unexpected Error")
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
         mydict = yaml.load(parsed_results["stdout"])
 
         if mydict["items"]:

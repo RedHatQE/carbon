@@ -85,6 +85,7 @@ class AnsibleController(CarbonController):
     This is carbons Ansible controller class to drive remote machine
     configuration and management.
     """
+    __controller_name__ = 'Ansible'
 
     def __init__(self, inventory=None):
         """Constructor.
@@ -308,20 +309,41 @@ class DockerController(CarbonController):
     The docker controller interfaces with the docker service. It handles
     actions with containers.
     """
+    __controller_name__ = 'Docker'
 
-    def __init__(self):
+    def __init__(self, cname=None):
         """Constructor.
 
         Instantiates docker client class.
+
+        :param cname: Name of the container.
         """
         super(DockerController, self).__init__()
+        self._cname = cname
+
         self.client = DockerClient()
 
-    def run_container(self, name, image, command=None, entrypoint=None,
+    @property
+    def cname(self):
+        """Return the name of the container."""
+        return self._cname
+
+    @cname.setter
+    def cname(self, value):
+        """Raises an exception when trying to set name of container after the
+        controller class has been instantiated.
+
+        :param value: The name for the docker container.
+        """
+        raise ValueError(
+            'You cannot set the container name after class has been '
+            'instantiated.'
+        )
+
+    def run_container(self, image, command=None, entrypoint=None,
                       volumes=None):
         """Run a command in new container.
 
-        :param name: Name for the container.
         :param image: Image to create container.
         :param command: Command to run inside the container.
         :param entrypoint: Override the default entrypoint.
@@ -330,19 +352,19 @@ class DockerController(CarbonController):
             {'/home/user': {'bind': '/tmp', 'mode': 'rw'}, ..}
         :return: A dict of the return code and ansible callback object.
         """
-        status = self.get_container_status(name)
+        status = self.get_container_status()
         if status == 'running':
             raise DockerControllerException(
-                'Container %s is %s! Re-use container.' % (name, status))
+                'Container %s is %s! Re-use container.' % (self.cname, status))
         elif status == 'exited':
             self.logger.warn('Container %s is %s! Remove container before '
-                             'starting a new one.', name, status)
-            self.remove_container(name)
+                             'starting a new one.', self.cname, status)
+            self.remove_container()
 
         try:
             self.client.containers.run(
                 image,
-                name=name,
+                name=self.cname,
                 detach=True,
                 tty=True,
                 entrypoint=entrypoint,
@@ -351,58 +373,51 @@ class DockerController(CarbonController):
             )
         except (APIError, ContainerError, ImageNotFound) as ex:
             raise DockerControllerException(ex)
-        self.logger.info('Successfully started container: %s', name)
+        self.logger.info('Successfully started container: %s', self.cname)
 
-    def remove_container(self, name):
-        """Remove a container.
-
-        :param name: Name for the container.
-        """
-        container = self.get_container(name)
+    def remove_container(self):
+        """Remove a container."""
+        container = self.get_container()
 
         try:
             container.remove()
         except APIError as ex:
             raise DockerControllerException(ex)
-        self.logger.info('Container %s successfully removed.', name)
+        self.logger.info('Container %s successfully removed.', self.cname)
 
-    def start_container(self, name):
-        """Start a stopped container.
-
-        :param name: Name of the container.
-        """
-        status = self.get_container_status(name)
+    def start_container(self):
+        """Start a stopped container."""
+        status = self.get_container_status()
         if status != 'exited':
-            self.logger.warn('Container %s is not stopped (status=%s).', name,
-                             status)
+            self.logger.warn(
+                'Container %s is not stopped (status=%s).', self.cname, status
+            )
             return
 
-        container = self.get_container(name)
+        container = self.get_container()
 
         try:
             container.start()
         except APIError as ex:
             raise DockerControllerException(ex)
-        self.logger.info('Container %s successfully started.', name)
+        self.logger.info('Container %s successfully started.', self.cname)
 
-    def stop_container(self, name):
-        """Stop a running container.
-
-        :param name: Name for the container.
-        """
-        status = self.get_container_status(name)
+    def stop_container(self):
+        """Stop a running container."""
+        status = self.get_container_status()
         if status != 'running':
-            self.logger.warn('Container %s is not running (status=%s).', name,
-                             status)
+            self.logger.warn(
+                'Container %s is not running (status=%s).', self.cname, status
+            )
             return
 
-        container = self.get_container(name)
+        container = self.get_container()
 
         try:
             container.stop()
         except APIError as ex:
             raise DockerControllerException(ex)
-        self.logger.info('Container: %s successfully stopped.', name)
+        self.logger.info('Container: %s successfully stopped.', self.cname)
 
     def pull_image(self, name, tag='latest'):
         """Pull an image from a registry.
@@ -430,29 +445,29 @@ class DockerController(CarbonController):
             raise DockerControllerException(ex)
         self.logger.info('Successfully removed image %s.', _image)
 
-    def get_container_status(self, name):
-        """Get the status for the name of the container given.
+    def get_container_status(self):
+        """Get the container status.
 
-        :param name: Name of the container.
         :return: Status of the container.
         """
         try:
-            container = self.client.containers.get(name)
+            container = self.client.containers.get(self.cname)
             status = str(container.status)
         except (APIError, NotFound):
             status = None
         return status
 
-    def get_container(self, name):
-        """Check to see if the container name given is already running.
+    def get_container(self):
+        """Check to see if the container is already running.
 
-        :param name: Name of the container.
         :return: A boolean, true = alive, false = not alive.
         """
         try:
-            container = self.client.containers.get(name)
+            container = self.client.containers.get(self.cname)
         except (APIError, NotFound):
-            raise DockerControllerException('Container %s not found.' % name)
+            raise DockerControllerException(
+                'Container %s not found.' % self.cname
+            )
         return container
 
     def get_image(self, name):

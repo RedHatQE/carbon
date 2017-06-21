@@ -49,8 +49,7 @@ class BeakerProvisionerException(CarbonProvisionerException):
         super(BeakerProvisionerException, self).__init__(message)
 
 
-class BeakerProvisioner(CarbonProvisioner, AnsibleController,
-                        DockerController):
+class BeakerProvisioner(CarbonProvisioner):
     """The main class for carbon Beaker provisioner.
 
     This provisioner will interact with the Beaker server using the
@@ -103,38 +102,69 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         super(BeakerProvisioner, self).__init__()
         self.host = host
 
-        # Set name for container
-        self._name = self.host.bkr_name + '_' + str(uuid.uuid4())[:4]
-
         # Set Data Folder
         self._data_folder = host.data_folder()
 
         # Set beaker xml class
         self.bxml = BeakerXML()
 
-        # Set ansible inventory file
-        self.ansible_inventory = get_ansible_inventory_script('docker')
+        # Create controller objects
+        self._docker = DockerController(
+            cname=self.host.bkr_name + '_' + str(uuid.uuid4())[:4]
+        )
+        self._ansible = AnsibleController(
+            inventory=get_ansible_inventory_script(self.docker.name.lower())
+        )
 
         # Run container
         try:
-            self.run_container(self.name, self._bkr_image, entrypoint='bash')
+            self.docker.run_container(self._bkr_image, entrypoint='bash')
         except DockerControllerException as ex:
             self.logger.warn(ex)
             raise BeakerProvisionerException("Issue bringing up the container")
 
     @property
     def name(self):
-        """Return the name for the container."""
-        return self._name
+        """Return the name for the provisioner."""
+        return self.__provisioner_name__
 
     @name.setter
     def name(self, value):
-        """Raises an exception when trying to set the name for the container
-        after the class has been instanciated.
-        :param value: The name for container.
         """
-        raise AttributeError('You cannot set name for container after the '
-                             'class is instanciated.')
+        Returns the name of the provisioner
+        :param value: The name for the provisioner.
+        """
+        raise AttributeError('You cannot set name for the provisioner.')
+
+    @property
+    def docker(self):
+        """Return the docker object."""
+        return self._docker
+
+    @docker.setter
+    def docker(self, value):
+        """Raises an exception when trying to instantiate docker controller
+        after provisioner class has been instantiated.
+
+        :param value: The name for docker container.
+        """
+        raise ValueError('You cannot create a docker controller object after '
+                         'provisioner class has been instantiated.')
+
+    @property
+    def ansible(self):
+        """Return the ansible object."""
+        return self._ansible
+
+    @ansible.setter
+    def ansible(self, value):
+        """Raises an exception when trying to instantiate the ansible
+        controller after provisioner class has been instantiated.
+        """
+        raise ValueError(
+            'You cannot create a ansible controller object after provisioner '
+            'class has been instantiated.'
+        )
 
     def authenticate(self):
         """Authenticate to Beaker server, support
@@ -173,8 +203,8 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
 
             cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
 
-            results = self.run_module(
-                dict(name='copy file', hosts=self.name, gather_facts='no',
+            results = self.ansible.run_module(
+                dict(name='copy file', hosts=self.docker.cname, gather_facts='no',
                      tasks=[dict(action=dict(module='copy', args=cp_args))])
             )
 
@@ -206,20 +236,20 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         # verify that the authentication worked
         _cmd = "bkr whoami"
 
-        results = self.run_module(
-            dict(name='bkr authenticate', hosts=self.name, gather_facts='no',
+        results = self.ansible.run_module(
+            dict(name='bkr authenticate', hosts=self.docker.cname, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
         if results['status'] != 0:
             raise BeakerProvisionerException("Authentication was not successful")
 
     def lineinfile_call(self, summary, replace_line, lineinfilecmd):
         self.logger.debug(lineinfilecmd)
 
-        results = self.run_module(
-            dict(name=summary, hosts=self.name, gather_facts='no',
+        results = self.ansible.run_module(
+            dict(name=summary, hosts=self.docker.cname, gather_facts='no',
                  tasks=[dict(action=dict(module='lineinfile', args=lineinfilecmd))])
         )
 
@@ -256,13 +286,13 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         _cmd = self.bxml.cmd.replace('=', "\=")
 
         # Run command on container
-        results = self.run_module(
-            dict(name='bkr workflow-simple', hosts=self.name, gather_facts='no',
+        results = self.ansible.run_module(
+            dict(name='bkr workflow-simple', hosts=self.docker.cname, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
         # Process results and get xml from stdout
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
 
         if results['status'] != 0:
             raise BeakerProvisionerException("Issue generating Beaker XML")
@@ -291,24 +321,24 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
 
         cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
 
-        results = self.run_module(
-            dict(name='copy file', hosts=self.name, gather_facts='no',
+        results = self.ansible.run_module(
+            dict(name='copy file', hosts=self.docker.cname, gather_facts='no',
                  tasks=[dict(action=dict(module='copy', args=cp_args))])
         )
 
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
         if results['status'] != 0:
             raise BeakerProvisionerException("Error when copying bkr xml to container")
 
         bkr_xml_path = os.path.join(dest_full_path_file, self._bkr_xml)
         _cmd = "bkr job-submit --xml {0}".format(bkr_xml_path)
 
-        results = self.run_module(
-            dict(name='bkr job submit', hosts=self.name, gather_facts='no',
+        results = self.ansible.run_module(
+            dict(name='bkr job submit', hosts=self.docker.cname, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
 
         if results['status'] != 0:
             raise BeakerProvisionerException("Error submitting Beaker job")
@@ -347,12 +377,12 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
 
             _cmd = "bkr job-results {0}".format(self.host.bkr_job_id)
 
-            results = self.run_module(
-                dict(name='bkr job status', hosts=self.name, gather_facts='no',
+            results = self.ansible.run_module(
+                dict(name='bkr job status', hosts=self.docker.cname, gather_facts='no',
                      tasks=[dict(action=dict(module='shell', args=_cmd))])
             )
 
-            self.results_analyzer(results['status'])
+            self.ansible.results_analyzer(results['status'])
 
             if results['status'] != 0:
                 raise BeakerProvisionerException("Unable to check status of the beaker job")
@@ -409,8 +439,8 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
 
         try:
             # Stop/remove container
-            self.stop_container(self.name)
-            self.remove_container(self.name)
+            self.docker.stop_container()
+            self.docker.remove_container()
         except DockerControllerException as ex:
             raise BeakerProvisionerException(ex)
 
@@ -419,12 +449,12 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         self.logger.info('Tearing down machines from %s', self.__class__)
         _cmd = "bkr job-cancel {0}".format(self.host.bkr_job_id)
 
-        results = self.run_module(
-            dict(name='bkr job cancel', hosts=self.name, gather_facts='no',
+        results = self.ansible.run_module(
+            dict(name='bkr job cancel', hosts=self.docker.cname, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
-        self.results_analyzer(results['status'])
+        self.ansible.results_analyzer(results['status'])
 
         if results['status'] != 0:
             raise BeakerProvisionerException("Error cancelling Beaker job")
@@ -452,8 +482,8 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
 
         try:
             # Stop/remove container
-            self.stop_container(self.name)
-            self.remove_container(self.name)
+            self.docker.stop_container()
+            self.docker.remove_container()
         except DockerControllerException as ex:
             raise BeakerProvisionerException(ex)
 

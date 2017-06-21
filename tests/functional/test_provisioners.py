@@ -96,8 +96,8 @@ class TestOpenshiftProvisioner(TestCase):
         """Create a openshift provisioner object."""
         obj = OpenshiftProvisioner(self.host)
         assert_is_instance(obj, OpenshiftProvisioner)
-        obj.stop_container(obj.host.oc_name)
-        obj.remove_container(obj.host.oc_name)
+        obj.docker.stop_container()
+        obj.docker.remove_container()
 
     def test_set_label(self):
         """Test setting the label for the application after the openshift
@@ -107,8 +107,8 @@ class TestOpenshiftProvisioner(TestCase):
         try:
             obj.labels = 'label1'
         except AttributeError:
-            obj.stop_container(obj.host.oc_name)
-            obj.remove_container(obj.host.oc_name)
+            obj.docker.stop_container()
+            obj.docker.remove_container()
             assert True
 
     def test_setup_labels(self):
@@ -117,8 +117,8 @@ class TestOpenshiftProvisioner(TestCase):
         """
         obj = OpenshiftProvisioner(self.host)
         obj.setup_labels()
-        obj.stop_container(obj.host.oc_name)
-        obj.remove_container(obj.host.oc_name)
+        obj.docker.stop_container()
+        obj.docker.remove_container()
         assert_is_instance(obj.labels, list)
 
     @nottest
@@ -131,8 +131,8 @@ class TestOpenshiftProvisioner(TestCase):
 
         obj = OpenshiftProvisioner(self.host)
         obj.authenticate()
-        obj.stop_container(obj.host.oc_name)
-        obj.remove_container(obj.host.oc_name)
+        obj.docker.stop_container()
+        obj.docker.remove_container()
 
     @nottest
     @raises(OpenshiftProvisionerException)

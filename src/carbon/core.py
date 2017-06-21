@@ -635,4 +635,22 @@ class CarbonController(LoggerMixin):
     Every controller will need to inherit the carbon controller. Controllers
     handle actions between carbon and its resources aka hosts.
     """
-    pass
+
+    __controller_name__ = None
+
+    def __init__(self):
+        """Constructor."""
+        pass
+
+    @property
+    def name(self):
+        """Return the name of the controller."""
+        return self.__controller_name__
+
+    @name.setter
+    def name(self, value):
+        """Raises an exception when trying to set controller name property.
+
+        :param value: Name of controller to set.
+        """
+        raise ValueError('You cannot set the controller name property.')

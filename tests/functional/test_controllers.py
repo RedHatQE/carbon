@@ -55,17 +55,17 @@ class TestDockerController(TestCase):
     @raises(DockerControllerException)
     def test_get_container():
         """Test method to get container object."""
-        _name = 'kingbob'
-        obj = DockerController()
+        obj = DockerController(cname='kingbob')
 
         # Container present
-        obj.run_container(_name, 'fedora', command='bash')
-        obj.get_container(_name)
-        obj.stop_container(_name)
-        obj.remove_container(_name)
+        obj.run_container('fedora', command='bash')
+        obj.get_container()
+        obj.stop_container()
+        obj.remove_container()
 
         # Container absent
-        obj.get_container('kevin')
+        obj = DockerController(cname='kevin')
+        obj.get_container()
 
     @staticmethod
     def test_get_image():
@@ -81,19 +81,18 @@ class TestDockerController(TestCase):
     @staticmethod
     def test_get_container_status():
         """Test method to get container status."""
-        _name = 'stuart'
         _image = 'fedora'
-        obj = DockerController()
+        obj = DockerController(cname='stuart')
 
         # Container present
         obj.pull_image(_image)
-        obj.run_container(_name, _image, command='bash')
-        assert_is_instance(obj.get_container_status(_name), string_types)
-        obj.stop_container(_name)
-        obj.remove_container(_name)
+        obj.run_container(_image, command='bash')
+        assert_is_instance(obj.get_container_status(), string_types)
+        obj.stop_container()
+        obj.remove_container()
 
         # Container absent
-        assert_is_none(obj.get_container_status(_name))
+        assert_is_none(obj.get_container_status())
 
     @staticmethod
     @raises(DockerControllerException)
@@ -124,56 +123,53 @@ class TestDockerController(TestCase):
     @staticmethod
     def test_stop_container():
         """Test method to stop a container."""
-        _name = 'bob'
         _image = 'fedora'
-        obj = DockerController()
+        obj = DockerController(cname='bob')
 
         # Container present
         obj.pull_image(_image)
-        obj.run_container(_name, _image, command='bash')
-        obj.stop_container(_name)
-        obj.remove_container(_name)
+        obj.run_container(_image, command='bash')
+        obj.stop_container()
+        obj.remove_container()
 
         # Container absent
-        obj.stop_container(_name)
+        obj.stop_container()
 
     @staticmethod
     def test_start_container():
         """Test method to start a container."""
-        _name = 'stewie'
         _image = 'fedora'
-        obj = DockerController()
+        obj = DockerController(cname='stewie')
 
         # Container present
         obj.pull_image(_image)
-        obj.run_container(_name, _image, command='bash')
-        obj.start_container(_name)
-        obj.stop_container(_name)
-        obj.start_container(_name)
-        obj.stop_container(_name)
-        obj.remove_container(_name)
+        obj.run_container(_image, command='bash')
+        obj.start_container()
+        obj.stop_container()
+        obj.start_container()
+        obj.stop_container()
+        obj.remove_container()
 
     @staticmethod
     def test_run_container():
         """Test method to run a command in a new container."""
-        _name = 'peter'
         _image = 'fedora'
-        obj = DockerController()
+        obj = DockerController(cname='peter')
 
         obj.pull_image(_image)
 
         # Container present and running
         try:
-            obj.run_container(_name, _image, command='bash')
-            obj.run_container(_name, _image, command='bash')
+            obj.run_container(_image, command='bash')
+            obj.run_container(_image, command='bash')
         except DockerControllerException:
             pass
 
         # Container present and exited
-        obj.stop_container(_name)
-        obj.run_container(_name, _image, command='bash')
-        obj.stop_container(_name)
-        obj.remove_container(_name)
+        obj.stop_container()
+        obj.run_container(_image, command='bash')
+        obj.stop_container()
+        obj.remove_container()
 
 
 class TestAnsibleController(TestCase):
