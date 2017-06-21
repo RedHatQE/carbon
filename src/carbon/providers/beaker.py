@@ -53,6 +53,8 @@ class BeakerProvider(CarbonProvider):
         'priority',
         'kdump',
         'ndump',
+        'jobgroup',
+        'key_values',
         'timeout'
     )
 
@@ -200,5 +202,19 @@ class BeakerProvider(CarbonProvider):
     def validate_whiteboard(cls, value):
         if value:
             return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_jobgroup(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_key_values(cls, value):
+        if value:
+            return isinstance(value, list)
         else:
             return True

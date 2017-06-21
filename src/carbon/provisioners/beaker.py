@@ -25,10 +25,12 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
+import random
+import subprocess
 import uuid
 import time
 
-from xml.dom.minidom import parseString
+from xml.dom.minidom import parse, parseString
 
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
@@ -59,22 +61,24 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
     multiple requests with different authentication in the same namespace
     (with same config file). In order to handle this, we need to isolate
     each session with different namespaces. This will be handled by each
-    scenario will have its own dedicated container to perform all the requests
-    to the beaker server. This will isolate multiple scenarios runs on the
+    scenario, each resource will have its own dedicated container to perform the requests
+    to the beaker server. This will isolate multiple scenarios runs and resources on the
     same server.
 
     Please see the diagram below for an example:
 
     ------------      ------------
-    | Scenario | --> | Container |
-    ------------      ------------
-         |                  |     -------------------------------
-    ------------            | --> | $ bkr job-submit machine1.xml  |
-    | - machine1 |          |     -------------------------------
-    | - machine2 |          |
-    ------------            |     -------------------------------
-                            | --> | $ bkr job-submit machine2.xml  |
-                                  -------------------------------
+    | Scenario | --> | Resources  |
+    ------------     | - machine1 |
+                     | - machine2 |
+                      ------------
+                            |      -----------       --------------------------------
+                            | --> | Container | --> | $ bkr job-submit machine1.xml  |
+                            |      -----------       --------------------------------
+                            |
+                            |      -----------       --------------------------------
+                            | --> | Container | --> | $ bkr job-submit machine2.xml  |
+                                   -----------       --------------------------------
 
     This provisioner assumes that on the server, docker is installed and
     running.
@@ -99,10 +103,15 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
     def __init__(self, host):
         super(BeakerProvisioner, self).__init__()
         self.host = host
-        self._data_folder = host.data_folder()
 
         # Set name for container
         self._name = self.host.bkr_name + '_' + str(uuid.uuid4())[:4]
+
+        # Set Data Folder
+        self._data_folder = host.data_folder()
+
+        # Set beaker xml class
+        self.bxml = BeakerXML()
 
         # Set ansible inventory file
         self.ansible_inventory = get_ansible_inventory_script('docker')
@@ -219,9 +228,59 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
             raise BeakerProvisionerException("Error when {0}".format(summary))
 
     def gen_bkr_xml(self):
-        """ generate the Beaker xml from the host input
+        """ generate the Beaker xml file from the host input
         """
-        pass
+        self.logger.info("Generating bkr XML")
+
+        bkr_xml_file = os.path.join(self._data_folder,
+                                    self._bkr_xml)
+
+        host_desc = self.host.profile()
+
+        # Set attributes for Beaker
+        for key in host_desc:
+            if key is not 'bkr_name' and key.startswith('bkr_'):
+                xml_key = key.split("bkr_", 1)[1]
+                if host_desc[key]:
+                    try:
+                        setattr(self.bxml, xml_key, host_desc[key])
+                    except Exception as ex:
+                        raise BeakerProvisionerException(ex)
+
+        # Generate Beaker workflow-simple command
+        try:
+            self.bxml.generateBKRXML(bkr_xml_file, savefile=True)
+        except Exception as ex:
+            raise BeakerProvisionerException(ex)
+
+        # Format command for container
+        _cmd = self.bxml.cmd.replace('=', "\=")
+
+        # Run command on container
+        results = self.run_module(
+            dict(name='bkr workflow-simple', hosts=self.name, gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args=_cmd))])
+        )
+
+        # Process results and get xml from stdout
+        self.results_analyzer(results['status'])
+
+        if results['status'] != 0:
+            raise BeakerProvisionerException("Issue generating Beaker XML")
+
+        else:
+            if len(results["callback"].contacted) == 1:
+                parsed_results = results["callback"].contacted[0]["results"]
+            else:
+                raise BeakerProvisionerException("Unexpected Error creating XML")
+
+            output = parsed_results["stdout"]
+
+        # Generate Complete XML
+        try:
+            self.bxml.generateXMLDOM(bkr_xml_file, output, savefile=True)
+        except Exception as ex:
+            raise BeakerProvisionerException("Issue generating Beaker XML")
 
     def submit_bkr_xml(self):
         """ submit the beaker xml and retrieve Beaker JOBID
@@ -475,3 +534,856 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
             return "fail"
         else:
             raise BeakerProvisionerException("Unexpected Job status {}".format(resultsdict))
+
+
+class BeakerXML():
+    """ Class to generate Beaker XML file from input host yaml"""
+    _op_list = ['!=', '<=', '>=', '=', '<', '>']
+
+    def __init__(self):
+        """Intialization of BeakerXML"""
+        self._jobgroup = ""
+        self._key_values = ""
+        self._xmldom = ""
+        self._arch = ""
+        self._family = ""
+        self._random = True
+        self._component = ""
+        self._cmd = ""
+        self._runid = ""
+        self._osvariant = ""
+        self._product = ""
+        self._retention_tag = ""
+        self._whiteboard = ""
+        self._packages = "None"
+        self._tasks = "None"
+        self._method = "nfs"
+        self._reservetime = "86400"
+        self._reservetime_always = ""
+        self._host_requires_options = []
+        self._distro_requires_options = []
+        self._tasklist = []
+        self._paramlist = []
+        self._hrname = []
+        self._hrvalue = []
+        self._hrop = []
+        self._drname = []
+        self._drvalue = []
+        self._drop = []
+        self._repolist = []
+        self._tag = ""
+        self._priority = "Normal"  # Low, Medium, Normal, High, or Urgent
+        self._distro = ""
+        self._kernel_options = ""
+        self._kernel_options_post = ""
+        self._removetask = False
+        self._kdumpon = False
+        self._ndumpon = False
+        self._cclist = []
+        self._virtmachine = False
+        self._virtcapable = False
+
+    def generateBKRXML(self, x, savefile=False):
+
+        xmlfile = x
+
+        # How will we generate the XML dom
+        # Step 1: take all the values and pass it to bkr workflow simple to create a xml for us.
+        file = open(xmlfile, 'w+')
+        file.write("<?xml version='1.0' ?>\n")
+        file.close()
+
+        # Set virtual machine if configured
+        if(self.virtual_machine):
+            self.sethostrequires('hypervisor', '!=', "")
+
+        # Set virtual capable if configured
+        if(self.virt_capable):
+            self.sethostrequires('system_type', '=', "Machine")
+            self.setdistrorequires('distro_virt', '=', "")
+
+        # Set User supplied host requires
+        if (self.host_requires_options):
+            for hro in self.host_requires_options:
+                for hro_op in self._op_list:
+                    if hro_op in hro:
+                        hr_values = hro.split(hro_op)
+                        self.sethostrequires(hr_values[0], hro_op, hr_values[1])
+                        break
+
+        # Set User supplied host requires
+        if (self.distro_requires_options):
+            for dro in self.distro_requires_options:
+                for dro_op in self._op_list:
+                    if dro_op in dro:
+                        dr_values = dro.split(dro_op)
+                        self.setdistrorequires(dr_values[0], dro_op, dr_values[1])
+                        break
+
+        # Set arch
+        self.cmd += "bkr workflow-simple --arch " + self.arch
+
+        # Set random if hostname not configured
+        # if(self.bkr_random and not("hostname" in self.hrname)):
+        #     self.cmd += " --random"
+
+        # Generate Whiteboard Value if not specified
+        if (self.whiteboard == ""):
+            self.whiteboard = "Carbon:"
+            if self.runid != "":
+                self.whiteboard += " RunID:" + self.runid
+            if self.component != "":
+                self.whiteboard += " Component:" + self.component
+            if self.distro != "":
+                self.whiteboard += " " + self.distro
+            else:
+                self.whiteboard += " " + self.family + "," + self.tag
+            self.whiteboard += " " + self.arch
+
+        # Set family if configured and no distro specified
+        if self.family != "" and self.distro == "":
+            self.cmd += " --family " + self.family
+
+        # Set variant if configured
+        if self.variant != "":
+            self.cmd += " --variant " + self.variant
+
+        # Set retention tag
+        if self.retention_tag != "":
+            self.cmd += " --retention_tag " + self.retention_tag
+
+        # Set whiteboard and method
+        self.cmd += " --whiteboard '" + self.whiteboard + "'"
+        self.cmd += " --method " + self.method
+
+        # Set repos
+        for repo in self.repolist:
+            self.cmd += " --repo " + repo
+
+        # Set email recipients
+        for email in self.cclist:
+            self.cmd += " --cc " + email
+
+        # Set kernel options
+        if(self.kernel_options != ""):
+            self.cmd += " --kernel_options " + self.kernel_options
+
+        # Set post kernel options
+        if(self.kernel_post_options != ""):
+            self.cmd += " --kernel_options_post " + self.kernel_post_options
+
+        # Set product
+        if(self.product != ""):
+            self.cmd += " --product '" + self.product + "'"
+
+        # Set debug and dryrun
+        self.cmd += " --debug --dryrun"
+
+        # Removal of --prettyxml option because it creates too many line breaks.
+        # self.cmd += " --prettyxml"
+
+        # Set packages to install
+        if(self.packages != "None"):
+            packagelist = self.packages.split(",")
+            for package in packagelist:
+                self.cmd += " --install " + package
+
+        # Set tasks
+        if(self.tasks != "None"):
+            tasklist = self.tasks.split(",")
+            for task in tasklist:
+                self.cmd += " --task " + task
+        else:
+            # workaround for no tasks, add one task and delete it later
+            self.cmd += " --task " + "/distribution/reservesys"
+            self.removetask = True
+
+        # Set tag if distro empty else distro
+        if(self.distro == ""):
+            self.cmd += " --tag " + self.tag
+        else:
+            self.cmd += " --distro " + self.distro
+
+        # Set kdumo on
+        if(self.kdump):
+            self.cmd += " --kdump"
+
+        # Set ndump on
+        if(self.ndump):
+            self.cmd += " --ndump"
+
+        # Set job group
+        if(self.jobgroup != ""):
+            self.cmd += " --job-group " + self.jobgroup
+
+        # Set priority
+        self.cmd += " --priority " + self.priority
+
+        # Set a key value hostrequires field
+        for kv in self.key_values:
+            self.cmd += " --keyvalue '" + kv + "'"
+
+    def generateXMLDOM(self, x, xmldata, savefile=False):
+
+        xmlfile = x
+
+        file = open(xmlfile, 'w+')
+        for xmlline in xmldata:
+            file.write(xmlline)
+        file.close()
+
+        # parse the xml that was create and put it into a dom, so it can be modified
+        dom1 = parse(xmlfile)
+        # print dom1.toprettyxml()
+
+        # Done with the xmlfile so it can be deleted
+        if not savefile:
+            os.remove(xmlfile)
+
+        # If there were no tasks added delete the one placeholder task, which
+        # was added because one task must be passed to simple workflow
+        if(self.removetask):
+            recipe_parent = dom1.getElementsByTagName('recipe')[0]
+            tasklength = dom1.getElementsByTagName('task').length
+            delete_index = tasklength - 1
+            delete_element = dom1.getElementsByTagName('task')[delete_index]
+            # print tasklength
+            # print delete_index
+            # print delete_element
+            recipe_parent.removeChild(delete_element)
+
+        # Step 2: Take the xml generated by beaker-workflow and put it into a DOM
+        # Create host requires  elementi
+        if len(dom1.getElementsByTagName('and')) > 1:
+            hre_parent = dom1.getElementsByTagName('and')[1]
+        else:
+            temp_parent = dom1.getElementsByTagName('hostRequires')[0]
+            # print temp_parent
+            temp_parent.appendChild(dom1.createElement('and'))
+            # print dom1.toprettyxml()
+            hre_parent = dom1.getElementsByTagName('and')[1]
+
+        dre_parent = dom1.getElementsByTagName('and')[0]
+
+        # should check for an empty host requires first
+        if self.hrname:
+            for index, value in enumerate(self.hrname):
+                # parse the value hostrequires key, first is op the rest is the value
+                # print str(self.hrname[index])
+                # print str(self.hrop[index])
+                # print str(self.hrvalue[index])
+                # Add all host requires here
+                hre = dom1.createElement(str(self.hrname[index]))
+                hre.attributes['op'] = str(self.hrop[index])
+                hre.attributes['value'] = str(self.hrvalue[index])
+
+                hre_parent.appendChild(hre)
+
+        # should check for an empty distro requires first
+        if self.drname:
+            for index, value in enumerate(self.drname):
+                # parse the value hostrequires key, first is op the rest is the value
+                # Add all distro requires here
+                dre = dom1.createElement(str(self.drname[index]))
+                dre.attributes['op'] = str(self.drop[index])
+                dre.attributes['value'] = str(self.drvalue[index])
+
+                dre_parent.appendChild(dre)
+
+        if self.reservetime_always != "":
+            te = dom1.createElement('task')
+            te.attributes['name'] = "/distribution/reservesys"
+            te.attributes['role'] = "STANDALONE"
+
+            tpe = dom1.createElement('params')
+
+            tpce = dom1.createElement('param')
+            tpce.attributes['name'] = "RESERVETIME"
+            tpce.attributes['value'] = str(self.reservetime_always)
+
+            te_parent = dom1.getElementsByTagName("recipe")[0]
+
+            # Add reservetime to the xml
+            te_parent.appendChild(te)
+            te.appendChild(tpe)
+            tpe.appendChild(tpce)
+        else:
+            # Reserve if it fails
+            te = dom1.createElement('task')
+            te.attributes['name'] = "/distribution/reservesys"
+            te.attributes['role'] = "STANDALONE"
+
+            tpe = dom1.createElement('params')
+
+            tpce = dom1.createElement('param')
+            # tpce.attributes['name'] = "RESERVE_IF_FAIL"
+            # tpce.attributes['value'] = "true"
+
+            tpce2 = dom1.createElement('param')
+            tpce2.attributes['name'] = "RESERVETIME"
+            tpce2.attributes['value'] = str(self.reservetime)
+
+            te_parent = dom1.getElementsByTagName("recipe")[0]
+
+            # Add reservetime to the xml
+            te_parent.appendChild(te)
+            te.appendChild(tpe)
+            tpe.appendChild(tpce)
+            tpe.appendChild(tpce2)
+
+        # set the completed DOM and return 0 for a successfull creation of the Beaker XML
+        self.xmldom = dom1
+
+        # Output updated file
+        file = open(xmlfile, "wb")
+        self.xmldom.writexml(file)
+        file.close()
+
+    @property
+    def kernel_post_options(self):
+        """Return the kernel post options."""
+        return self._kernel_options_post
+
+    @kernel_post_options.setter
+    def kernel_post_options(self, options):
+        """Set the the kernel post options.
+        :param options: post kernel options"""
+        self._kernel_options_post = options
+
+    @property
+    def kernel_options(self):
+        """Return the beaker options."""
+        return self._kernel_options
+
+    @kernel_options.setter
+    def kernel_options(self, options):
+        """Set the beaker options.
+        :param options: beakeroptions"""
+        self._kernel_options = options
+
+    @property
+    def ksmeta(self):
+        """Return the kick start meta data."""
+        return self._ksmeta
+
+    @ksmeta.setter
+    def ksmets(self, meta):
+        """Set kick start meta data.
+        :param meta: meta data"""
+        self._ksmeta = meta
+
+    @property
+    def arch(self):
+        """Return the arch."""
+        return self._arch
+
+    @arch.setter
+    def arch(self, arch):
+        """Set arch for resource.
+        :param arch: Arch of resource"""
+        self._arch = arch
+
+    @property
+    def family(self):
+        """Return the family of resource."""
+        return self._family
+
+    @family.setter
+    def family(self, family):
+        """Set family of resource.
+        :param family: Family of resource"""
+        self._family = family
+
+    @property
+    def kdump(self):
+        """Return the k dump on setting."""
+        return self._kdumpon
+
+    @kdump.setter
+    def kdump(self, kbool):
+        """Set k dump on.
+        :param kbool: k dump on setting (bool)"""
+        self._kdumpon = kbool
+
+    @property
+    def ndump(self):
+        """Return the n dump on setting."""
+        return self._ndumpon
+
+    @ndump.setter
+    def ndump(self, nbool):
+        """Set n dump on.
+        :param nbool: n dump on setting (bool)"""
+        self._ndumpon = nbool
+
+    @property
+    def retention_tag(self):
+        """Return the retention tag."""
+        return self._retention_tag
+
+    @retention_tag.setter
+    def retention_tag(self, rtag):
+        """Set retention tag.
+        :param rtag: Retention tag"""
+        self._retention_tag = rtag
+
+    @property
+    def tag(self):
+        """Return the tag."""
+        return self._tag
+
+    @tag.setter
+    def tag(self, tag):
+        """Set tag.
+        :param tag: Tag to set"""
+        self._tag = tag
+
+    @property
+    def jobgroup(self):
+        """Return the jobs group."""
+        return self._jobgroup
+
+    @jobgroup.setter
+    def jobgroup(self, group):
+        """Set the jobs group.
+        :param group: Group to use for job"""
+        self._jobgroup = group
+
+    @property
+    def component(self):
+        """Return the component."""
+        return self._component
+
+    @component.setter
+    def component(self, component):
+        """Set component.
+        :param component: Component"""
+        self._component = component
+
+    @property
+    def distro(self):
+        """Return the distro."""
+        return self._distro
+
+    @distro.setter
+    def distro(self, distro):
+        """Set the distro for resource.
+        :param distro: Distro to set"""
+        self._distro = distro
+
+    @property
+    def product(self):
+        """Return the product."""
+        return self._product
+
+    @product.setter
+    def product(self, product):
+        """Set the product.
+        :param product: Product to set"""
+        self._product = product
+
+    @property
+    def method(self):
+        """Return the method."""
+        return self._method
+
+    @method.setter
+    def method(self, method):
+        """ Set the method.
+        :param method: Method to set"""
+        self._method = method
+
+    @property
+    def priority(self):
+        """Return the priority."""
+        return self._priority
+
+    @priority.setter
+    def priority(self, priority):
+        """Set priority.
+        :param priority: Priority to set."""
+        self._priority = priority
+
+    @property
+    def xmldom(self):
+        """Return the xmldom."""
+        return self._xmldom
+
+    @xmldom.setter
+    def xmldom(self, xmldom):
+        """Set xmldom for class.
+        :param xmldom"""
+        self._xmldom = xmldom
+
+    def get_xmldom_pretty(self):
+        """Return the xmldom in pretty print format."""
+        return self.xmldom.toprettyxml()
+
+    @property
+    def whiteboard(self):
+        """Return the white board."""
+        return self._whiteboard
+
+    @whiteboard.setter
+    def whiteboard(self, whiteboard):
+        """Set whiteboard value.
+        :param whiteboard: Value to set"""
+        self._whiteboard = whiteboard
+
+    @property
+    def packages(self):
+        """Return the packages."""
+        return self._packages
+
+    @packages.setter
+    def packages(self, packages):
+        """Set packages to install for job.
+        :param packages: List of packages to install"""
+        self._packages = packages
+
+    @property
+    def runid(self):
+        """Return the runid of job ."""
+        return self._runid
+
+    @runid.setter
+    def runid(self, runid):
+        """Set runid.
+        :param runid: runid of job"""
+        self._runid = runid
+
+    @property
+    def tasks(self):
+        """Return the tasks."""
+        return self._tasks
+
+    @tasks.setter
+    def tasks(self, tasks):
+        """Set tasks of job.
+        :param tasks: List of tasks"""
+        self._tasks = tasks
+
+    @property
+    def paramlist(self):
+        """Return the parameter list to be used by tasks."""
+        return self._paramlist
+
+    @paramlist.setter
+    def paramlist(self, paramdict):
+        """Set parameter list.
+        :param paramdict: Paramerters to be used by tassks (dict)."""
+        self._paramlist.append(paramdict)
+
+    @property
+    def key_values(self):
+        """Return the key values."""
+        return self._key_values
+
+    @key_values.setter
+    def key_values(self, key_values):
+        """Set key values for job.
+        :param key_values: Key values to set for job"""
+        self._key_values = key_values
+
+    @property
+    def tasklist(self):
+        """Return the task list."""
+        return self._tasklist
+
+    @tasklist.setter
+    def tasklist(self, task):
+        """Set List of tasks for job.
+        :param task: List of tasks"""
+        self._tasklist.append(task)
+
+    @property
+    def host_requires_options(self):
+        """Return the host requires options."""
+        return self._host_requires_options
+
+    @host_requires_options.setter
+    def host_requires_options(self, hr_values):
+        """Set host requires opttions.
+        :param hr_values: List of host requires options"""
+        self._host_requires_options = hr_values
+
+    @property
+    def distro_requires_options(self):
+        """Return the distro requires options."""
+        return self._distro_requires_options
+
+    @distro_requires_options.setter
+    def distro_requires_options(self, dr_values):
+        """Set distro requires options.
+        :param dr_values: List of distro requires options"""
+        self._distro_requires_options = dr_values
+
+    @property
+    def cclist(self):
+        """Return the cc list."""
+        return self._cclist
+
+    @cclist.setter
+    def cclist(self, email):
+        """Set cc list for job.
+        :param email: List of emails to cc"""
+        self._cclist.append(email)
+
+    @property
+    def hrname(self):
+        """Return the host requires names."""
+        return self._hrname
+
+    @hrname.setter
+    def hrname(self, hr_name):
+        """Raises an exception when trying to set the host requires name
+        directly. Must use sethostrequires.
+        :param value: The host requires name.
+        """
+        raise AttributeError('You cannot set Hostrequires name directly. '
+                             'Use sethostrequires().')
+
+    @property
+    def hrop(self):
+        """Return the host requires operations"""
+        return self._hrop
+
+    @hrop.setter
+    def hrop(self, hr_op):
+        """Raises an exception when trying to set the host requires op
+        directly. Must use sethostrequires.
+        :param value: The host requires operation.
+        """
+        raise AttributeError('You cannot set Hostrequires operation directly. '
+                             'Use sethostrequires().')
+
+    @property
+    def hrvalue(self):
+        """Return the host requires values"""
+        return self._hrvalue
+
+    @hrvalue.setter
+    def hrvalue(self, hr_value):
+        """Raises an exception when trying to set the host requires value
+        directly. Must use sethostrequires.
+        :param value: The host requires value.
+        """
+        raise AttributeError('You cannot set Hostrequires value directly. '
+                             'Use sethostrequires().')
+
+    @property
+    def drname(self):
+        """Return distro requires names"""
+        return self._drname
+
+    @drname.setter
+    def drname(self, dr_name):
+        """Raises an exception when trying to set the Distro requires name
+        directly. Must use setdistrorequires.
+        :param value: The disto requires name.
+        """
+        raise AttributeError('You cannot set Distrorequires name directly. '
+                             'Use setdistrorequires().')
+
+    @property
+    def drop(self):
+        """Return distro requires operations"""
+        return self._drop
+
+    @drop.setter
+    def drop(self, dr_op):
+        """Raises an exception when trying to set the distro requires op
+        directly. Must use setdistrorequires.
+        :param value: The distro requires operation.
+        """
+        raise AttributeError('You cannot set Distrorequires operation directly. '
+                             'Use setdistrorequires().')
+
+    @property
+    def drvalue(self):
+        """Return distro requires values"""
+        return self._drvalue
+
+    @drvalue.setter
+    def drvalue(self, dr_value):
+        """Raises an exception when trying to set the distro requires value
+        directly. Must use setdistrorequires.
+        :param value: The distro requires value.
+        """
+        raise AttributeError('You cannot set Distroequires value directly. '
+                             'Use setdistrorequires().')
+
+    @property
+    def repolist(self):
+        """Return the repos list."""
+        return self._repolist
+
+    @repolist.setter
+    def repolist(self, repo):
+        """Set the repos for the resource.
+        :param repo: repo to add to list"""
+        self._repolist.append(repo)
+
+    @property
+    def cmd(self):
+        """Return the bkr cmd to create xml."""
+        return self._cmd
+
+    @cmd.setter
+    def cmd(self, cmd):
+        """Set bkr cmd to run to create xml.
+        :param cmd: bkr xml creation cmd"""
+        self._cmd = cmd
+
+    @property
+    def bkr_random(self):
+        """Return the random setting of job."""
+        return self._random
+
+    @bkr_random.setter
+    def bkr_random(self, rbool):
+        """Set random setting of job.
+        :param rbool: random setting (bool)"""
+        self._random = rbool
+
+    @property
+    def virtual_machine(self):
+        """Return the virtual machine setting."""
+        return self._virtmachine
+
+    @virtual_machine.setter
+    def virtual_machine(self, vbool):
+        """Set virtual machine setting.
+        :param vbool: virtual machine setting (bool)"""
+        self._virtmachine = vbool
+
+    @property
+    def virt_capable(self):
+        """Return the virt capable setting."""
+        return self._virtcapable
+
+    @virt_capable.setter
+    def virt_capable(self, vbool):
+        """Set virt capable.
+        :param vbool: virtual capable setting (bool)"""
+        self._virtcapable = vbool
+
+    @property
+    def variant(self):
+        """Return the variant."""
+        return self._osvariant
+
+    @variant.setter
+    def variant(self, osvariant):
+        """Set variant of resource.
+        :param osvariant: variant of resource"""
+        self._osvariant = osvariant
+
+    @property
+    def reservetime(self):
+        """Return the reserve time."""
+        return self._reservetime
+
+    @reservetime.setter
+    def reservetime(self, reservetime):
+        """Set reserve time.
+        :param reservetime: time to reserve resource for (seconds)"""
+        self._reservetime = reservetime
+
+    @property
+    def reservetime_always(self):
+        """Return the reserve time always setting."""
+        return self._reservetime_always
+
+    @reservetime_always.setter
+    def reservetime_always(self, reservetime_always):
+        """Set reserve time always.
+        :param reservetime_always: time setting"""
+        self._reservetime_always = reservetime_always
+
+    def isRandom(self):
+        """Returns if random"""
+        return self._random
+
+    def isVirtEnable(self):
+        """Returns if virtual machine"""
+        return self._virtmachine
+
+    def isVirtCapable(self):
+        """Returns if virtual capable"""
+        return self._virtcapable
+
+    def getXMLtext(self):
+        """Returns pretty print format of xml"""
+        return self.xmldom.toprettyxml()
+
+    def sethostrequires(self, hr_name, hr_op, hr_value):
+        """Set host requires parameters.
+        :param hr_name: Host requires name
+        :param hr_op: Host requires operation
+        :param hr_value: Host requires value"""
+        if hr_name not in self._hrname:
+            self._hrname.append(hr_name)
+            self._hrop.append(hr_op)
+            self._hrvalue.append(hr_value)
+        else:
+            updateindex = self._hrname.index(hr_name)
+            self._hrop[updateindex] = hr_op
+            self._hrvalue[updateindex] = hr_value
+
+    def setdistrorequires(self, dr_name, dr_op, dr_value):
+        """Set the distro requires parameters.
+        :param dr_name: Distro requires name
+        :param dr_op: Distro requires operation
+        :param dr_value: Distro requires value"""
+        if dr_name not in self._drname:
+            self._drname.append(dr_name)
+            self._drop.append(dr_op)
+            self._drvalue.append(dr_value)
+        else:
+            updateindex = self._drname.index(dr_name)
+            self._drop[updateindex] = dr_op
+            self._drvalue[updateindex] = dr_value
+
+    def set(self, param, value):
+        """Set parameters value.
+        :param param: Parameter to set
+        :value value: Value of parameter
+        :returns: 0 on success 1 if failed"""
+        if param == "variant":
+            self.variant(value)
+        elif param == "priority":
+            self.priority(value)
+        elif param == "family":
+            self.family(value)
+        elif param == "retentiontag":
+            self.retentiontag(value)
+        elif param == "whiteboard":
+            self.whiteboard(value)
+        elif param == "packages":
+            self.packages(value)
+        elif param == "tasks":
+            self.tasks(value)
+        elif param == "tag":
+            self.tag(value)
+        elif param == "distro":
+            self.distro(value)
+        elif param == "arch":
+            self.arch(value)
+        elif param == "reservetime":
+            self.reservetime(value)
+        elif param == "method":
+            self.method(value)
+        elif param == "component":
+            self.component(value)
+        elif param == "product":
+            self.product(value)
+        elif param == "kernel_options":
+            self.kernel_options(value)
+        elif param == "kernel_post_options":
+            self.kernel_post_options(value)
+        elif param == "cclist":
+            self.cclist(value)
+        else:
+            return(1)
+        return(0)
