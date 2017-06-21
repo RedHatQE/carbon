@@ -126,6 +126,8 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 #html_theme_options = {}
 
+html_context = {"css_files": ["_static/theme_override.css"]}
+
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
