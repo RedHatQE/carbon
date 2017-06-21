@@ -25,10 +25,9 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
-import random
-import subprocess
 import uuid
 import time
+import socket
 
 from xml.dom.minidom import parse, parseString
 
@@ -374,6 +373,8 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
                     continue
                 elif status == "success":
                     self.logger.info("Machine is successfully provisioned from Beaker")
+                    # get machine info
+                    self.get_machine_info(bkr_xml_output)
                     return
                 elif status == "fail":
                     raise BeakerProvisionerException("Machine provision failed: {}".format(self.host.bkr_job_id))
@@ -384,11 +385,6 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         self.cancel_job()
         raise BeakerProvisionerException("Timeout reached for Beaker job")
 
-    def get_bkr_logs(self):
-        """ Retrieve the logs for the Beaker provisioning
-        """
-        pass
-
     def create(self):
         """Get a machine from Beaker based on the definition from the scenario.
         Steps:
@@ -396,7 +392,6 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         2.  generate a beaker xml from the host data
         3.  submit a beaker job
         4.  watch for the beaker job to be complete -> return success or failed
-        5.  get logs for the beaker job
         """
         self.logger.info('Provisioning machines from %s', self.__class__)
 
@@ -411,9 +406,6 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
 
         # wait for the bkr job to be complete and return pass or failed
         self.wait_for_bkr_job()
-
-        # get the logs of the Beaker provisioning
-        self.get_bkr_logs()
 
         try:
             # Stop/remove container
@@ -503,6 +495,30 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         else:
             raise BeakerProvisionerException("Couldn't find install task status")
 
+    def get_machine_info(self, xmldata):
+        """
+        Used to parse the Beaker results xml and return machine information
+        setting hostname and ip address
+
+        :param xmldata: xmldata of a beaker job status
+        :return: dictionary of job and install task statuses
+        :raises BeakerProvisionerException: if results cannot be analyzed successfully
+        """
+        try:
+            dom = parseString(xmldata)
+        except Exception as e:
+            raise BeakerProvisionerException("Error Issue reading xml data {}".format(e))
+
+        tasklist = dom.getElementsByTagName('task')
+        for task in tasklist:
+            cname = task.getAttribute('name')
+
+            if cname == '/distribution/install':
+                hostname = task.getElementsByTagName('system')[0].getAttribute("value")
+                addr = socket.gethostbyname(hostname)
+                self.host.bkr_hostname = hostname.encode('ascii', 'ignore')
+                self.host.bkr_ip_address = addr
+
     def analyze_results(self, resultsdict):
         """
         return success, fail, or warn based on the job and install task statuses
@@ -513,10 +529,12 @@ class BeakerProvisioner(CarbonProvisioner, AnsibleController,
         """
         # when is the job complete
         if resultsdict["job_result"].strip().lower() == "new" and \
-           resultsdict["job_status"].strip().lower() in ["new", "waiting", "queued", "scheduled"]:
+           resultsdict["job_status"].strip().lower() in \
+           ["new", "waiting", "queued", "scheduled", "processed"]:
             return "wait"
         elif resultsdict["install_result"].strip().lower() == "new" and \
-                resultsdict["install_status"].strip().lower() in ["new", "waiting", "queued", "scheduled", "running"]:
+                resultsdict["install_status"].strip().lower() in \
+                ["new", "waiting", "queued", "scheduled", "running", "processed"]:
             return "wait"
         elif resultsdict["job_result"].strip().lower() == "pass" and \
             resultsdict["job_status"].strip().lower() == "running" and \

@@ -59,7 +59,7 @@ class BeakerProvider(CarbonProvider):
     )
 
     _output_parameters = (
-        'name',
+        'hostname',
         'ip_address',
         'job_id'
     )
