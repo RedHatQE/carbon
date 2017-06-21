@@ -11,6 +11,7 @@ tests/.workspace
 *.egg-info
 .cache
 _mailinglist
+node_modules
 
 # Test state / virtualenvs
 .tox
