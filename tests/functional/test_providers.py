@@ -85,6 +85,7 @@ class TestOpenshift(TestCase):
         assert_true(host.provider.name, 'openshift')
         assert_false(host.provider.validate_name(None))
         assert_true(host.provider.validate_name('applicationbyimage'))
+        assert_false(host.provider.validate_name(['applicationbygit']))
 
     def test_image(self):
         """Test the validate image method. This test performs the following:
@@ -116,6 +117,15 @@ class TestOpenshift(TestCase):
         """
         assert_true(self._ocp.validate_template(None))
         assert_true(self._ocp.validate_template('my_template.yaml'))
+
+    def test_custom_template(self):
+        """Test the validate custom template method. This test performs the
+        following:
+            1. Template undefined.
+            2. Template is a string data type
+        """
+        assert_true(self._ocp.validate_custom_template(None))
+        assert_true(self._ocp.validate_custom_template('my_template.yaml'))
 
     def test_env_vars(self):
         """Test the validate env vars method. This test performs the following:
