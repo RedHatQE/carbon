@@ -196,6 +196,29 @@ class TestBeaker(TestCase):
         instance of the provider class."""
         assert_is_instance(self._beaker, BeakerProvider)
 
+    def test_name(self):
+        """Test the validate name method. This test performs the following:
+            1. Name undefined.
+            2. Name is a string data type.
+        """
+        assert_false(self._beaker.validate_name(None))
+        assert_false(self._beaker.validate_name(1))
+        assert_true(self._beaker.validate_name('test_name'))
+
+    def test_timeout(self):
+        """Test the validate timeout method. This test performs the following:
+            1. timeout undefined.
+            2. timeout is a string data type.
+        """
+        assert_false(self._beaker.validate_timeout('11'))
+        assert_false(self._beaker.validate_timeout(3599))
+        assert_false(self._beaker.validate_timeout(172801))
+        assert_false(self._beaker.validate_timeout(-6000))
+        assert_true(self._beaker.validate_timeout(None))
+        assert_true(self._beaker.validate_timeout(3600))
+        assert_true(self._beaker.validate_timeout(172800))
+        assert_true(self._beaker.validate_timeout(100001))
+
     def test_arch(self):
         """Test the validate arch method."""
         assert_true(self._beaker.validate_arch('x86_64'))
@@ -207,10 +230,120 @@ class TestBeaker(TestCase):
     def test_family(self):
         """Test the validate family method."""
         assert_true(self._beaker.validate_family('FEDORA26'))
+        assert_true(self._beaker.validate_family(None))
 
     def test_variant(self):
         """Test the validate variant method."""
         assert_true(self._beaker.validate_variant('workstation'))
+
+    def test_distro(self):
+        """Test the validate variant distro."""
+        assert_false(self._beaker.validate_distro(11))
+        assert_true(self._beaker.validate_distro(None))
+        assert_true(self._beaker.validate_distro('Rhel-7'))
+
+    def test_kernel_options(self):
+        """Test the validate kernel options method."""
+        assert_false(self._beaker.validate_kernel_options("isolcpus=0,5"))
+        assert_true(self._beaker.validate_kernel_options(None))
+        assert_true(self._beaker.validate_kernel_options(["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]))
+        assert_true(self._beaker.validate_kernel_options([1, 2, 3]))
+
+    def test_kernel_post_options(self):
+        """Test the validate kernel post options method."""
+        assert_false(self._beaker.validate_kernel_post_options("isolcpus=0,5"))
+        assert_true(self._beaker.validate_kernel_post_options(None))
+        assert_true(self._beaker.validate_kernel_post_options(["isolcpus=0,5", "timezone=est", "selinux=--disabled"]))
+        assert_true(self._beaker.validate_kernel_post_options([1, 2, 3]))
+
+    def test_host_requires_options(self):
+        """Test the validate host requires options method."""
+        assert_false(self._beaker.validate_host_requires_options(11))
+        assert_true(self._beaker.validate_host_requires_options(None))
+        assert_true(self._beaker.validate_host_requires_options(["arch=x86_64", "memory>=15000"]))
+        assert_true(self._beaker.validate_host_requires_options([1, 2, 3]))
+
+    def test_distro_requires_options(self):
+        """Test the validate distro requires options method."""
+        assert_false(self._beaker.validate_distro_requires_options(11))
+        assert_true(self._beaker.validate_distro_requires_options(None))
+        assert_true(self._beaker.validate_distro_requires_options(["arch=x86_64", "memory>=15000"]))
+        assert_true(self._beaker.validate_distro_requires_options([1, 2, 3]))
+
+    def test_virtual_machine(self):
+        """Test the validate virtual machine method."""
+        assert_false(self._beaker.validate_virtual_machine(3))
+        assert_false(self._beaker.validate_virtual_machine(1))
+        assert_false(self._beaker.validate_virtual_machine('True'))
+        assert_true(self._beaker.validate_virtual_machine(None))
+        assert_true(self._beaker.validate_virtual_machine(True))
+        assert_true(self._beaker.validate_virtual_machine(False))
+        assert_true(self._beaker.validate_virtual_machine(0))
+
+    def test_virt_capable(self):
+        """Test the validate virt capable method."""
+        assert_false(self._beaker.validate_virt_capable(5))
+        assert_false(self._beaker.validate_virt_capable(1))
+        assert_false(self._beaker.validate_virt_capable('True'))
+        assert_true(self._beaker.validate_virt_capable(None))
+        assert_true(self._beaker.validate_virt_capable(True))
+        assert_true(self._beaker.validate_virt_capable(False))
+        assert_true(self._beaker.validate_virt_capable(0))
+
+    def test_retention_tag(self):
+        """Test the validate retention tag method."""
+        assert_false(self._beaker.validate_retention_tag(11))
+        assert_true(self._beaker.validate_retention_tag(None))
+        assert_true(self._beaker.validate_retention_tag('Rhel-7'))
+        assert_true(self._beaker.validate_retention_tag('Scratch'))
+
+    def test_kdump(self):
+        """Test the validate kdump method."""
+        assert_false(self._beaker.validate_kdump(1001))
+        assert_false(self._beaker.validate_kdump(1))
+        assert_false(self._beaker.validate_kdump('True'))
+        assert_true(self._beaker.validate_kdump(None))
+        assert_true(self._beaker.validate_kdump(True))
+        assert_true(self._beaker.validate_kdump(False))
+        assert_true(self._beaker.validate_kdump(0))
+
+    def test_ndump(self):
+        """Test the validate ndump method."""
+        assert_false(self._beaker.validate_ndump(11))
+        assert_false(self._beaker.validate_ndump(1))
+        assert_false(self._beaker.validate_ndump('True'))
+        assert_true(self._beaker.validate_ndump(None))
+        assert_true(self._beaker.validate_ndump(True))
+        assert_true(self._beaker.validate_ndump(False))
+        assert_true(self._beaker.validate_ndump(0))
+
+    def test_priority(self):
+        """Test the validate priority method."""
+        assert_false(self._beaker.validate_priority(11))
+        assert_true(self._beaker.validate_priority(None))
+        assert_true(self._beaker.validate_priority('Rhel-7'))
+        assert_true(self._beaker.validate_priority('Low'))
+
+    def test_whiteboard(self):
+        """Test the validate whiteboard method."""
+        assert_false(self._beaker.validate_whiteboard(11))
+        assert_true(self._beaker.validate_whiteboard(None))
+        assert_true(self._beaker.validate_whiteboard('Rhel-7'))
+        assert_true(self._beaker.validate_whiteboard('Title of the job or job id'))
+
+    def test_jobgroup(self):
+        """Test the validate jobgoup method."""
+        assert_false(self._beaker.validate_jobgroup(11))
+        assert_true(self._beaker.validate_jobgroup(None))
+        assert_true(self._beaker.validate_jobgroup('Rhel-7'))
+        assert_true(self._beaker.validate_jobgroup('ci-ops-pit'))
+
+    def test_key_values(self):
+        """Test the validate key_values method."""
+        assert_false(self._beaker.validate_key_values(11))
+        assert_true(self._beaker.validate_key_values(None))
+        assert_true(self._beaker.validate_key_values(["DISKSPACE>=500000", "HVM=1"]))
+        assert_true(self._beaker.validate_key_values([1, 2, 3]))
 
 
 class TestAws(TestCase):
