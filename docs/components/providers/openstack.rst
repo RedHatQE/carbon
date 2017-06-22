@@ -8,9 +8,9 @@ within your scenario descriptor file to provision resources in OpenStack.
 Credentials
 +++++++++++
 
-To authenticate with OpenStack, you will need to create a OpenStack
+To authenticate with OpenStack, you will need to create an OpenStack
 credentials section within your scenario descriptor file. Below is an example
-of defining credentials for an OpenStack tenant.
+credentials section with all available OpenStack credential keys.
 
 .. code-block:: yaml
     :linenos:
@@ -34,8 +34,7 @@ of defining credentials for an OpenStack tenant.
         - Required
 
     *   - name
-        - The name of the openstack credentials section to reference to
-          resources to be provisioned.
+        - The name of the OpenStack credentials section.
         - String
         - True
 
@@ -67,9 +66,9 @@ of defining credentials for an OpenStack tenant.
 Resources
 +++++++++
 
-To provision resources within OpenStack, you will need to create a OpenStack
+To provision resources within OpenStack, you will need to create an OpenStack
 resource section within your scenario descriptor file. Below is an example
-of a resource to provision in OpenStack.
+resource section with all available OpenStack provider keys.
 
 .. code-block:: yaml
     :linenos:
@@ -79,6 +78,7 @@ of a resource to provision in OpenStack.
       - name: <name>
         role: <role>
         provider: openstack
+        provisioner: <provisioner>
         credential: <credential>
         os_image: <image>
         os_flavor: <flavor>
@@ -107,42 +107,43 @@ of a resource to provision in OpenStack.
         - True
 
     *   - provider
-        - Name of the provider (openstack)
+        - The name of the provider. (openstack)
         - String
         - True
 
     *   - provisioner
-        - Name of the provisioner to use to boot node.
+        - The name of the provisioner to use to boot nodes.
         - String
         - False
 
     *   - credential
-        - Name of the credentials to used defined in the scenario descriptor.
+        - The name of the credentials to use to boot node. This is the one
+          defined in the credentials section of the scenario descriptor.
         - String
         - True
 
     *   - os_image
-        - Name or ID of the image to boot.
+        - The name or ID of the image to boot.
         - String
         - True
 
     *   - os_flavor
-        - Name or ID of the flavor to boot.
+        - The name or ID of the flavor to boot.
         - String
         - True
 
     *   - os_networks
-        - Name of the internal network to attach node too.
+        - The name of the internal network to attach node too.
         - List
         - True
 
     *   - os_floating_ip_pool
-        - Name of the external network to attach node too.
+        - The name of the external network to attach node too.
         - String
         - True
 
     *   - os_keypair
-        - Name of the keypair to associate node with.
+        - The name of the keypair to associate the node with.
         - String
         - True
 
