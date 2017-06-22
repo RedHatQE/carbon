@@ -202,7 +202,7 @@ class TestBeaker(TestCase):
 
     def test_tag(self):
         """Test the validate tag method."""
-        assert_true(self._beaker.validate_tag(['RTT_ACCEPTED']))
+        assert_true(self._beaker.validate_tag('RTT_ACCEPTED'))
 
     def test_family(self):
         """Test the validate family method."""

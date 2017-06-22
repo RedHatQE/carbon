@@ -284,6 +284,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # Format command for container
         _cmd = self.bxml.cmd.replace('=', "\=")
+        self.logger.debug(_cmd)
 
         # Run command on container
         results = self.ansible.run_module(
@@ -747,9 +748,10 @@ class BeakerXML():
             self.removetask = True
 
         # Set tag if distro empty else distro
-        if(self.distro == ""):
+        if self.tag:
             self.cmd += " --tag " + self.tag
-        else:
+
+        if self.distro:
             self.cmd += " --distro " + self.distro
 
         # Set kdumo on

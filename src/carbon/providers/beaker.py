@@ -111,7 +111,10 @@ class BeakerProvider(CarbonProvider):
 
     @classmethod
     def validate_tag(cls, value):
-        return isinstance(value, list)
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
 
     @classmethod
     def validate_family(cls, value):
@@ -126,7 +129,10 @@ class BeakerProvider(CarbonProvider):
 
     @classmethod
     def validate_distro(cls, value):
-        return isinstance(value, string_types)
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
 
     @classmethod
     def validate_kernel_options(cls, value):
