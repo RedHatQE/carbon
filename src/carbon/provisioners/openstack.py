@@ -75,18 +75,6 @@ class OpenstackProvisioner(CarbonProvisioner):
         self._session = None
 
     @property
-    def name(self):
-        """Return the name of the provisioner."""
-        return self.__provisioner_name__
-
-    @name.setter
-    def name(self, value):
-        """Raises an exception when trying to set the name for the provisioner
-        after the class has been instantiated."""
-        raise ValueError('You cannot set the name for the provisioner after '
-                         'the class has been instantiated.')
-
-    @property
     def key_session(self):
         """Create a keystone authenticated session (when needed) and return
         keystone session object.

@@ -124,19 +124,6 @@ class BeakerProvisioner(CarbonProvisioner):
             raise BeakerProvisionerException("Issue bringing up the container")
 
     @property
-    def name(self):
-        """Return the name for the provisioner."""
-        return self.__provisioner_name__
-
-    @name.setter
-    def name(self, value):
-        """
-        Returns the name of the provisioner
-        :param value: The name for the provisioner.
-        """
-        raise AttributeError('You cannot set name for the provisioner.')
-
-    @property
     def docker(self):
         """Return the docker object."""
         return self._docker

@@ -417,6 +417,8 @@ class CarbonProvisioner(LoggerMixin):
     """
     __provisioner_name__ = None
 
+    _assets = None
+
     def create(self):
         raise NotImplementedError
 
@@ -425,14 +427,16 @@ class CarbonProvisioner(LoggerMixin):
 
     @property
     def name(self):
-        return self.__provisioner__name__
+        """Return the name for the container."""
+        return self.__provisioner_name__
 
     @name.setter
     def name(self, value):
-        raise CarbonProvisionerException(
-            'You can not set provisioner name property. This value is set by '
-            'the instance.'
-        )
+        """
+        Returns the name of the provisioner
+        :param value: The name for the provisioner.
+        """
+        raise AttributeError('You cannot set name for the provisioner.')
 
 
 class CarbonProvider(LoggerMixin):

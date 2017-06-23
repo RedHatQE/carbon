@@ -234,7 +234,7 @@ class TestOpenstackProvisioner(TestCase):
         obj = OpenstackProvisioner(self.host)
         assert_equal(obj.name, 'openstack')
 
-    @raises(ValueError)
+    @raises(AttributeError)
     def test_set_provisioner_name(self):
         """Test setting the name for the provisioner class."""
         obj = OpenstackProvisioner(self.host)
