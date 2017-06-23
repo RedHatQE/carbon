@@ -561,7 +561,7 @@ class BeakerProvisioner(CarbonProvisioner):
         # when is the job complete
         if resultsdict["job_result"].strip().lower() == "new" and \
            resultsdict["job_status"].strip().lower() in \
-           ["new", "waiting", "queued", "scheduled", "processed"]:
+           ["new", "waiting", "queued", "scheduled", "processed", "installing"]:
             return "wait"
         elif resultsdict["install_result"].strip().lower() == "new" and \
                 resultsdict["install_status"].strip().lower() in \
