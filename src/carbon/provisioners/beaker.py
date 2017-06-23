@@ -715,11 +715,11 @@ class BeakerXML():
 
         # Set kernel options
         if(self.kernel_options != ""):
-            self.cmd += " --kernel_options " + self.kernel_options
+            self.cmd += " --kernel_options '" + " ".join(self.kernel_options) + "'"
 
         # Set post kernel options
         if(self.kernel_post_options != ""):
-            self.cmd += " --kernel_options_post " + self.kernel_post_options
+            self.cmd += " --kernel_options_post '" + " ".join(self.kernel_post_options) + "'"
 
         # Set product
         if(self.product != ""):

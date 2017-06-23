@@ -52,3 +52,9 @@ provision:
     # timeout for the beaker job, default if not set is 8hrs = 28800
     # can only set values between 1hr(3600) and 48hrs(172800)
     bkr_timeout: 172800
+
+    # kernel options
+    #
+    # bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    # bkr_kernel_post_options: ["isolcpus=0,5"]
+
