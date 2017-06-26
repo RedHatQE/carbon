@@ -101,7 +101,6 @@ class Host(CarbonResource):
                                       '%s.' % str(self.name))
         else:
             self._provisioner = get_provisioner_class(provisioner_param)
-        self._assets = self._provisioner._assets
 
         # We must set the providers credentials initially
         self._credential = parameters.pop('credential', None)
@@ -258,6 +257,16 @@ class Host(CarbonResource):
 
     def data_folder(self):
         return str(self.config['DATA_FOLDER'])
+
+    def get_assets_list(self):
+        """
+        Run through each asset parameter and add its value
+        in the list if the parameter was set
+        :return: list of assets
+        """
+        return [getattr(self, param) for param in
+                self.provider.get_assets_parameters()
+                if (hasattr(self, param) and getattr(self, param) is not None)]
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.

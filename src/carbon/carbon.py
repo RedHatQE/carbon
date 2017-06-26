@@ -25,9 +25,12 @@
 """
 import os
 import sys
+import shutil
 import errno
 import collections
+import tempfile
 from threading import Lock
+
 import yaml
 import taskrunner
 
@@ -215,9 +218,6 @@ class Carbon(LoggerMixin, ResultsMixin):
     # set the log type
     logger_type = ConfigAttribute('LOGGER_TYPE')
 
-    # set the assets path
-    assets_path = ConfigAttribute('ASSETS_PATH')
-
     # The pipeline of pipelines. All pipelines in the lists starts an
     # empty tasks list and tasks will be added later when the
     # :function:`~carbon.Carbon.run` is executed. The framework will run
@@ -236,8 +236,7 @@ class Carbon(LoggerMixin, ResultsMixin):
     # Default configuration parameters.
     default_config = {
         'DEBUG': False,
-        'DATA_FOLDER': '/tmp',
-        'ASSETS_PATH': None,
+        'DATA_FOLDER': tempfile.gettempdir(),
         # set to stream or file
         'LOGGER_TYPE': 'file',
         'LOGGER_NAME': __carbon_name__,
@@ -270,9 +269,6 @@ class Carbon(LoggerMixin, ResultsMixin):
 
         if log_level:
             self.log_level = log_level
-
-        if assets_path:
-            self.assets_path = assets_path
 
         if cleanup:
             self.cleanup = cleanup
@@ -307,7 +303,18 @@ class Carbon(LoggerMixin, ResultsMixin):
         self.create_carbon_logger(self.config)
         self.create_custom_logger(self.config, "taskrunner")
         # commented out pykwalify as it logged too much
-#        self.create_custom_logger(self.config, "pykwalify.core")
+        # self.create_custom_logger(self.config, "pykwalify.core")
+
+        # the assets can be located wherever the user wants or it
+        # will look at the running folder (getcwd())
+        if assets_path:
+            self.assets_path = assets_path
+        else:
+            self.assets_path = os.getcwd()
+            self.logger.warn('Assets path were not set, thefore the'
+                             ' framework setting for the running directory.'
+                             ' You may have problems if your scenario needs'
+                             ' to use assets such file, keys, etc.')
 
         self.scenario = Scenario(config=self.config)
 
@@ -446,6 +453,32 @@ class Carbon(LoggerMixin, ResultsMixin):
             if pipeline.type.__name__ == t['task'].__name__:
                 pipeline.tasks.append(t)
 
+    def _copy_assets(self):
+        """
+        Copy the assets from the `self.assets_path` to the assets
+        folder within the `self.data_folder`.
+        """
+        local_assets_folder = os.path.join(self.data_folder, 'assets')
+
+        # create assets folder
+        os.makedirs(local_assets_folder)
+
+        for asset in self.scenario.get_assets_list():
+            src_file = os.path.join(self.assets_path, asset)
+            dst_file = os.path.join(local_assets_folder, asset)
+
+            # if asset is declared within a folder, the destination
+            # parent folder needs to be created to avoid `errno.ENOENT`.
+            dst_folder = os.path.dirname(dst_file)
+            if not os.path.isdir(dst_folder):
+                os.makedirs(dst_folder)
+            del dst_folder
+
+            if os.path.isdir(src_file):
+                shutil.copytree(src=src_file, dst=dst_file)
+            else:
+                shutil.copy2(src=src_file, dst=dst_file)
+
     def run(self, tasklist=TASKLIST):
         """
         This function assumes there are zero or more tasks to be
@@ -489,6 +522,21 @@ class Carbon(LoggerMixin, ResultsMixin):
         for report in self.scenario.reports:
             for report_task in report.get_tasks():
                 self._add_task_into_pipeline(report_task)
+
+        # ensure that all assets are copied to the assets folder
+        # if assets exists
+        try:
+            self._copy_assets()
+        except shutil.Error as ex:
+            self.logger.error('Error while copying assets. %s' % ex.message)
+            raise CarbonException('Error while copying assets %s' % ex.message)
+        except IOError as ex:
+            if ex.errno == errno.ENOENT:
+                self.logger.error('Error while copying the asset "%s"' % ex.filename)
+                raise CarbonException('Asset "%s" does not exist. Check if '
+                                      'the asset folder was set correctly.' % ex.filename)
+            else:
+                raise CarbonException('Error while copying assets. Msg: %s' % ex.message)
 
         try:
             for pipeline in self._pipelines:

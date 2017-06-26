@@ -227,6 +227,16 @@ class Scenario(CarbonResource):
         # Perform scenario file validation based on carbon schema
         self.yaml_validate()
 
+    def get_assets_list(self):
+        """
+        Get a list of all assets needed by all hosts in the scenario
+        :return: list of assets
+        """
+        assets = []
+        for host in self.hosts:
+            assets += host.get_assets_list()
+        return assets
+
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,

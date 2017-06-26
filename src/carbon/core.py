@@ -351,48 +351,6 @@ class CarbonResource(LoggerMixin):
         return [getattr(self, "_construct_%s_task" % task_type)
                 for task_type in self._valid_tasks_types]
 
-    def get_asset_list(self):
-        assets = []
-        for host in self.hosts:
-            # check for possible assets, and add filename if set
-            for asset in host._assets:
-                if asset:
-                    # verify host has the key
-                    if hasattr(host, asset):
-                        # verify key value is set
-                        if getattr(host, asset):
-                            assets.append(getattr(host, asset))
-                    # check creds
-                    else:
-                        for cred in self._credentials:
-                            if asset in cred and cred[asset]:
-                                assets.append(cred[asset])
-        return assets
-
-    def copy_assets(self):
-        assets_dir = self.config["ASSETS_PATH"]
-        data_folder = self.config["DATA_FOLDER"]
-        for asset in self.get_asset_list():
-            asset_src = os.path.join(assets_dir, asset)
-            self.logger.debug("Attempt copy {0} {1}".format(asset_src, data_folder))
-            try:
-                shutil.copy(asset_src, data_folder)
-            except IOError as e:
-                # case where the source is a directory of files
-                if e.errno == errno.EISDIR:
-                    try:
-                        copy_tree(asset_src, data_folder)
-                    except:
-                        e = sys.exc_info()[0]
-                        raise CarbonException("Unexpected error, copying assets "
-                                              "dir: {}".format(e))
-                else:
-                    raise CarbonException("Unexpected error, copying assets: "
-                                          "{}".format(e))
-            except:
-                e = sys.exc_info()[0]
-                raise CarbonException("unexpected error: {}".format(e))
-
     def reload_tasks(self):
         self._tasks = []
         for task_constructor in self._get_task_constructors():
@@ -416,8 +374,6 @@ class CarbonProvisioner(LoggerMixin):
     This is the base class for all provisioners for provisioning machines
     """
     __provisioner_name__ = None
-
-    _assets = None
 
     def create(self):
         raise NotImplementedError
@@ -464,6 +420,7 @@ class CarbonProvider(LoggerMixin):
     _output_parameters = ()
     _mandatory_creds_parameters = ()
     _optional_creds_parameters = ()
+    _assets_parameters = ()
 
     def __init__(self, **kwargs):
         # I care only about the parameters set on ~self._parameters
@@ -553,7 +510,7 @@ class CarbonProvider(LoggerMixin):
     def get_mandatory_parameters(cls):
         """
         Get the list of the mandatory parameters
-        :return: a tuple of the mandatory paramaters.
+        :return: a tuple of the mandatory parameters.
         """
         return ('{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters)
 
@@ -561,9 +518,18 @@ class CarbonProvider(LoggerMixin):
     def get_optional_parameters(cls):
         """
         Get the list of the optional parameters
-        :return: a tuple of the optional paramaters.
+        :return: a tuple of the optional parameters.
         """
-        return ('{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters)
+        return ('{}{}'.format(cls.__provider_prefix__, k) for k in
+                (cls._optional_parameters + cls._assets_parameters))
+
+    @classmethod
+    def get_assets_parameters(cls):
+        """
+        Get the list of the assets parameters
+        :return: a tuple of the assets parameters
+        """
+        return ('{}{}'.format(cls.__provider_prefix__, k) for k in cls._assets_parameters)
 
     @classmethod
     def get_all_parameters(cls):
@@ -573,7 +539,8 @@ class CarbonProvider(LoggerMixin):
         """
         all_params = {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters} \
             .union({'{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters},
-                   {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._output_parameters})
+                   {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._output_parameters},
+                   {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._assets_parameters},)
         return (param for param in all_params)
 
     @classmethod

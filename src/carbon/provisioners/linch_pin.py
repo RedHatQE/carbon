@@ -43,7 +43,6 @@ class LinchpinProvisioner(CarbonProvisioner):
     directly by the API.
     """
     __provisioner_name__ = 'linchpin'
-    _assets = ["pinfile", "credentials", "layout", "topology"]
 
     _topology = "topology.yml"
     _layout = "layout.yml"

@@ -75,32 +75,35 @@ class OpenshiftProvider(CarbonProvider):
 
     _mandatory_parameters = (
         'name',
-        'labels'
+        'labels',
     )
 
     _optional_parameters = (
         'image',
         'git',
         'template',
-        'custom_template',
         'env_vars',
-        'build_timeout'
+        'build_timeout',
     )
 
     _output_parameters = (
         'app_name',
-        'routes'
+        'routes',
     )
 
     _mandatory_creds_parameters = (
         'auth_url',
-        'project'
+        'project',
     )
 
     _optional_creds_parameters = (
         'token',
         'username',
-        'password'
+        'password',
+    )
+
+    _assets_parameters = (
+        'custom_template',
     )
 
     def __init__(self, **kwargs):

@@ -69,22 +69,22 @@ class TestScenario(TestCase):
     def test_copy_assets(self):
         """Test copying an asset into the data folder."""
         self.cbn.load_from_yaml('assets/openshift_assets.yaml')
-        assert_equal(len(self.cbn.scenario.get_asset_list()), 1)
-        self.cbn.scenario.copy_assets()
-        assert_equal(os.path.exists(os.path.join(self.cbn.data_folder, "mytemplate.yaml")), 1)
+        assert_equal(len(self.cbn.scenario.get_assets_list()), 1)
+        self.cbn._copy_assets()
+        assert_equal(os.path.exists(os.path.join(self.cbn.assets_path, "mytemplate.yaml")), 1)
 
-    @raises(CarbonException)
+    @raises(IOError)
     def test_copy_assets_invalid(self):
         """Test assets defined, but not set in the assets path."""
         self.cbn.load_from_yaml('assets/openshift_invalid_assets.yaml')
-        assert_equal(len(self.cbn.scenario.get_asset_list()), 1)
-        self.cbn.scenario.copy_assets()
+        assert_equal(len(self.cbn.scenario.get_assets_list()), 1)
+        self.cbn._copy_assets()
 
     def test_copy_assets_no_assets(self):
         """Test assets defined, but not set in the assets path."""
         self.cbn.load_from_yaml('assets/scenario.yaml')
-        assert_equal(len(self.cbn.scenario.get_asset_list()), 0)
-        self.cbn.scenario.copy_assets()
+        assert_equal(len(self.cbn.scenario.get_assets_list()), 0)
+        self.cbn._copy_assets()
 
     def test_get_data_folder(self):
         """Test getting data folder for carbon scenario."""
@@ -262,7 +262,7 @@ class TestHost(TestCase):
         cp_parameters = deepcopy(self._parameters)
         cp_parameters.pop('name')
         host = Host(config=self.cbn.config, name='client1', parameters=cp_parameters)
-        assert_equal(host._assets, [''])
+        assert_equal(host.get_assets_list(), [])
 
     def test_set_random_name(self):
         """Test setting a random host name when no name declared for a host."""

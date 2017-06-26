@@ -58,7 +58,6 @@ class OpenstackProvisioner(CarbonProvisioner):
     """
     __provisioner_name__ = 'openstack'
     __api_version__ = '2'
-    _assets = [""]
 
     def __init__(self, host):
         """Constructor.

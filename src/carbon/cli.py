@@ -31,7 +31,8 @@ import click
 from . import __version__
 from ._compat import string_types
 from .carbon import Carbon
-from .constants import TASKLIST, TASK_CLEANUP_CHOICES, TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
+from .constants import TASKLIST, TASK_CLEANUP_CHOICES,\
+    TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
 
 _VERBOSITY = 0
 
@@ -114,10 +115,10 @@ def validate(ctx, scenario):
               default=None,
               help="Scenario definition file to be executed.")
 @click.option("-d", "--data-folder",
-              default="/tmp",
+              default=None,
               help="Scenario workspace path.")
 @click.option("-a", "--assets-path",
-              default="/tmp",
+              default=None,
               help="Scenario workspace path.")
 @click.option("--log-type",
               default="file",
@@ -153,6 +154,11 @@ def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type, assets_p
         click.echo('Error:\n%s\n%s' % (ex.problem, ex.problem_mark))
         ctx.exit()
 
+    # Ensure assets_path is set. If user does not set via client command
+    # line it will set the same path where the scenario is
+    if assets_path is None:
+        assets_path = os.path.dirname(scenario)
+
     # Create a new carbon compound
     cbn = Carbon(__name__, log_level=log_level, cleanup=cleanup,
                  data_folder=data_folder, log_type=log_type, assets_path=assets_path)
@@ -165,9 +171,6 @@ def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type, assets_p
         task = TASKLIST
     elif isinstance(task, string_types):
         task = [task]
-
-    if assets_path:
-        cbn.scenario.copy_assets()
 
     # The scenario will start the main pipeline and run through the task
     # pipelines declared. See :function:`~carbon.Carbon.run` for more details.
