@@ -135,6 +135,11 @@ resource section with the available Beaker provider keys.
         - String
         - True
 
+    *   - bkr_variant
+        - The OS variant of the node.
+        - String
+        - True
+
     *   - bkr_family
         - The OS family of the node. (family or distro needs to be set)
         - String
@@ -175,7 +180,7 @@ resource section with the available Beaker provider keys.
         - List
         - False
 
-    *   - bkr_kernel_options
+    *   - bkr_kernel_options_post
         - List of bkr kernel options after install with the format:["<key><operand><value>"]
         - List
         - False
