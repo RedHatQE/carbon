@@ -20,15 +20,11 @@ from setuptools import setup, find_packages
 ROOT = os.path.dirname(__file__)
 VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
 
-dependencies = [
-    'http://file.rdu.redhat.com/~tmoreira/taskrunner-master.zip'
-]
-
 requires = [
     'Flask>=0.12.2',
     'Werkzeug>=0.11.15',
     'Click>=6.7',
-    'taskrunner==0.3.0',
+    'taskrunner>=0.3.0',
     'PyYAML>=3.12',
     'pykwalify>=1.6.0',
     'python-openstackclient>=3.11.0',
@@ -57,7 +53,6 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=requires,
-    dependency_links=dependencies,
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

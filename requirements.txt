@@ -1,4 +1,3 @@
-http://file.rdu.redhat.com/~tmoreira/taskrunner-master.zip
 bumpversion>=0.5.3
 tox>=2.7.0
 nose>=1.3.7
