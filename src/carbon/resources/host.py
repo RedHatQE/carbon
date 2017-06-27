@@ -285,9 +285,20 @@ class Host(CarbonResource):
         in the list if the parameter was set
         :return: list of assets
         """
-        return [getattr(self, param) for param in
-                self.provider.get_assets_parameters()
-                if (hasattr(self, param) and getattr(self, param) is not None)]
+        # first, get the list of assets from the provider parameters
+        host_assets = [getattr(self, param) for param in
+                       self.provider.get_assets_parameters()
+                       if (hasattr(self, param) and
+                           getattr(self, param) is not None)]
+
+        # second, get the list of assets from the provider's credential
+        # settings
+        creds_assets = [self.provider.credentials[param] for param in
+                        self.provider.get_assets_parameters()
+                        if param in self.provider.credentials.keys()]
+
+        # return a single list from the merge of both list
+        return host_assets + creds_assets
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.

@@ -60,7 +60,6 @@ class BeakerProvider(CarbonProvider):
         'ip_address',
         'job_id',
         'ssh_key',
-        'keytab',
     )
 
     _output_parameters = (

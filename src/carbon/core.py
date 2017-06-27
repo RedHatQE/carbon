@@ -502,23 +502,8 @@ class CarbonProvider(LoggerMixin):
                  of fields that needs to be filled.
         """
         intersec = {k for k, v in parameters.items()}\
-            .intersection({k for k in cls._mandatory_creds_parameters})
-        return {k for k in cls._mandatory_creds_parameters}.difference(intersec)
-
-    @classmethod
-    def get_mandatory_creds_parameters(cls):
-        """
-        Get the list of the mandatory credential parameters
-        :return: a tuple of the mandatory credential paramaters.
-        """
-        return (k for k in cls._mandatory_creds_parameters)
-
-    @classmethod
-    def get_optional_creds_parameters(cls):
-        """Get the list of the optional credential parameters.
-        :return: A tuple of the optional credential parameters.
-        """
-        return (k for k in cls._optional_creds_parameters)
+            .intersection({k for k in cls.get_mandatory_creds_parameters()})
+        return {k for k in cls.get_mandatory_creds_parameters()}.difference(intersec)
 
     @classmethod
     def _mandatory_parameters_set(cls):
@@ -535,6 +520,38 @@ class CarbonProvider(LoggerMixin):
         :return: a tuple of the mandatory parameters.
         """
         return (param for param in cls._mandatory_parameters_set())
+
+    @classmethod
+    def _mandatory_creds_parameters_set(cls):
+        """
+        Build a set of mandatory parameters
+        :return: a set
+        """
+        return {k for k in cls._mandatory_creds_parameters}
+
+    @classmethod
+    def get_mandatory_creds_parameters(cls):
+        """
+        Get the list of the mandatory credential parameters
+        :return: a tuple of the mandatory parameters.
+        """
+        return (param for param in cls._mandatory_creds_parameters_set())
+
+    @classmethod
+    def _optional_creds_parameters_set(cls):
+        """
+        Build a set of optional parameters
+        :return: a set
+        """
+        return {k for k in cls._optional_creds_parameters}
+
+    @classmethod
+    def get_optional_creds_parameters(cls):
+        """
+        Get the list of the optional credential parameters
+        :return: a tuple of the optional parameters.
+        """
+        return (param for param in cls._optional_creds_parameters_set())
 
     @classmethod
     def _optional_parameters_set(cls):
@@ -570,6 +587,24 @@ class CarbonProvider(LoggerMixin):
         return (param for param in cls._all_parameters_set())
 
     @classmethod
+    def _all_creds_parameters_set(cls):
+        """
+        Build a set of all credential parameters
+        :return: a set
+        """
+        return cls._mandatory_creds_parameters_set()\
+            .union(cls._optional_creds_parameters_set())
+
+    @classmethod
+    def get_all_creds_parameters(cls):
+        """
+        Return the list of all possible credential parameters for
+        the provider.
+        :return: a tuple
+        """
+        return (param for param in cls._all_creds_parameters_set())
+
+    @classmethod
     def _assets_parameters_set(cls):
         """
         Build a set of assets parameters from the
@@ -583,12 +618,27 @@ class CarbonProvider(LoggerMixin):
         )
 
     @classmethod
+    def _assets_creds_parameters_set(cls):
+        """
+        Build a set of assets parameters from the
+        intersection between all parameters and what
+        it is in the `cls._assets_parameters`
+        :return: a set
+        """
+        return cls._all_creds_parameters_set().intersection(
+            {k for k in cls._assets_parameters}
+        )
+
+    @classmethod
     def get_assets_parameters(cls):
         """
         Get the list of the assets parameters
-        :return: a tuple of the assets parameters
+        :return: a tuple
         """
-        return (param for param in cls._assets_parameters_set())
+        all_assets = cls._assets_parameters_set()\
+            .union(cls._assets_creds_parameters_set())
+
+        return (param for param in all_assets)
 
     @classmethod
     def _output_parameters_set(cls):
@@ -622,6 +672,10 @@ class CarbonProvider(LoggerMixin):
     @classmethod
     def is_asset(cls, value):
         return value in cls.get_assets_parameters()
+
+    @classmethod
+    def is_credential_asset(cls, value):
+        return value in cls.get_assets_creds_parameters()
 
     @classmethod
     def is_output(cls, value):
