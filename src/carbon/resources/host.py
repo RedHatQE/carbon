@@ -46,7 +46,11 @@ class CarbonHostException(CarbonResourceException):
 class Host(CarbonResource):
 
     _valid_tasks_types = ['validate', 'provision', 'cleanup']
-    _valid_fields = ['name', 'ip_address']
+    _fields = [
+        'name',
+        'ip_address',
+        'metadata'
+    ]
 
     def __init__(self,
                  config=None,
@@ -80,6 +84,9 @@ class Host(CarbonResource):
         if self._role is None:
             raise CarbonHostException('A role must be set for host %s.' %
                                       str(self.name))
+
+        # metadata will be defined via yaml file
+        self._metadata = parameters.pop('metadata', {})
 
         # we must have a provider set
         provider_param = parameters.pop('provider', provider)
@@ -179,6 +186,19 @@ class Host(CarbonResource):
         raise AttributeError('You cannot set name after class is instanciated.')
 
     @property
+    def metadata(self):
+        """Return the name for the host."""
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, value):
+        """Raises an exception when trying to set the name for the host after
+        the class has been instanciated.
+        :param value: The name for host
+        """
+        raise AttributeError('You cannot set metadata. This is set via descriptor YAML file.')
+
+    @property
     def provider(self):
         """Return the provider object for the host."""
         return self._provider
@@ -237,6 +257,7 @@ class Host(CarbonResource):
         d = self.provider.build_profile(self)
         d.update({
             'name': self.name,
+            'metadata': self.metadata,
             'provider': self.provider.name(),
             'credential': self._credential,
             'provisioner': self.provisioner.__provisioner_name__,
