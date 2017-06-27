@@ -93,12 +93,14 @@ class OpenstackProvider(CarbonProvider):
         'description',
         'files',
         'security_groups',
+        'node_id',
+        'ip_address',
     )
 
     _output_parameters = (
         'name',
         'node_id',
-        'ip_address'
+        'ip_address',
     )
 
     _mandatory_creds_parameters = (
@@ -106,7 +108,7 @@ class OpenstackProvider(CarbonProvider):
         'tenant_name',
         'tenant_id',
         'username',
-        'password'
+        'password',
     )
 
     _optional_creds_parameters = ()
@@ -394,4 +396,12 @@ class OpenstackProvider(CarbonProvider):
         except RuntimeError:
             return False
 
+        return True
+
+    @classmethod
+    def validate_node_id(cls, value):
+        return True
+
+    @classmethod
+    def validate_ip_address(cls, value):
         return True

@@ -413,7 +413,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         _template_file = None
         _template_filename = None
 
-        filepath = os.path.join(self._data_folder, _template)
+        filepath = os.path.join(self._data_folder, "assets", _template)
 
         if os.path.isfile(filepath):
             _template_file = filepath

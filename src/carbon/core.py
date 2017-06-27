@@ -407,7 +407,6 @@ class CarbonProvider(LoggerMixin):
     @classmethod
     def validate_<parameter_name>(cls, value)
 
-
     """
     # the YAML definition uses this value to reference to this class.
     # you have to override this variable in the subclasses so it can be
@@ -415,11 +414,25 @@ class CarbonProvider(LoggerMixin):
     __provider_name__ = None
     __provider_prefix__ = None
 
+    # all parameters that MUST be set for the provider
     _mandatory_parameters = ()
+
+    # additional parameters that can be set for the provider
     _optional_parameters = ()
+
+    # parameters that will be set based on output of the provider
+    # for instance, for the Openstack, ip_address and for Openshift
+    # routes
     _output_parameters = ()
+
+    # all credential parameters that MUST be set for the provider's credential
     _mandatory_creds_parameters = ()
+
+    # additional parameters that can be set for the provider's credential
     _optional_creds_parameters = ()
+
+    # special parameters that contain file paths - assets parameters must
+    # be added to either mandatory or optional.
     _assets_parameters = ()
 
     def __init__(self, **kwargs):
@@ -475,8 +488,9 @@ class CarbonProvider(LoggerMixin):
                  fields that needs to be filled.
         """
         intersec = {k for k, v in parameters.items()}\
-            .intersection({'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters})
-        return {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters}.difference(intersec)
+            .intersection(cls._mandatory_parameters_set())
+
+        return cls._mandatory_parameters_set().difference(intersec)
 
     @classmethod
     def check_mandatory_creds_parameters(cls, parameters):
@@ -507,12 +521,28 @@ class CarbonProvider(LoggerMixin):
         return (k for k in cls._optional_creds_parameters)
 
     @classmethod
+    def _mandatory_parameters_set(cls):
+        """
+        Build a set of mandatory parameters
+        :return: a set
+        """
+        return {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters}
+
+    @classmethod
     def get_mandatory_parameters(cls):
         """
         Get the list of the mandatory parameters
         :return: a tuple of the mandatory parameters.
         """
-        return ('{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters)
+        return (param for param in cls._mandatory_parameters_set())
+
+    @classmethod
+    def _optional_parameters_set(cls):
+        """
+        Build a set of optional parameters
+        :return: a set
+        """
+        return {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters}
 
     @classmethod
     def get_optional_parameters(cls):
@@ -520,16 +550,16 @@ class CarbonProvider(LoggerMixin):
         Get the list of the optional parameters
         :return: a tuple of the optional parameters.
         """
-        return ('{}{}'.format(cls.__provider_prefix__, k) for k in
-                (cls._optional_parameters + cls._assets_parameters))
+        return (param for param in cls._optional_parameters_set())
 
     @classmethod
-    def get_assets_parameters(cls):
+    def _all_parameters_set(cls):
         """
-        Get the list of the assets parameters
-        :return: a tuple of the assets parameters
+        Build a set of all parameters
+        :return: a set
         """
-        return ('{}{}'.format(cls.__provider_prefix__, k) for k in cls._assets_parameters)
+        return cls._mandatory_parameters_set()\
+            .union(cls._optional_parameters_set())
 
     @classmethod
     def get_all_parameters(cls):
@@ -537,11 +567,49 @@ class CarbonProvider(LoggerMixin):
         Return the list of all possible parameters for the provider.
         :return: a tuple with all parameters
         """
-        all_params = {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters} \
-            .union({'{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters},
-                   {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._output_parameters},
-                   {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._assets_parameters},)
-        return (param for param in all_params)
+        return (param for param in cls._all_parameters_set())
+
+    @classmethod
+    def _assets_parameters_set(cls):
+        """
+        Build a set of assets parameters from the
+        intersection between all parameters and what
+        it is in the `cls._assets_parameters`
+        :return: a set
+        """
+        return cls._all_parameters_set().intersection(
+            {'{}{}'.format(cls.__provider_prefix__, k)
+             for k in cls._assets_parameters}
+        )
+
+    @classmethod
+    def get_assets_parameters(cls):
+        """
+        Get the list of the assets parameters
+        :return: a tuple of the assets parameters
+        """
+        return (param for param in cls._assets_parameters_set())
+
+    @classmethod
+    def _output_parameters_set(cls):
+        """
+        Build a set of output parameters from the
+        intersection between all parameters and what
+        it is in the `cls._assets_parameters`
+        :return: a set
+        """
+        return cls._all_parameters_set().intersection(
+            {'{}{}'.format(cls.__provider_prefix__, k)
+             for k in cls._output_parameters}
+        )
+
+    @classmethod
+    def get_output_parameters(cls):
+        """
+        Get the list of the output parameters
+        :return: a tuple
+        """
+        return (param for param in cls._output_parameters_set())
 
     @classmethod
     def is_optional(cls, value):
@@ -550,6 +618,14 @@ class CarbonProvider(LoggerMixin):
     @classmethod
     def is_mandatory(cls, value):
         return value in cls.get_mandatory_parameters()
+
+    @classmethod
+    def is_asset(cls, value):
+        return value in cls.get_assets_parameters()
+
+    @classmethod
+    def is_output(cls, value):
+        return value in cls.get_output_parameters()
 
     def validate(self, host):
         """

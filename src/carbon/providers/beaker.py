@@ -55,13 +55,18 @@ class BeakerProvider(CarbonProvider):
         'ndump',
         'jobgroup',
         'key_values',
-        'timeout'
+        'timeout',
+        'hostname',
+        'ip_address',
+        'job_id',
+        'ssh_key',
+        'keytab',
     )
 
     _output_parameters = (
         'hostname',
         'ip_address',
-        'job_id'
+        'job_id',
     )
 
     _mandatory_creds_parameters = ()
@@ -71,6 +76,11 @@ class BeakerProvider(CarbonProvider):
         'keytab_principal',
         'username',
         'password'
+    )
+
+    _assets_parameters = (
+        'ssh_key',
+        'keytab',
     )
 
     def __init__(self, **kwargs):
@@ -97,10 +107,11 @@ class BeakerProvider(CarbonProvider):
     def validate_timeout(self, value):
         if value:
             self.logger.info("Validating env vars: {0}".format(value))
-            if isinstance(value, int) and value >= 3600 and value <= 172800:
+            if isinstance(value, int) and (3600 <= value <= 172800):
                 return True
             else:
-                self.logger.warn("Beaker timeout must be between 3600(1hr) and 172800(48hrs)")
+                self.logger.warn("Beaker timeout must be between 3600(1hr)"
+                                 " and 172800(48hrs)")
                 return False
         else:
             return True
@@ -222,5 +233,40 @@ class BeakerProvider(CarbonProvider):
     def validate_key_values(cls, value):
         if value:
             return isinstance(value, list)
+        else:
+            return True
+
+    @classmethod
+    def validate_keytab(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_ssh_key(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_hostname(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_ip_address(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_job_id(cls, value):
+        if value:
+            return isinstance(value, string_types)
         else:
             return True

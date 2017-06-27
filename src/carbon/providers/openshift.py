@@ -84,6 +84,9 @@ class OpenshiftProvider(CarbonProvider):
         'template',
         'env_vars',
         'build_timeout',
+        'app_name',
+        'routes',
+        'custom_template',
     )
 
     _output_parameters = (
@@ -227,3 +230,15 @@ class OpenshiftProvider(CarbonProvider):
             return True
         else:
             return True
+
+    @classmethod
+    def validate_routes(cls, value):
+        return True
+
+    @classmethod
+    def validate_custom_templates(cls, value):
+        return True
+
+    @classmethod
+    def validate_app_name(cls, value):
+        return True
