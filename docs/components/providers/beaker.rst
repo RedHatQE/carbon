@@ -88,8 +88,6 @@ resource section with the available Beaker provider keys.
         bkr_virt_capable: <True or False>
         bkr_priority: <priority of the job>
         bkr_retention_tag: <retention tag>
-        bkr_kdump: <True or False>
-        bkr_ndump: <True or False>
         bkr_timeout: <timeout val for Beaker job>
         bkr_kernel_options: [<list of kernel options>]
         bkr_kernel_post_options: [<list of kernel post options>]
@@ -205,14 +203,19 @@ resource section with the available Beaker provider keys.
         - String
         - False
 
-    *   - bkr_kdump
-        - Get a crash dump in the case of a kernel crash.
-        - Boolean
+    *   - bkr_ssh_key
+        - Name of the ssh key to inject to the test system, file must be placed in assets folder.
+        - String
         - False
 
-    *   - bkr_ndump
-        - Get a dump of the heap and cpu.
-        - Boolean
+    *   - bkr_username
+        - username of the bkr machine, required if using bkr_ssh_key.
+        - String
+        - False
+
+    *   - bkr_password
+        - password of the bkr machine, required if using bkr_ssh_key.
+        - String
         - False
 
     *   - bkr_timeout
@@ -297,11 +300,11 @@ Examples
         # possible values for priority: Low, Medium, Normal, High, Urgent"
         bkr_priority: Urgent
         bkr_retention_tag: 60days
-
-        # get a crash dump in the case of a kernel crash
-        bkr_kdump: True
-        # get a dump of the heap and cpu
-        bkr_ndump: True
+        
+        # inject ssh key into Beaker machine
+        bkr_ssh_key: <my_private_ssh_key>
+        bkr_username: <username of Beaker system>
+        bkr_password: <password of Beaker user>
 
         # timeout for the beaker job, default if not set is 8hrs = 28800
         # can only set values between 1hr(3600) and 48hrs(172800)

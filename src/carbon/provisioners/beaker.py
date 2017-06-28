@@ -25,16 +25,18 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
+import sys
 import uuid
 import time
 import socket
 
+from subprocess import Popen, PIPE
 from xml.dom.minidom import parse, parseString
 
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
 from ..core import CarbonProvisioner, CarbonProvisionerException
-from ..helpers import get_ansible_inventory_script
+from ..helpers import get_ansible_inventory_script, copy_key
 
 
 class BeakerProvisionerException(CarbonProvisionerException):
@@ -93,7 +95,6 @@ class BeakerProvisioner(CarbonProvisioner):
     __provisioner_name__ = "beaker"
     __provisioner_prefix__ = 'bkr_'
 
-    _assets = ["keytab"]
     _bkr_xml = "bkrjob.xml"
 
     _bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
@@ -185,7 +186,7 @@ class BeakerProvisioner(CarbonProvisioner):
             self.logger.info("Authentication w/ keytab/keytab_principal")
 
             # copy the keytab file to container
-            src_file_path = os.path.join(self._data_folder, self.host.provider.credentials["keytab"])
+            src_file_path = os.path.join(self._data_folder, "assets", self.host.provider.credentials["keytab"])
             dest_full_path_file = '/etc/beaker'
 
             cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
@@ -195,6 +196,7 @@ class BeakerProvisioner(CarbonProvisioner):
                      tasks=[dict(action=dict(module='copy', args=cp_args))])
             )
 
+            self.ansible.results_analyzer(results['status'])
             if results['status'] != 0:
                 raise BeakerProvisionerException("Error when copying file to container")
 
@@ -425,6 +427,9 @@ class BeakerProvisioner(CarbonProvisioner):
         # wait for the bkr job to be complete and return pass or failed
         self.wait_for_bkr_job()
 
+        # copy ssh key to the machine
+        self.copy_ssh_key()
+
         try:
             # Stop/remove container
             self.docker.stop_container()
@@ -536,6 +541,49 @@ class BeakerProvisioner(CarbonProvisioner):
                 addr = socket.gethostbyname(hostname)
                 self.host.bkr_hostname = hostname.encode('ascii', 'ignore')
                 self.host.bkr_ip_address = addr
+
+    def copy_ssh_key(self):
+        self.logger.info("Send keys over to the Beaker Nodes: {0} "
+                         "{1}".format(self.host.bkr_ip_address, self.host.bkr_hostname))
+        # setup prior to injecting ssh keys
+        ssh_key_path = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key)
+
+        try:
+            p = Popen("chmod 600 {}".format(ssh_key_path), stdout=PIPE, shell=True)
+            output = p.communicate()[0]
+            if p.returncode != 0:
+                self.logger.error("Error setting mode of ssh key: {}".format(output))
+                raise BeakerProvisionerException("Error setting mode of ssh "
+                                                 "key: {}".format(output))
+        except Exception as e:
+            raise BeakerProvisionerException("Error setting mode of ssh key {}".format(e))
+
+        ssh_key_path_public = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key + ".pub")
+
+        try:
+            p = Popen("ssh-keygen -y -f {0} > {1}".format(ssh_key_path,
+                                                          ssh_key_path_public),
+                      stdout=PIPE, shell=True)
+            output = p.communicate()[0]
+            if p.returncode != 0:
+                self.logger.error("Error generating public key: {}".format(output))
+                raise BeakerProvisionerException("Error setting mode of ssh key: "
+                                                 "{}".format(output))
+        except Exception as e:
+            raise BeakerProvisionerException("Error Generating public key {}".format(e))
+
+        if copy_key(self.host.bkr_username,
+                    self.host.bkr_password,
+                    'yes',
+                    {'ip': self.host.bkr_ip_address,
+                     'name': self.host.bkr_hostname},
+                    ssh_key_path_public):
+            raise BeakerProvisionerException("Failed to send key: {0}, "
+                                             "{1}".format(self.host.bkr_ip_address,
+                                                          self.host.bkr_hostname))
+        self.logger.info("Successfully Sent key: {0}, "
+                         "{1}".format(self.host.bkr_ip_address,
+                                      self.host.bkr_hostname))
 
     def analyze_results(self, resultsdict):
         """

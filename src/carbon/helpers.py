@@ -33,7 +33,9 @@ import random
 import string
 import threading
 import yaml
+import pexpect
 
+from ._compat import string_types
 from logging import getLogger
 from subprocess import Popen, PIPE
 
@@ -391,6 +393,186 @@ def check_is_gitrepo_fine(git_repo_url):
         return False
 
     return True
+
+
+def gen_key():
+    """
+    helper function to locally generate an ssh key
+    """
+    out = ""
+    cmd = 'ssh-keygen'
+
+    LOG.info('\tgen_key - Executing cmd: {}'.format(cmd))
+    child = pexpect.spawn(cmd)
+
+    while True:
+        i = child.expect([pexpect.TIMEOUT,
+                          r'Enter file in which to save the key',
+                          r'Overwrite', r'Enter passphrase',
+                          r'Enter same passphrase again:',
+                          r'The key fingerprint is:',
+                          pexpect.EOF], timeout=60)
+
+        if i == 0:  # Timeout
+            LOG.info('\t    Timeout...')
+            LOG.info('\t    Failed to generate keys')
+            LOG.info('\t{0}{1}'.format(child.before.replace('\n', '\n\t'),
+                                       child.after.replace('\n', '\n\t')))
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.close()
+            LOG.info("\n\tOutput Capture:\n\t" + "-" * 50)
+            LOG.info("\t{}".format(out.replace('\n', '\n\t')))
+            LOG.info("\t" + "-" * 50 + "\n")
+            return 1
+
+        if i == 1:  # File to save
+            LOG.info('\t    Save File: Answer - Default')
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.sendline('')
+
+        if i == 2:  # Overite
+            LOG.info('\t    Save File exists: Answer - (yes/no)')
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.sendline('yes')
+
+        if i == 3:  # passphrase
+            LOG.info('\t    Passphrase: Answer - Default')
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.sendline('')
+
+        if i == 4:  # confirm passphrase
+            LOG.info('\t    Confirm Passphrase: Answer - Default')
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.sendline('')
+
+        if i == 5:  # Finished.
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+
+        if i == 6:  # Completed
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.close()
+
+            LOG.info("\tOutput Capture\n" + "-" * 60 +
+                     "\n\t{}\n".format(out.replace('\n', '\n\t')) +
+                     "-" * 60 + "\n")
+
+            if child.exitstatus == 0:
+                LOG.info('    Succesfully generated keys')
+                retcode = 0
+            else:
+                LOG.error('    Failed to generate keys')
+                retcode = 1
+            return retcode
+
+    LOG.info('\tUnexpected Results...')
+    LOG.error('Failed to generate keys')
+    return 1
+
+
+def copy_key(user, presponse, use_ips, test_system, sshkeypath):
+    """
+    helper funciton to inject ssh keys to a test system
+    :param user: username of the test system
+    :param presponse: password of the test system
+    :param use_ips: Boolean to use ip or hostname
+    :param test_system: dictionary of name and ip
+    :param sshkeypath: full path of the public sshkey
+    :return: return code
+    :rtype: int
+    """
+    out = ""
+
+    if use_ips == 'yes':
+        cmd = 'ssh-copy-id -i {0} {1}@{2}'.format(sshkeypath, user, test_system['ip'])
+    else:
+        cmd = 'ssh-copy-id -i {0} {1}@{2}'.format(sshkeypath, user, test_system['name'])
+
+    LOG.debug('Executing cmd: %s' % cmd)
+
+    child = pexpect.spawn(cmd)
+
+    while True:
+        i = child.expect([pexpect.TIMEOUT, r'yes/no', r'password:',
+                          r"added extra keys that you weren't expecting.",
+                          pexpect.EOF], timeout=180)
+
+        if i == 0:  # Timeout
+            LOG.info('\t    Timeout...')
+            LOG.info('\t    Failed to send keys to remote')
+            LOG.info('\t{0}{1}'.format(child.before.replace('\n', '\n\t'),
+                                       child.after.replace('\n', '\n\t')))
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.close()
+            LOG.info("\n\tOutput Capture:\n" + "-" * 50)
+            LOG.info("\t{}".format(out.replace('\n', '\n\t')))
+            LOG.info("\t" + "-" * 50 + "\n")
+            return 1
+
+        if i == 1:  # yes no
+            LOG.debug('\t    Answer: (yes/no)')
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.sendline('yes')
+
+        if i == 2:  # Password
+            LOG.debug('\t    Answer: Password')
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.sendline(presponse)
+
+        if i == 3:  # finished.
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+
+        if i == 4:  # Completed
+            out = "{0}{1}{2}".format(out, child.before, child.after)
+            child.close()
+            if child.exitstatus == 0:
+                LOG.info('\tSuccesfully sent keys to remote\n')
+                retcode = 0
+            else:
+                LOG.error('Failed to send keys to remote\n')
+                retcode = 1
+            LOG.info("\n\tOutput Capture:\n\t" + "-" * 50 + "\n\t"
+                     "{}".format(out.replace('\n', '\n\t')) + "\n\t" +
+                     "-" * 50 + "\n")
+            return retcode
+
+    LOG.info('\tUnexpected Results...')
+    LOG.error('Failed to send keys to remote\n')
+    return 1
+
+
+def send_key(user, presponse, use_ips, systems, sshkeypath):
+    """
+    setup for injecting ssh keys to test systems
+    :param user: username of the test system
+    :param presponse: password of the test system
+    :param use_ips: Boolean to use ip or hostname
+    :param test_system: dictionary of name and ip
+    :param sshkeypath: full path of the public sshkey
+    :return: return code
+    :rtype: int
+    """
+    # Check if presponse is string or list
+    host_pw_pairs = None
+    # If string, construct key value pairs with same password for each host
+    # for backward compatibility
+    if isinstance(presponse, string_types):
+        host_pw_pairs = [(system, presponse) for system in systems]
+    # If list, zip the host and password lists together
+    else:
+        host_pw_pairs = zip(systems, presponse)
+    # Send key to root and test users on test systems
+    for test_system, host_presponse in host_pw_pairs:
+        res = copy_key(user, host_presponse, use_ips, test_system, sshkeypath)
+        if res:
+            LOG.error("PRE: Failed to send keys to user {0} on system "
+                      "{1}\n".format(user, test_system['name']))
+            return 1
+            raise Exception("Failed to send key. System: {0} - User: "
+                            "{1}".format(test_system, user))
+        else:
+            LOG.info("PRE: Successfully sent keys to user {0} on system "
+                     "{1}\n".format(user, test_system['name']))
+    return 0
 
 
 class LockedCachedProperty(object):

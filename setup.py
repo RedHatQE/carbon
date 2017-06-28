@@ -26,6 +26,7 @@ requires = [
     'Click>=6.7',
     'taskrunner>=0.3.0',
     'PyYAML>=3.12',
+    'pexpect>=4.2.1',
     'pykwalify>=1.6.0',
     'python-openstackclient>=3.11.0',
     'python-neutronclient>=6.2.0',

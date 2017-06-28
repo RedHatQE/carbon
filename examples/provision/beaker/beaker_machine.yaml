@@ -20,6 +20,12 @@ provision:
     # required keys - arch and variant
     bkr_arch: x86_64
     bkr_variant: Server
+    
+    # inject ssh key to the Beaker machine, saved in assets folder
+    # if bkr_ssh_key is set, bkr_username and bkr_password must also be set
+    bkr_ssh_key: <my_private_ssh_key>
+    bkr_username: <bkr_machine_username>
+    bkr_password: <bkr_machine_password>
 
     # either distro or family needs to be set
     bkr_family: RedHatEnterpriseLinux7
@@ -42,12 +48,6 @@ provision:
     # possible values for priority: Low, Medium, Normal, High, Urgent"
     bkr_priority: Urgent
     bkr_retention_tag: 60days
-
-    # get a crash dump in the case of a kernel crash
-    bkr_kdump: True
- 
-    # get a dump of the heap and cpu
-    bkr_ndump: True
 
     # timeout for the beaker job, default if not set is 8hrs = 28800
     # can only set values between 1hr(3600) and 48hrs(172800)

@@ -35,7 +35,7 @@ class BeakerProvider(CarbonProvider):
     _mandatory_parameters = (
         'name',
         'arch',
-        'variant'
+        'variant',
     )
 
     _optional_parameters = (
@@ -60,6 +60,8 @@ class BeakerProvider(CarbonProvider):
         'ip_address',
         'job_id',
         'ssh_key',
+        'username',
+        'password',
     )
 
     _output_parameters = (
@@ -71,10 +73,10 @@ class BeakerProvider(CarbonProvider):
     _mandatory_creds_parameters = ()
 
     _optional_creds_parameters = (
-        'keytab',
         'keytab_principal',
+        'keytab',
         'username',
-        'password'
+        'password',
     )
 
     _assets_parameters = (
@@ -118,6 +120,18 @@ class BeakerProvider(CarbonProvider):
     @classmethod
     def validate_arch(cls, value):
         return isinstance(value, string_types)
+
+    @classmethod
+    def validate_username(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        return True
+
+    @classmethod
+    def validate_password(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        return True
 
     @classmethod
     def validate_tag(cls, value):
