@@ -447,10 +447,10 @@ class CarbonProvider(LoggerMixin):
     def __str__(self):
         return '<Provider: %s>' % self.__provider_name__
 
-    @classmethod
-    def name(cls):
+    @property
+    def name(self):
         """Return the provider name."""
-        return cls.__provider_name__
+        return self.__provider_name__
 
     @property
     def credentials(self):

@@ -258,7 +258,7 @@ class Host(CarbonResource):
         d.update({
             'name': self.name,
             'metadata': self.metadata,
-            'provider': self.provider.name(),
+            'provider': self.provider.name,
             'credential': self._credential,
             'provisioner': self.provisioner.__provisioner_name__,
             'role': self._role,
