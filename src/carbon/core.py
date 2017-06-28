@@ -452,6 +452,25 @@ class CarbonProvider(LoggerMixin):
         """Return the provider name."""
         return self.__provider_name__
 
+    @name.setter
+    def name(self, value):
+        """Raises an exception when trying to set the name for the provider
+        :param value: name
+        """
+        raise AttributeError('You cannot set provider name.')
+
+    @property
+    def prefix(self):
+        """Return the provider prefix"""
+        return self.__provider_prefix__
+
+    @prefix.setter
+    def prefix(self, value):
+        """Raises an exception when trying to set the provider prefix
+        :param value: prefix
+        """
+        raise AttributeError('You cannot set provider prefix.')
+
     @property
     def credentials(self):
         """Return the credentials for the provider."""

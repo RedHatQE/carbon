@@ -237,6 +237,18 @@ class Host(CarbonResource):
         """
         raise AttributeError('You cant set role after class is instanciated.')
 
+    @property
+    def uid(self):
+        """Return the unique ID for the host"""
+        return getattr(self, '{}name'.format(self.provider.prefix))
+
+    @uid.setter
+    def uid(self, value):
+        """Raises an exception when trying to set the uid
+        :param value: uid
+        """
+        raise AttributeError('You cannot set uid.')
+
     @staticmethod
     def _filter_host_name(given_name):
         """
