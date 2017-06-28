@@ -51,8 +51,6 @@ class BeakerProvider(CarbonProvider):
         'retention_tag',
         'tag',
         'priority',
-        'kdump',
-        'ndump',
         'jobgroup',
         'key_values',
         'timeout',
@@ -62,6 +60,10 @@ class BeakerProvider(CarbonProvider):
         'ssh_key',
         'username',
         'password',
+        'taskparam',
+        'ignore_panic',
+        'kickstart',
+        'ksmeta'
     )
 
     _output_parameters = (
@@ -82,6 +84,7 @@ class BeakerProvider(CarbonProvider):
     _assets_parameters = (
         'ssh_key',
         'keytab',
+        'bkr_kickstart'
     )
 
     def __init__(self, **kwargs):
@@ -250,9 +253,23 @@ class BeakerProvider(CarbonProvider):
             return True
 
     @classmethod
+    def validate_taskparam(cls, value):
+        if value:
+            return isinstance(value, list)
+        else:
+            return True
+
+    @classmethod
     def validate_keytab(cls, value):
         if value:
             return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_ignore_panic(cls, value):
+        if value:
+            return isinstance(value, bool)
         else:
             return True
 
@@ -264,9 +281,23 @@ class BeakerProvider(CarbonProvider):
             return True
 
     @classmethod
+    def validate_kickstart(cls, value):
+        if value:
+            return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
     def validate_hostname(cls, value):
         if value:
             return isinstance(value, string_types)
+        else:
+            return True
+
+    @classmethod
+    def validate_ksmeta(cls, value):
+        if value:
+            return isinstance(value, list)
         else:
             return True
 

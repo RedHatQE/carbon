@@ -275,6 +275,22 @@ class BeakerProvisioner(CarbonProvisioner):
         _cmd = self.bxml.cmd.replace('=', "\=")
         self.logger.debug(_cmd)
 
+        # copy the ks file to container if set
+        if self.bxml.kickstart != "":
+            src_file_path = os.path.join(self._data_folder, self.bxml.kickstart)
+            dest_full_path_file = '/tmp'
+
+            cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
+
+            results = self.ansible.run_module(
+                dict(name='copy file', hosts=self.docker.cname, gather_facts='no',
+                     tasks=[dict(action=dict(module='copy', args=cp_args))])
+            )
+
+            self.ansible.results_analyzer(results['status'])
+            if results['status'] != 0:
+                raise BeakerProvisionerException("Error copying kickstart file to container")
+
         # Run command on container
         results = self.ansible.run_module(
             dict(name='bkr workflow-simple', hosts=self.docker.cname, gather_facts='no',
@@ -428,7 +444,8 @@ class BeakerProvisioner(CarbonProvisioner):
         self.wait_for_bkr_job()
 
         # copy ssh key to the machine
-        self.copy_ssh_key()
+        if self.host.bkr_ssh_key:
+            self.copy_ssh_key()
 
         try:
             # Stop/remove container
@@ -650,6 +667,7 @@ class BeakerXML():
         self._paramlist = []
         self._hrname = []
         self._hrvalue = []
+        self._taskparam = []
         self._hrop = []
         self._drname = []
         self._drvalue = []
@@ -660,12 +678,15 @@ class BeakerXML():
         self._distro = ""
         self._kernel_options = ""
         self._kernel_options_post = ""
+        self._kickstart = ""
+        self._ksmeta = ""
         self._removetask = False
         self._kdumpon = False
         self._ndumpon = False
         self._cclist = []
         self._virtmachine = False
         self._virtcapable = False
+        self._ignore_panic = False
 
     def generateBKRXML(self, x, savefile=False):
 
@@ -703,6 +724,22 @@ class BeakerXML():
                         dr_values = dro.split(dro_op)
                         self.setdistrorequires(dr_values[0], dro_op, dr_values[1])
                         break
+
+        # Set User supplied taskparam Only valid option currently is reservetime
+        if (self.taskparam):
+            for taskparam in self.taskparam:
+                for tp_op in self._op_list:
+                    if tp_op in taskparam:
+                        tp_values = taskparam.split(tp_op)
+                        tp_key = str(tp_values[0]).lower()
+                        if tp_key == 'reservetime':
+                            self.reservetime = tp_values[1]
+                            break
+                        else:
+                            self.logger.warning(
+                                "taskparam setting of %s not currently supported. Ingnoring" %
+                                tp_key)
+                            break
 
         # Set arch
         self.cmd += "bkr workflow-simple --arch " + self.arch
@@ -756,6 +793,14 @@ class BeakerXML():
         if(self.kernel_post_options != ""):
             self.cmd += " --kernel_options_post '" + " ".join(self.kernel_post_options) + "'"
 
+        # Set kickstart file
+        if (self.kickstart != ""):
+            self.cmd += " --kickstart '" + "/tmp/" + self.kickstart + "'"
+
+        # Set kick start meta options
+        if (self.ksmeta != ""):
+            self.cmd += " --ks-meta '" + " ".join(self.ksmeta) + "'"
+
         # Set product
         if(self.product != ""):
             self.cmd += " --product '" + self.product + "'"
@@ -796,6 +841,10 @@ class BeakerXML():
         # Set ndump on
         if(self.ndump):
             self.cmd += " --ndump"
+
+        # Set ignore panic
+        if(self.ignore_panic):
+            self.cmd += " --ignore-panic"
 
         # Set job group
         if(self.jobgroup != ""):
@@ -875,6 +924,30 @@ class BeakerXML():
 
                 dre_parent.appendChild(dre)
 
+        for index, val in enumerate(self.tasklist):
+            paramlist = self.paramlist[index]
+
+            te = dom1.createElement('task')
+            te.attributes['name'] = val
+            te.attributes['role'] = "STANDALONE"
+
+            tpe = dom1.createElement('params')
+
+            te_parent = dom1.getElementsByTagName("recipe")[0]
+
+            # Add the task to the xml
+            te_parent.appendChild(te)
+            te.appendChild(tpe)
+
+            keyindex = 0
+            for key in paramlist:
+                tpce = dom1.createElement('param')
+                tpce.attributes['name'] = key
+
+                tpce.attributes['value'] = paramlist[key]
+                keyindex = keyindex + 1
+                tpe.appendChild(tpce)
+
         if self.reservetime_always != "":
             te = dom1.createElement('task')
             te.attributes['name'] = "/distribution/reservesys"
@@ -947,12 +1020,23 @@ class BeakerXML():
         self._kernel_options = options
 
     @property
+    def kickstart(self):
+        """Return the kickstart file."""
+        return self._kickstart
+
+    @kickstart.setter
+    def kickstart(self, ksfile):
+        """Set kick start file.
+        :param ksfile: kickstart file"""
+        self._kickstart = ksfile
+
+    @property
     def ksmeta(self):
         """Return the kick start meta data."""
         return self._ksmeta
 
     @ksmeta.setter
-    def ksmets(self, meta):
+    def ksmeta(self, meta):
         """Set kick start meta data.
         :param meta: meta data"""
         self._ksmeta = meta
@@ -978,6 +1062,17 @@ class BeakerXML():
         """Set family of resource.
         :param family: Family of resource"""
         self._family = family
+
+    @property
+    def ignore_panic(self):
+        """Return the ignore_panic setting."""
+        return self._ignore_panic
+
+    @ignore_panic.setter
+    def ignore_panic(self, ipbool):
+        """Set ignore panic.
+        :param ipbool: ignore panic setting (bool)"""
+        self._ignore_panic = ipbool
 
     @property
     def kdump(self):
@@ -1156,8 +1251,9 @@ class BeakerXML():
     @paramlist.setter
     def paramlist(self, paramdict):
         """Set parameter list.
-        :param paramdict: Paramerters to be used by tassks (dict)."""
-        self._paramlist.append(paramdict)
+        :param paramdict: Paramerters to be used by tasklist (dict)."""
+        raise AttributeError('You cannot set paramlist directly. '
+                             'Use settaskparam().')
 
     @property
     def key_values(self):
@@ -1171,6 +1267,18 @@ class BeakerXML():
         self._key_values = key_values
 
     @property
+    def taskparam(self):
+        """Return the taskparam list. Its a list of task parameters
+           that will be applied to all tasks"""
+        return self._taskparam
+
+    @taskparam.setter
+    def taskparam(self, taskparam):
+        """Set List of taskparam.
+        :param taskparam: List of task parameter that will be applied to all tasks"""
+        self._taskparam = taskparam
+
+    @property
     def tasklist(self):
         """Return the task list."""
         return self._tasklist
@@ -1179,7 +1287,8 @@ class BeakerXML():
     def tasklist(self, task):
         """Set List of tasks for job.
         :param task: List of tasks"""
-        self._tasklist.append(task)
+        raise AttributeError('You cannot set tasklist directly. '
+                             'Use settaskparam().')
 
     @property
     def host_requires_options(self):
@@ -1429,6 +1538,10 @@ class BeakerXML():
             updateindex = self._drname.index(dr_name)
             self._drop[updateindex] = dr_op
             self._drvalue[updateindex] = dr_value
+
+    def settaskparam(self, task, paramdict):
+        self.tasklist.append(task)
+        self.paramlist.append(paramdict)
 
     def set(self, param, value):
         """Set parameters value.
