@@ -461,7 +461,13 @@ class Carbon(LoggerMixin, ResultsMixin):
         local_assets_folder = os.path.join(self.data_folder, 'assets')
 
         # create assets folder
-        os.makedirs(local_assets_folder)
+        try:
+            os.makedirs(local_assets_folder)
+        except OSError as ex:
+            if ex.errno == errno.EEXIST:
+                pass
+            else:
+                raise CarbonException('Error creating assets folder - %s' % ex.message)
 
         for asset in self.scenario.get_assets_list():
             src_file = os.path.join(self.assets_path, asset)
