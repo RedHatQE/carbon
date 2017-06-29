@@ -187,15 +187,26 @@ class BeakerProvisioner(CarbonProvisioner):
 
             # copy the keytab file to container
             src_file_path = os.path.join(self._data_folder, "assets", self.host.provider.credentials["keytab"])
-            dest_full_path_file = '/etc/beaker'
+            dest_file_path = os.path.join('/etc/beaker', self.host.provider.credentials["keytab"])
 
-            cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
+            # ensure destination path exists
+            dest_dir = os.path.dirname(dest_file_path)
+            ensure_dir_args = 'path={0} recurse=yes state=directory'.format(dest_dir)
+            results = self.ansible.run_module(
+                dict(name='ensure keytab folder', hosts=self.docker.cname, gather_facts='no',
+                     tasks=[dict(action=dict(module='file', args=ensure_dir_args))])
+            )
+            self.ansible.results_analyzer(results['status'])
+            if results['status'] != 0:
+                raise BeakerProvisionerException("Error when creating keytab folder within"
+                                                 " the container")
 
+            # copy the keytab
+            cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_file_path)
             results = self.ansible.run_module(
                 dict(name='copy file', hosts=self.docker.cname, gather_facts='no',
                      tasks=[dict(action=dict(module='copy', args=cp_args))])
             )
-
             self.ansible.results_analyzer(results['status'])
             if results['status'] != 0:
                 raise BeakerProvisionerException("Error when copying file to container")
@@ -207,8 +218,7 @@ class BeakerProvisioner(CarbonProvisioner):
             self.lineinfile_call(summary, replace_line, cmd)
 
             summary = "update beaker config: keytab filename"
-            keytab_path = os.path.join(dest_full_path_file, self.host.provider.credentials["keytab"])
-            replace_line = 'KRB_KEYTAB=\"{0}\"'.format(keytab_path)
+            replace_line = 'KRB_KEYTAB=\"{0}\"'.format(dest_file_path)
             cmd = 'path={0} regexp=^#KRB_KEYTAB line={1}'.format(bkr_config, replace_line)
             self.lineinfile_call(summary, replace_line, cmd)
 
