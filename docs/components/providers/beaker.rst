@@ -91,6 +91,10 @@ resource section with the available Beaker provider keys.
         bkr_timeout: <timeout val for Beaker job>
         bkr_kernel_options: [<list of kernel options>]
         bkr_kernel_post_options: [<list of kernel post options>]
+        bkr_kickstart: < Filename of kickstart file>
+        bkr_ignore_panic: <True or False>
+        bkr_taskparam: [<list of task parameter settings>]
+        bkr_ksmeta: [<list of kick start meta OPTIONS>]
 
 
 .. list-table::
@@ -223,6 +227,26 @@ resource section with the available Beaker provider keys.
         - Boolean
         - False
 
+    *   - bkr_kickstart
+        - filename of the kickstart template for installation
+        - String
+        - False
+
+    *   - bkr_ignore_panic
+        - Do not abort job if panic message appears on serial console
+        - Boolean
+        - False
+
+    *   - bkr_taskparam
+        - parameter settings of form NAME=VALUE that will be set for every task in job
+        - List
+        - False
+
+    *   - bkr_ksmeta
+        - kickstart metadata OPTIONS for when generating kickstart
+        - List
+        - False
+
 
 
 Examples
@@ -309,3 +333,19 @@ Examples
         # timeout for the beaker job, default if not set is 8hrs = 28800
         # can only set values between 1hr(3600) and 48hrs(172800)
         bkr_timeout: 172800
+
+        # possible values for ignore panic: True, False
+        bkr_ignore_panic: True
+    
+        # Filename of the kickstart file to execute
+        bkr_kickstart: <kickstart filename>
+
+        # Only taskparam value supported currently is RESERVETIME
+        # Set as seconds - Reserve system for 2 days
+        bkr_taskparam: RESERVETIME=172800
+
+        # kick start meta data OPTIONS - list
+        bkr_ksmeta: ["<key>=<value>"]
+
+
+
