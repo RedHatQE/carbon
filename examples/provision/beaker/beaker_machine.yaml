@@ -58,3 +58,15 @@ provision:
     # bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
     # bkr_kernel_post_options: ["isolcpus=0,5"]
 
+    # possible values for ignore panic: True, False
+    # bkr_ignore_panic: True
+    #
+    # Filename of the kickstart file to execute
+    # bkr_kickstart: <filename>
+    #
+    # Set as seconds - 2 days is setting below
+    # bkr_taskparam: RESERVETIME=172800
+    #
+    # kick start meta data OPTIONS - list
+    # bkr_ksmeta: ["<key>=<value>"]
+    #
