@@ -84,7 +84,7 @@ class BeakerProvider(CarbonProvider):
     _assets_parameters = (
         'ssh_key',
         'keytab',
-        'bkr_kickstart'
+        'kickstart'
     )
 
     def __init__(self, **kwargs):

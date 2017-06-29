@@ -277,7 +277,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # copy the ks file to container if set
         if self.bxml.kickstart != "":
-            src_file_path = os.path.join(self._data_folder, self.bxml.kickstart)
+            src_file_path = os.path.join(self._data_folder, "assets", self.bxml.kickstart)
             dest_full_path_file = '/tmp'
 
             cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
@@ -356,8 +356,10 @@ class BeakerProvisioner(CarbonProvisioner):
 
             output = parsed_results["stdout"]
             if output.find("Submitted:") != "-1":
+                mod_output = output[output.find("Submitted:"):]
                 # set the result as ascii instead of unicode
-                self.host.bkr_job_id = output[output.find("[") + 2:output.find("]") - 1].encode('ascii', 'ignore')
+                self.host.bkr_job_id = mod_output[mod_output.find(
+                    "[") + 2:mod_output.find("]") - 1].encode('ascii', 'ignore')
                 self.logger.info("just submitted: {}".format(self.host.bkr_job_id))
             else:
                 raise BeakerProvisionerException("Unexpected Error submitting job")
