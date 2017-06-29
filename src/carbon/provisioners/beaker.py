@@ -25,18 +25,18 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import os
-import sys
+import stat
 import uuid
 import time
 import socket
-
-from subprocess import Popen, PIPE
 from xml.dom.minidom import parse, parseString
+
+import paramiko
 
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
 from ..core import CarbonProvisioner, CarbonProvisionerException
-from ..helpers import get_ansible_inventory_script, copy_key
+from ..helpers import get_ansible_inventory_script
 
 
 class BeakerProvisionerException(CarbonProvisionerException):
@@ -572,52 +572,43 @@ class BeakerProvisioner(CarbonProvisioner):
                 self.host.bkr_ip_address = addr
 
     def copy_ssh_key(self):
+
         self.logger.info("Send keys over to the Beaker Nodes: {0} "
                          "{1}".format(self.host.bkr_ip_address, self.host.bkr_hostname))
+
         # setup prior to injecting ssh keys
-        ssh_key_path = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key)
-
-        # get permission of the private key
-        oct_permission = oct(os.stat("{}".format(ssh_key_path)).st_mode)[4:]
-        if int(oct_permission) != 600:
-            try:
-                p = Popen("chmod 600 {}".format(ssh_key_path), stdout=PIPE, shell=True)
-                stdoutput = p.communicate()[0]
-                stderror = p.communicate()[1]
-
-                if p.returncode != 0:
-                    self.logger.error("Error setting mode of ssh key: "
-                                      "{0} {1}".format(stdoutput, stderror))
-                    raise BeakerProvisionerException("Error setting mode of ssh key: "
-                                                     "{0} {1}".format(stdoutput, stderror))
-            except Exception as e:
-                raise BeakerProvisionerException("Error setting mode of ssh key {}".format(e))
-
-        ssh_key_path_public = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key + ".pub")
+        private_key = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key)
 
         try:
-            p = Popen("ssh-keygen -y -f {0} > {1}".format(ssh_key_path,
-                                                          ssh_key_path_public),
-                      stdout=PIPE, shell=True)
-            stdoutput = p.communicate()[0]
-            stderror = p.communicate()[1]
-            if p.returncode != 0:
-                self.logger.error("Error generating public key: {0} "
-                                  "{1}".format(stdoutput. stderror))
-                raise BeakerProvisionerException("Error generating public key: {0}"
-                                                 " {1}".format(stdoutput, stderror))
-        except Exception as e:
-            raise BeakerProvisionerException("Error Generating public key {}".format(e))
+            # set permission of the private key
+            os.chmod(private_key, stat.S_IRUSR | stat.S_IWUSR)
 
-        if copy_key(self.host.bkr_username,
-                    self.host.bkr_password,
-                    'yes',
-                    {'ip': self.host.bkr_ip_address,
-                     'name': self.host.bkr_hostname},
-                    ssh_key_path_public):
-            raise BeakerProvisionerException("Failed to send key: {0}, "
-                                             "{1}".format(self.host.bkr_ip_address,
-                                                          self.host.bkr_hostname))
+        except OSError as ex:
+            raise BeakerProvisionerException("Error setting permission of ssh key - %s" % ex.message)
+
+        # generate public key from private
+        public_key = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key + ".pub")
+        rsa_key = paramiko.RSAKey(filename=private_key)
+        with open(public_key, 'w') as f:
+            f.write('%s %s' % (rsa_key.get_name(), rsa_key.get_base64()))
+
+        # send the key to the beaker machine
+        ssh_con = paramiko.SSHClient()
+        ssh_con.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        try:
+            ssh_con.connect(hostname=self.host.bkr_ip_address,
+                            username=self.host.bkr_username,
+                            password=self.host.bkr_password)
+            sftp = ssh_con.open_sftp()
+            sftp.put(public_key, '/root/.ssh/authorized_keys')
+        except paramiko.SSHException as ex:
+            raise BeakerProvisionerException('Error connecting to beaker machine - %s' % ex.message)
+        except IOError as ex:
+            raise BeakerProvisionerException('Error sending public key - %s' % ex.message)
+        finally:
+            ssh_con.close()
+
         self.logger.info("Successfully Sent key: {0}, "
                          "{1}".format(self.host.bkr_ip_address,
                                       self.host.bkr_hostname))
