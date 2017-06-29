@@ -545,6 +545,7 @@ class Carbon(LoggerMixin, ResultsMixin):
                 raise CarbonException('Error while copying assets. Msg: %s' % ex.message)
 
         try:
+            status = 0
             for pipeline in self._pipelines:
                 if pipeline.name not in self.tasks:
                     continue
@@ -557,14 +558,22 @@ class Carbon(LoggerMixin, ResultsMixin):
                 else:
                     for task in pipeline.tasks:
                         ctx = taskrunner.execute([task], cleanup=self.cleanup)
-                        self.update_results(pipeline.name, task, 0, ctx)
+                        self.update_results(pipeline.name, task, status, ctx)
                 self.logger.info("." * 50)
         except taskrunner.TaskExecutionException as ex:
+            status = 1
             self.logger.error(ex)
-            self.update_results(pipeline.name, task, 1, ex.context)
+            self.update_results(pipeline.name, task, status, ex.context)
         finally:
             self.write_status_file(self.status_file)
             self.logger.info('Scenario status file ~ %s' % self.status_file)
 
             file_mgmt('w', self.results_file, self.scenario.profile())
             self.logger.info('Scenario results file ~ %s' % self.results_file)
+
+            # Raise final carbon exception based on status of task execution
+            if status:
+                raise CarbonException(
+                    "Carbon scenario '%s' failed to execute successfully!" %
+                    self.scenario.name
+                )
