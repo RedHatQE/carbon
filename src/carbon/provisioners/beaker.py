@@ -577,18 +577,21 @@ class BeakerProvisioner(CarbonProvisioner):
         # setup prior to injecting ssh keys
         ssh_key_path = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key)
 
-        try:
-            p = Popen("chmod 600 {}".format(ssh_key_path), stdout=PIPE, shell=True)
-            stdoutput = p.communicate()[0]
-            stderror = p.communicate()[1]
+        # get permission of the private key
+        oct_permission = oct(os.stat("{}".format(ssh_key_path)).st_mode)[4:]
+        if int(oct_permission) != 600:
+            try:
+                p = Popen("chmod 600 {}".format(ssh_key_path), stdout=PIPE, shell=True)
+                stdoutput = p.communicate()[0]
+                stderror = p.communicate()[1]
 
-            if p.returncode != 0:
-                self.logger.error("Error setting mode of ssh key: "
-                                  "{0} {1}".format(stdoutput, stderror))
-                raise BeakerProvisionerException("Error setting mode of ssh key: "
-                                                 "{0} {1}".format(stdoutput, stderror))
-        except Exception as e:
-            raise BeakerProvisionerException("Error setting mode of ssh key {}".format(e))
+                if p.returncode != 0:
+                    self.logger.error("Error setting mode of ssh key: "
+                                      "{0} {1}".format(stdoutput, stderror))
+                    raise BeakerProvisionerException("Error setting mode of ssh key: "
+                                                     "{0} {1}".format(stdoutput, stderror))
+            except Exception as e:
+                raise BeakerProvisionerException("Error setting mode of ssh key {}".format(e))
 
         ssh_key_path_public = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key + ".pub")
 
