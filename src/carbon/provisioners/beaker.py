@@ -579,11 +579,14 @@ class BeakerProvisioner(CarbonProvisioner):
 
         try:
             p = Popen("chmod 600 {}".format(ssh_key_path), stdout=PIPE, shell=True)
-            output = p.communicate()[0]
+            stdoutput = p.communicate()[0]
+            stderror = p.communicate()[1]
+
             if p.returncode != 0:
-                self.logger.error("Error setting mode of ssh key: {}".format(output))
-                raise BeakerProvisionerException("Error setting mode of ssh "
-                                                 "key: {}".format(output))
+                self.logger.error("Error setting mode of ssh key: "
+                                  "{0} {1}".format(stdoutput, stderror))
+                raise BeakerProvisionerException("Error setting mode of ssh key: "
+                                                 "{0} {1}".format(stdoutput, stderror))
         except Exception as e:
             raise BeakerProvisionerException("Error setting mode of ssh key {}".format(e))
 
@@ -593,11 +596,13 @@ class BeakerProvisioner(CarbonProvisioner):
             p = Popen("ssh-keygen -y -f {0} > {1}".format(ssh_key_path,
                                                           ssh_key_path_public),
                       stdout=PIPE, shell=True)
-            output = p.communicate()[0]
+            stdoutput = p.communicate()[0]
+            stderror = p.communicate()[1]
             if p.returncode != 0:
-                self.logger.error("Error generating public key: {}".format(output))
-                raise BeakerProvisionerException("Error setting mode of ssh key: "
-                                                 "{}".format(output))
+                self.logger.error("Error generating public key: {0} "
+                                  "{1}".format(stdoutput. stderror))
+                raise BeakerProvisionerException("Error generating public key: {0}"
+                                                 " {1}".format(stdoutput, stderror))
         except Exception as e:
             raise BeakerProvisionerException("Error Generating public key {}".format(e))
 
