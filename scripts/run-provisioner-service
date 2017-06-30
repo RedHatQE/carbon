@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from carbon.services import provisioner
+
+if __name__ == '__main__':
+    provisioner.run(debug=True)

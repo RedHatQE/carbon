@@ -30,7 +30,14 @@ class CiopsProvisioner(CarbonProvisioner):
     """
     Ciops version 1 for provisioning machines
     """
+    __provisioner_name__ = "ciops"
+    _assets = ["credentials", "input_yaml"]
+
+    def __init__(self, **kwargs):
+        super(CiopsProvisioner, self).__init__(**kwargs)
 
     def create(self):
-        print('Provisioning machines from {klass}'
-              .format(klass=self.__class__))
+        self.logger.info('Provisioning machines from %s', self.__class__)
+
+    def delete(self):
+        self.logger.info('Tearing down machines from %s', self.__class__)

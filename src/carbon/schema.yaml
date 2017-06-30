@@ -1,0 +1,62 @@
+# Schema file (schema.yaml)
+type: map
+mapping:
+  name:
+    type: str
+    required: True
+  description:
+    type: str
+    required: True
+  credentials:
+    required: False
+    # not fully defined
+    type: seq
+    sequence:
+      - type: any
+  provision:
+    required: True
+    sequence:
+    - type: map
+      allowempty: True
+      mapping:
+        name:
+          required: True
+        provider:
+          required: True
+  orchestrate:
+    required: False
+    sequence:
+    - type: map
+      allowempty: True
+      mapping:
+        name:
+          required: True
+        hosts:
+          required: True
+        vars:
+          allowempty: True
+          type: map
+  execute:
+    required: False
+    sequence:
+    - type: map
+      allowempty: True
+      mapping:
+        name:
+          required: True
+        vars:
+          allowempty: True
+          type: map
+  report:
+    required: False
+    sequence:
+    - type: map
+      allowempty: True
+      mapping:
+        type:
+          required: True
+        name:
+          required: True
+        vars:
+          allowempty: True
+          type: map

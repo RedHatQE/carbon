@@ -43,5 +43,9 @@ class DigitalOceanProvider(CarbonProvider):
 
     _optional_parameters = ()
 
+    _mandatory_creds_parameters = ()
+
+    _optional_creds_parameters = ()
+
     def __init__(self, **kwargs):
         super(DigitalOceanProvider, self).__init__(**kwargs)

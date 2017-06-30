@@ -1,13 +1,10 @@
-.PHONY: clean-pyc clean-tests clean tox-test docs
+.PHONY: clean-pyc clean-tests clean docs
 
-all: clean-pyc clean-tests clean tox-test
+all: clean-pyc clean-tests clean test
 
 clean-all: clean-pyc clean-tests clean
 
 test:
-	cd tests; pytest -v
-
-tox-test:
 	tox
 
 release:
@@ -25,9 +22,9 @@ clean:
 clean-tests:
 	rm -rf tests/coverage-report*
 	rm -rf tests/.coverage*
+	rm -rf tests/.workspace
 	rm -rf tests/__pycache__
-	rm -rf tests/junit-report.xml
-	rm -rf tests/flake8-report.txt
+	rm -rf tests/cover
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
@@ -35,4 +32,4 @@ clean-pyc:
 	find . -name '*~' -exec rm -f {} +
 
 docs:
-	$(MAKE) -C docs html
+	python setup.py build_sphinx

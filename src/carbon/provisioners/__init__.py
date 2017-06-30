@@ -16,4 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from .ciops import CiopsProvisioner
-from .linchpin import LinchpinProvisioner
+from .linch_pin import LinchpinProvisioner
+from .openshift import OpenshiftProvisioner
+from .openstack import OpenstackProvisioner
+from .beaker import BeakerProvisioner

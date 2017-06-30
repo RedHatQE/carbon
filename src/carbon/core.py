@@ -21,18 +21,230 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import shutil
 import sys
+import os
+import errno
 import inspect
+from distutils.dir_util import copy_tree
 
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
+from logging import Formatter, getLogger, StreamHandler, FileHandler
 from taskrunner import Task
+
 from .helpers import get_core_tasks_classes
 
-# TODO: we must implement core exceptions
+
 class CarbonException(Exception):
-    pass
+    """Carbon's base Exception class"""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        self.message = message
+        super(CarbonException, self).__init__(message)
 
 
-class CarbonTask(Task):
+class CarbonTaskException(CarbonException):
+    """Carbon's task base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonTaskException, self).__init__(message)
+
+
+class CarbonResourceException(CarbonException):
+    """Carbon's resource base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonResourceException, self).__init__(message)
+
+
+class CarbonProvisionerException(CarbonException):
+    """Carbon's provisioner base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonProvisionerException, self).__init__(message)
+
+
+class CarbonProviderException(CarbonException):
+    """Carbon's provider base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonProviderException, self).__init__(message)
+
+
+class CarbonControllerException(CarbonException):
+    """Carbon's controller base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonControllerException, self).__init__(message)
+
+
+class LoggerMixinException(CarbonException):
+    """Carbon's logger mixin base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonTaskException, self).__init__(message)
+
+
+class LoggerMixin(object):
+    """Carbons logger mixin class.
+
+    This class provides an easy interface for other classes throughout carbon
+    to utilize the carbon logger.
+
+    When a carbon object is created, the carbon logger will be created also.
+    Allowing easy access to the logger as follows:
+
+        cbn = Carbon()
+        cbn.logger.info('Carbon!')
+
+    Carbon packages (classes) can either include the logger mixin or create
+    their own object.
+
+        class Host(CarbonResource):
+            self.logger.info('Carbon Resource!')
+
+    Modules that want to use carbon logger per function base and not per class,
+    can access the carbon logger as follows:
+
+        from logging import getLogger
+        LOG = getLogger(__name__)
+        LOG.info('Carbon!')
+
+    New loggers for other libraries can easily be added. A create_lib_logger
+    method will need to be create to setup the logger. Then lastly you can set
+    a property to return that specific logger for easy access.
+    """
+
+    _LOG_FORMAT = ("%(asctime)s %(levelname)s "
+                   "[%(name)s.%(funcName)s:%(lineno)d] %(message)s")
+
+    _LOG_LEVELS = {
+        'debug': DEBUG,
+        'info': INFO,
+        'warning': WARNING,
+        'error': ERROR,
+        'critical': CRITICAL
+    }
+
+    @classmethod
+    def create_carbon_logger(cls, carbon_config):
+        """Create carbons logger.
+
+        :param name: Logger name.
+        :param log_level: Log level to set for logger.
+        :return: Carbon logger object.
+        """
+        clogger = getLogger(carbon_config["LOGGER_NAME"])
+        if not clogger.handlers:
+            if carbon_config["LOGGER_TYPE"] == "stream":
+                chandler = StreamHandler()
+            elif carbon_config["LOGGER_TYPE"] == "file":
+                logfile = os.path.join(carbon_config["DATA_FOLDER"], "logs", "carbon_scenario.log")
+                logdir = os.path.dirname(logfile)
+                if os.path.exists(logdir):
+                    pass
+                else:
+                    try:
+                        os.makedirs(logdir)
+                    except OSError as ex:
+                        if ex.errno == errno.EACCES:
+                            raise LoggerMixinException(
+                                'You do not have permission to create the '
+                                'workspace.'
+                            )
+                        else:
+                            raise LoggerMixinException(
+                                'Error creating scenario workspace: %s' %
+                                ex.message
+                            )
+                chandler = FileHandler(logfile)
+            else:
+                raise LoggerMixinException(
+                    'Please set a valid LOGGER_TYPE value.'
+                )
+            chandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
+            chandler.setFormatter(Formatter(cls._LOG_FORMAT))
+            clogger.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
+            clogger.addHandler(chandler)
+        return clogger
+
+    @classmethod
+    def create_custom_logger(cls, carbon_config, name):
+        """Create custom logger.
+
+        :param name: Logger name.
+        :param log_level: Log level to set for logger.
+        :param name: name of a python class to log
+        :return: Taskrunner logger object.
+        """
+        if carbon_config["LOGGER_TYPE"] == "stream":
+            thandler = StreamHandler()
+        elif carbon_config["LOGGER_TYPE"] == "file":
+            logfile = os.path.join(carbon_config["DATA_FOLDER"], "logs", "carbon_scenario.log")
+            logdir = os.path.dirname(logfile)
+            if os.path.exists(logdir):
+                pass
+            else:
+                try:
+                    os.makedirs(logdir)
+                except OSError as ex:
+                    if ex.errno == errno.EACCES:
+                        raise LoggerMixinException(
+                            'You do not have permission to create the '
+                            'workspace.'
+                        )
+                    else:
+                        raise LoggerMixinException(
+                            'Error creating scenario workspace: %s' %
+                            ex.message
+                        )
+            thandler = FileHandler(logfile)
+        else:
+            raise LoggerMixinException(
+                'Please set a valid LOGGER_TYPE value.'
+            )
+        thandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
+        thandler.setFormatter(Formatter(cls._LOG_FORMAT))
+        tlogger = getLogger(name)
+        tlogger.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
+        tlogger.addHandler(thandler)
+        return tlogger
+
+    @property
+    def logger(self):
+        """Returns the default logger (carbon logger) object."""
+        return getLogger(inspect.getmodule(inspect.stack()[1][0]).__name__)
+
+
+class CarbonTask(Task, LoggerMixin):
     """
     This is the base class for every task created for Carbon framework.
     All instances of this class can be found within the ~carbon.tasks
@@ -57,7 +269,7 @@ class CarbonTask(Task):
         return self.name
 
 
-class CarbonResource(object):
+class CarbonResource(LoggerMixin):
     """
     This is the base class for every resource created for Carbon Framework.
     All instances of this class can be found within ~carbon.resources
@@ -66,13 +278,16 @@ class CarbonResource(object):
     _valid_tasks_types = []
     _fields = []
 
-    def __init__(self, name=None, **kwargs):
+    def __init__(self, config=None, name=None, **kwargs):
 
         # every resource has a name
         self._name = name
 
         # A list of tasks that will be executed upon the reource.
         self._tasks = []
+
+        # Carbon configuration
+        self._config = config
 
     @property
     def name(self):
@@ -82,13 +297,22 @@ class CarbonResource(object):
     def name(self, value):
         raise AttributeError('You can set name after class is instanciated.')
 
+    @property
+    def config(self):
+        return self._config
+
+    @config.setter
+    def config(self, value):
+        raise AttributeError('You can set config after resource is created.')
+
     def _add_task(self, t):
         """
         Add a task to the list of tasks for the resource
         """
         if t['task'] not in set(get_core_tasks_classes()):
-            raise CarbonException('The task class "%s" used is not valid.'
-                                  % t['task'])
+            raise CarbonResourceException(
+                'The task class "%s" used is not valid.' % t['task']
+            )
         self._tasks.append(t)
 
     def _extract_tasks_from_resource(self):
@@ -144,15 +368,34 @@ class CarbonResource(object):
     def validate(self):
         pass
 
-class CarbonProvisioner(object):
+
+class CarbonProvisioner(LoggerMixin):
     """
     This is the base class for all provisioners for provisioning machines
     """
+    __provisioner_name__ = None
+
     def create(self):
         raise NotImplementedError
 
+    def delete(self):
+        raise NotImplementedError
 
-class CarbonProvider(object):
+    @property
+    def name(self):
+        """Return the name for the container."""
+        return self.__provisioner_name__
+
+    @name.setter
+    def name(self, value):
+        """
+        Returns the name of the provisioner
+        :param value: The name for the provisioner.
+        """
+        raise AttributeError('You cannot set name for the provisioner.')
+
+
+class CarbonProvider(LoggerMixin):
     """
     This is the base class for all providers.
 
@@ -164,7 +407,6 @@ class CarbonProvider(object):
     @classmethod
     def validate_<parameter_name>(cls, value)
 
-
     """
     # the YAML definition uses this value to reference to this class.
     # you have to override this variable in the subclasses so it can be
@@ -172,11 +414,30 @@ class CarbonProvider(object):
     __provider_name__ = None
     __provider_prefix__ = None
 
+    # all parameters that MUST be set for the provider
     _mandatory_parameters = ()
+
+    # additional parameters that can be set for the provider
     _optional_parameters = ()
+
+    # parameters that will be set based on output of the provider
+    # for instance, for the Openstack, ip_address and for Openshift
+    # routes
+    _output_parameters = ()
+
+    # all credential parameters that MUST be set for the provider's credential
+    _mandatory_creds_parameters = ()
+
+    # additional parameters that can be set for the provider's credential
+    _optional_creds_parameters = ()
+
+    # special parameters that contain file paths - assets parameters must
+    # be added to either mandatory or optional.
+    _assets_parameters = ()
 
     def __init__(self, **kwargs):
         # I care only about the parameters set on ~self._parameters
+        self._credentials = {}
         params = {k for k, v in kwargs.items()}\
             .intersection({'{}{}'.format(self.__provider_prefix__, k) for k in self._mandatory_parameters})
         for k, v in kwargs.items():
@@ -186,9 +447,55 @@ class CarbonProvider(object):
     def __str__(self):
         return '<Provider: %s>' % self.__provider_name__
 
-    @classmethod
-    def name(cls):
-        return cls.__provider_name__
+    @property
+    def name(self):
+        """Return the provider name."""
+        return self.__provider_name__
+
+    @name.setter
+    def name(self, value):
+        """Raises an exception when trying to set the name for the provider
+        :param value: name
+        """
+        raise AttributeError('You cannot set provider name.')
+
+    @property
+    def prefix(self):
+        """Return the provider prefix"""
+        return self.__provider_prefix__
+
+    @prefix.setter
+    def prefix(self, value):
+        """Raises an exception when trying to set the provider prefix
+        :param value: prefix
+        """
+        raise AttributeError('You cannot set provider prefix.')
+
+    @property
+    def credentials(self):
+        """Return the credentials for the provider."""
+        return self._credentials
+
+    @credentials.setter
+    def credentials(self, value):
+        """Raise an exception when trying to set the credentials for the
+        provider after the class has been instanciated. You should use the
+        set_credentials method to set credentials.
+        :param value: The provider credentials
+        """
+        raise ValueError('You cannot set provider credentials directly. Use '
+                         'function ~CarbonProvider.set_credentials')
+
+    def set_credentials(self, cdata):
+        """Set the provider credentials.
+        :param cdata: The provider credentials dict
+        """
+        for p in self.get_mandatory_creds_parameters():
+            self._credentials[p] = cdata[p]
+
+        for p in self.get_optional_creds_parameters():
+            if p in cdata:
+                self._credentials[p] = cdata[p]
 
     @classmethod
     def check_mandatory_parameters(cls, parameters):
@@ -200,24 +507,95 @@ class CarbonProvider(object):
                  fields that needs to be filled.
         """
         intersec = {k for k, v in parameters.items()}\
-            .intersection({'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters})
-        return {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters}.difference(intersec)
+            .intersection(cls._mandatory_parameters_set())
+
+        return cls._mandatory_parameters_set().difference(intersec)
+
+    @classmethod
+    def check_mandatory_creds_parameters(cls, parameters):
+        """
+        Validates the parameters against the mandatory credentials parameters
+        set by the class.
+        :param parameters: a dictionary of parameters
+        :return: an empty set if all mandatory creds fields satisfy or the list
+                 of fields that needs to be filled.
+        """
+        intersec = {k for k, v in parameters.items()}\
+            .intersection({k for k in cls.get_mandatory_creds_parameters()})
+        return {k for k in cls.get_mandatory_creds_parameters()}.difference(intersec)
+
+    @classmethod
+    def _mandatory_parameters_set(cls):
+        """
+        Build a set of mandatory parameters
+        :return: a set
+        """
+        return {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters}
 
     @classmethod
     def get_mandatory_parameters(cls):
         """
         Get the list of the mandatory parameters
-        :return: a tuple of the mandatory paramaters.
+        :return: a tuple of the mandatory parameters.
         """
-        return ('{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters)
+        return (param for param in cls._mandatory_parameters_set())
+
+    @classmethod
+    def _mandatory_creds_parameters_set(cls):
+        """
+        Build a set of mandatory parameters
+        :return: a set
+        """
+        return {k for k in cls._mandatory_creds_parameters}
+
+    @classmethod
+    def get_mandatory_creds_parameters(cls):
+        """
+        Get the list of the mandatory credential parameters
+        :return: a tuple of the mandatory parameters.
+        """
+        return (param for param in cls._mandatory_creds_parameters_set())
+
+    @classmethod
+    def _optional_creds_parameters_set(cls):
+        """
+        Build a set of optional parameters
+        :return: a set
+        """
+        return {k for k in cls._optional_creds_parameters}
+
+    @classmethod
+    def get_optional_creds_parameters(cls):
+        """
+        Get the list of the optional credential parameters
+        :return: a tuple of the optional parameters.
+        """
+        return (param for param in cls._optional_creds_parameters_set())
+
+    @classmethod
+    def _optional_parameters_set(cls):
+        """
+        Build a set of optional parameters
+        :return: a set
+        """
+        return {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters}
 
     @classmethod
     def get_optional_parameters(cls):
         """
         Get the list of the optional parameters
-        :return: a tuple of the optional paramaters.
+        :return: a tuple of the optional parameters.
         """
-        return ('{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters)
+        return (param for param in cls._optional_parameters_set())
+
+    @classmethod
+    def _all_parameters_set(cls):
+        """
+        Build a set of all parameters
+        :return: a set
+        """
+        return cls._mandatory_parameters_set()\
+            .union(cls._optional_parameters_set())
 
     @classmethod
     def get_all_parameters(cls):
@@ -225,9 +603,82 @@ class CarbonProvider(object):
         Return the list of all possible parameters for the provider.
         :return: a tuple with all parameters
         """
-        all_params = {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters} \
-            .union({'{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters})
-        return (param for param in all_params)
+        return (param for param in cls._all_parameters_set())
+
+    @classmethod
+    def _all_creds_parameters_set(cls):
+        """
+        Build a set of all credential parameters
+        :return: a set
+        """
+        return cls._mandatory_creds_parameters_set()\
+            .union(cls._optional_creds_parameters_set())
+
+    @classmethod
+    def get_all_creds_parameters(cls):
+        """
+        Return the list of all possible credential parameters for
+        the provider.
+        :return: a tuple
+        """
+        return (param for param in cls._all_creds_parameters_set())
+
+    @classmethod
+    def _assets_parameters_set(cls):
+        """
+        Build a set of assets parameters from the
+        intersection between all parameters and what
+        it is in the `cls._assets_parameters`
+        :return: a set
+        """
+        return cls._all_parameters_set().intersection(
+            {'{}{}'.format(cls.__provider_prefix__, k)
+             for k in cls._assets_parameters}
+        )
+
+    @classmethod
+    def _assets_creds_parameters_set(cls):
+        """
+        Build a set of assets parameters from the
+        intersection between all parameters and what
+        it is in the `cls._assets_parameters`
+        :return: a set
+        """
+        return cls._all_creds_parameters_set().intersection(
+            {k for k in cls._assets_parameters}
+        )
+
+    @classmethod
+    def get_assets_parameters(cls):
+        """
+        Get the list of the assets parameters
+        :return: a tuple
+        """
+        all_assets = cls._assets_parameters_set()\
+            .union(cls._assets_creds_parameters_set())
+
+        return (param for param in all_assets)
+
+    @classmethod
+    def _output_parameters_set(cls):
+        """
+        Build a set of output parameters from the
+        intersection between all parameters and what
+        it is in the `cls._assets_parameters`
+        :return: a set
+        """
+        return cls._all_parameters_set().intersection(
+            {'{}{}'.format(cls.__provider_prefix__, k)
+             for k in cls._output_parameters}
+        )
+
+    @classmethod
+    def get_output_parameters(cls):
+        """
+        Get the list of the output parameters
+        :return: a tuple
+        """
+        return (param for param in cls._output_parameters_set())
 
     @classmethod
     def is_optional(cls, value):
@@ -238,7 +689,18 @@ class CarbonProvider(object):
         return value in cls.get_mandatory_parameters()
 
     @classmethod
-    def validate(cls, host):
+    def is_asset(cls, value):
+        return value in cls.get_assets_parameters()
+
+    @classmethod
+    def is_credential_asset(cls, value):
+        return value in cls.get_assets_creds_parameters()
+
+    @classmethod
+    def is_output(cls, value):
+        return value in cls.get_output_parameters()
+
+    def validate(self, host):
         """
         Run a validation for all validate_<param_name> that is
         found in the provider class.
@@ -260,17 +722,17 @@ class CarbonProvider(object):
             # It then returns the list of parameters that the validate
             # functions will return false.
             #
-            # It throws an CarbonException if the host doesn't have the
+            # It throws an CarbonProviderException if the host doesn't have the
             # attribute to be validated or if the provider has not implemented
             # the validate_<param> function.
             items = [
                 (param,
-                 getattr(host, '{}{}'.format(cls.__provider_prefix__, param)),
-                 getattr(cls, "validate_%s" % param),)
-                for param in (cls._mandatory_parameters + cls._optional_parameters)]
+                 getattr(host, '{}{}'.format(self.__provider_prefix__, param)),
+                 getattr(self, "validate_%s" % param),)
+                for param in (self._mandatory_parameters + self._optional_parameters)]
             return [(param, value) for param, value, func in [item for item in items] if not func(value)]
         except AttributeError as e:
-            raise CarbonException(e.args[0])
+            raise CarbonProviderException(e.args[0])
 
     @classmethod
     def build_profile(cls, host):
@@ -285,3 +747,30 @@ class CarbonProvider(object):
                 param: getattr(host, param, None)
             })
         return profile
+
+
+class CarbonController(LoggerMixin):
+    """This is the base class for all controllers.
+
+    Every controller will need to inherit the carbon controller. Controllers
+    handle actions between carbon and its resources aka hosts.
+    """
+
+    __controller_name__ = None
+
+    def __init__(self):
+        """Constructor."""
+        pass
+
+    @property
+    def name(self):
+        """Return the name of the controller."""
+        return self.__controller_name__
+
+    @name.setter
+    def name(self, value):
+        """Raises an exception when trying to set controller name property.
+
+        :param value: Name of controller to set.
+        """
+        raise ValueError('You cannot set the controller name property.')

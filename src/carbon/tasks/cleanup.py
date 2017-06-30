@@ -23,17 +23,29 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+from ..constants import TASK_CLEANUP_CHOICES
 from ..core import CarbonTask
 
 
 class CleanupTask(CarbonTask):
-    def __init__(self, msg, clean_msg, **kwargs):
+
+    def __init__(self, msg, clean_msg, host, **kwargs):
         super(CleanupTask, self).__init__(**kwargs)
         self.msg = msg
         self.clean_msg = clean_msg
+        self.provisioner = host.provisioner(host)
+        self.cleanup_level = kwargs['cleanup']
 
     def run(self, context):
-        print(self.msg)
+        self.logger.info(self.msg)
+
+        # Delete resources when cleanup level is not never or on_failure
+        # Should always be the last action to be run for ~CleanupTask.run()
+        if self.cleanup_level == TASK_CLEANUP_CHOICES[1] or self.cleanup_level\
+                == TASK_CLEANUP_CHOICES[4]:
+            self.logger.warn('Skipping resource deletion.')
+        else:
+            self.provisioner.delete()
 
     def cleanup(self, context):
-        print(self.clean_msg)
+        self.logger.info(self.clean_msg)

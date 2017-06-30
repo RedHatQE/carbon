@@ -22,11 +22,45 @@
     :license: GPLv3, see LICENSE for more details.
 
 """
-PIPELINE_ORDER = ['validate',
-                  'check',
-                  'create',
-                  'config',
-                  'install',
-                  'test',
-                  'report',
-                  'teardown']
+import os
+import re
+
+CARBON_ROOT = os.path.join("/".join(os.path.dirname(__file__).split('/')[0:-2]))
+SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "schema.yaml")
+
+TASKLIST = ["validate",
+            "provision",
+            "orchestrate",
+            "execute",
+            "report",
+            "cleanup"]
+
+TASK_CLEANUP_CHOICES = ["always",
+                        "never",
+                        "pronto",
+                        "on_success",
+                        "on_failure"]
+
+TASK_LOGLEVEL_CHOICES = ["debug",
+                         "info",
+                         "warning",
+                         "error",
+                         "critical"]
+
+PROVISIONERS = {
+    "openstack": "openstack",
+    "beaker": "beaker",
+    "openshift": "openshift"
+}
+
+LOGTYPE_CHOICES = ["file",
+                   "stream"]
+
+HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]
+
+STATUS_FILE = "status.yaml"
+
+RESULTS_FILE = "results.yaml"
+
+# Rule for Carbon hosts naming convention
+RULE_HOST_NAMING = re.compile('[\W_]+')

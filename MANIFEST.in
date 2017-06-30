@@ -1,11 +1,6 @@
-include Makefile CHANGES LICENSE AUTHORS README.md
-recursive-include tests *
-recursive-include docs *
-recursive-exclude docs *.pyc
-recursive-exclude docs *.pyo
-recursive-exclude docs .gitignore
-recursive-exclude tests *.pyc
-recursive-exclude tests *.pyo
+include CHANGES LICENSE AUTHORS README.md
+include src/carbon/schema.yaml
+exclude setup.cfg
 prune docs/_build
 prune docs/.ropeproject
 prune docs/.gitignore

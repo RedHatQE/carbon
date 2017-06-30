@@ -23,14 +23,30 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import uuid
+import os
+import errno
 
-from ..core import CarbonResource
+from pykwalify.core import Core
+from pykwalify.errors import CoreError, SchemaError
+from ..constants import SCENARIO_SCHEMA
+from ..core import CarbonResource, CarbonResourceException
+from ..helpers import gen_random_str
 from ..tasks import ValidateTask
 from .actions import Action
 from .host import Host
 from .executes import Execute
 from .reports import Report
+
+
+class ScenarioException(CarbonResourceException):
+    """Scenario's base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(ScenarioException, self).__init__(message)
 
 
 class Scenario(CarbonResource):
@@ -40,30 +56,48 @@ class Scenario(CarbonResource):
     _fields = [
         'name',         # the name of the scenario
         'description',  # a brief description of what the scenario is
+        'filename',  # location of the file that is the scenario
     ]
 
     def __init__(self,
+                 config=None,
                  name=None,
                  parameters={},
                  validate_task_cls=ValidateTask,
                  **kwargs):
 
-        super(Scenario, self).__init__(name, **kwargs)
+        super(Scenario, self).__init__(config=config, name=name, **kwargs)
 
         if not name:
-            self._name = str(uuid.uuid4())
+            self._name = gen_random_str(15)
+
+        self._credentials = list()
 
         self._hosts = list()
         self._actions = list()
         self._executes = list()
         self._reports = list()
-
         self._validate_task_cls = validate_task_cls
 
         self.reload_tasks()
 
         if parameters:
             self.load(parameters)
+
+        # create a scenario data folder where all hosts, actions, executes, reports
+        # will live during the scenario life cycle
+        # TODO: cleanup task should clean this directory after report collects it
+        self._data_folder = self.config['DATA_FOLDER']
+        try:
+            if not os.path.exists(self._data_folder):
+                os.makedirs(self._data_folder)
+        except OSError as ex:
+            if ex.errno == errno.EACCES:
+                raise ScenarioException('You do not have permission to create'
+                                        ' the workspace.')
+            else:
+                raise ScenarioException('Error creating scenario workspace: '
+                                        '%s' % ex.message)
 
     def add_resource(self, item):
         if isinstance(item, Host):
@@ -79,6 +113,14 @@ class Scenario(CarbonResource):
                              'Check the type of the given item: %s' % item)
 
     @property
+    def data_folder(self):
+        return self._data_folder
+
+    @data_folder.setter
+    def data_folder(self, value):
+        raise ValueError('Data folder is set automatically.')
+
+    @property
     def hosts(self):
         return self._hosts
 
@@ -88,8 +130,8 @@ class Scenario(CarbonResource):
                          'Use function ~Scenario.add_hosts')
 
     def add_hosts(self, h):
-        if not isinstance(h, Report):
-            raise ValueError('Report must be of type %s ' % type(Report))
+        if not isinstance(h, Host):
+            raise ValueError('Host must be of type %s ' % type(Host))
         self._hosts.append(h)
 
     @property
@@ -134,6 +176,36 @@ class Scenario(CarbonResource):
             raise ValueError('Execute must be of type %s ' % type(Execute))
         self._reports.append(h)
 
+    @property
+    def credentials(self):
+        return self._credentials
+
+    @credentials.setter
+    def credentials(self, value):
+        raise ValueError('You cannot set credentials directly. '
+                         'Use function ~Scenario.add_credentials')
+
+    def add_credentials(self, data):
+        self._credentials.append(data)
+
+    def yaml_validate(self):
+        """Validate the carbon scenario yaml file."""
+        self.logger.info('Validating the scenario yaml file %s', self.filename)
+
+        try:
+            c = Core(source_file=self.filename,
+                     schema_files=[SCENARIO_SCHEMA])
+            c.validate(raise_exception=True)
+
+            self.logger.info(
+                'Successfully validated scenario yaml based on schema.'
+            )
+        except (CoreError, SchemaError) as ex:
+            self.logger.error(
+                'Unsuccessfully validated scenario yaml based on schema.'
+            )
+            raise ScenarioException(ex.msg)
+
     def profile(self):
         """
         Builds a dictionary that represents the scenario with
@@ -143,7 +215,7 @@ class Scenario(CarbonResource):
         profile = dict(
             name=self.name,
             description=self.description,
-            credentials=[],
+            credentials=self.credentials,
             provision=[host.profile() for host in self.hosts],
             orchestrate=[],
             execute=[],
@@ -151,9 +223,24 @@ class Scenario(CarbonResource):
         )
         return profile
 
+    def validate(self):
+        # Perform scenario file validation based on carbon schema
+        self.yaml_validate()
+
+    def get_assets_list(self):
+        """
+        Get a list of all assets needed by all hosts in the scenario
+        :return: list of assets
+        """
+        assets = []
+        for host in self.hosts:
+            assets += host.get_assets_list()
+        return assets
+
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,
             'resource': self,
         }
+
         return task

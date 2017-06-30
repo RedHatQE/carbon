@@ -1,0 +1,181 @@
+---
+name: FF Interop Test
+description: Run an Interop Test against FF
+
+credentials:
+
+  - name: openstack_ciops
+    auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
+    tenant_name: pit-jenkins
+    tenant_id: bf4de4c330bb47d6937af31fd5c71a18
+    username: username
+    password: password
+
+  - name: beaker
+
+provision:
+
+  - name: machine_1
+    provider: openstack
+    credential: openstack_ciops
+    os_name:
+    os_image: rhel-6.9-workstation-x86_64-latest
+    os_flavor: m1.medium
+    os_networks: ['pit-jenkins']
+    os_floating_ip_pool: "10.8.172.0/22"
+    os_keypair: 'pit-jenkins'
+    os_admin_pass:
+    os_description:
+    os_files:
+    os_security_groups:
+    ip_address:
+    role: test_pilot
+
+  - name: machine_2
+    provider: beaker
+    credential: beaker
+    bkr_arch: i386
+    bkr_tag: ['RTT_ACCEPTED']
+    bkr_family: RedHatEnterpriseLinux6
+    bkr_variant: Workstation
+    bkr_info: client
+    ip_address:
+    role: w_client
+
+  - name: machine_3
+    provider: beaker
+    credential: beaker
+    bkr_arch: s390x
+    bkr_tag: ['RTT_ACCEPTED']
+    bkr_family: RedHatEnterpriseLinux6
+    bkr_variant: Server
+    bkr_info: client
+    ip_address:
+    role: s390x_client
+
+  - name: machine_4
+    provider: openstack
+    credential: openstack_ciops
+    os_name:
+    os_image: rhel-6.9-server-x86_64-latest
+    os_flavor: m1.medium
+    os_networks: ['pit-jenkins']
+    os_floating_ip_pool: "10.8.172.0/22"
+    os_keypair: 'pit-jenkins'
+    os_admin_pass:
+    os_description:
+    os_files:
+    os_security_groups:
+    ip_address:
+    role: test_pilot
+
+# Orchestration
+# -------------
+# This is controlled by the CarbonOchestrator object.
+# Initially we use Ansible as our orchestration mechanisms
+# and implements accordingly to our needs.
+#
+# We would organize like:
+#
+# carbon.orchestrators.ansible
+# carbon.orchestrators.puppet     (we won't use puppet, but someone would be able to do this)
+# carbon.orchestrators.chef       (we won't use chef, but someone would be able to do this)
+#
+# class CarbonOchestrator(object):
+#
+#      def __init__(self, actions_list):   # the orchestrator initialization
+#          implement init
+#
+#      def validate():                     # this will be called in the Validation stage.
+#          implement validation
+#
+#      def run():                          # this will run the orchestration
+#          implement running
+#
+# class AnsibleCarbonOchestrator(CarbonOchestrator):
+#
+#      def __init__(self, actions_list):   # the orchestration would initiate with a list
+#          implement init
+#
+#      def validate():                     # this will be called in the Validation stage
+#          implement validation            # with specific settings about Ansible playbooks
+#
+#      def run():                          # this will run the orchestration with Ansible,
+#          implement running               # and it would follow something like
+#                                          #
+#                                          # for action in list of actions:
+#                                          #   ansible-playbook -H<action.hosts> -D<var_a=action.var_a> -D<var_b=action.var_b> <action.name>.yaml
+#
+# Things we should be able to do:
+#     - add own playbook
+#
+# For each package, it goes like this:
+orchestrate:
+
+  - name: rhn
+    hosts: machine_1, machine_2
+    vars:
+      host: subscription.rhsm.stage.redhat.com
+      username: pit_rhel_workstation_1
+      password: EwEBUVYX
+      auto-attach: True
+      clean: False
+
+  - name: rhn
+    hosts: machine_3
+    vars:
+      host: subscription.rhsm.stage.redhat.com
+      username: pit_rhel_server_1
+      password: EwEBUAAA
+      auto-attach: True
+      clean: False
+      channels: ['rhel-6-for-system-z-rpms', 'rhel-6-for-system-z-optional-rpms']
+
+  - name: carbon_debugging
+    hosts: machine_1, machine_2, machine_3
+    vars:
+      packages: pexpect, git, wget, python-setuptools, python-devel, restraint-deamon
+      group_packages: desktop
+
+# Execute Service
+# ---------------
+# Carbon finds what framework you want to use and execute it using
+# the variables it need
+execute:
+  - name: initial-tests
+    framework: restraint
+    vars:
+      execute_xml: http://file.bos.redhat.com/~vipatel/FFinterop-rhel6.xml
+      role: ['w_client', 's390x_client']
+
+# Report Service
+# --------------
+# At the end of execute, there will be a buch of files that will be
+# saved: logs, test results, tracebacks, probes logs, etc
+# The report task will find out what module you want to report and
+# pass all the artifacts above to it. It is up to the module to
+# upload the files, report test results (TCMS, Polarion, etc) and
+# notify (IRC, Slack, etc)
+report:
+
+  - type: python
+    name: ftp
+    vars:
+      address: ftp.redhat.com
+
+  - type: playbook
+    name: irc
+    vars:
+      channels: #pit
+
+  - type: notification
+    name: email
+    vars:
+      emails: tmv@redhat.com, vipatel@redhat.com
+
+  - type: test
+    name: polarion
+    vars:
+      host:
+      username:
+      password:

@@ -1,19 +1,30 @@
 .DS_Store
 *.pyc
-*.pyo
-env
-env*
+__pycache__
 dist
 build
-__pycache__
-*.egg
+docs/build
+docs/source/reference/services
+tests/cover
+tests/.coverage
+tests/.workspace
 *.egg-info
+.cache
 _mailinglist
+node_modules
+
+# Test state / virtualenvs
 .tox
-.coverage*
-.cache/
+.coverage
+
+# Common virtualenv names
+venv
+venv2
+venv3
+
+# IDEs
 .idea/
 .ropeproject
-tests/coverage-report*
-tests/flake8-report.txt
-tests/junit-report.xml
+.project
+.pydevproject
+.settings/

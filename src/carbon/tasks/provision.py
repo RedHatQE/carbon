@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.tasks.create
+    carbon.tasks.provision
 
     Here you add brief description of what this module is about
 
@@ -27,13 +27,19 @@ from ..core import CarbonTask
 
 
 class ProvisionTask(CarbonTask):
-    def __init__(self, msg, clean_msg, **kwargs):
+    """The provision task object will call a provisioner to provision
+    resources in their declared provider.
+    """
+
+    def __init__(self, msg, clean_msg, host, **kwargs):
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
         self.clean_msg = clean_msg
+        self.provisioner = host.provisioner(host)
 
     def run(self, context):
-        print(self.msg)
+        self.logger.info(self.msg)
+        self.provisioner.create()
 
     def cleanup(self, context):
-        print(self.clean_msg)
+        self.logger.info(self.clean_msg)

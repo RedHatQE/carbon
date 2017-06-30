@@ -1,0 +1,27 @@
+---
+name: Openshift example
+description: Provision applications in Openshift based on supported use cases
+
+credentials:
+
+  - name: openshift
+    auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
+    project: vipatel-test
+    username: vipatel
+    token: XQbeDJr_c508PTAinMqlUGcR5hsmL4GWhuThLAsAz8I
+
+provision:
+
+  - name: Application by image
+    provider: openshift
+    credential: openshift
+    # setting an asset that doesn't exist
+    oc_custom_template: mytemplate2.yaml
+    role: application1
+    oc_image: rywillia/example  # Define registry and image
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:  # Need to see if we can pass multiple labels by oc client
+      - label1: label1
+      - label2: image_app

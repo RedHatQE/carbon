@@ -27,10 +27,3 @@ from .orchestrate import OrchestrateTask
 from .execute import ExecuteTask
 from .report import ReportTask
 from .cleanup import CleanupTask
-
-MAIN_PIPELINE = enumerate(['validate',
-                           'create',
-                           'orchestrate',
-                           'execute',
-                           'report',
-                           'cleanup'])

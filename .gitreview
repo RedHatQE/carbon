@@ -1,0 +1,6 @@
+[gerrit]
+host=code.engineering.redhat.com
+port=22
+project=carbon.git
+defaultremote=origin
+defaultbranch=develop
