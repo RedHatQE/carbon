@@ -1,6 +1,6 @@
 .. toctree::
     :maxdepth: 2
 
-    provisioners/linchpin
+    provisioners/beaker
     provisioners/openshift
     provisioners/openstack
