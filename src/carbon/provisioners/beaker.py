@@ -569,12 +569,12 @@ class BeakerProvisioner(CarbonProvisioner):
                 hostname = task.getElementsByTagName('system')[0].getAttribute("value")
                 addr = socket.gethostbyname(hostname)
                 self.host.bkr_hostname = hostname.encode('ascii', 'ignore')
-                self.host.bkr_ip_address = addr
+                self.host.set_ip_address(addr)
 
     def copy_ssh_key(self):
 
         self.logger.info("Send keys over to the Beaker Nodes: {0} "
-                         "{1}".format(self.host.bkr_ip_address, self.host.bkr_hostname))
+                         "{1}".format(self.host.ip_address, self.host.bkr_hostname))
 
         # setup prior to injecting ssh keys
         private_key = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key)
@@ -597,7 +597,7 @@ class BeakerProvisioner(CarbonProvisioner):
         ssh_con.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         try:
-            ssh_con.connect(hostname=self.host.bkr_ip_address,
+            ssh_con.connect(hostname=self.host.ip_address,
                             username=self.host.bkr_username,
                             password=self.host.bkr_password)
             sftp = ssh_con.open_sftp()
@@ -610,7 +610,7 @@ class BeakerProvisioner(CarbonProvisioner):
             ssh_con.close()
 
         self.logger.info("Successfully Sent key: {0}, "
-                         "{1}".format(self.host.bkr_ip_address,
+                         "{1}".format(self.host.ip_address,
                                       self.host.bkr_hostname))
 
     def analyze_results(self, resultsdict):

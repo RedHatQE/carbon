@@ -23,6 +23,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+from copy import copy
+
 from ..core import CarbonResource, CarbonResourceException
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
@@ -87,6 +89,9 @@ class Host(CarbonResource):
 
         # metadata will be defined via yaml file
         self._metadata = parameters.pop('metadata', {})
+
+        # IP address
+        self._ip_address = parameters.pop('ip_address', None)
 
         # we must have a provider set
         provider_param = parameters.pop('provider', provider)
@@ -186,6 +191,32 @@ class Host(CarbonResource):
         raise AttributeError('You cannot set name after class is instanciated.')
 
     @property
+    def ip_address(self):
+        """Return the IP address for the host (if applicable)."""
+        return self._ip_address
+
+    @ip_address.setter
+    def ip_address(self, value):
+        """Raise an exception when setting IP address directly. Use the
+        following method ~Host.set_ip_address().
+
+        :param value: The IP address of the host.
+        """
+        raise AttributeError('You cannot set ip address directly! Please use'
+                             ' ~Host.set_ip_address().')
+
+    def set_ip_address(self, value):
+        """Set the IP address for the host. Following attributes will be set:
+            1. _ip_address
+            2. <provider_prefix>_ip_address
+
+        :param value: The IP address of the host.
+        """
+        attr = 'ip_address'
+        setattr(self, '_' + attr, value)
+        setattr(self, self.provider.prefix + attr, copy(value))
+
+    @property
     def metadata(self):
         """Return the name for the host."""
         return self._metadata
@@ -276,6 +307,10 @@ class Host(CarbonResource):
             'role': self._role,
             'data_folder': self.data_folder()
         })
+
+        # Set ip address attribute (if applicable)
+        if self.ip_address:
+            d.update({'ip_address': self.ip_address})
         return d
 
     def validate(self):
