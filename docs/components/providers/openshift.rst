@@ -10,8 +10,28 @@ Credentials
 +++++++++++
 
 To authenticate with OpenShift, you will need to create an OpenShift
-credentials section within your scenario descriptor file. Below is an example
-credentials section with all available OpenShift credential keys.
+credentials section within your scenario descriptor file.
+
+If using your username and token, which is the preferred method, you can
+either get it from the Openshift UI or using oc command line tool:
+
+Using the Openshift UI:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the top right of the OpenShift interface, select the ? -> Command Line
+Tools.  From there, you see textboxes, after the first uneditable textbox
+(which discusses a session token), click the clipboard button to copy the
+token to your clipboard.
+
+Using the oc command line tool:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: none
+   :linenos:
+
+    oc whoami --show-token
+
+Below is an example credentials section with all available OpenShift credential keys.
 
 .. code-block:: yaml
     :linenos:
@@ -157,7 +177,9 @@ keys.
         - True
 
     *   - oc_build_timeout
-        - The duration to wait for an application to finish building.
+        - The duration to wait for an application to finish building and pods
+          to be up and running, default value is set to 1800, which is 30
+          minutes.
         - Integer
         - False
 

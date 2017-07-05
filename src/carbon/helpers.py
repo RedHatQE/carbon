@@ -34,7 +34,6 @@ import string
 import threading
 
 import yaml
-import pexpect
 
 from ._compat import string_types
 from logging import getLogger

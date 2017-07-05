@@ -551,6 +551,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
                 if not buildcheck:
                     self.logger.info("Sleeping for 10 secs for all builds to complete")
                     time.sleep(10)
+                    wait -= 10
                     continue
             elif "stderr_lines" in parsed_results and parsed_results["stderr_lines"]:
                 raise OpenshiftProvisionerException(
@@ -582,6 +583,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
                     self.logger.info("Pod not created yet")
                     errcheck += 1
                     time.sleep(10)
+                    wait -= 10
                     continue
                 else:
                     raise OpenshiftProvisionerException(
@@ -605,6 +607,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
                 if not podcheck:
                     self.logger.debug("Sleeping for 10 secs waiting for all pods to be Running")
                     time.sleep(10)
+                    wait -= 10
                     continue
             elif "stderr_lines" in parsed_results2 and parsed_results2["stderr_lines"]:
                 raise OpenshiftProvisionerException(
@@ -618,7 +621,11 @@ class OpenshiftProvisioner(CarbonProvisioner):
                 )
 
             # complete if all conditions passed and no Exceptions thrown
-            break
+            self.logger.info("Build Complete and all pods are up")
+            return
+        # timeout reached
+        raise OpenshiftProvisionerException("Timeout reached waiting for builds"
+                                            "to complete and pods to come up")
 
     def expose_route(self):
         """Expose an existing container externally via routes.
