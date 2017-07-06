@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 
 ROOT = os.path.dirname(__file__)
-VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
+VERSION_RE = re.compile(r'''__version__ = ['"]([a-zA-Z0-9.]+)['"]''')
 
 requires = [
     'Flask>=0.12.2',
