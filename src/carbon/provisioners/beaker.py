@@ -590,7 +590,7 @@ class BeakerProvisioner(CarbonProvisioner):
         public_key = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key + ".pub")
         rsa_key = paramiko.RSAKey(filename=private_key)
         with open(public_key, 'w') as f:
-            f.write('%s %s' % (rsa_key.get_name(), rsa_key.get_base64()))
+            f.write('%s %s\n' % (rsa_key.get_name(), rsa_key.get_base64()))
 
         # send the key to the beaker machine
         ssh_con = paramiko.SSHClient()
