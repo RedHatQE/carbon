@@ -186,7 +186,15 @@ class Scenario(CarbonResource):
                          'Use function ~Scenario.add_credentials')
 
     def add_credentials(self, data):
-        self._credentials.append(data)
+        if self._credentials:
+            for index, value in enumerate(self._credentials):
+                # overwrite if exists
+                if value["name"] == data["name"]:
+                    # self._credentials.remove(value)
+                    self._credentials.pop(index)
+            self._credentials.append(data)
+        else:
+            self._credentials.append(data)
 
     def yaml_validate(self):
         """Validate the carbon scenario yaml file."""
