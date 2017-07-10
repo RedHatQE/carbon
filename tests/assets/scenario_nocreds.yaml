@@ -1,0 +1,137 @@
+---
+name: Scenario Example
+description: Description of the scenario example.
+
+provision:
+
+  - name: machine_1
+    provider: openstack
+    provisioner: openstack
+    credential: pit-openstack
+    os_image: rhel-7.3-workstation-x86_64-released
+    os_flavor: m1.medium
+    os_networks: [pit-jenkins]
+    os_floating_ip_pool: 10.8.172.0/22
+    os_keypair: pit-jenkins
+    os_admin_pass:
+    os_description:
+    os_files:
+    os_security_groups:
+    ip_address:
+    role: w_client
+
+  - name: machine_2
+    provider: openstack
+    credential: pit-openstack
+    os_image: rhel-7.3-server-x86_64-released
+    os_flavor: m1.medium
+    os_networks: ['pit-jenkins']
+    os_floating_ip_pool: "10.8.172.0/22"
+    os_keypair: 'pit-jenkins'
+    os_admin_pass:
+    os_description:
+    os_files:
+    os_security_groups:
+    ip_address:
+    role: test_pilot
+
+  - name: machine_3
+    provider: openstack
+    credential: pit-openstack
+    os_image: rhel-7.3-workstation-x86_64-released
+    os_flavor: m1.medium
+    os_networks: ['pit-jenkins']
+    os_floating_ip_pool: "10.8.172.0/22"
+    os_keypair: 'pit-jenkins'
+    os_admin_pass:
+    os_description:
+    os_files:
+    os_security_groups:
+    ip_address:
+    role: w_client
+
+  - name: Application by image
+    provider: openshift
+    credential: pit-openshift
+    role: application1
+    oc_image: rywillia/example
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:
+      - label1: label1
+      - label2: image_app
+
+  - name: Application by git
+    provider: openshift
+    provisioner: openshift
+    credential: pit-openshift
+    # timeout for builds to complete, in seconds, default 30mins = 1800 sec
+    oc_build_timeout: 3600
+    role: application2
+    oc_git: https://github.com/openshift/django-ex
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:
+      - label1: label1
+      - label2: git_app
+
+orchestrate:
+
+  - name: rhn
+    hosts: machine_1, machine_2
+    vars:
+      host: subscription.rhsm.stage.redhat.com
+      username: pit_rhel_workstation_1
+      password: EwEBUVYX
+      auto-attach: True
+      clean: False
+
+  - name: rhn
+    hosts: machine_3
+    vars:
+      host: subscription.rhsm.stage.redhat.com
+      username: pit_rhel_server_1
+      password: EwEBUAAA
+      auto-attach: True
+      clean: False
+      channels: ['rhel-6-for-system-z-rpms', 'rhel-6-for-system-z-optional-rpms']
+
+  - name: install_packages
+    hosts: machine_1, machine_2, machine_3
+    vars:
+      packages: pexpect, git, wget, python-setuptools, python-devel, restraint-deamon
+      group_packages: desktop
+
+execute:
+
+  - framework: restraint
+    name: restraint
+    vars:
+      execute_xml: http://file.bos.redhat.com/~vipatel/FFinterop-rhel6.xml
+      role: ['w_client', 's390x_client']
+
+report:
+
+  - type: python
+    name: ftp
+    vars:
+      address: ftp.redhat.com
+
+  - type: playbook
+    name: irc
+    vars:
+      channels: #pit
+
+  - type: notification
+    name: email
+    vars:
+      emails: tmv@redhat.com, vipatel@redhat.com
+
+  - type: test
+    name: polarion
+    vars:
+      host:
+      username:
+      password:

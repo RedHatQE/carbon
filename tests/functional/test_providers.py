@@ -416,59 +416,40 @@ class TestOpenstack(TestCase):
     def test_flavor(self):
         """Test the validate flavor method. This test performs the following:
             1. Flavor undefined.
-            2. Flavor defined and is a valid flavor.
-            3. Flavor defined and is a invalid flavor.
-            4. Flavor defined and is a invalid data type(s).
+            2. Flavor defined and is a invalid data type(s).
         """
         key = '%sflavor' % self._osp.__provider_prefix__
         cp_parameters = deepcopy(self._host)
         assert_false(self._osp.validate_flavor(None))
-        # assert_true(self._osp.validate_flavor(cp_parameters.pop(key)))
-        # cp_parameters[key] = 3
-        # assert_true(self._osp.validate_flavor(cp_parameters.pop(key)))
-        # cp_parameters[key] = -1
-        # assert_false(self._osp.validate_flavor(cp_parameters.pop(key)))
         cp_parameters[key] = [3]
         assert_false(self._osp.validate_flavor(cp_parameters.pop(key)))
 
     def test_image(self):
         """Test the validate image method. This test performs the following:
             1. Image undefined.
-            2. Image defined and is a valid image.
-            3. Image defined and is a invalid image.
-            4. Image defined and is a invalid data type(s).
+            2. Image defined and is a invalid data type(s).
         """
         key = '%simage' % self._osp.__provider_prefix__
         cp_parameters = deepcopy(self._host)
         assert_false(self._osp.validate_image(None))
-        # assert_true(self._osp.validate_image(cp_parameters.pop(key)))
-        # cp_parameters[key] = 'my_image_123'
-        # assert_false(self._osp.validate_image(cp_parameters.pop(key)))
         cp_parameters[key] = 1234
         assert_false(self._osp.validate_image(cp_parameters.pop(key)))
 
     def test_networks(self):
         """Test the validate networks method. This test performs the following:
-            1, Networks undefined.
-            2. Networks defined and are valid networks.
-            3. Networks defined and are invalid networks.
-            4. Networks defined and networks are a invalid data type(s).
+            1. Networks undefined.
+            2. Networks defined and networks are a invalid data type(s).
         """
         key = '%snetworks' % self._osp.__provider_prefix__
         cp_parameters = deepcopy(self._host)
         assert_false(self._osp.validate_networks(None))
-        # assert_true(self._osp.validate_networks(cp_parameters.pop(key)))
-        # cp_parameters[key] = ['local-network']
-        # assert_false(self._osp.validate_networks(cp_parameters.pop(key)))
         cp_parameters['os_networks'] = "local-network"
         assert_false(self._osp.validate_networks(cp_parameters.pop(key)))
 
     def test_keypair(self):
         """Test the validate keypair method. This test performs the following:
             1. Keypair undefined.
-            2. Keypair defined and is a valid keypair.
-            3. Keypair defined and is a invalid keypair.
-            4. Keypair defined and is a invalid data type(s).
+            2. Keypair defined and is a invalid data type(s).
         """
         key = '%skeypair' % self._osp.__provider_prefix__
         cp_parameters = deepcopy(self._host)
@@ -483,15 +464,10 @@ class TestOpenstack(TestCase):
         """Test the validate floating ip pool method. This test performs the
         following:
             1. Floating ip pool undefined.
-            2. Floating ip pool defined and is a valid floating ip pool.
-            3. Floating ip pool defined and is a invalid floating ip pool.
-            4. Floating ip pool defined and is a invalid data type(s).
+            2. Floating ip pool defined and is a invalid data type(s).
         """
         key = '%sfloating_ip_pool' % self._osp.__provider_prefix__
         cp_parameters = deepcopy(self._host)
         assert_false(self._osp.validate_floating_ip_pool(None))
-        # assert_true(self._osp.validate_floating_ip_pool(cp_parameters[key]))
-        # cp_parameters[key] = '192.168.1.0/22'
-        # assert_false(self._osp.validate_floating_ip_pool(cp_parameters[key]))
         cp_parameters[key] = ['192.168.1.0/22']
         assert_false(self._osp.validate_floating_ip_pool(cp_parameters[key]))
