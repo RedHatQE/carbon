@@ -51,7 +51,8 @@ class Host(CarbonResource):
     _fields = [
         'name',
         'ip_address',
-        'metadata'
+        'metadata',
+        'ansible_params'
     ]
 
     def __init__(self,
@@ -89,6 +90,9 @@ class Host(CarbonResource):
 
         # metadata will be defined via yaml file
         self._metadata = parameters.pop('metadata', {})
+
+        # Ansible parameters will be defined via yaml file
+        self._ansible_params = parameters.pop('ansible_params', {})
 
         # IP address
         self._ip_address = parameters.pop('ip_address', None)
@@ -230,6 +234,22 @@ class Host(CarbonResource):
         raise AttributeError('You cannot set metadata. This is set via descriptor YAML file.')
 
     @property
+    def ansible_params(self):
+        """Return the Ansible parameters for the host."""
+        return self._ansible_params
+
+    @ansible_params.setter
+    def ansible_params(self, value):
+        """Raises an exception when trying to set the ansible parameters for
+        the host after the class has been instanciated.
+        :param value: The ansible parameters for the host.
+        """
+        raise AttributeError(
+            'You cannot set ansible_params. This is set via the descriptor '
+            'YAML file.'
+        )
+
+    @property
     def provider(self):
         """Return the provider object for the host."""
         return self._provider
@@ -301,6 +321,7 @@ class Host(CarbonResource):
         d.update({
             'name': self.name,
             'metadata': self.metadata,
+            'ansible_params': self.ansible_params,
             'provider': self.provider.name,
             'credential': self._credential,
             'provisioner': self.provisioner.__provisioner_name__,
