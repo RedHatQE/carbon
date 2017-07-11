@@ -13,7 +13,6 @@ credentials section within your scenario descriptor file. Below is an example
 credentials section with all available OpenStack credential keys.
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     credentials:
@@ -71,7 +70,6 @@ resource section within your scenario descriptor file. Below is an example
 resource section with all available OpenStack provider keys.
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     provision:
@@ -80,12 +78,12 @@ resource section with all available OpenStack provider keys.
         provider: openstack
         provisioner: <provisioner>
         credential: <credential>
+        metadata: <dict_key_values>
         os_image: <image>
         os_flavor: <flavor>
         os_networks: <networks>
         os_floating_ip_pool: <floating_ip_pool>
         os_keypair: <keypair>
-
 
 .. list-table::
     :widths: auto
@@ -147,11 +145,17 @@ resource section with all available OpenStack provider keys.
         - String
         - True
 
+    *   - metadata
+        - Data that the resource may need access to after provisioning is
+          finished. This data is passed through and is not modified by carbon
+          framework.
+        - Dict
+        - False
+
 Examples
 ++++++++
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: OpenStack provider example
@@ -177,7 +181,6 @@ Examples
         os_keypair: pit-jenkins
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: OpenStack provider example
@@ -211,3 +214,7 @@ Examples
         os_networks: [pit-jenkins]
         os_floating_ip_pool: 10.8.172.0/22
         os_keypair: pit-jenkins
+        # Example with metadata defined
+        metadata:
+          username: root
+          password: root

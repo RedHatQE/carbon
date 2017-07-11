@@ -14,7 +14,6 @@ credentials section with all available Beaker credential keys.  You must set
 either keytab and keytab_principal or username and password.
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     credentials:
@@ -66,7 +65,6 @@ resource section within your scenario descriptor file. Below is an example
 resource section with the available Beaker provider keys.
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     provision:
@@ -75,6 +73,7 @@ resource section with the available Beaker provider keys.
         provider: openstack
         provisioner: <provisioner>
         credential: <credential>
+        metadata: <dict_key_values>
         bkr_arch: <arch>
         bkr_variant: <variant>
         bkr_family: <family>
@@ -95,7 +94,6 @@ resource section with the available Beaker provider keys.
         bkr_ignore_panic: <True or False>
         bkr_taskparam: [<list of task parameter settings>]
         bkr_ksmeta: [<list of kick start meta OPTIONS>]
-
 
 .. list-table::
     :widths: auto
@@ -247,23 +245,27 @@ resource section with the available Beaker provider keys.
         - List
         - False
 
-
+    *   - metadata
+        - Data that the resource may need access to after provisioning is
+          finished. This data is passed through and is not modified by carbon
+          framework.
+        - Dict
+        - False
 
 Examples
 ++++++++
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: Beaker example
     description: Get a specific RHEL7 distro
-    
+
     credentials:
-    
+
       - name: beaker
-        keytab: 
-        keytab_principal: 
+        keytab:
+        keytab_principal:
         username: username
         password: password
 
@@ -280,7 +282,6 @@ Examples
 
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: Beaker example
@@ -347,5 +348,7 @@ Examples
         # kick start meta data OPTIONS - list
         bkr_ksmeta: ["<key>=<value>"]
 
-
-
+        # Host metadata
+        metadata:
+          user: root
+          password: root
