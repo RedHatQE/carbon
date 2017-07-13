@@ -79,6 +79,7 @@ resource section with all available OpenStack provider keys.
         provisioner: <provisioner>
         credential: <credential>
         metadata: <dict_key_values>
+        ansible_params: <dict_key_values>
         os_image: <image>
         os_flavor: <flavor>
         os_networks: <networks>
@@ -152,6 +153,12 @@ resource section with all available OpenStack provider keys.
         - Dict
         - False
 
+    *   - ansible_params
+        - Ansible parameters to be used within a inventory file to control how
+          ansible communicates with the host.
+        - Dict
+        - False
+
 Examples
 ++++++++
 
@@ -218,3 +225,11 @@ Examples
         metadata:
           username: root
           password: root
+        # Example with ansible parameters defined
+        ansible_params:
+          # 'ansible_' will always be appended if not given
+          user: root
+          ssh_pass: root
+          -- or --
+          ansible_user: root
+          ansible_ssh_pass: root

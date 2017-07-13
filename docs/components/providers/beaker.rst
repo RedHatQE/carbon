@@ -74,6 +74,7 @@ resource section with the available Beaker provider keys.
         provisioner: <provisioner>
         credential: <credential>
         metadata: <dict_key_values>
+        ansible_params: <dict_key_values>
         bkr_arch: <arch>
         bkr_variant: <variant>
         bkr_family: <family>
@@ -252,6 +253,12 @@ resource section with the available Beaker provider keys.
         - Dict
         - False
 
+    *   - ansible_params
+        - Ansible parameters to be used within a inventory file to control how
+          ansible communicates with the host.
+        - Dict
+        - False
+
 Examples
 ++++++++
 
@@ -352,3 +359,11 @@ Examples
         metadata:
           user: root
           password: root
+        # Example with ansible parameters defined
+        ansible_params:
+          # 'ansible_' will always be appended if not given
+          user: root
+          ssh_pass: root
+          -- or --
+          ansible_user: root
+          ansible_ssh_pass: root
