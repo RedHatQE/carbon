@@ -21,7 +21,7 @@ ROOT = os.path.dirname(__file__)
 VERSION_RE = re.compile(r'''__version__ = ['"]([a-zA-Z0-9.]+)['"]''')
 
 requires = [
-    'Flask>=0.12.2',
+    'pbr>=3.1.1',
     'Werkzeug>=0.11.15',
     'Click>=6.7',
     'taskrunner>=0.3.0',
