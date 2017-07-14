@@ -154,6 +154,17 @@ class BeakerProvisioner(CarbonProvisioner):
             'class has been instantiated.'
         )
 
+    def container_cleanup_and_error(self, msg):
+        """ Cleanup Docker Container. Stop and remove"""
+        try:
+            # Stop/remove container
+            self.docker.stop_container()
+            self.docker.remove_container()
+        except DockerControllerException as ex:
+            raise BeakerProvisionerException(ex.message)
+        finally:
+            raise BeakerProvisionerException(msg)
+
     def authenticate(self):
         """Authenticate to Beaker server, support
         1. username/password
@@ -202,18 +213,18 @@ class BeakerProvisioner(CarbonProvisioner):
             )
             self.ansible.results_analyzer(results['status'])
             if results['status'] != 0:
-                raise BeakerProvisionerException("Error when creating keytab folder within"
-                                                 " the container")
+                self.container_cleanup_and_error("Error when creating keytab folder within"
+                                                     " the container")
 
             # copy the keytab
             cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_file_path)
             results = self.ansible.run_module(
-                dict(name='copy file', hosts=self.docker.cname, gather_facts='no',
-                     tasks=[dict(action=dict(module='copy', args=cp_args))])
+                     dict(name='copy file', hosts=self.docker.cname, gather_facts='no',
+                          tasks=[dict(action=dict(module='copy', args=cp_args))])
             )
             self.ansible.results_analyzer(results['status'])
             if results['status'] != 0:
-                raise BeakerProvisionerException("Error when copying file to container")
+                self.container_cleanup_and_error("Error when copying file to container")
 
             # Modify the config file with correct data
             summary = "update beaker config - authmethod"
@@ -233,7 +244,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # Case 3: invalid authentication vals
         else:
-            raise BeakerProvisionerException("Unable to Authenticate, please set"
+            self.container_cleanup_and_error("Unable to Authenticate, please set"
                                              " username/password or keytab/keytab_principal.")
 
         # verify that the authentication worked
@@ -246,7 +257,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         self.ansible.results_analyzer(results['status'])
         if results['status'] != 0:
-            raise BeakerProvisionerException("Authentication was not successful")
+            self.container_cleanup_and_error("Authentication was not successful")
 
     def lineinfile_call(self, summary, replace_line, lineinfilecmd):
         self.logger.debug(lineinfilecmd)
@@ -257,7 +268,7 @@ class BeakerProvisioner(CarbonProvisioner):
         )
 
         if results['status'] != 0:
-            raise BeakerProvisionerException("Error when {0}".format(summary))
+            self.container_cleanup_and_error("Error when {0}".format(summary))
 
     def gen_bkr_xml(self):
         """ generate the Beaker xml file from the host input
@@ -277,13 +288,13 @@ class BeakerProvisioner(CarbonProvisioner):
                     try:
                         setattr(self.bxml, xml_key, host_desc[key])
                     except Exception as ex:
-                        raise BeakerProvisionerException(ex)
+                        self.container_cleanup_and_error("Error setting Beaker attribute data {}".format(ex))
 
         # Generate Beaker workflow-simple command
         try:
             self.bxml.generateBKRXML(bkr_xml_file, savefile=True)
         except Exception as ex:
-            raise BeakerProvisionerException(ex)
+            self.container_cleanup_and_error("Error Generating beaker xml data {}".format(ex))
 
         # Format command for container
         _cmd = self.bxml.cmd.replace('=', "\=")
@@ -303,7 +314,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
             self.ansible.results_analyzer(results['status'])
             if results['status'] != 0:
-                raise BeakerProvisionerException("Error copying kickstart file to container")
+                self.container_cleanup_and_error("Error copying kickstart file to container")
 
         # Run command on container
         results = self.ansible.run_module(
@@ -315,13 +326,13 @@ class BeakerProvisioner(CarbonProvisioner):
         self.ansible.results_analyzer(results['status'])
 
         if results['status'] != 0:
-            raise BeakerProvisionerException("Issue generating Beaker XML")
+            self.container_cleanup_and_error("Issue generating Beaker XML")
 
         else:
             if len(results["callback"].contacted) == 1:
                 parsed_results = results["callback"].contacted[0]["results"]
             else:
-                raise BeakerProvisionerException("Unexpected Error creating XML")
+                self.container_cleanup_and_error("Unexpected Error creating XML")
 
             output = parsed_results["stdout"]
 
@@ -329,7 +340,7 @@ class BeakerProvisioner(CarbonProvisioner):
         try:
             self.bxml.generateXMLDOM(bkr_xml_file, output, savefile=True)
         except Exception as ex:
-            raise BeakerProvisionerException("Issue generating Beaker XML")
+            self.container_cleanup_and_error("Issue generating Beaker XML")
 
     def submit_bkr_xml(self):
         """ submit the beaker xml and retrieve Beaker JOBID
@@ -348,7 +359,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         self.ansible.results_analyzer(results['status'])
         if results['status'] != 0:
-            raise BeakerProvisionerException("Error when copying bkr xml to container")
+            self.container_cleanup_and_error("Error when copying bkr xml to container")
 
         bkr_xml_path = os.path.join(dest_full_path_file, self._bkr_xml)
         _cmd = "bkr job-submit --xml {0}".format(bkr_xml_path)
@@ -361,12 +372,12 @@ class BeakerProvisioner(CarbonProvisioner):
         self.ansible.results_analyzer(results['status'])
 
         if results['status'] != 0:
-            raise BeakerProvisionerException("Error submitting Beaker job")
+            self.container_cleanup_and_error("Error submitting Beaker job")
         else:
             if len(results["callback"].contacted) == 1:
                 parsed_results = results["callback"].contacted[0]["results"]
             else:
-                raise BeakerProvisionerException("Unexpected Error submitting job")
+                self.container_cleanup_and_error("Unexpected Error submitting job")
 
             output = parsed_results["stdout"]
             if output.find("Submitted:") != "-1":
@@ -376,7 +387,7 @@ class BeakerProvisioner(CarbonProvisioner):
                     "[") + 2:mod_output.find("]") - 1].encode('ascii', 'ignore')
                 self.logger.info("just submitted: {}".format(self.host.bkr_job_id))
             else:
-                raise BeakerProvisionerException("Unexpected Error submitting job")
+                self.container_cleanup_and_error("Unexpected Error submitting job")
 
     def wait_for_bkr_job(self):
         """ wait for the Beaker job to be complete and return if the provisioning was
@@ -407,12 +418,12 @@ class BeakerProvisioner(CarbonProvisioner):
             self.ansible.results_analyzer(results['status'])
 
             if results['status'] != 0:
-                raise BeakerProvisionerException("Unable to check status of the beaker job")
+                self.container_cleanup_and_error("Unable to check status of the beaker job")
             else:
                 if len(results["callback"].contacted) == 1:
                     parsed_results = results["callback"].contacted[0]["results"]
                 else:
-                    raise BeakerProvisionerException("Unexpected Error submitting job")
+                    self.container_cleanup_and_error("Unexpected Error submitting job")
 
                 bkr_xml_output = parsed_results["stdout"]
                 bkr_job_status_dict = self.get_job_status(bkr_xml_output)
@@ -429,13 +440,13 @@ class BeakerProvisioner(CarbonProvisioner):
                     self.get_machine_info(bkr_xml_output)
                     return
                 elif status == "fail":
-                    raise BeakerProvisionerException("Machine provision failed: {}".format(self.host.bkr_job_id))
+                    self.container_cleanup_and_error("Machine provision failed: {}".format(self.host.bkr_job_id))
                 else:
-                    raise BeakerProvisionerException("Unknown status from Beaker job")
+                    self.container_cleanup_and_error("Unknown status from Beaker job")
         # timeout reached for Beaker job
         self.logger.error("Timeout reached waiting for Beaker job to complete.")
         self.cancel_job()
-        raise BeakerProvisionerException("Timeout reached for Beaker job")
+        self.container_cleanup_and_error("Timeout reached for Beaker job")
 
     def create(self):
         """Get a machine from Beaker based on the definition from the scenario.
@@ -483,18 +494,18 @@ class BeakerProvisioner(CarbonProvisioner):
         self.ansible.results_analyzer(results['status'])
 
         if results['status'] != 0:
-            raise BeakerProvisionerException("Error cancelling Beaker job")
+            self.container_cleanup_and_error("Error cancelling Beaker job")
         else:
             if len(results["callback"].contacted) == 1:
                 parsed_results = results["callback"].contacted[0]["results"]
             else:
-                raise BeakerProvisionerException("Unexpected Error submitting job")
+                self.container_cleanup_and_error("Unexpected Error submitting job")
 
             output = parsed_results["stdout"]
             if "Cancelled" in output:
                 self.logger.info("Successfully cancelled: {}".format(self.host.bkr_job_id))
             else:
-                raise BeakerProvisionerException("Unexpected Error cancelling job")
+                self.container_cleanup_and_error("Unexpected Error cancelling job")
 
     def delete(self):
         """ Return the bkr machine back to the pool"""
@@ -526,13 +537,13 @@ class BeakerProvisioner(CarbonProvisioner):
         try:
             dom = parseString(xmldata)
         except Exception as e:
-            raise BeakerProvisionerException("Error Issue reading xml data {}".format(e))
+            self.container_cleanup_and_error("Error Issue reading xml data {}".format(e))
 
         # check job status
         joblist = dom.getElementsByTagName('job')
         # verify it is a length of 1 else exception
         if len(joblist) != 1:
-            raise BeakerProvisionerException("Unable to parse job results from "
+            self.container_cleanup_and_error("Unable to parse job results from "
                                              "{}".format(self.host.bkr_job_id))
         mydict["job_result"] = joblist[0].getAttribute("result")
         mydict["job_status"] = joblist[0].getAttribute("status")
@@ -549,7 +560,7 @@ class BeakerProvisioner(CarbonProvisioner):
         if "install_status" in mydict and mydict["install_status"]:
             return mydict
         else:
-            raise BeakerProvisionerException("Couldn't find install task status")
+            self.container_cleanup_and_error("Couldn't find install task status")
 
     def get_machine_info(self, xmldata):
         """
@@ -563,7 +574,7 @@ class BeakerProvisioner(CarbonProvisioner):
         try:
             dom = parseString(xmldata)
         except Exception as e:
-            raise BeakerProvisionerException("Error Issue reading xml data {}".format(e))
+            self.container_cleanup_and_error("Error Issue reading xml data {}".format(e))
 
         tasklist = dom.getElementsByTagName('task')
         for task in tasklist:
@@ -588,7 +599,7 @@ class BeakerProvisioner(CarbonProvisioner):
             os.chmod(private_key, stat.S_IRUSR | stat.S_IWUSR)
 
         except OSError as ex:
-            raise BeakerProvisionerException("Error setting permission of ssh key - %s" % ex.message)
+            self.container_cleanup_and_error("Error setting permission of ssh key - %s" % ex.message)
 
         # generate public key from private
         public_key = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key + ".pub")
@@ -607,9 +618,9 @@ class BeakerProvisioner(CarbonProvisioner):
             sftp = ssh_con.open_sftp()
             sftp.put(public_key, '/root/.ssh/authorized_keys')
         except paramiko.SSHException as ex:
-            raise BeakerProvisionerException('Error connecting to beaker machine - %s' % ex.message)
+            self.container_cleanup_and_error('Error connecting to beaker machine - %s' % ex.message)
         except IOError as ex:
-            raise BeakerProvisionerException('Error sending public key - %s' % ex.message)
+            self.container_cleanup_and_error('Error sending public key - %s' % ex.message)
         finally:
             ssh_con.close()
 
@@ -649,7 +660,7 @@ class BeakerProvisioner(CarbonProvisioner):
         elif resultsdict["job_result"].strip().lower() == "fail":
             return "fail"
         else:
-            raise BeakerProvisionerException("Unexpected Job status {}".format(resultsdict))
+            self.container_cleanup_and_error("Unexpected Job status {}".format(resultsdict))
 
 
 class BeakerXML():
