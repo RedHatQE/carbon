@@ -363,7 +363,8 @@ class Host(CarbonResource):
         # settings
         creds_assets = [self.provider.credentials[param] for param in
                         self.provider.get_assets_parameters()
-                        if param in self.provider.credentials.keys()]
+                        if param in self.provider.credentials.keys() and
+                        self.provider.credentials[param] is not None]
 
         # return a single list from the merge of both list
         return host_assets + creds_assets

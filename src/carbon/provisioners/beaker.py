@@ -162,8 +162,10 @@ class BeakerProvisioner(CarbonProvisioner):
         bkr_config = "/etc/beaker/client.conf"
         # Case 1: user has username and password set
         if ["username", "password"] <= self.host.provider.credentials.keys() \
-                and self.host.provider.credentials["username"] and \
-                self.host.provider.credentials["password"]:
+                and "username" in self.host.provider.credentials.keys() \
+                and self.host.provider.credentials["username"] \
+                and "password" in self.host.provider.credentials.keys() \
+                and self.host.provider.credentials["password"]:
             self.logger.info("Authentication w/ username/pass")
 
             # Modify the config file with correct data
@@ -181,8 +183,10 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # Case 2: user has a keytab and principal set
         elif ["keytab", "keytab_principal"] <= self.host.provider.credentials.keys() \
-                and self.host.provider.credentials["keytab"] and \
-                self.host.provider.credentials["keytab_principal"]:
+                and "keytab" in self.host.provider.credentials.keys() \
+                and self.host.provider.credentials["keytab"] \
+                and "keytab_principal" in self.host.provider.credentials.keys() \
+                and self.host.provider.credentials["keytab_principal"]:
             self.logger.info("Authentication w/ keytab/keytab_principal")
 
             # copy the keytab file to container
@@ -1560,39 +1564,39 @@ class BeakerXML():
         :value value: Value of parameter
         :returns: 0 on success 1 if failed"""
         if param == "variant":
-            self.variant(value)
+            self.variant = value
         elif param == "priority":
-            self.priority(value)
+            self.priority = value
         elif param == "family":
-            self.family(value)
+            self.family = value
         elif param == "retentiontag":
-            self.retentiontag(value)
+            self.retention_tag = value
         elif param == "whiteboard":
-            self.whiteboard(value)
+            self.whiteboard = value
         elif param == "packages":
-            self.packages(value)
+            self.packages = value
         elif param == "tasks":
-            self.tasks(value)
+            self.tasks = value
         elif param == "tag":
-            self.tag(value)
+            self.tag = value
         elif param == "distro":
-            self.distro(value)
+            self.distro = value
         elif param == "arch":
-            self.arch(value)
+            self.arch = value
         elif param == "reservetime":
-            self.reservetime(value)
+            self.reservetime = value
         elif param == "method":
-            self.method(value)
+            self.method = value
         elif param == "component":
-            self.component(value)
+            self.component = value
         elif param == "product":
-            self.product(value)
+            self.product = value
         elif param == "kernel_options":
-            self.kernel_options(value)
+            self.kernel_options = value
         elif param == "kernel_post_options":
-            self.kernel_post_options(value)
+            self.kernel_post_options = value
         elif param == "cclist":
-            self.cclist(value)
+            self.cclist = value
         else:
             return(1)
         return(0)
