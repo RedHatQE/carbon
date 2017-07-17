@@ -392,8 +392,15 @@ class Carbon(LoggerMixin, ResultsMixin):
         data["filename"] = filepath
         self.scenario.load(data)
 
-        for item in cred_items:
-            self.scenario.add_credentials(item)
+        # setting up credentials
+        if "CREDENTIALS" in self.config and self.config["CREDENTIALS"]:
+            for item in self.config["CREDENTIALS"]:
+                self.scenario.add_credentials(item)
+        if cred_items:
+            for item in cred_items:
+                self.scenario.add_credentials(item)
+        if not self.scenario.credentials:
+            raise CarbonException("Credentials are not being set!!")
 
         self._load_resources(Host, pro_items)
         self._load_resources(Action, orc_items)

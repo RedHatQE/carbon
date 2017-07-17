@@ -29,5 +29,5 @@ from .helpers import CustomDict
 from .carbon import Carbon
 
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 __author__ = 'PIT Team Red Hat'

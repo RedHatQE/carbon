@@ -1,10 +1,58 @@
-Carbon Changelog
-================
+Version 0.2.0 (2017-07-17)
+--------------------------
 
-Here you can follow all changes since first version of this project.
+Bug Fixes
+~~~~~~~~~
+
+* **providers.beaker:** fix for an unkown status that was not being analyzed
+* **providers.beaker:** fixing incorrect Exception & adding info if caught
+* **providers.openshift:** infinite Loop Possible Waiting for Builds/Pods
+* **provisioner.beaker:** fix transfer of ssh key
+* **provisioners.beaker:** bug fix for validation and Beaker XML gen
+* check for asset and beaker credential keys before performing operation on
+* cleanup docker containers on failures of beaker provisioning
+* create directory if beaker assets are within folder
+* provider name must be a property
 
 
-Version 0.1
------------
+Features
+~~~~~~~~
 
-- First release.
+* **provisioners.beaker:** return Beaker Data
+* **resources.host:** add metadata key to host profile
+* add property to retrieve <provider>_name
+* adding ip_address attribute for host objects
+* get assets list for credentials
+* ignore exception if asset folder already exist
+* **resources.host:** host resource to accept ansible parameters
+* **carbon:** ability to declare provider credentials in carbon configuration file" into develop
+
+
+Chores
+~~~~~~
+
+* remove flask dependency and add pbr
+* add line break when creating ssh public key
+* accept versions with alphanimeric
+
+
+Tests
+~~~~~
+
+* **carbon.test:** removal of invalid integration tests
+* **carbon.provisioners**: create a Jenkins job to run nightly tests w/ provisioners x providers matrix
+
+
+Documentation
+~~~~~~~~~~~~~
+
+* document ansible_params key available to hosts
+* document metadata key for host resources
+* update version number to match other carbon projects
+* make the changelog show on the main documentation page
+
+
+Version 0.1.0 (2017-06-30)
+--------------------------
+
+* First release.

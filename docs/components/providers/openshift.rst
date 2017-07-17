@@ -10,11 +10,29 @@ Credentials
 +++++++++++
 
 To authenticate with OpenShift, you will need to create an OpenShift
-credentials section within your scenario descriptor file. Below is an example
-credentials section with all available OpenShift credential keys.
+credentials section within your scenario descriptor file.
+
+If using your username and token, which is the preferred method, you can
+either get it from the Openshift UI or using oc command line tool:
+
+Using the Openshift UI:
+~~~~~~~~~~~~~~~~~~~~~~~
+
+In the top right of the OpenShift interface, select the ? -> Command Line
+Tools.  From there, you see textboxes, after the first uneditable textbox
+(which discusses a session token), click the clipboard button to copy the
+token to your clipboard.
+
+Using the oc command line tool:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    $ oc whoami --show-token
+
+Below is an example credentials section with all available OpenShift credential keys.
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     credentials:
@@ -74,7 +92,6 @@ Below is an example resource section with all available OpenShift provider
 keys.
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     provision
@@ -83,6 +100,7 @@ keys.
         provider: openshift
         provisioner: <provisioner>
         credential: <credential>
+        metadata: <dict_key_values>
         oc_image: <image>
         oc_git: <git>
         oc_template: <template>
@@ -157,15 +175,23 @@ keys.
         - True
 
     *   - oc_build_timeout
-        - The duration to wait for an application to finish building.
+        - The duration to wait for an application to finish building and pods
+          to be up and running, default value is set to 1800, which is 30
+          minutes.
         - Integer
+        - False
+
+    *   - metadata
+        - Data that the resource may need access to after provisioning is
+          finished. This data is passed through and is not modified by carbon
+          framework.
+        - Dict
         - False
 
 Examples
 ++++++++
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: Openshift image example
@@ -191,7 +217,6 @@ Examples
           - label2: image_app
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: Openshift git example
@@ -219,7 +244,6 @@ Examples
           - label2: git_app
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: Openshift default template example
@@ -246,7 +270,6 @@ Examples
           - label2: predefinedtemplate_app
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: Openshift custom template example

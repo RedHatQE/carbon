@@ -521,7 +521,7 @@ class OpenstackProvisioner(CarbonProvisioner):
         ips = []
         for ip in float_ips:
             ips.append(str(ip['floatingip']['floating_ip_address']))
-        self.host.os_ip_address = ips
+        self.host.set_ip_address(ips)
 
         self.logger.info('Successfully created node %s' % self.host.os_name)
 

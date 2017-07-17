@@ -31,7 +31,7 @@ Additional Notes
 Development instructions, design notes and changelog.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     development
     design

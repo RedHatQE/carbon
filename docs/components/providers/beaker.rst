@@ -14,7 +14,6 @@ credentials section with all available Beaker credential keys.  You must set
 either keytab and keytab_principal or username and password.
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     credentials:
@@ -66,7 +65,6 @@ resource section within your scenario descriptor file. Below is an example
 resource section with the available Beaker provider keys.
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     provision:
@@ -75,6 +73,8 @@ resource section with the available Beaker provider keys.
         provider: openstack
         provisioner: <provisioner>
         credential: <credential>
+        metadata: <dict_key_values>
+        ansible_params: <dict_key_values>
         bkr_arch: <arch>
         bkr_variant: <variant>
         bkr_family: <family>
@@ -95,7 +95,6 @@ resource section with the available Beaker provider keys.
         bkr_ignore_panic: <True or False>
         bkr_taskparam: [<list of task parameter settings>]
         bkr_ksmeta: [<list of kick start meta OPTIONS>]
-
 
 .. list-table::
     :widths: auto
@@ -247,23 +246,33 @@ resource section with the available Beaker provider keys.
         - List
         - False
 
+    *   - metadata
+        - Data that the resource may need access to after provisioning is
+          finished. This data is passed through and is not modified by carbon
+          framework.
+        - Dict
+        - False
 
+    *   - ansible_params
+        - Ansible parameters to be used within a inventory file to control how
+          ansible communicates with the host.
+        - Dict
+        - False
 
 Examples
 ++++++++
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: Beaker example
     description: Get a specific RHEL7 distro
-    
+
     credentials:
-    
+
       - name: beaker
-        keytab: 
-        keytab_principal: 
+        keytab:
+        keytab_principal:
         username: username
         password: password
 
@@ -280,7 +289,6 @@ Examples
 
 
 .. code-block:: yaml
-    :linenos:
 
     ---
     name: Beaker example
@@ -347,5 +355,15 @@ Examples
         # kick start meta data OPTIONS - list
         bkr_ksmeta: ["<key>=<value>"]
 
-
-
+        # Host metadata
+        metadata:
+          user: root
+          password: root
+        # Example with ansible parameters defined
+        ansible_params:
+          # 'ansible_' will always be appended if not given
+          user: root
+          ssh_pass: root
+          -- or --
+          ansible_user: root
+          ansible_ssh_pass: root

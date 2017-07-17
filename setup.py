@@ -18,15 +18,14 @@ from setuptools import setup, find_packages
 
 
 ROOT = os.path.dirname(__file__)
-VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
+VERSION_RE = re.compile(r'''__version__ = ['"]([a-zA-Z0-9.]+)['"]''')
 
 requires = [
-    'Flask>=0.12.2',
+    'pbr>=3.1.1',
     'Werkzeug>=0.11.15',
     'Click>=6.7',
     'taskrunner>=0.3.0',
     'PyYAML>=3.12',
-    'pexpect>=4.2.1',
     'pykwalify>=1.6.0',
     'python-openstackclient>=3.11.0',
     'python-neutronclient>=6.2.0',
