@@ -23,27 +23,27 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
-import sys
-import shutil
-import errno
 import collections
+import errno
+import shutil
+import sys
 import tempfile
 from threading import Lock
 
-import yaml
+import os
 import taskrunner
+import yaml
 
 from . import __name__ as __carbon_name__
 from .config import Config, ConfigAttribute
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
 from .core import CarbonException, LoggerMixin
-from .helpers import LockedCachedProperty, get_root_path, file_mgmt, gen_random_str
+from .helpers import LockedCachedProperty, get_root_path, file_mgmt, \
+    gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
-from .tasks import ValidateTask, ProvisionTask
 from .tasks import OrchestrateTask, ExecuteTask
 from .tasks import ReportTask, CleanupTask
-
+from .tasks import ValidateTask, ProvisionTask
 
 # a lock used for logger initialization
 _logger_lock = Lock()

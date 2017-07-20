@@ -23,15 +23,14 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import click
 import os
 import yaml
-
-import click
 
 from . import __version__
 from ._compat import string_types
 from .carbon import Carbon
-from .constants import TASKLIST, TASK_CLEANUP_CHOICES,\
+from .constants import TASKLIST, TASK_CLEANUP_CHOICES, \
     TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
 
 _VERBOSITY = 0

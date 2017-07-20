@@ -21,23 +21,21 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 import ast
 from copy import deepcopy
-from nose.tools import assert_true, assert_false, assert_is_instance, raises
-from nose.plugins.attrib import attr
 from unittest import TestCase
+
+import os
+from nose.plugins.attrib import attr
+from nose.tools import assert_true, assert_false
 
 try:
     from test.test_support import EnvironmentVarGuard
 except ImportError:
     from test.support import EnvironmentVarGuard
 
-from carbon import Carbon
 from carbon.helpers import file_mgmt
-from carbon.providers import OpenstackProvider, OpenshiftProvider
-from carbon.providers import DigitalOceanProvider, RackspaceProvider
-from carbon.providers import AwsProvider, BeakerProvider
+from carbon.providers import OpenstackProvider
 
 # ++++++ IGNORE PYLINT MESSAGES ++++++ #
 # - Ignores method names, unit tests setUp method needs this naming standard

@@ -24,14 +24,15 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 import time
+
+import os
 import yaml
 
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException
 from ..core import CarbonProvisioner, CarbonProvisionerException
-from ..helpers import get_ansible_inventory_script, gen_random_str
+from ..helpers import get_ansible_inventory_script
 
 
 class OpenshiftProvisionerException(CarbonProvisionerException):

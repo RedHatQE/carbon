@@ -25,12 +25,12 @@
 """
 from copy import copy
 
+from ..constants import RULE_HOST_NAMING
 from ..core import CarbonResource, CarbonResourceException
-from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
 from ..helpers import get_provisioner_class, get_default_provisioner
 from ..helpers import get_provisioners_list
-from ..constants import RULE_HOST_NAMING
+from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 
 
 class CarbonHostException(CarbonResourceException):

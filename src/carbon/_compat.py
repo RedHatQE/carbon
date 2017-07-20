@@ -25,10 +25,9 @@
     :copyright: (c) 2015 by Armin Ronacher.
     :license: GPLv3, see LICENSE for more details.
 """
-import sys
-import operator
 import functools
-import warnings
+import operator
+import sys
 
 # Syntax sugar.
 _ver = sys.version_info
@@ -105,7 +104,8 @@ else:
     ifilter = filter
     range_type = range
 
-    from io import StringIO, BytesIO
+    from io import StringIO
+
     NativeStringIO = StringIO
 
     _latin1_encode = operator.methodcaller('encode', 'latin1')

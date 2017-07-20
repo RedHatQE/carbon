@@ -21,20 +21,12 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
-from nose.tools import assert_is_instance, assert_equal, nottest, raises
 from unittest import TestCase
 
-from glanceclient.v2.client import Client as Glance_client
-from keystoneauth1 import session
-from neutronclient.v2_0 import client as neutron_client
-from novaclient.v2.client import Client as Nova_client
-from novaclient.v2.flavors import Flavor as Nova_flavor
-from novaclient.v2.images import Image as Nova_image
-from novaclient.v2.networks import Network as Nova_network
+import os
+from nose.tools import assert_is_instance, assert_equal, nottest, raises
 
 from carbon import Carbon
-from carbon.core import CarbonException
 from carbon._compat import is_py3
 from carbon.helpers import file_mgmt
 from carbon.provisioners.openshift import OpenshiftProvisioner

@@ -24,14 +24,14 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
-import stat
-import uuid
-import time
 import socket
+import time
+import uuid
 from xml.dom.minidom import parse, parseString
 
+import os
 import paramiko
+import stat
 
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerException

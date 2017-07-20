@@ -28,8 +28,8 @@ from neutronclient.v2_0.client import Client as neutronclient
 from novaclient.client import Client as novaclient
 from novaclient.exceptions import ClientException
 
-from ..core import CarbonProvider
 from .._compat import string_types
+from ..core import CarbonProvider
 
 
 class OpenstackProvider(CarbonProvider):

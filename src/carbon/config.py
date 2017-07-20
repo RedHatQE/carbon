@@ -24,12 +24,13 @@
     :license: GPLv3, see LICENSE for more details.
 
 """
-import os
-import types
 import errno
 import json
 
+import os
+import types
 from werkzeug.utils import import_string
+
 from ._compat import string_types, iteritems
 
 

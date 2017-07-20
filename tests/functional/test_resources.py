@@ -21,11 +21,12 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 from copy import deepcopy
+from unittest import TestCase
+
+import os
 from nose.tools import assert_equal, assert_is_instance, assert_is_not_none
 from nose.tools import assert_false, raises
-from unittest import TestCase
 
 try:
     from test.test_support import EnvironmentVarGuard

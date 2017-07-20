@@ -23,7 +23,6 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import uuid
 
 from ..core import CarbonResource
 from ..tasks import ReportTask, ValidateTask

@@ -21,15 +21,12 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import shutil
-import sys
-import os
 import errno
 import inspect
-from distutils.dir_util import copy_tree
-
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
+
+import os
 from taskrunner import Task
 
 from .helpers import get_core_tasks_classes

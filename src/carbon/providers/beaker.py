@@ -21,8 +21,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import CarbonProvider
 from .._compat import string_types
+from ..core import CarbonProvider
 
 
 class BeakerProvider(CarbonProvider):

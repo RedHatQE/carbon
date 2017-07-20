@@ -23,11 +23,10 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from .config import Config, ConfigAttribute
-from .resources import Scenario, Host, Action, Execute, Report
-from .helpers import CustomDict
 from .carbon import Carbon
-
+from .config import Config, ConfigAttribute
+from .helpers import CustomDict
+from .resources import Scenario, Host, Action, Execute, Report
 
 __version__ = '0.3.0'
 __author__ = 'PIT Team Red Hat'

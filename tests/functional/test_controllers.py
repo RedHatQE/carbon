@@ -21,8 +21,9 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 from unittest import TestCase
+
+import os
 
 try:
     from test.test_support import EnvironmentVarGuard

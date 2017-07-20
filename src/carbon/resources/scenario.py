@@ -23,19 +23,20 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 import errno
 
+import os
 from pykwalify.core import Core
 from pykwalify.errors import CoreError, SchemaError
+
+from .actions import Action
+from .executes import Execute
+from .host import Host
+from .reports import Report
 from ..constants import SCENARIO_SCHEMA
 from ..core import CarbonResource, CarbonResourceException
 from ..helpers import gen_random_str
 from ..tasks import ValidateTask
-from .actions import Action
-from .host import Host
-from .executes import Execute
-from .reports import Report
 
 
 class ScenarioException(CarbonResourceException):

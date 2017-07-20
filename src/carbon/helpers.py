@@ -23,21 +23,19 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import sys
-import stat
-import os
 import inspect
 import json
 import pkgutil
 import random
 import string
+import sys
 import threading
-
-import yaml
-
-from ._compat import string_types
 from logging import getLogger
 from subprocess import Popen, PIPE
+
+import os
+import stat
+import yaml
 
 from .constants import PROVISIONERS
 
