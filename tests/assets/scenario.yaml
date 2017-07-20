@@ -17,6 +17,12 @@ credentials:
     username: username
     token: token
 
+  - name: beaker
+    keytab:
+    keytab_principal:
+    username:
+    password:
+
 provision:
 
   - name: machine_1
@@ -91,6 +97,21 @@ provision:
     oc_labels:
       - label1: label1
       - label2: git_app
+
+  - name: Machine from Beaker 1
+    provider: beaker
+    credential: beaker
+    role: bkr-machine
+    bkr_jobgroup: ci-ops-pit
+    bkr_arch: x86_64
+    bkr_variant: Workstation
+    bkr_whiteboard: Testing machine provisioning from Carbon
+    bkr_distro: RHEL-6.9
+    bkr_host_requires_options: ["arch=x86_64", "memory>=15000"]
+    bkr_key_values: ["DISKSPACE>=500000", "HVM=1"]
+    bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    bkr_kernel_post_options: ["isolcpus = 0,5"]
+    bkr_tag: "RTT_ACCEPTED"
 
 orchestrate:
 

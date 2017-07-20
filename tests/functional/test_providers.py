@@ -226,6 +226,8 @@ class TestBeaker(TestCase):
 
     def test_tag(self):
         """Test the validate tag method."""
+        assert_false(self._beaker.validate_tag(11))
+        assert_true(self._beaker.validate_tag(None))
         assert_true(self._beaker.validate_tag('RTT_ACCEPTED'))
 
     def test_family(self):
@@ -345,6 +347,78 @@ class TestBeaker(TestCase):
         assert_true(self._beaker.validate_key_values(None))
         assert_true(self._beaker.validate_key_values(["DISKSPACE>=500000", "HVM=1"]))
         assert_true(self._beaker.validate_key_values([1, 2, 3]))
+
+    def test_username(self):
+        """Test the validate username method."""
+        assert_false(self._beaker.validate_username(11))
+        assert_true(self._beaker.validate_username(None))
+        assert_true(self._beaker.validate_username('ci-ops-pit'))
+
+    def test_password(self):
+        """Test the validate password method."""
+        assert_false(self._beaker.validate_password(11))
+        assert_true(self._beaker.validate_password(None))
+        assert_true(self._beaker.validate_password('ci-ops-pit'))
+
+    def test_keytab(self):
+        """Test the validate keytab method."""
+        assert_false(self._beaker.validate_keytab(11))
+        assert_true(self._beaker.validate_keytab(None))
+        assert_true(self._beaker.validate_keytab('ci-ops-pit'))
+
+    def test_ssh_key(self):
+        """Test the validate ssh_key method."""
+        assert_false(self._beaker.validate_ssh_key(11))
+        assert_true(self._beaker.validate_ssh_key(None))
+        assert_true(self._beaker.validate_ssh_key('ci-ops-pit'))
+
+    def test_kickstart(self):
+        """Test the validate kickstart method."""
+        assert_false(self._beaker.validate_kickstart(11))
+        assert_true(self._beaker.validate_kickstart(None))
+        assert_true(self._beaker.validate_kickstart('ci-ops-pit'))
+
+    def test_hostname(self):
+        """Test the validate hostname method."""
+        assert_false(self._beaker.validate_hostname(11))
+        assert_true(self._beaker.validate_hostname(None))
+        assert_true(self._beaker.validate_hostname('ci-ops-pit'))
+
+    def test_ip_address(self):
+        """Test the validate ip_address method."""
+        assert_false(self._beaker.validate_ip_address(11))
+        assert_true(self._beaker.validate_ip_address(None))
+        assert_true(self._beaker.validate_ip_address('ci-ops-pit'))
+
+    def test_job_id(self):
+        """Test the validate job_id method."""
+        assert_false(self._beaker.validate_job_id(11))
+        assert_true(self._beaker.validate_job_id(None))
+        assert_true(self._beaker.validate_job_id('ci-ops-pit'))
+
+    def test_taskparam(self):
+        """Test the validate taskparam method."""
+        assert_false(self._beaker.validate_taskparam(11))
+        assert_true(self._beaker.validate_taskparam(None))
+        assert_true(self._beaker.validate_taskparam(["DISKSPACE>=500000", "HVM=1"]))
+        assert_true(self._beaker.validate_taskparam([1, 2, 3]))
+
+    def test_ksmeta(self):
+        """Test the validate ksmeta method."""
+        assert_false(self._beaker.validate_ksmeta(11))
+        assert_true(self._beaker.validate_ksmeta(None))
+        assert_true(self._beaker.validate_ksmeta(["DISKSPACE>=500000", "HVM=1"]))
+        assert_true(self._beaker.validate_ksmeta([1, 2, 3]))
+
+    def test_ignore_panic(self):
+        """Test the validate ignore panic method."""
+        assert_false(self._beaker.validate_ignore_panic(3))
+        assert_false(self._beaker.validate_ignore_panic(1))
+        assert_false(self._beaker.validate_ignore_panic('True'))
+        assert_true(self._beaker.validate_ignore_panic(None))
+        assert_true(self._beaker.validate_ignore_panic(True))
+        assert_true(self._beaker.validate_ignore_panic(False))
+        assert_true(self._beaker.validate_ignore_panic(0))
 
 
 class TestAws(TestCase):

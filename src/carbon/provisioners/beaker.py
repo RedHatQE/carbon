@@ -172,8 +172,7 @@ class BeakerProvisioner(CarbonProvisioner):
         """
         bkr_config = "/etc/beaker/client.conf"
         # Case 1: user has username and password set
-        if ["username", "password"] <= self.host.provider.credentials.keys() \
-                and "username" in self.host.provider.credentials.keys() \
+        if "username" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["username"] \
                 and "password" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["password"]:
@@ -193,8 +192,7 @@ class BeakerProvisioner(CarbonProvisioner):
             self.lineinfile_call(summary, replace_line, cmd)
 
         # Case 2: user has a keytab and principal set
-        elif ["keytab", "keytab_principal"] <= self.host.provider.credentials.keys() \
-                and "keytab" in self.host.provider.credentials.keys() \
+        elif "keytab" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["keytab"] \
                 and "keytab_principal" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["keytab_principal"]:

@@ -77,6 +77,113 @@ provision:
       - label1: label1
       - label2: git_app
 
+  - name: Machine from Beaker 1
+    provider: beaker
+    credential: pit-beaker
+    role: bkr-machine
+    bkr_jobgroup: ci-ops-pit
+    bkr_arch: x86_64
+    bkr_variant: Workstation
+    bkr_whiteboard: Testing machine provisioning from Carbon
+    bkr_distro: RHEL-6.9
+    bkr_host_requires_options: ["arch=x86_64", "memory>=15000"]
+    bkr_key_values: ["DISKSPACE>=500000", "HVM=1"]
+    bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    bkr_kernel_post_options: ["isolcpus = 0,5"]
+    bkr_tag: "RTT_ACCEPTED"
+
+  - name: Machine from Beaker 2
+    provider: beaker
+    credential: pit-beaker
+    role: bkr-machine
+    bkr_jobgroup: ci-ops-pit
+    bkr_arch: x86_64
+    bkr_variant: Server
+    bkr_whiteboard: Testing machine provisioning from Carbon
+    bkr_distro: RHEL-7.3
+    bkr_host_requires_options: ["arch=x86_64", "memory>=15000"]
+    bkr_key_values: ["DISKSPACE>=500000", "HVM=1"]
+    bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    bkr_kernel_post_options: ["isolcpus = 0,5"]
+    bkr_tag: "RTT_ACCEPTED"
+
+  - name: Machine from Beaker 3
+    provider: beaker
+    credential: pit-beaker
+    role: bkr-machine
+    bkr_jobgroup: ci-ops-pit
+    bkr_arch: x86_64
+    bkr_variant: Server
+    bkr_whiteboard: Testing machine provisioning from Carbon
+    bkr_distro: RHEL-7.3
+    bkr_host_requires_options: ["arch=x86_64", "memory>=15000"]
+    bkr_key_values: ["DISKSPACE>=500000", "HVM=1"]
+    bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    bkr_kernel_post_options: ["isolcpus = 0,5"]
+    bkr_tag: "RTT_ACCEPTED"
+
+  - name: Machine from Beaker 4
+    provider: beaker
+    credential: pit-beaker
+    role: bkr-machine
+    bkr_jobgroup: ci-ops-pit
+    bkr_arch: x86_64
+    bkr_variant: Server
+    bkr_whiteboard: Testing machine provisioning from Carbon
+    bkr_distro: RHEL-7.3
+    bkr_host_requires_options: ["arch=x86_64", "memory>=15000"]
+    bkr_key_values: ["DISKSPACE>=500000", "HVM=1"]
+    bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    bkr_kernel_post_options: ["isolcpus = 0,5"]
+    bkr_tag: "RTT_ACCEPTED"
+
+  - name: Machine from Beaker 5
+    provider: beaker
+    credential: pit-beaker
+    role: bkr-machine
+    bkr_jobgroup: ci-ops-pit
+    bkr_arch: x86_64
+    bkr_variant: Server
+    bkr_whiteboard:
+    bkr_distro: RHEL-7.3
+    bkr_host_requires_options: ["arch=x86_64", "memory>=15000"]
+    bkr_key_values: ["DISKSPACE>=500000", "HVM=1"]
+    bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    bkr_kernel_post_options: ["isolcpus = 0,5"]
+    bkr_tag: "RTT_ACCEPTED"
+    bkr_kickstart: rhel7-7.3-ci-cloud.ks
+    bkr_ignore_panic: True
+    bkr_timeout: 3600
+    bkr_ssh_key: jenkins.keytab-pit-jenkins.rhev-ci-vms.eng.rdu2.redhat.com
+    bkr_ksmeta: ["a=b", "c>d"]
+
+  - name: Machine from Beaker 6
+    provider: beaker
+    credential: pit-beaker
+    role: bkr-machine
+    bkr_jobgroup: ci-ops-pit
+    bkr_arch: x86_64
+    bkr_variant: Server
+    bkr_whiteboard:
+    bkr_distro: RHEL-7.3
+    bkr_host_requires_options: ["arch=x86_64", "memory>=15000"]
+    bkr_key_values: ["DISKSPACE>=500000", "HVM=1"]
+    bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    bkr_kernel_post_options: ["isolcpus = 0,5"]
+    bkr_tag: "RTT_ACCEPTED"
+    bkr_ignore_panic: True
+    bkr_timeout: 3600
+    bkr_virtual_machine: False
+    bkr_virt_capable: True
+    bkr_distro_requires_options: ["method=nfs", "tag=RTT_ACCEPTED"]
+    bkr_priority: Urgent
+    bkr_retention_tag: 60days
+    bkr_taskparam: [ RESERVETIME=172800 ]
+    bkr_ssh_key: pit-jenkins
+    bkr_username: root
+    bkr_password: ci-ops-pit
+    bkr_ksmeta: ["a=b", "c>d"]
+
 orchestrate:
 
   - name: rhn
