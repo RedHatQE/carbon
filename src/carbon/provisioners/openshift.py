@@ -30,12 +30,12 @@ import os
 import yaml
 
 from ..controllers import AnsibleController
-from ..controllers import DockerController, DockerControllerException
-from ..core import CarbonProvisioner, CarbonProvisionerException
+from ..controllers import DockerController, DockerControllerError
+from ..core import CarbonProvisioner, CarbonProvisionerError
 from ..helpers import get_ansible_inventory_script
 
 
-class OpenshiftProvisionerException(CarbonProvisionerException):
+class OpenshiftProvisionerError(CarbonProvisionerError):
     """Base class for openshift provisioner exceptions."""
 
     def __init__(self, message):
@@ -44,7 +44,7 @@ class OpenshiftProvisionerException(CarbonProvisionerException):
         :param message: Details about the error.
         """
         self.message = message
-        super(OpenshiftProvisionerException, self).__init__(message)
+        super(OpenshiftProvisionerError, self).__init__(message)
 
 
 class OpenshiftProvisioner(CarbonProvisioner):
@@ -131,7 +131,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         # Run container
         try:
             self.docker.run_container(self._oc_image, entrypoint='bash')
-        except DockerControllerException as ex:
+        except DockerControllerError as ex:
             self.logger.warn(ex)
 
     @property
@@ -210,7 +210,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
             # Stop/remove container
             self.docker.stop_container()
             self.docker.remove_container()
-            raise OpenshiftProvisionerException(
+            raise OpenshiftProvisionerError(
                 'Authentication type not found. Supported types:'
                 ' <token|username/password>.')
 
@@ -225,10 +225,10 @@ class OpenshiftProvisioner(CarbonProvisioner):
                 # Stop/remove container
                 self.docker.stop_container()
                 self.docker.remove_container()
-            except DockerControllerException as ex:
-                raise OpenshiftProvisionerException(ex.message)
+            except DockerControllerError as ex:
+                raise OpenshiftProvisionerError(ex.message)
             finally:
-                raise OpenshiftProvisionerException(
+                raise OpenshiftProvisionerError(
                     'Could not authenticate. Please check credentials.')
 
     def select_project(self):
@@ -250,9 +250,9 @@ class OpenshiftProvisioner(CarbonProvisioner):
                 # Stop/remove container
                 self.docker.stop_container()
                 self.docker.remove_container()
-                raise OpenshiftProvisionerException('Failed to select project')
-        except DockerControllerException as ex:
-            raise OpenshiftProvisionerException(ex)
+                raise OpenshiftProvisionerError('Failed to select project')
+        except DockerControllerError as ex:
+            raise OpenshiftProvisionerError(ex)
 
     def create(self):
         """Create a new application in openshift based on the type of
@@ -295,9 +295,9 @@ class OpenshiftProvisioner(CarbonProvisioner):
                     self.logger.error('More than one application type are '
                                       'declared for resource. Unable to '
                                       'determine which one to use.')
-                    raise OpenshiftProvisionerException('More than one application type are '
-                                                        'declared for resource. Unable to '
-                                                        'determine which one to use.')
+                    raise OpenshiftProvisionerError('More than one application type are '
+                                                    'declared for resource. Unable to '
+                                                    'determine which one to use.')
 
                 if newapp is None:
                     # check for custom template
@@ -307,16 +307,16 @@ class OpenshiftProvisioner(CarbonProvisioner):
                         self.logger.error('Application type not defined for '
                                           'resource. Available choices ~ %s' %
                                           self._app_choices)
-                        raise OpenshiftProvisionerException('Application type not '
-                                                            'defined for resource.')
+                        raise OpenshiftProvisionerError('Application type not '
+                                                        'defined for resource.')
 
                 getattr(self, 'app_by_%s' % newapp)()
             finally:
                 # Stop/remove container
                 self.docker.stop_container()
                 self.docker.remove_container()
-        except DockerControllerException as ex:
-            raise OpenshiftProvisionerException('Docker error. - %s' % ex.message)
+        except DockerControllerError as ex:
+            raise OpenshiftProvisionerError('Docker error. - %s' % ex.message)
 
     def delete(self):
         """Delete all resources associated with an application. It will
@@ -353,11 +353,11 @@ class OpenshiftProvisioner(CarbonProvisioner):
             self.docker.remove_container()
 
             if results['status'] != 0:
-                raise OpenshiftProvisionerException(
+                raise OpenshiftProvisionerError(
                     'Failed to delete application.'
                 )
-        except DockerControllerException as ex:
-            raise OpenshiftProvisionerException(ex)
+        except DockerControllerError as ex:
+            raise OpenshiftProvisionerError(ex)
 
     def app_by_image(self):
         """Create a new application in an openshift server from a docker image.
@@ -434,7 +434,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
             )
 
             if results['status'] != 0:
-                raise OpenshiftProvisionerException(
+                raise OpenshiftProvisionerError(
                     'Failed to create new application by template.'
                 )
 
@@ -475,7 +475,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
 
         self.ansible.results_analyzer(results['status'])
         if results['status'] != 0:
-            raise OpenshiftProvisionerException('Error creating app. %s' % results)
+            raise OpenshiftProvisionerError('Error creating app. %s' % results)
 
     def env_opts(self):
         self._env_opts = ""
@@ -506,7 +506,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         attempt = 0
         while wait > 0:
             if errcheck > 4:
-                raise OpenshiftProvisionerException("pods never came up")
+                raise OpenshiftProvisionerError("pods never came up")
             buildcheck = True
             podcheck = True
             attempt += 1
@@ -527,12 +527,12 @@ class OpenshiftProvisioner(CarbonProvisioner):
             if len(results["callback"].contacted) == 1:
                 parsed_results = results["callback"].contacted[0]["results"]
             else:
-                raise OpenshiftProvisionerException("Unexpected Error")
+                raise OpenshiftProvisionerError("Unexpected Error")
             if "stdout" in parsed_results and "stderr" in parsed_results["stdout"]:
                 if "No resources" in parsed_results["stdout"]["stderr"]:
                     pass
                 else:
-                    raise OpenshiftProvisionerException(
+                    raise OpenshiftProvisionerError(
                         "Unexpected Error checking builds: {}".format(
                             parsed_results["stdout"]["stderr"])
                     )
@@ -544,7 +544,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
                         buildcheck = buildcheck and True
                     elif build_status == "Failed":
                         self.logger.error("The build failed")
-                        raise OpenshiftProvisionerException('The build failed')
+                        raise OpenshiftProvisionerError('The build failed')
                     else:
                         # Build is still in progress
                         buildcheck = False
@@ -555,12 +555,12 @@ class OpenshiftProvisioner(CarbonProvisioner):
                     wait -= 10
                     continue
             elif "stderr_lines" in parsed_results and parsed_results["stderr_lines"]:
-                raise OpenshiftProvisionerException(
+                raise OpenshiftProvisionerError(
                     "Unexpected Error when Checking the build:: {}".format(
                         parsed_results["stderr_lines"])
                 )
             else:
-                raise OpenshiftProvisionerException(
+                raise OpenshiftProvisionerError(
                     "Unexpected Error when Checking the build: {}".format(
                         parsed_results)
                 )
@@ -577,7 +577,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
             if len(results["callback"].contacted) == 1:
                 parsed_results2 = results["callback"].contacted[0]["results"]
             else:
-                raise OpenshiftProvisionerException("Unexpected Error")
+                raise OpenshiftProvisionerError("Unexpected Error")
             if "stderr" in parsed_results2 and parsed_results2["stderr"]:
                 # check if pods have not been created yet
                 if "No resources" in parsed_results2["stderr"]:
@@ -587,7 +587,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
                     wait -= 10
                     continue
                 else:
-                    raise OpenshiftProvisionerException(
+                    raise OpenshiftProvisionerError(
                         "Unexpected output when checking for created pods: "
                         "{}".format(parsed_results2["stderr"]))
             elif "stdout" in parsed_results2 and parsed_results2["stdout"]:
@@ -611,12 +611,12 @@ class OpenshiftProvisioner(CarbonProvisioner):
                     wait -= 10
                     continue
             elif "stderr_lines" in parsed_results2 and parsed_results2["stderr_lines"]:
-                raise OpenshiftProvisionerException(
+                raise OpenshiftProvisionerError(
                     "Unexpected Error when Checking the pod: {}".format(
                         parsed_results["stderr_lines"])
                 )
             else:
-                raise OpenshiftProvisionerException(
+                raise OpenshiftProvisionerError(
                     "Unexpected Error when Checking the build: {}".format(
                         parsed_results)
                 )
@@ -625,8 +625,8 @@ class OpenshiftProvisioner(CarbonProvisioner):
             self.logger.info("Build Complete and all pods are up")
             return
         # timeout reached
-        raise OpenshiftProvisionerException("Timeout reached waiting for builds"
-                                            "to complete and pods to come up")
+        raise OpenshiftProvisionerError("Timeout reached waiting for builds"
+                                        "to complete and pods to come up")
 
     def expose_route(self):
         """Expose an existing container externally via routes.
@@ -647,7 +647,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         if len(results["callback"].contacted) == 1:
             parsed_results = results["callback"].contacted[0]["results"]
         else:
-            raise OpenshiftProvisionerException("Unexpected Error")
+            raise OpenshiftProvisionerError("Unexpected Error")
         mydict = yaml.load(parsed_results["stdout"])
         try:
             app_name = mydict["items"][0]["metadata"]["name"]
@@ -686,7 +686,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         if len(results["callback"].contacted) == 1:
             parsed_results = results["callback"].contacted[0]["results"]
         else:
-            raise OpenshiftProvisionerException("Unexpected Error")
+            raise OpenshiftProvisionerError("Unexpected Error")
         self.ansible.results_analyzer(results['status'])
         mydict = yaml.load(parsed_results["stdout"])
 

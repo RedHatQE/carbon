@@ -36,7 +36,7 @@ except ImportError:
 from carbon import Carbon, Scenario, Host
 from carbon._compat import string_types
 from carbon.constants import PROVISIONERS
-from carbon.core import CarbonException, CarbonResource
+from carbon.core import CarbonError, CarbonResource
 from carbon.helpers import file_mgmt
 from carbon.providers import OpenstackProvider
 from carbon.resources import Action, Execute, Report
@@ -212,7 +212,7 @@ class TestScenario(TestCase):
         self.cbn.load_from_yaml('assets/scenario.yaml')
         self.cbn.scenario.validate()
 
-    @raises(CarbonException)
+    @raises(CarbonError)
     def test_validate_invalid_scenario_yaml(self):
         """Test validating an invalid carbon scenario yaml."""
         self.cbn.load_from_yaml('assets/invalid_scenario.yaml')

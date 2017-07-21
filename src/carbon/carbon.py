@@ -37,7 +37,7 @@ import yaml
 from . import __name__ as __carbon_name__
 from .config import Config, ConfigAttribute
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
-from .core import CarbonException, LoggerMixin
+from .core import CarbonError, LoggerMixin
 from .helpers import LockedCachedProperty, get_root_path, file_mgmt, \
     gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
@@ -293,10 +293,10 @@ class Carbon(LoggerMixin, ResultsMixin):
             os.makedirs(self.config['DATA_FOLDER'])
         except IOError as ex:
             if ex.errno == errno.EACCES:
-                raise CarbonException("You don't have permission to create '"
+                raise CarbonError("You don't have permission to create '"
                                       "the data folder.")
             else:
-                raise CarbonException('Error creating data folder - '
+                raise CarbonError('Error creating data folder - '
                                       '%s'.format(ex.message))
 
         # Setup logging handlers
@@ -387,7 +387,7 @@ class Carbon(LoggerMixin, ResultsMixin):
             exe_items = data.pop('execute', None)
             rpt_items = data.pop('report', None)
         except KeyError as ex:
-            raise CarbonException(ex)
+            raise CarbonError(ex)
 
         data["filename"] = filepath
         self.scenario.load(data)
@@ -400,7 +400,7 @@ class Carbon(LoggerMixin, ResultsMixin):
             for item in cred_items:
                 self.scenario.add_credentials(item)
         if not self.scenario.credentials:
-            raise CarbonException("Credentials are not being set!!")
+            raise CarbonError("Credentials are not being set!!")
 
         self._load_resources(Host, pro_items)
         self._load_resources(Action, orc_items)
@@ -474,7 +474,7 @@ class Carbon(LoggerMixin, ResultsMixin):
             if ex.errno == errno.EEXIST:
                 pass
             else:
-                raise CarbonException('Error creating assets folder - %s' % ex.message)
+                raise CarbonError('Error creating assets folder - %s' % ex.message)
 
         for asset in self.scenario.get_assets_list():
             src_file = os.path.join(self.assets_path, asset)
@@ -510,7 +510,7 @@ class Carbon(LoggerMixin, ResultsMixin):
 
         # check if scenario was set
         if self.scenario is None:
-            raise CarbonException(
+            raise CarbonError(
                 'You must set a scenario before running the framework!'
             )
 
@@ -542,14 +542,14 @@ class Carbon(LoggerMixin, ResultsMixin):
             self._copy_assets()
         except shutil.Error as ex:
             self.logger.error('Error while copying assets. %s' % ex.message)
-            raise CarbonException('Error while copying assets %s' % ex.message)
+            raise CarbonError('Error while copying assets %s' % ex.message)
         except IOError as ex:
             if ex.errno == errno.ENOENT:
                 self.logger.error('Error while copying the asset "%s"' % ex.filename)
-                raise CarbonException('Asset "%s" does not exist. Check if '
-                                      'the asset folder was set correctly.' % ex.filename)
+                raise CarbonError('Asset "%s" does not exist. Check if '
+                                  'the asset folder was set correctly.' % ex.filename)
             else:
-                raise CarbonException('Error while copying assets. Msg: %s' % ex.message)
+                raise CarbonError('Error while copying assets. Msg: %s' % ex.message)
 
         try:
             status = 0
@@ -580,7 +580,7 @@ class Carbon(LoggerMixin, ResultsMixin):
 
             # Raise final carbon exception based on status of task execution
             if status:
-                raise CarbonException(
+                raise CarbonError(
                     "Carbon scenario '%s' failed to execute successfully!" %
                     self.scenario.name
                 )

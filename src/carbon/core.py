@@ -32,7 +32,7 @@ from taskrunner import Task
 from .helpers import get_core_tasks_classes
 
 
-class CarbonException(Exception):
+class CarbonError(Exception):
     """Carbon's base Exception class"""
 
     def __init__(self, message):
@@ -41,10 +41,10 @@ class CarbonException(Exception):
         :param message: Details about the error.
         """
         self.message = message
-        super(CarbonException, self).__init__(message)
+        super(CarbonError, self).__init__(message)
 
 
-class CarbonTaskException(CarbonException):
+class CarbonTaskError(CarbonError):
     """Carbon's task base exception class."""
 
     def __init__(self, message):
@@ -52,10 +52,10 @@ class CarbonTaskException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonTaskException, self).__init__(message)
+        super(CarbonTaskError, self).__init__(message)
 
 
-class CarbonResourceException(CarbonException):
+class CarbonResourceError(CarbonError):
     """Carbon's resource base exception class."""
 
     def __init__(self, message):
@@ -63,10 +63,10 @@ class CarbonResourceException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonResourceException, self).__init__(message)
+        super(CarbonResourceError, self).__init__(message)
 
 
-class CarbonProvisionerException(CarbonException):
+class CarbonProvisionerError(CarbonError):
     """Carbon's provisioner base exception class."""
 
     def __init__(self, message):
@@ -74,10 +74,10 @@ class CarbonProvisionerException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonProvisionerException, self).__init__(message)
+        super(CarbonProvisionerError, self).__init__(message)
 
 
-class CarbonProviderException(CarbonException):
+class CarbonProviderError(CarbonError):
     """Carbon's provider base exception class."""
 
     def __init__(self, message):
@@ -85,10 +85,10 @@ class CarbonProviderException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonProviderException, self).__init__(message)
+        super(CarbonProviderError, self).__init__(message)
 
 
-class CarbonControllerException(CarbonException):
+class CarbonControllerError(CarbonError):
     """Carbon's controller base exception class."""
 
     def __init__(self, message):
@@ -96,10 +96,10 @@ class CarbonControllerException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonControllerException, self).__init__(message)
+        super(CarbonControllerError, self).__init__(message)
 
 
-class LoggerMixinException(CarbonException):
+class LoggerMixinError(CarbonError):
     """Carbon's logger mixin base exception class."""
 
     def __init__(self, message):
@@ -107,7 +107,7 @@ class LoggerMixinException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonTaskException, self).__init__(message)
+        super(LoggerMixinError, self).__init__(message)
 
 
 class LoggerMixin(object):
@@ -173,18 +173,18 @@ class LoggerMixin(object):
                         os.makedirs(logdir)
                     except OSError as ex:
                         if ex.errno == errno.EACCES:
-                            raise LoggerMixinException(
+                            raise LoggerMixinError(
                                 'You do not have permission to create the '
                                 'workspace.'
                             )
                         else:
-                            raise LoggerMixinException(
+                            raise LoggerMixinError(
                                 'Error creating scenario workspace: %s' %
                                 ex.message
                             )
                 chandler = FileHandler(logfile)
             else:
-                raise LoggerMixinException(
+                raise LoggerMixinError(
                     'Please set a valid LOGGER_TYPE value.'
                 )
             chandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
@@ -214,18 +214,18 @@ class LoggerMixin(object):
                     os.makedirs(logdir)
                 except OSError as ex:
                     if ex.errno == errno.EACCES:
-                        raise LoggerMixinException(
+                        raise LoggerMixinError(
                             'You do not have permission to create the '
                             'workspace.'
                         )
                     else:
-                        raise LoggerMixinException(
+                        raise LoggerMixinError(
                             'Error creating scenario workspace: %s' %
                             ex.message
                         )
             thandler = FileHandler(logfile)
         else:
-            raise LoggerMixinException(
+            raise LoggerMixinError(
                 'Please set a valid LOGGER_TYPE value.'
             )
         thandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
@@ -307,7 +307,7 @@ class CarbonResource(LoggerMixin):
         Add a task to the list of tasks for the resource
         """
         if t['task'] not in set(get_core_tasks_classes()):
-            raise CarbonResourceException(
+            raise CarbonResourceError(
                 'The task class "%s" used is not valid.' % t['task']
             )
         self._tasks.append(t)
@@ -719,7 +719,7 @@ class CarbonProvider(LoggerMixin):
             # It then returns the list of parameters that the validate
             # functions will return false.
             #
-            # It throws an CarbonProviderException if the host doesn't have the
+            # It throws an CarbonProviderError if the host doesn't have the
             # attribute to be validated or if the provider has not implemented
             # the validate_<param> function.
             items = [
@@ -729,7 +729,7 @@ class CarbonProvider(LoggerMixin):
                 for param in (self._mandatory_parameters + self._optional_parameters)]
             return [(param, value) for param, value, func in [item for item in items] if not func(value)]
         except AttributeError as e:
-            raise CarbonProviderException(e.args[0])
+            raise CarbonProviderError(e.args[0])
 
     @classmethod
     def build_profile(cls, host):

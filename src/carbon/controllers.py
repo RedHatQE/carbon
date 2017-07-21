@@ -35,7 +35,7 @@ from ansible.vars import VariableManager
 from docker import DockerClient
 from docker.errors import APIError, ContainerError, NotFound, ImageNotFound
 
-from .core import CarbonController, CarbonControllerException
+from .core import CarbonController, CarbonControllerError
 
 
 class CarbonCallback(CallbackBase):
@@ -291,7 +291,7 @@ class AnsibleController(CarbonController):
                 self.logger.info(item['results']['msg'])
 
 
-class DockerControllerException(CarbonControllerException):
+class DockerControllerError(CarbonControllerError):
     """Base class for docker controller exceptions."""
 
     def __init__(self, message):
@@ -300,7 +300,7 @@ class DockerControllerException(CarbonControllerException):
         :param message: Details about the error.
         """
         self.message = message
-        super(DockerControllerException, self).__init__(message)
+        super(DockerControllerError, self).__init__(message)
 
 
 class DockerController(CarbonController):
@@ -354,7 +354,7 @@ class DockerController(CarbonController):
         """
         status = self.get_container_status()
         if status == 'running':
-            raise DockerControllerException(
+            raise DockerControllerError(
                 'Container %s is %s! Re-use container.' % (self.cname, status))
         elif status == 'exited':
             self.logger.warn('Container %s is %s! Remove container before '
@@ -372,7 +372,7 @@ class DockerController(CarbonController):
                 volumes=volumes
             )
         except (APIError, ContainerError, ImageNotFound) as ex:
-            raise DockerControllerException(ex)
+            raise DockerControllerError(ex)
         self.logger.info('Successfully started container: %s', self.cname)
 
     def remove_container(self):
@@ -382,7 +382,7 @@ class DockerController(CarbonController):
         try:
             container.remove()
         except APIError as ex:
-            raise DockerControllerException(ex)
+            raise DockerControllerError(ex)
         self.logger.info('Container %s successfully removed.', self.cname)
 
     def start_container(self):
@@ -399,7 +399,7 @@ class DockerController(CarbonController):
         try:
             container.start()
         except APIError as ex:
-            raise DockerControllerException(ex)
+            raise DockerControllerError(ex)
         self.logger.info('Container %s successfully started.', self.cname)
 
     def stop_container(self):
@@ -416,7 +416,7 @@ class DockerController(CarbonController):
         try:
             container.stop()
         except APIError as ex:
-            raise DockerControllerException(ex)
+            raise DockerControllerError(ex)
         self.logger.info('Container: %s successfully stopped.', self.cname)
 
     def pull_image(self, name, tag='latest'):
@@ -428,7 +428,7 @@ class DockerController(CarbonController):
         try:
             self.client.images.pull(name, tag=tag)
         except APIError as ex:
-            raise DockerControllerException(ex)
+            raise DockerControllerError(ex)
         self.logger.info('Successfully pulled image %s:%s.', name, tag)
 
     def remove_image(self, name, tag='latest'):
@@ -442,7 +442,7 @@ class DockerController(CarbonController):
         try:
             self.client.images.remove(image=_image)
         except APIError as ex:
-            raise DockerControllerException(ex)
+            raise DockerControllerError(ex)
         self.logger.info('Successfully removed image %s.', _image)
 
     def get_container_status(self):
@@ -465,7 +465,7 @@ class DockerController(CarbonController):
         try:
             container = self.client.containers.get(self.cname)
         except (APIError, NotFound):
-            raise DockerControllerException(
+            raise DockerControllerError(
                 'Container %s not found.' % self.cname
             )
         return container

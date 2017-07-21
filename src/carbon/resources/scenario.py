@@ -34,12 +34,12 @@ from .executes import Execute
 from .host import Host
 from .reports import Report
 from ..constants import SCENARIO_SCHEMA
-from ..core import CarbonResource, CarbonResourceException
+from ..core import CarbonResource, CarbonResourceError
 from ..helpers import gen_random_str
 from ..tasks import ValidateTask
 
 
-class ScenarioException(CarbonResourceException):
+class ScenarioError(CarbonResourceError):
     """Scenario's base exception class."""
 
     def __init__(self, message):
@@ -47,7 +47,7 @@ class ScenarioException(CarbonResourceException):
 
         :param message: Details about the error.
         """
-        super(ScenarioException, self).__init__(message)
+        super(ScenarioError, self).__init__(message)
 
 
 class Scenario(CarbonResource):
@@ -94,11 +94,11 @@ class Scenario(CarbonResource):
                 os.makedirs(self._data_folder)
         except OSError as ex:
             if ex.errno == errno.EACCES:
-                raise ScenarioException('You do not have permission to create'
-                                        ' the workspace.')
+                raise ScenarioError('You do not have permission to create'
+                                    ' the workspace.')
             else:
-                raise ScenarioException('Error creating scenario workspace: '
-                                        '%s' % ex.message)
+                raise ScenarioError('Error creating scenario workspace: '
+                                    '%s' % ex.message)
 
     def add_resource(self, item):
         if isinstance(item, Host):
@@ -213,7 +213,7 @@ class Scenario(CarbonResource):
             self.logger.error(
                 'Unsuccessfully validated scenario yaml based on schema.'
             )
-            raise ScenarioException(ex.msg)
+            raise ScenarioError(ex.msg)
 
     def profile(self):
         """

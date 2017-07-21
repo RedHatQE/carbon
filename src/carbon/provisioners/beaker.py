@@ -34,12 +34,12 @@ import paramiko
 import stat
 
 from ..controllers import AnsibleController
-from ..controllers import DockerController, DockerControllerException
-from ..core import CarbonProvisioner, CarbonProvisionerException
+from ..controllers import DockerController, DockerControllerError
+from ..core import CarbonProvisioner, CarbonProvisionerError
 from ..helpers import get_ansible_inventory_script
 
 
-class BeakerProvisionerException(CarbonProvisionerException):
+class BeakerProvisionerError(CarbonProvisionerError):
     """ Base class for Beaker provisioner exceptions."""
 
     def __init__(self, message):
@@ -48,7 +48,7 @@ class BeakerProvisionerException(CarbonProvisionerException):
         :param message: Details about the error.
         """
         self.message = message
-        super(BeakerProvisionerException, self).__init__(message)
+        super(BeakerProvisionerError, self).__init__(message)
 
 
 class BeakerProvisioner(CarbonProvisioner):
@@ -120,9 +120,9 @@ class BeakerProvisioner(CarbonProvisioner):
         # Run container
         try:
             self.docker.run_container(self._bkr_image, entrypoint='bash')
-        except DockerControllerException as ex:
+        except DockerControllerError as ex:
             self.logger.warn(ex)
-            raise BeakerProvisionerException("Issue bringing up the container")
+            raise BeakerProvisionerError("Issue bringing up the container")
 
     @property
     def docker(self):
@@ -160,10 +160,10 @@ class BeakerProvisioner(CarbonProvisioner):
             # Stop/remove container
             self.docker.stop_container()
             self.docker.remove_container()
-        except DockerControllerException as ex:
-            raise BeakerProvisionerException(ex.message)
+        except DockerControllerError as ex:
+            raise BeakerProvisionerError(ex.message)
         finally:
-            raise BeakerProvisionerException(msg)
+            raise BeakerProvisionerError(msg)
 
     def authenticate(self):
         """Authenticate to Beaker server, support
@@ -476,8 +476,8 @@ class BeakerProvisioner(CarbonProvisioner):
             # Stop/remove container
             self.docker.stop_container()
             self.docker.remove_container()
-        except DockerControllerException as ex:
-            raise BeakerProvisionerException(ex)
+        except DockerControllerError as ex:
+            raise BeakerProvisionerError(ex)
 
     def cancel_job(self):
         """Cancel a Beaker job """
@@ -519,8 +519,8 @@ class BeakerProvisioner(CarbonProvisioner):
             # Stop/remove container
             self.docker.stop_container()
             self.docker.remove_container()
-        except DockerControllerException as ex:
-            raise BeakerProvisionerException(ex)
+        except DockerControllerError as ex:
+            raise BeakerProvisionerError(ex)
 
     def get_job_status(self, xmldata):
         """
@@ -528,7 +528,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         :param xmldata: xmldata of a beaker job status
         :return: dictionary of job and install task statuses
-        :raises BeakerProvisionerException: if results cannot be analyzed successfully
+        :raises BeakerProvisionerError: if results cannot be analyzed successfully
         """
 
         mydict = {}
@@ -567,7 +567,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         :param xmldata: xmldata of a beaker job status
         :return: dictionary of job and install task statuses
-        :raises BeakerProvisionerException: if results cannot be analyzed successfully
+        :raises BeakerProvisionerError: if results cannot be analyzed successfully
         """
         try:
             dom = parseString(xmldata)
@@ -632,7 +632,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         :param resultsdict: dictionary of job and install task statuses
         :return: action str [wait, success, or fail]
-        :raises BeakerProvisionerException: if results cannot be analyzed successfully
+        :raises BeakerProvisionerError: if results cannot be analyzed successfully
         """
         # when is the job complete
         if resultsdict["job_result"].strip().lower() == "new" and \

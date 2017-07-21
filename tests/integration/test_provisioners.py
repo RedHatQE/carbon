@@ -39,7 +39,7 @@ from carbon import Carbon
 from carbon._compat import is_py3
 from carbon.helpers import file_mgmt
 from carbon.provisioners.beaker import BeakerProvisioner
-from carbon.provisioners.beaker import BeakerProvisionerException
+from carbon.provisioners.beaker import BeakerProvisionerError
 from carbon.provisioners.openstack import OpenstackProvisioner
 from carbon.resources import Host
 
@@ -361,7 +361,7 @@ class TestBeakerProvisioner(TestCase):
         assert_is_instance(self.obj, BeakerProvisioner)
         try:
             self.obj.create()
-        except BeakerProvisionerException:
+        except BeakerProvisionerError:
             pass
         self.obj = BeakerProvisioner(self.host5)
         self.obj.delete()
@@ -384,7 +384,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host6)
         self.obj.delete()
 
-    @raises(BeakerProvisionerException)
+    @raises(BeakerProvisionerError)
     def test_authenticate_unable_to_copy_files_to_cotainer(self):
         """Create a beaker provisioner object. Verifies object is instance
         of carbon.provisioners.BeakerProvisioner. Authenticate fail to copy
@@ -397,7 +397,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj.host.provider.credentials["keytab"] = "badfile"
         self.obj.authenticate()
 
-    @raises(BeakerProvisionerException)
+    @raises(BeakerProvisionerError)
     def test_authenticate_no_credentials(self):
         """Create a beaker provisioner object. Verifies object is instance
         of carbon.provisioners.BeakerProvisioner. Authenticate with no
@@ -413,7 +413,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj.host.provider.credentials["passwork"] = None
         self.obj.authenticate()
 
-    @raises(BeakerProvisionerException)
+    @raises(BeakerProvisionerError)
     def test_authenticate_bad_credentials(self):
         """Create a beaker provisioner object. Verifies object is instance
         of carbon.provisioners.BeakerProvisioner. Authenticate with no

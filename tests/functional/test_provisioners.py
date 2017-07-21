@@ -32,9 +32,9 @@ from carbon.controllers import AnsibleController
 from carbon.controllers import DockerController
 from carbon.helpers import file_mgmt
 from carbon.provisioners.beaker import BeakerProvisioner
-from carbon.provisioners.beaker import BeakerProvisionerException
+from carbon.provisioners.beaker import BeakerProvisionerError
 from carbon.provisioners.openshift import OpenshiftProvisioner
-from carbon.provisioners.openshift import OpenshiftProvisionerException
+from carbon.provisioners.openshift import OpenshiftProvisionerError
 from carbon.provisioners.openstack import OpenstackProvisioner
 from carbon.resources import Host
 
@@ -131,26 +131,26 @@ class TestOpenshiftProvisioner(TestCase):
         obj.docker.remove_container()
 
     @nottest
-    @raises(OpenshiftProvisionerException)
+    @raises(OpenshiftProvisionerError)
     def test_invalid_authentication(self):
         """Test invalid authentication."""
         if is_py3:
             self.cbn.logger.warn('Skipping test due to Ansible support with '
                                  'Python3.')
-            raise OpenshiftProvisionerException
+            raise OpenshiftProvisionerError
 
         obj = OpenshiftProvisioner(self.host)
         obj.host.provider._credentials['token'] = 'token'
         obj.authenticate()
 
     @nottest
-    @raises(OpenshiftProvisionerException)
+    @raises(OpenshiftProvisionerError)
     def test_authentication_missing_keys(self):
         """Test authentication with missing keys."""
         if is_py3:
             self.cbn.logger.warn('Skipping test due to Ansible support with '
                                  'Python3.')
-            raise OpenshiftProvisionerException
+            raise OpenshiftProvisionerError
 
         obj = OpenshiftProvisioner(self.host)
         obj.host.provider._credentials.pop('password')
@@ -171,7 +171,7 @@ class TestOpenshiftProvisioner(TestCase):
         obj.select_project()
 
     @nottest
-    @raises(OpenshiftProvisionerException)
+    @raises(OpenshiftProvisionerError)
     def test_select_invalid_project(self):
         """Test the select project method to choose an invalid project to
         create applications within.
@@ -179,7 +179,7 @@ class TestOpenshiftProvisioner(TestCase):
         if is_py3:
             self.cbn.logger.warn('Skipping test due to Ansible support with '
                                  'Python3.')
-            raise OpenshiftProvisionerException
+            raise OpenshiftProvisionerError
 
         obj = OpenshiftProvisioner(self.host)
         obj.host.provider._credentials['project'] = 'invalid_project'
@@ -317,7 +317,7 @@ class TestBeakerProvisioner(TestCase):
         assert_equal(self.obj.bxml.set("cclist", ["user1", "user2", "user3"]), 0)
         assert_equal(self.obj.bxml.set("gargage", "badparam"), 1)
 
-    @raises(BeakerProvisionerException)
+    @raises(BeakerProvisionerError)
     def test_create_object_bad_docker_image(self):
         """Create a beaker provisioner object. Verifies object is instance
         of carbon.provisioners.BeakerProvisioner.

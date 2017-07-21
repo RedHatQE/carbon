@@ -40,7 +40,7 @@ from nose.tools import assert_is_none, assert_not_equal, assert_equal, raises
 
 from carbon._compat import string_types
 from carbon.controllers import AnsibleController, CarbonCallback
-from carbon.controllers import DockerController, DockerControllerException
+from carbon.controllers import DockerController, DockerControllerError
 from carbon.helpers import file_mgmt
 
 
@@ -53,7 +53,7 @@ class TestDockerController(TestCase):
         assert_is_instance(DockerController(), DockerController)
 
     @staticmethod
-    @raises(DockerControllerException)
+    @raises(DockerControllerError)
     def test_get_container():
         """Test method to get container object."""
         obj = DockerController(cname='kingbob')
@@ -96,7 +96,7 @@ class TestDockerController(TestCase):
         assert_is_none(obj.get_container_status())
 
     @staticmethod
-    @raises(DockerControllerException)
+    @raises(DockerControllerError)
     def test_remove_image():
         """Test method to remove an image."""
         _image = 'alpine'
@@ -110,7 +110,7 @@ class TestDockerController(TestCase):
         obj.remove_image('fadora')
 
     @staticmethod
-    @raises(DockerControllerException)
+    @raises(DockerControllerError)
     def test_pull_image():
         """Test method to pull an image."""
         obj = DockerController()
@@ -163,7 +163,7 @@ class TestDockerController(TestCase):
         try:
             obj.run_container(_image, command='bash')
             obj.run_container(_image, command='bash')
-        except DockerControllerException:
+        except DockerControllerError:
             pass
 
         # Container present and exited
