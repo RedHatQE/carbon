@@ -36,6 +36,7 @@ from novaclient.v2.images import Image as Nova_image
 from novaclient.v2.networks import Network as Nova_network
 
 from carbon import Carbon
+from carbon._compat import is_py3
 from carbon.helpers import file_mgmt
 from carbon.provisioners.beaker import BeakerProvisioner
 from carbon.provisioners.beaker import BeakerProvisionerException
