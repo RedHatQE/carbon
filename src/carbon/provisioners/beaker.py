@@ -214,12 +214,12 @@ class BeakerProvisioner(CarbonProvisioner):
             self.ansible.results_analyzer(results['status'])
             if results['status'] != 0:
                 self.container_cleanup_and_error("Error when creating keytab folder within"
-                                                     " the container")
+                                                 " the container")
 
             # copy the keytab
             cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_file_path)
             results = self.ansible.run_module(
-                     dict(name='copy file', hosts=self.docker.cname, gather_facts='no',
+                dict(name='copy file', hosts=self.docker.cname, gather_facts='no',
                           tasks=[dict(action=dict(module='copy', args=cp_args))])
             )
             self.ansible.results_analyzer(results['status'])
@@ -665,7 +665,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
 class BeakerXML():
     """ Class to generate Beaker XML file from input host yaml"""
-    _op_list = ['!=', '<=', '>=', '=', '<', '>']
+    _op_list = ['like', '==', '!=', '<=', '>=', '=', '<', '>']
 
     def __init__(self):
         """Intialization of BeakerXML"""
@@ -739,7 +739,8 @@ class BeakerXML():
                 for hro_op in self._op_list:
                     if hro_op in hro:
                         hr_values = hro.split(hro_op)
-                        self.sethostrequires(hr_values[0], hro_op, hr_values[1])
+                        self.sethostrequires(hr_values[0].strip(),
+                                             hro_op, hr_values[1].strip())
                         break
 
         # Set User supplied host requires
@@ -748,7 +749,8 @@ class BeakerXML():
                 for dro_op in self._op_list:
                     if dro_op in dro:
                         dr_values = dro.split(dro_op)
-                        self.setdistrorequires(dr_values[0], dro_op, dr_values[1])
+                        self.setdistrorequires(dr_values[0].strip(),
+                                               dro_op, dr_values[1].strip())
                         break
 
         # Set User supplied taskparam Only valid option currently is reservetime
