@@ -36,14 +36,6 @@ from .constants import TASKLIST, TASK_CLEANUP_CHOICES, \
 _VERBOSITY = 0
 
 
-def print_version(ctx, param, value):
-    """Print carbon version for the command line"""
-    if not value or ctx.resilient_parsing:
-        return
-    click.echo('%s' % __version__)
-    ctx.exit()
-
-
 def print_header():
     click.echo("-" * 50)
     click.echo("Carbon Framework v%s" % __version__)
@@ -52,11 +44,9 @@ def print_header():
 
 
 @click.group()
-@click.option("--version", is_flag=True, callback=print_version,
-              expose_value=False, is_eager=True,
-              help="Show version and exit.")
 @click.option("-v", "--verbose", count=True,
               help="Add verbosity to the commands.")
+@click.version_option()
 def cli(verbose):
     """
     This is Carbon command line utility.
