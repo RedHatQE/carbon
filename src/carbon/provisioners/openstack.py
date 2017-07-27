@@ -254,7 +254,7 @@ class OpenstackProvisioner(CarbonProvisioner):
             ('Waiting for %s to finish building..' % node.name),
             lambda node: node.status != 'BUILD',
             lambda: self.get_node_by_id(node.id),
-            timeout_sec=120
+            timeout_sec=300
         )
 
     def _wait_till_node_not_deleting(self, node):
