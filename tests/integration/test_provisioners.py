@@ -40,6 +40,8 @@ from carbon._compat import is_py3
 from carbon.helpers import file_mgmt
 from carbon.provisioners.beaker import BeakerProvisioner
 from carbon.provisioners.beaker import BeakerProvisionerError
+from carbon.provisioners.openshift import OpenshiftProvisioner
+from carbon.provisioners.openshift import OpenshiftProvisionerError
 from carbon.provisioners.openstack import OpenstackProvisioner
 from carbon.resources import Host
 
@@ -60,6 +62,7 @@ SCENARIO_CFGS = [
     os.path.join(os.getcwd(), '../assets/scenario_nocreds.yaml')
 ]
 
+
 def read_data(file_location):
     myvars = {}
     with open(file_location) as myfile:
@@ -69,6 +72,7 @@ def read_data(file_location):
                 var = line.split("=")[1]
                 myvars[name.strip()] = var
     return myvars
+
 
 class TestOpenstackProvisioner(TestCase):
     """Unit tests to test carbon provisioner ~ openstack."""
@@ -99,7 +103,8 @@ class TestOpenstackProvisioner(TestCase):
         self.data = file_mgmt('r', SCENARIO_CFG)
         params = self.data.pop('provision')[0]
         if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
+            params['provider_creds'] = ast.literal_eval(read_data(
+                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
         else:
             params['provider_creds'] = self.data.pop('credentials')
         self.host = Host(config=self.cbn.config, parameters=params)
@@ -189,6 +194,7 @@ class TestOpenstackProvisioner(TestCase):
         finally:
             obj.delete()
 
+
 class TestBeakerProvisioner(TestCase):
     """Unit tests to test carbon provisioner ~ beaker."""
 
@@ -216,17 +222,20 @@ class TestBeakerProvisioner(TestCase):
 
         # Create carbon object
         if os.getenv("CARBON_ASSETS_PATH") is not None:
-            self.cbn = Carbon(__name__, assets_path = os.environ["CARBON_ASSETS_PATH"])
+            self.cbn = Carbon(__name__, assets_path = \
+                os.environ["CARBON_ASSETS_PATH"])
         else:
             self.cbn = Carbon(__name__, assets_path="/home/fedora/assets")
 
-        BeakerProvisioner._bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
+        BeakerProvisioner._bkr_image = \
+            "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
         # Load scenario data
         self.data = file_mgmt('r', SCENARIO_CFG)
         params = self.data.pop('provision')[5]
         if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
+            params['provider_creds'] = ast.literal_eval(read_data(
+                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
         else:
             params['provider_creds'] = self.data.pop('credentials')
         self.host = Host(config=self.cbn.config, parameters=params)
@@ -235,7 +244,8 @@ class TestBeakerProvisioner(TestCase):
         self.data = file_mgmt('r', SCENARIO_CFG)
         params = self.data.pop('provision')[6]
         if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
+            params['provider_creds'] = ast.literal_eval(read_data(
+                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
         else:
             params['provider_creds'] = self.data.pop('credentials')
         self.host2 = Host(config=self.cbn.config, parameters=params)
@@ -244,7 +254,8 @@ class TestBeakerProvisioner(TestCase):
         self.data = file_mgmt('r', SCENARIO_CFG)
         params = self.data.pop('provision')[7]
         if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
+            params['provider_creds'] = ast.literal_eval(read_data(
+                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
         else:
             params['provider_creds'] = self.data.pop('credentials')
         self.host3 = Host(config=self.cbn.config, parameters=params)
@@ -253,7 +264,8 @@ class TestBeakerProvisioner(TestCase):
         self.data = file_mgmt('r', SCENARIO_CFG)
         params = self.data.pop('provision')[8]
         if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
+            params['provider_creds'] = ast.literal_eval(read_data(
+                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
         else:
             params['provider_creds'] = self.data.pop('credentials')
         self.host4 = Host(config=self.cbn.config, parameters=params)
@@ -262,7 +274,8 @@ class TestBeakerProvisioner(TestCase):
         self.data = file_mgmt('r', SCENARIO_CFG)
         params = self.data.pop('provision')[9]
         if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
+            params['provider_creds'] = ast.literal_eval(read_data(
+                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
         else:
             params['provider_creds'] = self.data.pop('credentials')
         self.host5 = Host(config=self.cbn.config, parameters=params)
@@ -271,7 +284,8 @@ class TestBeakerProvisioner(TestCase):
         self.data = file_mgmt('r', SCENARIO_CFG)
         params = self.data.pop('provision')[10]
         if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
+            params['provider_creds'] = ast.literal_eval(read_data(
+                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
         else:
             params['provider_creds'] = self.data.pop('credentials')
         self.host6 = Host(config=self.cbn.config, parameters=params)
@@ -280,7 +294,8 @@ class TestBeakerProvisioner(TestCase):
     def tearDown(self):
         """ Cleanup Docker Container. Stop and remove"""
         # Stop/remove container
-        if self.obj and self.obj.docker and self.obj.docker.get_container_status():
+        if self.obj and self.obj.docker and self.obj.docker.\
+                get_container_status():
             self.obj.docker.stop_container()
             self.obj.docker.remove_container()
 
@@ -289,14 +304,13 @@ class TestBeakerProvisioner(TestCase):
         of carbon.provisioners.BeakerProvisioner. Authenticate
         """
         if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise SkipTest('Skipping test due to Ansible support with Python3.')
+            raise SkipTest('Ansible support for Python 3 not available.')
 
         # Create a new carbon compound
         self.cbn._copy_assets()
         self.obj = BeakerProvisioner(self.host)
         assert_is_instance(self.obj, BeakerProvisioner)
+        self.obj.start_container()
         self.obj.authenticate()
 
     @nottest
@@ -306,14 +320,13 @@ class TestBeakerProvisioner(TestCase):
         password
         """
         if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise SkipTest('Skipping test due to Ansible support with Python3.')
+            raise SkipTest('Ansible support for Python 3 not available.')
 
         # Create a new carbon compound
         self.cbn._copy_assets()
         self.obj = BeakerProvisioner(self.host2)
         assert_is_instance(self.obj, BeakerProvisioner)
+        self.obj.start_container()
         self.obj.authenticate()
 
     def test_create_and_delete(self):
@@ -321,9 +334,7 @@ class TestBeakerProvisioner(TestCase):
         of carbon.provisioners.BeakerProvisioner. Create and delete resource
         """
         if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise SkipTest('Skipping test due to Ansible support with Python3.')
+            raise SkipTest('Ansible support for Python 3 not available.')
 
         self.cbn._copy_assets()
         self.obj = BeakerProvisioner(self.host)
@@ -335,25 +346,22 @@ class TestBeakerProvisioner(TestCase):
     def test_generateBKRXMLfrom_host(self):
         """Test create resource for the provisioner class."""
         if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise SkipTest('Skipping test due to Ansible support with Python3.')
+            raise SkipTest('Ansible support for Python 3 not available.')
 
         self.cbn._copy_assets()
         self.obj = BeakerProvisioner(self.host)
-
+        self.obj.start_container()
         self.obj.authenticate()
         self.obj.gen_bkr_xml()
 
     def test_generateBKRXML_no_save_print(self):
         """Test create resource for the provisioner class. No Save"""
         if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise SkipTest('Skipping test due to Ansible support with Python3.')
+            raise SkipTest('Ansible support for Python 3 not available.')
 
         self.cbn._copy_assets()
         self.obj = BeakerProvisioner(self.host)
+        self.obj.start_container()
         self.obj.authenticate()
 
         # Obtain xml path
@@ -370,7 +378,8 @@ class TestBeakerProvisioner(TestCase):
                     try:
                         setattr(self.obj.bxml, xml_key, host_desc[key])
                     except Exception as ex:
-                        self.obj.container_cleanup_and_error("Error setting Beaker attribute data {}".format(ex))
+                        self.obj.container_cleanup_and_error(
+                            "Error setting Beaker attribute data %s" % ex)
 
         # Generate Beaker XML
         self.obj.bxml.generateBKRXML(bkr_xml_file, savefile=False)
@@ -379,8 +388,9 @@ class TestBeakerProvisioner(TestCase):
                      "--whiteboard 'Testing machine provisioning from Carbon' "
                      "--method nfs --kernel_options 'selinux=--permisssive "
                      "keyboard=us lang=us timezone=est' --kernel_options_post "
-                     "'isolcpus = 0,5' --debug --dryrun --task /distribution/reservesys "
-                     "--tag RTT_ACCEPTED --distro RHEL-6.9 --job-group ci-ops-pit --priority Normal "
+                     "'isolcpus = 0,5' --debug --dryrun --task /distribution/"
+                     "reservesys --tag RTT_ACCEPTED --distro RHEL-6.9 --job-"
+                     "group ci-ops-pit --priority Normal "
                      "--keyvalue 'DISKSPACE>=500000' --keyvalue 'HVM=1'")
 
         # Format command for container
@@ -388,7 +398,8 @@ class TestBeakerProvisioner(TestCase):
 
         # Run command on container
         results = self.obj.ansible.run_module(
-            dict(name='bkr workflow-simple', hosts=self.obj.docker.cname, gather_facts='no',
+            dict(name='bkr workflow-simple',
+                 hosts=self.obj.docker.cname, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
@@ -402,7 +413,8 @@ class TestBeakerProvisioner(TestCase):
             if len(results["callback"].contacted) == 1:
                 parsed_results = results["callback"].contacted[0]["results"]
             else:
-                self.obj.container_cleanup_and_error("Unexpected Error creating XML")
+                self.obj.container_cleanup_and_error(
+                    "Unexpected Error creating XML")
 
             output = parsed_results["stdout"]
 
@@ -419,9 +431,7 @@ class TestBeakerProvisioner(TestCase):
         Use all keys and authenticate with user password
         """
         if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise SkipTest('Skipping test due to Ansible support with Python3.')
+            raise SkipTest('Ansible support for Python 3 not available.')
 
         self.cbn._copy_assets()
         self.host5.bkr_timeout = 160
@@ -434,16 +444,13 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host5)
         self.obj.delete()
 
-
     def test_create_and_delete_all_keys_except_kickstart(self):
         """Create a beaker provisioner object. Verifies object is instance
         of carbon.provisioners.BeakerProvisioner. Create and delete resource
         Use all keys and authenticate with user password
         """
         if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise SkipTest('Skipping test due to Ansible support with Python3.')
+            raise SkipTest('Ansible support for Python 3 not available.')
 
         self.cbn._copy_assets()
         self.obj = BeakerProvisioner(self.host6)
@@ -463,6 +470,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         assert_is_instance(self.obj, BeakerProvisioner)
         self.obj.host.provider.credentials["keytab"] = "badfile"
+        self.obj.start_container()
         self.obj.authenticate()
 
     @raises(BeakerProvisionerError)
@@ -479,6 +487,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj.host.provider.credentials["keytab_principal"] = None
         self.obj.host.provider.credentials["username"] = None
         self.obj.host.provider.credentials["passwork"] = None
+        self.obj.start_container()
         self.obj.authenticate()
 
     @raises(BeakerProvisionerError)
@@ -495,4 +504,110 @@ class TestBeakerProvisioner(TestCase):
         self.obj.host.provider.credentials["keytab_principal"] = None
         self.obj.host.provider.credentials["username"] = "badname"
         self.obj.host.provider.credentials["password"] = "badpass"
+        self.obj.start_container()
         self.obj.authenticate()
+
+
+class TestOpenshiftProvisioner(TestCase):
+    """Unit tests to test carbon provisioner ~ openshift."""
+
+    @nottest
+    def setUp(self):
+        """Actions to be performed before each test case."""
+        global CARBON_CFG, CARBON_CFGS
+        global SCENARIO_CFG, SCENARIO_CFGS
+
+        # Determine abs path to carbon config
+        for f in CARBON_CFGS:
+            if os.path.exists(f):
+                CARBON_CFG = f
+
+        # Determine abs path to scenario config
+        for f in SCENARIO_CFGS:
+            if os.path.exists(f):
+                SCENARIO_CFG = f
+
+        # Set carbon settings env variable
+        self.env = EnvironmentVarGuard()
+        self.env.set('CARBON_SETTINGS', CARBON_CFG)
+
+        # Create carbon object
+        self.cbn = Carbon(__name__, assets_path="assets")
+
+        # Load scenario data
+        self.data = file_mgmt('r', SCENARIO_CFG)
+        params = self.data.pop('provision')[3]
+        params['provider_creds'] = self.data.pop('credentials')
+        self.host = Host(config=self.cbn.config, parameters=params)
+
+    @nottest
+    def test_passwd_authentication(self):
+        """Test authentication using username/password to openshift."""
+        if is_py3:
+            raise SkipTest('Ansible support for Python 3 not available.')
+
+        obj = OpenshiftProvisioner(self.host)
+        obj.start_container()
+        obj.authenticate()
+        obj.docker.stop_container()
+        obj.docker.remove_container()
+
+    @nottest
+    @raises(OpenshiftProvisionerError)
+    def test_invalid_authentication(self):
+        """Test invalid authentication."""
+        if is_py3:
+            raise SkipTest('Ansible support for Python 3 not available.')
+
+        obj = OpenshiftProvisioner(self.host)
+        obj.host.provider._credentials['token'] = 'token'
+        obj.start_container()
+        obj.authenticate()
+        obj.docker.stop_container()
+        obj.docker.remove_container()
+
+    @nottest
+    @raises(OpenshiftProvisionerError)
+    def test_authentication_missing_keys(self):
+        """Test authentication with missing keys."""
+        if is_py3:
+            raise SkipTest('Ansible support for Python 3 not available.')
+
+        obj = OpenshiftProvisioner(self.host)
+        obj.host.provider._credentials.pop('password')
+        obj.start_container()
+        obj.authenticate()
+        obj.docker.stop_container()
+        obj.docker.remove_container()
+
+    @nottest
+    def test_select_project(self):
+        """Test the select project method to choose which project to create
+        applications within.
+        """
+        if is_py3:
+            raise SkipTest('Ansible support for Python 3 not available.')
+
+        obj = OpenshiftProvisioner(self.host)
+        obj.start_container()
+        obj.authenticate()
+        obj.select_project()
+        obj.docker.stop_container()
+        obj.docker.remove_container()
+
+    @nottest
+    @raises(OpenshiftProvisionerError)
+    def test_select_invalid_project(self):
+        """Test the select project method to choose an invalid project to
+        create applications within.
+        """
+        if is_py3:
+            raise SkipTest('Ansible support for Python 3 not available.')
+
+        obj = OpenshiftProvisioner(self.host)
+        obj.host.provider._credentials['project'] = 'invalid_project'
+        obj.start_container()
+        obj.authenticate()
+        obj.select_project()
+        obj.docker.stop_container()
+        obj.docker.remove_container()

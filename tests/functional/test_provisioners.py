@@ -24,17 +24,16 @@
 from unittest import TestCase
 
 import os
-from nose.tools import assert_is_instance, assert_equal, assert_true, nottest, raises
+from nose.tools import assert_is_instance, assert_equal, assert_true, \
+    nottest, raises
 
 from carbon import Carbon
-from carbon._compat import is_py3
 from carbon.controllers import AnsibleController
 from carbon.controllers import DockerController
+from carbon.controllers import DockerControllerError
 from carbon.helpers import file_mgmt
 from carbon.provisioners.beaker import BeakerProvisioner
-from carbon.provisioners.beaker import BeakerProvisionerError
 from carbon.provisioners.openshift import OpenshiftProvisioner
-from carbon.provisioners.openshift import OpenshiftProvisionerError
 from carbon.provisioners.openstack import OpenstackProvisioner
 from carbon.resources import Host
 
@@ -59,7 +58,6 @@ SCENARIO_CFGS = [
 class TestOpenshiftProvisioner(TestCase):
     """Unit tests to test carbon provisioner ~ openshift."""
 
-    @nottest
     def setUp(self):
         """Actions to be performed before each test case."""
         global CARBON_CFG, CARBON_CFGS
@@ -92,20 +90,14 @@ class TestOpenshiftProvisioner(TestCase):
         """Create a openshift provisioner object."""
         obj = OpenshiftProvisioner(self.host)
         assert_is_instance(obj, OpenshiftProvisioner)
-        obj.docker.stop_container()
-        obj.docker.remove_container()
 
+    @raises(AttributeError)
     def test_set_label(self):
         """Test setting the label for the application after the openshift
         provisioner class was instantiated.
         """
         obj = OpenshiftProvisioner(self.host)
-        try:
-            obj.labels = 'label1'
-        except AttributeError:
-            obj.docker.stop_container()
-            obj.docker.remove_container()
-            assert True
+        obj.labels = 'label1'
 
     def test_setup_labels(self):
         """Test the setup_labels method to create the list of labels to be
@@ -113,78 +105,7 @@ class TestOpenshiftProvisioner(TestCase):
         """
         obj = OpenshiftProvisioner(self.host)
         obj.setup_labels()
-        obj.docker.stop_container()
-        obj.docker.remove_container()
         assert_is_instance(obj.labels, list)
-
-    @nottest
-    def test_passwd_authentication(self):
-        """Test authentication using username/password to openshift."""
-        if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            return True
-
-        obj = OpenshiftProvisioner(self.host)
-        obj.authenticate()
-        obj.docker.stop_container()
-        obj.docker.remove_container()
-
-    @nottest
-    @raises(OpenshiftProvisionerError)
-    def test_invalid_authentication(self):
-        """Test invalid authentication."""
-        if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise OpenshiftProvisionerError
-
-        obj = OpenshiftProvisioner(self.host)
-        obj.host.provider._credentials['token'] = 'token'
-        obj.authenticate()
-
-    @nottest
-    @raises(OpenshiftProvisionerError)
-    def test_authentication_missing_keys(self):
-        """Test authentication with missing keys."""
-        if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise OpenshiftProvisionerError
-
-        obj = OpenshiftProvisioner(self.host)
-        obj.host.provider._credentials.pop('password')
-        obj.authenticate()
-
-    @nottest
-    def test_select_project(self):
-        """Test the select project method to choose which project to create
-        applications within.
-        """
-        if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            return True
-
-        obj = OpenshiftProvisioner(self.host)
-        obj.authenticate()
-        obj.select_project()
-
-    @nottest
-    @raises(OpenshiftProvisionerError)
-    def test_select_invalid_project(self):
-        """Test the select project method to choose an invalid project to
-        create applications within.
-        """
-        if is_py3:
-            self.cbn.logger.warn('Skipping test due to Ansible support with '
-                                 'Python3.')
-            raise OpenshiftProvisionerError
-
-        obj = OpenshiftProvisioner(self.host)
-        obj.host.provider._credentials['project'] = 'invalid_project'
-        obj.authenticate()
-        obj.select_project()
 
 
 class TestOpenstackProvisioner(TestCase):
@@ -265,7 +186,8 @@ class TestBeakerProvisioner(TestCase):
         # Create carbon object
         self.cbn = Carbon(__name__, assets_path="assets")
 
-        BeakerProvisioner._bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
+        BeakerProvisioner._bkr_image = \
+            "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
         # Load scenario data
         self.data = file_mgmt('r', SCENARIO_CFG)
@@ -275,11 +197,11 @@ class TestBeakerProvisioner(TestCase):
         self.host = Host(config=self.cbn.config, parameters=params)
         self.cbn.scenario.add_hosts(self.host)
 
-
     def tearDown(self):
         """ Cleanup Docker Container. Stop and remove"""
         # Stop/remove container
-        if self.obj and self.obj.docker and self.obj.docker.get_container_status():
+        if self.obj and self.obj.docker and self.obj.docker.\
+                get_container_status():
             self.obj.docker.stop_container()
             self.obj.docker.remove_container()
 
@@ -305,7 +227,8 @@ class TestBeakerProvisioner(TestCase):
 
     def test_set_kernel_post_options(self):
         """ Create a beaker provisioner object. Verify object is instance
-        of carbon.provisioners.BeakerProvisioner. Verify set kernel_post_options.
+        of carbon.provisioners.BeakerProvisioner.
+        Verify set kernel_post_options.
         """
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.kernel_post_options = ["isolcpus=0,5"]
@@ -464,16 +387,19 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.host_requires_options = ["arch=x86_64", "memory>=15000"]
 
-        assert_equal(self.obj.bxml.host_requires_options, ["arch=x86_64", "memory>=15000"])
+        assert_equal(self.obj.bxml.host_requires_options,
+                     ["arch=x86_64", "memory>=15000"])
 
     def test_set_distro_requires(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set distro requires.
         """
         self.obj = BeakerProvisioner(self.host)
-        self.obj.bxml.distro_requires_options = ["method=nfs", "tag=RTT_ACCEPTED"]
+        self.obj.bxml.distro_requires_options = \
+            ["method=nfs", "tag=RTT_ACCEPTED"]
 
-        assert_equal(self.obj.bxml.distro_requires_options, ["method=nfs", "tag=RTT_ACCEPTED"])
+        assert_equal(self.obj.bxml.distro_requires_options,
+                     ["method=nfs", "tag=RTT_ACCEPTED"])
 
     @raises(AttributeError)
     def test_set_hrname(self):
@@ -608,14 +534,14 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.tasklist = ["ThowException"]
 
-    @raises(BeakerProvisionerError)
+    @raises(DockerControllerError)
     def test_create_object_bad_docker_image(self):
         """Create a beaker provisioner object. Verifies object is instance
         of carbon.provisioners.BeakerProvisioner.
         """
-        BeakerProvisioner._bkr_image = "abx"
         self.obj = BeakerProvisioner(self.host)
-        assert_is_instance(self.obj, BeakerProvisioner)
+        self.obj._bkr_image = "abx"
+        self.obj.start_container()
 
     def test_get_provisioner_name(self):
         """Test getting the name of the provisioner class."""
@@ -633,7 +559,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         assert_is_instance(self.obj.docker, DockerController)
 
-    @raises(ValueError)
+    @raises(AttributeError)
     def test_set_provisioner_docker(self):
         """Test setting the docker controller for the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
@@ -644,7 +570,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         assert_is_instance(self.obj.ansible, AnsibleController)
 
-    @raises(ValueError)
+    @raises(AttributeError)
     def test_set_provisioner_ansible(self):
         """Test setting the ansible controller for the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
@@ -657,12 +583,18 @@ class TestBeakerProvisioner(TestCase):
                                     self.obj._bkr_xml)
 
         self.obj.bxml.generateBKRXML(bkr_xml_file, savefile=True)
-        assert_equal(self.obj.bxml.cmd,
-                     "bkr workflow-simple --arch  --whiteboard 'Carbon: , ' --method nfs --debug --dryrun --task /distribution/reservesys --priority Normal")
+        assert_equal(
+            self.obj.bxml.cmd,
+            "bkr workflow-simple --arch  --whiteboard 'Carbon: , ' "\
+            "--method nfs --debug --dryrun --task /distribution/reservesys "\
+            "--priority Normal"
+        )
 
     @raises(AttributeError)
     def test_generateBKRXML_invalid_taskparam(self):
-        """Test create resource for the provisioner class. Invalid Taskparam"""
+        """Test create resource for the provisioner class with an invalid
+        Taskparam.
+        """
         self.obj = BeakerProvisioner(self.host)
 
         bkr_xml_file = os.path.join(self.obj._data_folder,
@@ -671,7 +603,9 @@ class TestBeakerProvisioner(TestCase):
         self.obj.bxml.generateBKRXML(bkr_xml_file, savefile=True)
 
     def test_generateBKRXML_family_and_virt(self):
-        """Test create resource for the provisioner class. Family and Virt set"""
+        """Test create resource for the provisioner class with family and virt
+        set.
+        """
         self.obj = BeakerProvisioner(self.host)
         bkr_xml_file = os.path.join(self.obj._data_folder,
                                     self.obj._bkr_xml)
@@ -679,5 +613,10 @@ class TestBeakerProvisioner(TestCase):
         self.obj.bxml.distro = ""
         self.obj.bxml.virtual_machine = True
         self.obj.bxml.generateBKRXML(bkr_xml_file, savefile=True)
-        assert_equal(self.obj.bxml.cmd,
-                     "bkr workflow-simple --arch  --family RedHatEnterpriseLinux7 --whiteboard 'Carbon: RedHatEnterpriseLinux7, ' --method nfs --debug --dryrun --task /distribution/reservesys --priority Normal")
+        assert_equal(
+            self.obj.bxml.cmd,
+            "bkr workflow-simple --arch  --family RedHatEnterpriseLinux7 "
+            "--whiteboard 'Carbon: RedHatEnterpriseLinux7, ' --method nfs "
+            "--debug --dryrun --task /distribution/reservesys "
+            "--priority Normal"
+        )

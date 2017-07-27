@@ -61,24 +61,29 @@ class BeakerProvisioner(CarbonProvisioner):
     multiple requests with different authentication in the same namespace
     (with same config file). In order to handle this, we need to isolate
     each session with different namespaces. This will be handled by each
-    scenario, each resource will have its own dedicated container to perform the requests
-    to the beaker server. This will isolate multiple scenarios runs and resources on the
-    same server.
+    scenario, each resource will have its own dedicated container to perform
+    the requests to the beaker server. This will isolate multiple scenarios
+    runs and resources on the same server.
 
     Please see the diagram below for an example:
 
-    ------------      ------------
-    | Scenario | --> | Resources  |
-    ------------     | - machine1 |
-                     | - machine2 |
-                      ------------
-                            |      -----------       --------------------------------
-                            | --> | Container | --> | $ bkr job-submit machine1.xml  |
-                            |      -----------       --------------------------------
-                            |
-                            |      -----------       --------------------------------
-                            | --> | Container | --> | $ bkr job-submit machine2.xml  |
-                                   -----------       --------------------------------
+    -----------
+    | Scenario |
+    ------------
+        |
+        |     --------------
+        | --> | Resources  |
+              | - machine1 |
+              | - machine2 |
+              --------------
+                    |
+                    |     -------------     ---------------------------------
+                    | --> | Container | --> | $ bkr job-submit machine1.xml |
+                    |     -------------     ---------------------------------
+                    |
+                    |     -------------     ---------------------------------
+                    | --> | Container | --> | $ bkr job-submit machine2.xml |
+                    |     -------------     ---------------------------------
 
     This provisioner assumes that on the server, docker is installed and
     running.
@@ -100,11 +105,15 @@ class BeakerProvisioner(CarbonProvisioner):
     _bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
     def __init__(self, host):
+        """Constructor.
+
+        :param host: The host object.
+        """
         super(BeakerProvisioner, self).__init__()
         self.host = host
 
         # Set Data Folder
-        self._data_folder = host.data_folder()
+        self._data_folder = self.host.data_folder()
 
         # Set beaker xml class
         self.bxml = BeakerXML()
@@ -117,13 +126,6 @@ class BeakerProvisioner(CarbonProvisioner):
             inventory=get_ansible_inventory_script(self.docker.name.lower())
         )
 
-        # Run container
-        try:
-            self.docker.run_container(self._bkr_image, entrypoint='bash')
-        except DockerControllerError as ex:
-            self.logger.warn(ex)
-            raise BeakerProvisionerError("Issue bringing up the container")
-
     @property
     def docker(self):
         """Return the docker object."""
@@ -131,13 +133,13 @@ class BeakerProvisioner(CarbonProvisioner):
 
     @docker.setter
     def docker(self, value):
-        """Raises an exception when trying to instantiate docker controller
-        after provisioner class has been instantiated.
+        """Set the docker object.
 
-        :param value: The name for docker container.
+        :param value: The docker container object.
         """
-        raise ValueError('You cannot create a docker controller object after '
-                         'provisioner class has been instantiated.')
+        raise AttributeError(
+            'Cannot set docker controller object once class is instantiated.'
+        )
 
     @property
     def ansible(self):
@@ -146,16 +148,20 @@ class BeakerProvisioner(CarbonProvisioner):
 
     @ansible.setter
     def ansible(self, value):
-        """Raises an exception when trying to instantiate the ansible
-        controller after provisioner class has been instantiated.
+        """Set the ansible object.
+
+        :param value: The ansible object.
         """
-        raise ValueError(
-            'You cannot create a ansible controller object after provisioner '
-            'class has been instantiated.'
+        raise AttributeError(
+            'Cannot set ansible controller object once class is instantiated.'
         )
 
+    def start_container(self):
+        """Start container."""
+        self.docker.run_container(self._bkr_image, entrypoint='bash')
+
     def container_cleanup_and_error(self, msg):
-        """ Cleanup Docker Container. Stop and remove"""
+        """Cleanup Docker Container. Stop and remove"""
         try:
             # Stop/remove container
             self.docker.stop_container()
@@ -449,12 +455,16 @@ class BeakerProvisioner(CarbonProvisioner):
     def create(self):
         """Get a machine from Beaker based on the definition from the scenario.
         Steps:
-        1.  authenticate
-        2.  generate a beaker xml from the host data
-        3.  submit a beaker job
-        4.  watch for the beaker job to be complete -> return success or failed
+        1.  start container
+        2.  authenticate
+        3.  generate a beaker xml from the host data
+        4.  submit a beaker job
+        5.  watch for the beaker job to be complete -> return success or failed
         """
         self.logger.info('Provisioning machines from %s', self.__class__)
+
+        # Start container
+        self.start_container()
 
         # Authenticate to beaker
         self.authenticate()
@@ -508,6 +518,9 @@ class BeakerProvisioner(CarbonProvisioner):
     def delete(self):
         """ Return the bkr machine back to the pool"""
         self.logger.info('Tearing down machines from %s', self.__class__)
+
+        # Start container
+        self.start_container()
 
         # Authenticate to beaker
         self.authenticate()

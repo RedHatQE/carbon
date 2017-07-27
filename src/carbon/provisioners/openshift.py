@@ -105,17 +105,13 @@ class OpenshiftProvisioner(CarbonProvisioner):
     def __init__(self, host):
         """Constructor.
 
-        When the carbon openshift provisioner class is instantiated, it will
-        perform the following tasks:
-
-        * Create the container to handle executing all oc commands.
-
         :param host: The host object.
         """
         super(OpenshiftProvisioner, self).__init__()
         self.host = host
-        self._data_folder = host.data_folder()
+        self._data_folder = self.host.data_folder()
 
+        # Define attributes assigned after constructor is initialized
         self._routes = []
         self._labels = []
         self._finallabels = []
@@ -128,12 +124,6 @@ class OpenshiftProvisioner(CarbonProvisioner):
             inventory=get_ansible_inventory_script(self.docker.name.lower())
         )
 
-        # Run container
-        try:
-            self.docker.run_container(self._oc_image, entrypoint='bash')
-        except DockerControllerError as ex:
-            self.logger.warn(ex)
-
     @property
     def docker(self):
         """Return the docker object."""
@@ -141,13 +131,13 @@ class OpenshiftProvisioner(CarbonProvisioner):
 
     @docker.setter
     def docker(self, value):
-        """Raises an exception when trying to instantiate docker controller
-        after provisioner class has been instantiated.
+        """Set the docker object
 
-        :param value: The name for docker container.
+        :param value: The docker object.
         """
-        raise ValueError('You cannot create a docker controller object after '
-                         'provisioner class has been instantiated.')
+        raise AttributeError(
+            'Cannot set docker controller object once class is instantiated.'
+        )
 
     @property
     def ansible(self):
@@ -156,12 +146,12 @@ class OpenshiftProvisioner(CarbonProvisioner):
 
     @ansible.setter
     def ansible(self, value):
-        """Raises an exception when trying to instantiate the ansible
-        controller after provisioner class has been instantiated.
+        """Set the ansible object.
+
+        :param value: The ansible object.
         """
-        raise ValueError(
-            'You cannot create a ansible controller object after provisioner '
-            'class has been instantiated.'
+        raise AttributeError(
+            'Cannot set ansible controller object once class is instantiated.'
         )
 
     @property
@@ -171,12 +161,17 @@ class OpenshiftProvisioner(CarbonProvisioner):
 
     @labels.setter
     def labels(self, value):
-        """Raises an exception when trying to set lebels for application
-        after the class has been instanciated.
+        """Set the application labels.
+
+        :param value: The application labels.
         """
         raise AttributeError('You cannot set the labels through the '
                              'provisioning classes. Use the scenario '
                              'descriptor instead.')
+
+    def start_container(self):
+        """Start container."""
+        self.docker.run_container(self._oc_image, entrypoint='bash')
 
     def setup_labels(self):
         """Sets a normalized list of key:values for the label, which is a list.
@@ -265,6 +260,9 @@ class OpenshiftProvisioner(CarbonProvisioner):
         """
         self.logger.info('Create application from %s', self.__class__)
 
+        # Start container
+        self.start_container()
+
         # Authenticate with openshift
         self.authenticate()
 
@@ -324,6 +322,9 @@ class OpenshiftProvisioner(CarbonProvisioner):
         it. This ensures no stale resources are left laying around.
         """
         self.logger.info('Deleting application from %s', self.__class__)
+
+        # Start container
+        self.start_container()
 
         # Authenticate with openshift
         self.authenticate()
