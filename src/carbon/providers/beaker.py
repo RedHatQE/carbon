@@ -211,20 +211,6 @@ class BeakerProvider(CarbonProvider):
             return True
 
     @classmethod
-    def validate_kdump(cls, value):
-        if value:
-            return isinstance(value, bool)
-        else:
-            return True
-
-    @classmethod
-    def validate_ndump(cls, value):
-        if value:
-            return isinstance(value, bool)
-        else:
-            return True
-
-    @classmethod
     def validate_priority(cls, value):
         if value:
             return isinstance(value, string_types)

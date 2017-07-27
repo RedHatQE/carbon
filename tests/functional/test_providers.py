@@ -300,26 +300,6 @@ class TestBeaker(TestCase):
         assert_true(self._beaker.validate_retention_tag('Rhel-7'))
         assert_true(self._beaker.validate_retention_tag('Scratch'))
 
-    def test_kdump(self):
-        """Test the validate kdump method."""
-        assert_false(self._beaker.validate_kdump(1001))
-        assert_false(self._beaker.validate_kdump(1))
-        assert_false(self._beaker.validate_kdump('True'))
-        assert_true(self._beaker.validate_kdump(None))
-        assert_true(self._beaker.validate_kdump(True))
-        assert_true(self._beaker.validate_kdump(False))
-        assert_true(self._beaker.validate_kdump(0))
-
-    def test_ndump(self):
-        """Test the validate ndump method."""
-        assert_false(self._beaker.validate_ndump(11))
-        assert_false(self._beaker.validate_ndump(1))
-        assert_false(self._beaker.validate_ndump('True'))
-        assert_true(self._beaker.validate_ndump(None))
-        assert_true(self._beaker.validate_ndump(True))
-        assert_true(self._beaker.validate_ndump(False))
-        assert_true(self._beaker.validate_ndump(0))
-
     def test_priority(self):
         """Test the validate priority method."""
         assert_false(self._beaker.validate_priority(11))

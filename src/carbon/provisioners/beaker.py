@@ -661,7 +661,7 @@ class BeakerProvisioner(CarbonProvisioner):
             self.container_cleanup_and_error("Unexpected Job status {}".format(resultsdict))
 
 
-class BeakerXML():
+class BeakerXML(object):
     """ Class to generate Beaker XML file from input host yaml"""
     _op_list = ['like', '==', '!=', '<=', '>=', '=', '<', '>']
 
@@ -672,19 +672,14 @@ class BeakerXML():
         self._xmldom = ""
         self._arch = ""
         self._family = ""
-        self._random = True
         self._component = ""
         self._cmd = ""
         self._runid = ""
         self._osvariant = ""
-        self._product = ""
         self._retention_tag = ""
         self._whiteboard = ""
-        self._packages = "None"
-        self._tasks = "None"
         self._method = "nfs"
         self._reservetime = "86400"
-        self._reservetime_always = ""
         self._host_requires_options = []
         self._distro_requires_options = []
         self._tasklist = []
@@ -696,7 +691,6 @@ class BeakerXML():
         self._drname = []
         self._drvalue = []
         self._drop = []
-        self._repolist = []
         self._tag = ""
         self._priority = "Normal"  # Low, Medium, Normal, High, or Urgent
         self._distro = ""
@@ -705,9 +699,6 @@ class BeakerXML():
         self._kickstart = ""
         self._ksmeta = ""
         self._removetask = False
-        self._kdumpon = False
-        self._ndumpon = False
-        self._cclist = []
         self._virtmachine = False
         self._virtcapable = False
         self._ignore_panic = False
@@ -762,17 +753,12 @@ class BeakerXML():
                             self.reservetime = tp_values[1]
                             break
                         else:
-                            self.logger.warning(
-                                "taskparam setting of %s not currently supported. Ingnoring" %
+                            raise AttributeError(
+                                "taskparam setting of %s not currently supported." %
                                 tp_key)
-                            break
 
         # Set arch
         self.cmd += "bkr workflow-simple --arch " + self.arch
-
-        # Set random if hostname not configured
-        # if(self.bkr_random and not("hostname" in self.hrname)):
-        #     self.cmd += " --random"
 
         # Generate Whiteboard Value if not specified
         if (self.whiteboard == ""):
@@ -803,14 +789,6 @@ class BeakerXML():
         self.cmd += " --whiteboard '" + self.whiteboard + "'"
         self.cmd += " --method " + self.method
 
-        # Set repos
-        for repo in self.repolist:
-            self.cmd += " --repo " + repo
-
-        # Set email recipients
-        for email in self.cclist:
-            self.cmd += " --cc " + email
-
         # Set kernel options
         if(self.kernel_options != ""):
             self.cmd += " --kernel_options '" + " ".join(self.kernel_options) + "'"
@@ -827,31 +805,15 @@ class BeakerXML():
         if (self.ksmeta != ""):
             self.cmd += " --ks-meta '" + " ".join(self.ksmeta) + "'"
 
-        # Set product
-        if(self.product != ""):
-            self.cmd += " --product '" + self.product + "'"
-
         # Set debug and dryrun
         self.cmd += " --debug --dryrun"
 
         # Removal of --prettyxml option because it creates too many line breaks.
         # self.cmd += " --prettyxml"
 
-        # Set packages to install
-        if(self.packages != "None"):
-            packagelist = self.packages.split(",")
-            for package in packagelist:
-                self.cmd += " --install " + package
-
-        # Set tasks
-        if(self.tasks != "None"):
-            tasklist = self.tasks.split(",")
-            for task in tasklist:
-                self.cmd += " --task " + task
-        else:
-            # workaround for no tasks, add one task and delete it later
-            self.cmd += " --task " + "/distribution/reservesys"
-            self.removetask = True
+        # workaround for no tasks, add one task and delete it later
+        self.cmd += " --task " + "/distribution/reservesys"
+        self.removetask = True
 
         # Set tag if distro empty else distro
         if self.tag:
@@ -859,14 +821,6 @@ class BeakerXML():
 
         if self.distro:
             self.cmd += " --distro " + self.distro
-
-        # Set kdumo on
-        if(self.kdump):
-            self.cmd += " --kdump"
-
-        # Set ndump on
-        if(self.ndump):
-            self.cmd += " --ndump"
 
         # Set ignore panic
         if(self.ignore_panic):
@@ -950,70 +904,28 @@ class BeakerXML():
 
                 dre_parent.appendChild(dre)
 
-        for index, val in enumerate(self.tasklist):
-            paramlist = self.paramlist[index]
+        # Reserve if it fails
+        te = dom1.createElement('task')
+        te.attributes['name'] = "/distribution/reservesys"
+        te.attributes['role'] = "STANDALONE"
 
-            te = dom1.createElement('task')
-            te.attributes['name'] = val
-            te.attributes['role'] = "STANDALONE"
+        tpe = dom1.createElement('params')
 
-            tpe = dom1.createElement('params')
+        tpce = dom1.createElement('param')
+        # tpce.attributes['name'] = "RESERVE_IF_FAIL"
+        # tpce.attributes['value'] = "true"
 
-            te_parent = dom1.getElementsByTagName("recipe")[0]
+        tpce2 = dom1.createElement('param')
+        tpce2.attributes['name'] = "RESERVETIME"
+        tpce2.attributes['value'] = str(self.reservetime)
 
-            # Add the task to the xml
-            te_parent.appendChild(te)
-            te.appendChild(tpe)
+        te_parent = dom1.getElementsByTagName("recipe")[0]
 
-            keyindex = 0
-            for key in paramlist:
-                tpce = dom1.createElement('param')
-                tpce.attributes['name'] = key
-
-                tpce.attributes['value'] = paramlist[key]
-                keyindex = keyindex + 1
-                tpe.appendChild(tpce)
-
-        if self.reservetime_always != "":
-            te = dom1.createElement('task')
-            te.attributes['name'] = "/distribution/reservesys"
-            te.attributes['role'] = "STANDALONE"
-
-            tpe = dom1.createElement('params')
-
-            tpce = dom1.createElement('param')
-            tpce.attributes['name'] = "RESERVETIME"
-            tpce.attributes['value'] = str(self.reservetime_always)
-
-            te_parent = dom1.getElementsByTagName("recipe")[0]
-
-            # Add reservetime to the xml
-            te_parent.appendChild(te)
-            te.appendChild(tpe)
-            tpe.appendChild(tpce)
-        else:
-            # Reserve if it fails
-            te = dom1.createElement('task')
-            te.attributes['name'] = "/distribution/reservesys"
-            te.attributes['role'] = "STANDALONE"
-
-            tpe = dom1.createElement('params')
-
-            tpce = dom1.createElement('param')
-            # tpce.attributes['name'] = "RESERVE_IF_FAIL"
-            # tpce.attributes['value'] = "true"
-
-            tpce2 = dom1.createElement('param')
-            tpce2.attributes['name'] = "RESERVETIME"
-            tpce2.attributes['value'] = str(self.reservetime)
-
-            te_parent = dom1.getElementsByTagName("recipe")[0]
-
-            # Add reservetime to the xml
-            te_parent.appendChild(te)
-            te.appendChild(tpe)
-            tpe.appendChild(tpce)
-            tpe.appendChild(tpce2)
+        # Add reservetime to the xml
+        te_parent.appendChild(te)
+        te.appendChild(tpe)
+        tpe.appendChild(tpce)
+        tpe.appendChild(tpce2)
 
         # set the completed DOM and return 0 for a successfull creation of the Beaker XML
         self.xmldom = dom1
@@ -1101,28 +1013,6 @@ class BeakerXML():
         self._ignore_panic = ipbool
 
     @property
-    def kdump(self):
-        """Return the k dump on setting."""
-        return self._kdumpon
-
-    @kdump.setter
-    def kdump(self, kbool):
-        """Set k dump on.
-        :param kbool: k dump on setting (bool)"""
-        self._kdumpon = kbool
-
-    @property
-    def ndump(self):
-        """Return the n dump on setting."""
-        return self._ndumpon
-
-    @ndump.setter
-    def ndump(self, nbool):
-        """Set n dump on.
-        :param nbool: n dump on setting (bool)"""
-        self._ndumpon = nbool
-
-    @property
     def retention_tag(self):
         """Return the retention tag."""
         return self._retention_tag
@@ -1178,17 +1068,6 @@ class BeakerXML():
         self._distro = distro
 
     @property
-    def product(self):
-        """Return the product."""
-        return self._product
-
-    @product.setter
-    def product(self, product):
-        """Set the product.
-        :param product: Product to set"""
-        self._product = product
-
-    @property
     def method(self):
         """Return the method."""
         return self._method
@@ -1237,17 +1116,6 @@ class BeakerXML():
         self._whiteboard = whiteboard
 
     @property
-    def packages(self):
-        """Return the packages."""
-        return self._packages
-
-    @packages.setter
-    def packages(self, packages):
-        """Set packages to install for job.
-        :param packages: List of packages to install"""
-        self._packages = packages
-
-    @property
     def runid(self):
         """Return the runid of job ."""
         return self._runid
@@ -1257,17 +1125,6 @@ class BeakerXML():
         """Set runid.
         :param runid: runid of job"""
         self._runid = runid
-
-    @property
-    def tasks(self):
-        """Return the tasks."""
-        return self._tasks
-
-    @tasks.setter
-    def tasks(self, tasks):
-        """Set tasks of job.
-        :param tasks: List of tasks"""
-        self._tasks = tasks
 
     @property
     def paramlist(self):
@@ -1337,17 +1194,6 @@ class BeakerXML():
         """Set distro requires options.
         :param dr_values: List of distro requires options"""
         self._distro_requires_options = dr_values
-
-    @property
-    def cclist(self):
-        """Return the cc list."""
-        return self._cclist
-
-    @cclist.setter
-    def cclist(self, email):
-        """Set cc list for job.
-        :param email: List of emails to cc"""
-        self._cclist.append(email)
 
     @property
     def hrname(self):
@@ -1434,17 +1280,6 @@ class BeakerXML():
                              'Use setdistrorequires().')
 
     @property
-    def repolist(self):
-        """Return the repos list."""
-        return self._repolist
-
-    @repolist.setter
-    def repolist(self, repo):
-        """Set the repos for the resource.
-        :param repo: repo to add to list"""
-        self._repolist.append(repo)
-
-    @property
     def cmd(self):
         """Return the bkr cmd to create xml."""
         return self._cmd
@@ -1454,17 +1289,6 @@ class BeakerXML():
         """Set bkr cmd to run to create xml.
         :param cmd: bkr xml creation cmd"""
         self._cmd = cmd
-
-    @property
-    def bkr_random(self):
-        """Return the random setting of job."""
-        return self._random
-
-    @bkr_random.setter
-    def bkr_random(self, rbool):
-        """Set random setting of job.
-        :param rbool: random setting (bool)"""
-        self._random = rbool
 
     @property
     def virtual_machine(self):
@@ -1510,29 +1334,6 @@ class BeakerXML():
         :param reservetime: time to reserve resource for (seconds)"""
         self._reservetime = reservetime
 
-    @property
-    def reservetime_always(self):
-        """Return the reserve time always setting."""
-        return self._reservetime_always
-
-    @reservetime_always.setter
-    def reservetime_always(self, reservetime_always):
-        """Set reserve time always.
-        :param reservetime_always: time setting"""
-        self._reservetime_always = reservetime_always
-
-    def isRandom(self):
-        """Returns if random"""
-        return self._random
-
-    def isVirtEnable(self):
-        """Returns if virtual machine"""
-        return self._virtmachine
-
-    def isVirtCapable(self):
-        """Returns if virtual capable"""
-        return self._virtcapable
-
     def getXMLtext(self):
         """Returns pretty print format of xml"""
         return self.xmldom.toprettyxml()
@@ -1568,46 +1369,3 @@ class BeakerXML():
     def settaskparam(self, task, paramdict):
         self.tasklist.append(task)
         self.paramlist.append(paramdict)
-
-    def set(self, param, value):
-        """Set parameters value.
-        :param param: Parameter to set
-        :value value: Value of parameter
-        :returns: 0 on success 1 if failed"""
-        if param == "variant":
-            self.variant = value
-        elif param == "priority":
-            self.priority = value
-        elif param == "family":
-            self.family = value
-        elif param == "retentiontag":
-            self.retention_tag = value
-        elif param == "whiteboard":
-            self.whiteboard = value
-        elif param == "packages":
-            self.packages = value
-        elif param == "tasks":
-            self.tasks = value
-        elif param == "tag":
-            self.tag = value
-        elif param == "distro":
-            self.distro = value
-        elif param == "arch":
-            self.arch = value
-        elif param == "reservetime":
-            self.reservetime = value
-        elif param == "method":
-            self.method = value
-        elif param == "component":
-            self.component = value
-        elif param == "product":
-            self.product = value
-        elif param == "kernel_options":
-            self.kernel_options = value
-        elif param == "kernel_post_options":
-            self.kernel_post_options = value
-        elif param == "cclist":
-            self.cclist = value
-        else:
-            return(1)
-        return(0)

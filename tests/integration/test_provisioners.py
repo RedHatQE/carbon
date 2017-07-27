@@ -29,7 +29,7 @@ from glanceclient.v2.client import Client as Glance_client
 from keystoneauth1 import session
 from neutronclient.v2_0 import client as neutron_client
 from nose import SkipTest
-from nose.tools import assert_is_instance, nottest, raises
+from nose.tools import assert_equal, assert_is_instance, nottest, raises
 from novaclient.v2.client import Client as Nova_client
 from novaclient.v2.flavors import Flavor as Nova_flavor
 from novaclient.v2.images import Image as Nova_image
@@ -344,6 +344,74 @@ class TestBeakerProvisioner(TestCase):
 
         self.obj.authenticate()
         self.obj.gen_bkr_xml()
+
+    def test_generateBKRXML_no_save_print(self):
+        """Test create resource for the provisioner class. No Save"""
+        if is_py3:
+            self.cbn.logger.warn('Skipping test due to Ansible support with '
+                                 'Python3.')
+            raise SkipTest('Skipping test due to Ansible support with Python3.')
+
+        self.cbn._copy_assets()
+        self.obj = BeakerProvisioner(self.host)
+        self.obj.authenticate()
+
+        # Obtain xml path
+        bkr_xml_file = os.path.join(self.obj._data_folder,
+                                    self.obj._bkr_xml)
+
+        host_desc = self.obj.host.profile()
+
+        # Set attributes for Beaker
+        for key in host_desc:
+            if key is not 'bkr_name' and key.startswith('bkr_'):
+                xml_key = key.split("bkr_", 1)[1]
+                if host_desc[key]:
+                    try:
+                        setattr(self.obj.bxml, xml_key, host_desc[key])
+                    except Exception as ex:
+                        self.obj.container_cleanup_and_error("Error setting Beaker attribute data {}".format(ex))
+
+        # Generate Beaker XML
+        self.obj.bxml.generateBKRXML(bkr_xml_file, savefile=False)
+        assert_equal(self.obj.bxml.cmd,
+                     "bkr workflow-simple --arch x86_64 --variant Workstation "
+                     "--whiteboard 'Testing machine provisioning from Carbon' "
+                     "--method nfs --kernel_options 'selinux=--permisssive "
+                     "keyboard=us lang=us timezone=est' --kernel_options_post "
+                     "'isolcpus = 0,5' --debug --dryrun --task /distribution/reservesys "
+                     "--tag RTT_ACCEPTED --distro RHEL-6.9 --job-group ci-ops-pit --priority Normal "
+                     "--keyvalue 'DISKSPACE>=500000' --keyvalue 'HVM=1'")
+
+        # Format command for container
+        _cmd = self.obj.bxml.cmd.replace('=', "\=")
+
+        # Run command on container
+        results = self.obj.ansible.run_module(
+            dict(name='bkr workflow-simple', hosts=self.obj.docker.cname, gather_facts='no',
+                 tasks=[dict(action=dict(module='shell', args=_cmd))])
+        )
+
+        # Process results and get xml from stdout
+        self.obj.ansible.results_analyzer(results['status'])
+
+        if results['status'] != 0:
+            self.obj.container_cleanup_and_error("Issue generating Beaker XML")
+
+        else:
+            if len(results["callback"].contacted) == 1:
+                parsed_results = results["callback"].contacted[0]["results"]
+            else:
+                self.obj.container_cleanup_and_error("Unexpected Error creating XML")
+
+            output = parsed_results["stdout"]
+
+        # Test generation of XML DOM
+        self.obj.bxml.generateXMLDOM(bkr_xml_file, output, savefile=False)
+
+        # Test getting Text methods of xml
+        self.obj.bxml.getXMLtext()
+        self.obj.bxml.get_xmldom_pretty()
 
     def test_create_and_delete_all_keys_(self):
         """Create a beaker provisioner object. Verifies object is instance
