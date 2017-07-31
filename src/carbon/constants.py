@@ -64,3 +64,7 @@ RESULTS_FILE = "results.yaml"
 
 # Rule for Carbon hosts naming convention
 RULE_HOST_NAMING = re.compile('[\W_]+')
+
+# Beaker url's
+BEAKER_BASE_URL = "https://beaker.engineering.redhat.com/"
+BEAKER_JOBS_URL = "https://beaker.engineering.redhat.com/jobs/"

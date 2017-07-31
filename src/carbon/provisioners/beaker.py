@@ -33,6 +33,7 @@ import os
 import paramiko
 import stat
 
+from ..constants import BEAKER_JOBS_URL
 from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerError
 from ..core import CarbonProvisioner, CarbonProvisionerError
@@ -388,8 +389,14 @@ class BeakerProvisioner(CarbonProvisioner):
                 mod_output = output[output.find("Submitted:"):]
                 # set the result as ascii instead of unicode
                 self.host.bkr_job_id = mod_output[mod_output.find(
-                    "[") + 2:mod_output.find("]") - 1].encode('ascii', 'ignore')
-                self.logger.info("just submitted: {}".format(self.host.bkr_job_id))
+                    "[") + 2:mod_output.find("]") - 1].encode('ascii',
+                                                              'ignore')
+                self.host.bkr_job_url = BEAKER_JOBS_URL +\
+                                        self.host.bkr_job_id[2:]
+                self.logger.info("Just submitted Beaker Job: {} Job URL: {}"
+                                 .format(self.host.bkr_job_id,
+                                         self.host.bkr_job_url))
+
             else:
                 self.container_cleanup_and_error("Unexpected Error submitting job")
 

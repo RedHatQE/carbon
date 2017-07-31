@@ -284,8 +284,8 @@ class AnsibleController(CarbonController):
                     self.logger.info('Standard error:')
                     self.logger.error(item['results']['stderr'])
             if 'stdout' in item['results']:
-                self.logger.info('Standard output:')
-                self.logger.info(item['results']['stdout'])
+                self.logger.debug('Standard output:')
+                self.logger.debug(item['results']['stdout'])
             if 'msg' in item['results']:
                 self.logger.info('Message:')
                 self.logger.info(item['results']['msg'])
