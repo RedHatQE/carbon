@@ -22,6 +22,7 @@ VERSION_RE = re.compile(r'''__version__ = ['"]([a-zA-Z0-9.]+)['"]''')
 
 requires = [
     'pbr>=3.1.1',
+    'Flask>=0.12.2',
     'Werkzeug>=0.11.15',
     'Click>=6.7',
     'taskrunner>=0.3.0',

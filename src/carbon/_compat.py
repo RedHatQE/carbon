@@ -25,11 +25,8 @@
     :copyright: (c) 2015 by Armin Ronacher.
     :license: GPLv3, see LICENSE for more details.
 """
-import functools
-import operator
 import sys
 
-# Syntax sugar.
 _ver = sys.version_info
 
 # Python 2.x?
@@ -54,83 +51,6 @@ except ImportError:
     import __builtin__ as builtins
 
 if is_py2:
-    unichr = unichr
-    text_type = unicode
     string_types = (str, unicode)
-    integer_types = (int, long)
-
-    iterkeys = lambda d, *args, **kwargs: d.iterkeys(*args, **kwargs)
-    itervalues = lambda d, *args, **kwargs: d.itervalues(*args, **kwargs)
-    iteritems = lambda d, *args, **kwargs: d.iteritems(*args, **kwargs)
-
-    iterlists = lambda d, *args, **kwargs: d.iterlists(*args, **kwargs)
-    iterlistvalues = lambda d, *args, **kwargs: d.iterlistvalues(*args, **kwargs)
-
-    int_to_byte = chr
-    iter_bytes = iter
-
-    def to_bytes(x, charset=sys.getdefaultencoding(), errors='strict'):
-        if x is None:
-            return None
-        if isinstance(x, (bytes, bytearray, buffer)):
-            return bytes(x)
-        if isinstance(x, unicode):
-            return x.encode(charset, errors)
-        raise TypeError('Expected bytes')
-
-    def to_native(x, charset=sys.getdefaultencoding(), errors='strict'):
-        if x is None or isinstance(x, str):
-            return x
-        return x.encode(charset, errors)
-
 else:
-    unichr = chr
-    text_type = str
     string_types = (str, )
-    integer_types = (int, )
-
-    iterkeys = lambda d, *args, **kwargs: iter(d.keys(*args, **kwargs))
-    itervalues = lambda d, *args, **kwargs: iter(d.values(*args, **kwargs))
-    iteritems = lambda d, *args, **kwargs: iter(d.items(*args, **kwargs))
-
-    iterlists = lambda d, *args, **kwargs: iter(d.lists(*args, **kwargs))
-    iterlistvalues = lambda d, *args, **kwargs: iter(d.listvalues(*args, **kwargs))
-
-    int_to_byte = operator.methodcaller('to_bytes', 1, 'big')
-    iter_bytes = functools.partial(map, int_to_byte)
-
-    imap = map
-    izip = zip
-    ifilter = filter
-    range_type = range
-
-    from io import StringIO
-
-    NativeStringIO = StringIO
-
-    _latin1_encode = operator.methodcaller('encode', 'latin1')
-
-    def to_bytes(x, charset=sys.getdefaultencoding(), errors='strict'):
-        if x is None:
-            return None
-        if isinstance(x, (bytes, bytearray, memoryview)):  # noqa
-            return bytes(x)
-        if isinstance(x, str):
-            return x.encode(charset, errors)
-        raise TypeError('Expected bytes')
-
-    def to_native(x, charset=sys.getdefaultencoding(), errors='strict'):
-        if x is None or isinstance(x, str):
-            return x
-        return x.decode(charset, errors)
-
-
-def to_unicode(x, charset=sys.getdefaultencoding(), errors='strict',
-               allow_none_charset=False):
-    if x is None:
-        return None
-    if not isinstance(x, bytes):
-        return text_type(x)
-    if charset is None and allow_none_charset:
-        return x
-    return x.decode(charset, errors)

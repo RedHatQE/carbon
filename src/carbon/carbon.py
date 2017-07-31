@@ -33,9 +33,9 @@ from threading import Lock
 import os
 import taskrunner
 import yaml
+from flask.config import Config, ConfigAttribute
 
 from . import __name__ as __carbon_name__
-from .config import Config, ConfigAttribute
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
 from .core import CarbonError, LoggerMixin
 from .helpers import LockedCachedProperty, get_root_path, file_mgmt, \
