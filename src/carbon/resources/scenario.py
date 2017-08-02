@@ -26,6 +26,7 @@
 import errno
 
 import os
+import yaml
 from pykwalify.core import Core
 from pykwalify.errors import CoreError, SchemaError
 
@@ -57,7 +58,6 @@ class Scenario(CarbonResource):
     _fields = [
         'name',         # the name of the scenario
         'description',  # a brief description of what the scenario is
-        'filename',  # location of the file that is the scenario
     ]
 
     def __init__(self,
@@ -78,6 +78,7 @@ class Scenario(CarbonResource):
         self._actions = list()
         self._executes = list()
         self._reports = list()
+        self._yaml_data = None
         self._validate_task_cls = validate_task_cls
 
         self.reload_tasks()
@@ -129,6 +130,14 @@ class Scenario(CarbonResource):
     def hosts(self, value):
         raise ValueError('You can not set hosts directly.'
                          'Use function ~Scenario.add_hosts')
+
+    @property
+    def yaml_data(self):
+        return self._yaml_data
+
+    @yaml_data.setter
+    def yaml_data(self, value):
+        self._yaml_data = value
 
     def add_hosts(self, h):
         if not isinstance(h, Host):
@@ -199,10 +208,10 @@ class Scenario(CarbonResource):
 
     def yaml_validate(self):
         """Validate the carbon scenario yaml file."""
-        self.logger.info('Validating the scenario yaml file %s', self.filename)
+        self.logger.info('Validating the scenario yaml data')
 
         try:
-            c = Core(source_file=self.filename,
+            c = Core(source_data=yaml.load(self._yaml_data),
                      schema_files=[SCENARIO_SCHEMA])
             c.validate(raise_exception=True)
 

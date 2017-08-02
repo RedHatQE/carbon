@@ -65,7 +65,9 @@ class TestCarbon(TestCase):
         the carbon object.
         """
         obj = Carbon(__name__)
-        obj.load_from_yaml('assets/scenario.yaml')
+        # apply templating before loading the data
+        scenario_data = open("assets/scenario.yaml")
+        obj.load_from_yaml(scenario_data)
 
     def test_load_scenario_with_host_name_set_wrongly(self):
         """Test carbons function to load a scenario descriptor (yaml) file into
@@ -73,7 +75,8 @@ class TestCarbon(TestCase):
         """
         obj = Carbon(__name__)
         with self.assertRaises(CarbonHostError) as cm:
-            obj.load_from_yaml('assets/invalid_scenario_provider_name_error.yaml')
+            scenario_data = open("assets/invalid_scenario_provider_name_error.yaml")
+            obj.load_from_yaml(scenario_data)
         raised_exception = cm.exception
         self.assertEqual(raised_exception.message,
                          ('The os_name parameter for machine1 should not be set'
@@ -84,7 +87,8 @@ class TestCarbon(TestCase):
         a missing required section. An exception will be raised.
         """
         obj = Carbon(__name__)
-        obj.load_from_yaml('assets/invalid_scenario.yaml')
+        scenario_data = open("assets/invalid_scenario.yaml")
+        obj.load_from_yaml(scenario_data)
 
     @staticmethod
     def test_set_carbon_log_type():

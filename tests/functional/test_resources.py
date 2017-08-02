@@ -37,9 +37,10 @@ from carbon import Carbon, Scenario, Host
 from carbon._compat import string_types
 from carbon.constants import PROVISIONERS
 from carbon.core import CarbonError, CarbonResource
-from carbon.helpers import file_mgmt
+from carbon.helpers import file_mgmt, template_render
 from carbon.providers import OpenstackProvider
 from carbon.resources import Action, Execute, Report
+from carbon.resources.scenario import ScenarioError
 
 scenario_description = file_mgmt('r', 'assets/scenario.yaml')
 scenario_description_invalid = file_mgmt('r', 'assets/invalid_scenario.yaml')
@@ -69,7 +70,8 @@ class TestScenario(TestCase):
 
     def test_copy_assets(self):
         """Test copying an asset into the data folder."""
-        self.cbn.load_from_yaml('assets/openshift_assets.yaml')
+        scenario_data = open("assets/openshift_assets.yaml")
+        self.cbn.load_from_yaml(scenario_data)
         assert_equal(len(self.cbn.scenario.get_assets_list()), 1)
         self.cbn._copy_assets()
         assert_equal(os.path.exists(os.path.join(self.cbn.assets_path, "mytemplate.yaml")), 1)
@@ -77,13 +79,15 @@ class TestScenario(TestCase):
     @raises(IOError)
     def test_copy_assets_invalid(self):
         """Test assets defined, but not set in the assets path."""
-        self.cbn.load_from_yaml('assets/openshift_invalid_assets.yaml')
+        scenario_data = open("assets/openshift_invalid_assets.yaml")
+        self.cbn.load_from_yaml(scenario_data)
         assert_equal(len(self.cbn.scenario.get_assets_list()), 1)
         self.cbn._copy_assets()
 
     def test_copy_assets_no_assets(self):
         """Test assets defined, but not set in the assets path."""
-        self.cbn.load_from_yaml('assets/scenario.yaml')
+        scenario_data = open("assets/scenario.yaml")
+        self.cbn.load_from_yaml(scenario_data)
         assert_equal(len(self.cbn.scenario.get_assets_list()), 0)
         self.cbn._copy_assets()
 
@@ -130,7 +134,7 @@ class TestScenario(TestCase):
     def test_set_credentials(self):
         """Test setting credentials for the carbon scenario."""
         self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
-        self.cbn.scenario.credentials = {'user': 'user','passwd': 'passwd'}
+        self.cbn.scenario.credentials = {'user': 'user', 'passwd': 'passwd'}
 
     def test_get_actions(self):
         """Test getting actions for the carbon scenario."""
@@ -209,19 +213,40 @@ class TestScenario(TestCase):
 
     def test_validate_valid_scenario_yaml(self):
         """Test validating a valid carbon scenario yaml."""
-        self.cbn.load_from_yaml('assets/scenario.yaml')
+        scenario_data = template_render("assets/scenario.yaml", os.environ)
+        self.cbn.load_from_yaml(scenario_data)
         self.cbn.scenario.validate()
 
     @raises(CarbonError)
     def test_validate_invalid_scenario_yaml(self):
         """Test validating an invalid carbon scenario yaml."""
-        self.cbn.load_from_yaml('assets/invalid_scenario.yaml')
+        scenario_data = template_render("assets/invalid_scenario.yaml", os.environ)
+        self.cbn.load_from_yaml(scenario_data)
+        self.cbn.scenario.validate()
+
+    def test_validate_yaml_after_substitution_pos(self):
+        """Test loading an scenario that becomes valid only after substitution."""
+        env = os.environ
+        env["some_name"] = "mymachine"
+        scenario_data = template_render("assets/invalid_scenario_substitute.yaml", env)
+        self.cbn.load_from_yaml(scenario_data)
+        self.cbn.scenario.validate()
+
+    @raises(ScenarioError)
+    def test_validate_yaml_after_substitution_neg(self):
+        """Test loading an scenario that stays invalid after substitution."""
+        env = os.environ
+        env["some_name"] = "mymachine"
+        scenario_data = template_render("assets/invalid_scenario_substitute_invalid.yaml", env)
+        self.cbn.load_from_yaml(scenario_data)
         self.cbn.scenario.validate()
 
     def test_build_profile(self):
         """Test building a scenario profile with all its properties."""
-        self.cbn.load_from_yaml('assets/scenario.yaml')
+        scenario_data = open("assets/scenario.yaml")
+        self.cbn.load_from_yaml(scenario_data)
         assert_is_instance(self.cbn.scenario.profile(), dict)
+
 
 class TestHost(TestCase):
     """Unit tests to test carbon host."""
@@ -393,7 +418,7 @@ class TestHost(TestCase):
         credentials. An exception will be raised.
         """
         cp_parameters = deepcopy(self._parameters)
-        cdata = next(i for i in cp_parameters['provider_creds'] if i['name']\
+        cdata = next(i for i in cp_parameters['provider_creds'] if i['name']
                      == cp_parameters['credential'])
         cdata.pop('auth_url')
         cp_parameters['provider_creds'] = [cdata]

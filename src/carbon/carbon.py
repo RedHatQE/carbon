@@ -27,6 +27,7 @@ import collections
 import errno
 import shutil
 import sys
+import json
 import tempfile
 from threading import Lock
 
@@ -294,10 +295,10 @@ class Carbon(LoggerMixin, ResultsMixin):
         except IOError as ex:
             if ex.errno == errno.EACCES:
                 raise CarbonError("You don't have permission to create '"
-                                      "the data folder.")
+                                  "the data folder.")
             else:
                 raise CarbonError('Error creating data folder - '
-                                      '%s'.format(ex.message))
+                                  '%s'.format(ex.message))
 
         # Setup logging handlers
         self.create_carbon_logger(self.config)
@@ -358,7 +359,7 @@ class Carbon(LoggerMixin, ResultsMixin):
         root_path = self.root_path
         return self.config_class(root_path, self.default_config)
 
-    def load_from_yaml(self, filepath):
+    def load_from_yaml(self, filedata):
         """
         Given the YAML filename with the scenario description, this
         function will load all resources described in the file with
@@ -375,10 +376,12 @@ class Carbon(LoggerMixin, ResultsMixin):
         then be be loaded in each respective lists within the
         ~self.scenario object.
 
-        :param filepath: the full path for the YAML file descriptor
+        :param filedata: the full data object for the YAML file descriptor
         :return:
         """
-        data = dict(yaml.safe_load(open(filepath, 'r')))
+
+        self.scenario.yaml_data = filedata
+        data = dict(yaml.safe_load(filedata))
 
         try:
             cred_items = data.pop('credentials', None)
@@ -389,7 +392,6 @@ class Carbon(LoggerMixin, ResultsMixin):
         except KeyError as ex:
             raise CarbonError(ex)
 
-        data["filename"] = filepath
         self.scenario.load(data)
 
         # setting up credentials

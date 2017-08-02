@@ -79,7 +79,8 @@ class TestOpenshift(TestCase):
             3. Name defined and is a invalid data type.
         """
         obj = Carbon(__name__)
-        obj.load_from_yaml('assets/scenario_openshift.yaml')
+        scenario_data = open("assets/scenario_openshift.yaml")
+        obj.load_from_yaml(scenario_data)
 
         host = obj.scenario.hosts[0]
 

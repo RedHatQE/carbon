@@ -29,6 +29,7 @@ import pkgutil
 import random
 import string
 import sys
+import jinja2
 from logging import getLogger
 from subprocess import Popen, PIPE
 
@@ -326,6 +327,20 @@ def check_is_gitrepo_fine(git_repo_url):
         return False
 
     return True
+
+
+def template_render(filepath, env_dict):
+    """
+    A function to do jinja templating given a file and a dictionary of key/vars
+
+    :param filepath: path to a file
+    :param env_dict: dictionary of key/values used for data substitution
+    :return: stream of data with the templating complete
+    :rtype: data stream
+    """
+    path, filename = os.path.split(filepath)
+    return jinja2.Environment(loader=jinja2.FileSystemLoader(
+        path)).get_template(filename).render(env_dict)
 
 
 class CustomDict(dict):
