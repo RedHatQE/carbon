@@ -21,8 +21,7 @@
     This is a compatibility module that assists on keeping the Carbon
     Framework compatible with python 2.x and python 3.x.
 
-    :modified: (c) 2017 Red Hat, Inc.
-    :copyright: (c) 2015 by Armin Ronacher.
+    :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 import sys

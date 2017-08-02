@@ -34,12 +34,12 @@ import os
 import taskrunner
 import yaml
 from flask.config import Config, ConfigAttribute
+from flask.helpers import locked_cached_property, get_root_path
 
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
 from .core import CarbonError, LoggerMixin
-from .helpers import LockedCachedProperty, get_root_path, file_mgmt, \
-    gen_random_str
+from .helpers import file_mgmt, gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
 from .tasks import OrchestrateTask, ExecuteTask
 from .tasks import ReportTask, CleanupTask
@@ -318,7 +318,7 @@ class Carbon(LoggerMixin, ResultsMixin):
 
         self.scenario = Scenario(config=self.config)
 
-    @LockedCachedProperty
+    @locked_cached_property
     def name(self):
         """The name of the application.  This is usually the import name
         with the difference that it's guessed from the run file if the
@@ -333,19 +333,19 @@ class Carbon(LoggerMixin, ResultsMixin):
             return os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
 
-    @LockedCachedProperty
+    @locked_cached_property
     def uid(self):
         return self._uid
 
-    @LockedCachedProperty
+    @locked_cached_property
     def data_folder(self):
         return self.config['DATA_FOLDER']
 
-    @LockedCachedProperty
+    @locked_cached_property
     def status_file(self):
         return os.path.join(self.data_folder, STATUS_FILE)
 
-    @LockedCachedProperty
+    @locked_cached_property
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
 

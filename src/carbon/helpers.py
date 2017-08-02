@@ -29,13 +29,14 @@ import pkgutil
 import random
 import string
 import sys
-import threading
 from logging import getLogger
 from subprocess import Popen, PIPE
 
 import os
 import stat
 import yaml
+
+from flask.helpers import get_root_path
 
 from .constants import PROVISIONERS
 
@@ -54,51 +55,6 @@ class HelpersError(Exception):
         :param message: Details about the error.
         """
         super(HelpersError, self).__init__(message)
-
-
-def get_root_path(import_name):
-    """Returns the path to a package or cwd if that cannot be found.  This
-    returns the path of a package or the folder that contains a module.
-
-    :copyright: (c) 2015 by Armin Ronacher.
-    """
-    # Module already imported and has a file attribute.  Use that first.
-    mod = sys.modules.get(import_name)
-    if mod is not None and hasattr(mod, '__file__'):
-        return os.path.dirname(os.path.abspath(mod.__file__))
-
-    # Next attempt: check the loader.
-    loader = pkgutil.get_loader(import_name)
-
-    # Loader does not exist or we're referring to an unloaded main module
-    # or a main module without path (interactive sessions), go with the
-    # current working directory.
-    if loader is None or import_name == '__main__':
-        return os.getcwd()
-
-    # Some other loaders might exhibit the same behavior.
-    if hasattr(loader, 'get_filename'):
-        filepath = loader.get_filename(import_name)
-    else:
-        # Fall back to imports.
-        __import__(import_name)
-        mod = sys.modules[import_name]
-        filepath = getattr(mod, '__file__', None)
-
-        # If we don't have a filepath it might be because we are a
-        # namespace package.  In this case we pick the root path from the
-        # first module that is contained in our package.
-        if filepath is None:
-            raise RuntimeError('No root path can be found for the provided '
-                               'module "%s".  This can happen because the '
-                               'module came from an import hook that does '
-                               'not provide file name information or because '
-                               'it\'s a namespace package.  In this case '
-                               'the root path needs to be explicitly '
-                               'provided.' % import_name)
-
-    # filepath is import_name.py for a module, or __init__.py for a package.
-    return os.path.dirname(os.path.abspath(filepath))
 
 
 def get_core_tasks_classes():
@@ -239,30 +195,9 @@ def get_providers_list():
     """
     Return the provider class based on the __provider_name__ set within
     the class.
-    :param name: the name of the provider
     :return: the provider class
     """
     return [provider.__provider_name__ for provider in get_providers_classes()]
-
-
-def get_tasks_from_resource(resource):
-    """
-    Get the list of tasks from a resour
-    :return:
-    """
-    tasks = []
-    return tasks
-
-
-def get_all_resources_from_scenario(scenario):
-    """
-    Given the scenario, it returns a list of all resources from
-    the scenario, including the scenario itself.
-    :param scenario: the scenario resource to get resources extracted from
-    :return: list of resources
-    """
-    resources_list = []
-    return resources_list
 
 
 def gen_random_str(char_num=8):
@@ -391,35 +326,6 @@ def check_is_gitrepo_fine(git_repo_url):
         return False
 
     return True
-
-
-class LockedCachedProperty(object):
-    """
-    A decorator that converts a function into a lazy property.  The
-    function wrapped is called the first time to retrieve the result
-    and then that calculated result is used the next time you access
-    the value.  Works like the one in Werkzeug but has a lock for
-    thread safety.
-
-    :copyright: (c) 2015 by Armin Ronacher.
-    """
-
-    def __init__(self, func, name=None, doc=None):
-        self.__name__ = name or func.__name__
-        self.__module__ = func.__module__
-        self.__doc__ = doc or func.__doc__
-        self.func = func
-        self.lock = threading.RLock()
-
-    def __get__(self, obj, type=None):
-        if obj is None:
-            return self
-        with self.lock:
-            value = obj.__dict__.get(self.__name__, _missing)
-            if value is _missing:
-                value = self.func(obj)
-                obj.__dict__[self.__name__] = value
-            return value
 
 
 class CustomDict(dict):
