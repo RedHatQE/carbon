@@ -123,6 +123,10 @@ class BeakerProvisioner(CarbonProvisioner):
         self._docker = DockerController(
             cname=self.host.bkr_name + '_' + str(uuid.uuid4())[:4]
         )
+
+        # Get unique name for beaker xml
+        self._bkr_xml = "brkjob" + self.docker._cname[-11:] + ".xml"
+
         self._ansible = AnsibleController(
             inventory=get_ansible_inventory_script(self.docker.name.lower())
         )
