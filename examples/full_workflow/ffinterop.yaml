@@ -4,10 +4,10 @@ description: Run an Interop Test against FF
 
 credentials:
 
-  - name: openstack_ciops
-    auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
+  - name: openstack
+    auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
     tenant_name: pit-jenkins
-    tenant_id: bf4de4c330bb47d6937af31fd5c71a18
+    tenant_id: 2e1c0cf8f1234ea5ad8933d0927fc837
     username: username
     password: password
 
@@ -17,7 +17,7 @@ provision:
 
   - name: machine_1
     provider: openstack
-    credential: openstack_ciops
+    credential: openstack
     os_name:
     os_image: rhel-6.9-workstation-x86_64-latest
     os_flavor: m1.medium
@@ -55,7 +55,7 @@ provision:
 
   - name: machine_4
     provider: openstack
-    credential: openstack_ciops
+    credential: openstack
     os_name:
     os_image: rhel-6.9-server-x86_64-latest
     os_flavor: m1.medium

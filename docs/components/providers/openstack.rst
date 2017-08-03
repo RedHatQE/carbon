@@ -170,9 +170,9 @@ Examples
 
     credentials:
       - name: openstack
-        auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
+        auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
         tenant_name: pit-jenkins
-        tenant_id: bf4de4c330bb47d6937af31fd5c71a18
+        tenant_id: 2e1c0cf8f1234ea5ad8933d0927fc837
         username: username
         password: password
 
@@ -195,9 +195,9 @@ Examples
 
     credentials:
       - name: openstack
-        auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
+        auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
         tenant_name: pit-jenkins
-        tenant_id: bf4de4c330bb47d6937af31fd5c71a18
+        tenant_id: 2e1c0cf8f1234ea5ad8933d0927fc837
         username: username
         password: password
 
