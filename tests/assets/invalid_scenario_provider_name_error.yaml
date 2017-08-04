@@ -20,7 +20,7 @@ provision:
     os_image: rhel-7.3-workstation-x86_64-released
     os_flavor: m1.medium
     os_networks: ['pit-jenkins']
-    os_floating_ip_pool: "10.8.172.0/22"
+    os_floating_ip_pool: "10.8.240.0"
     os_keypair: 'pit-jenkins'
     os_admin_pass:
     os_description:
