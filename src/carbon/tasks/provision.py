@@ -39,10 +39,10 @@ class ProvisionTask(CarbonTask):
         self.provisioner = host.provisioner(host)
 
     def run(self, context):
-        task_provision_started.send(self, context)
+        task_provision_started.send(self, context=context)
         self.logger.info(self.msg)
         self.provisioner.create()
-        task_provision_finished.send(self, context)
+        task_provision_finished.send(self, context=context)
 
     def cleanup(self, context):
         self.logger.info(self.clean_msg)

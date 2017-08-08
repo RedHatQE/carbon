@@ -35,9 +35,9 @@ class OrchestrateTask(CarbonTask):
         self.clean_msg = clean_msg
 
     def run(self, context):
-        task_orchestrate_started.send(self, context)
+        task_orchestrate_started.send(self, context=context)
         self.logger.info(self.msg)
-        task_orchestrate_finished.send(self, context)
+        task_orchestrate_finished.send(self, context=context)
 
     def cleanup(self, context):
         self.logger.info(self.msg)
