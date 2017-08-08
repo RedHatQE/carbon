@@ -382,7 +382,7 @@ class TestBeakerProvisioner(TestCase):
                             "Error setting Beaker attribute data %s" % ex)
 
         # Generate Beaker XML
-        self.obj.bxml.generateBKRXML(bkr_xml_file, savefile=False)
+        self.obj.bxml.generate_beaker_xml(bkr_xml_file, savefile=False)
         assert_equal(self.obj.bxml.cmd,
                      "bkr workflow-simple --arch x86_64 --variant Workstation "
                      "--whiteboard 'Testing machine provisioning from Carbon' "
@@ -419,10 +419,10 @@ class TestBeakerProvisioner(TestCase):
             output = parsed_results["stdout"]
 
         # Test generation of XML DOM
-        self.obj.bxml.generateXMLDOM(bkr_xml_file, output, savefile=False)
+        self.obj.bxml.generate_xml_dom(bkr_xml_file, output, savefile=False)
 
         # Test getting Text methods of xml
-        self.obj.bxml.getXMLtext()
+        self.obj.bxml.get_xml_text()
         self.obj.bxml.get_xmldom_pretty()
 
     def test_create_and_delete_all_keys_(self):

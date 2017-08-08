@@ -582,7 +582,7 @@ class TestBeakerProvisioner(TestCase):
         bkr_xml_file = os.path.join(self.obj._data_folder,
                                     self.obj._bkr_xml)
 
-        self.obj.bxml.generateBKRXML(bkr_xml_file, savefile=True)
+        self.obj.bxml.generate_beaker_xml(bkr_xml_file, savefile=True)
         assert_equal(
             self.obj.bxml.cmd,
             "bkr workflow-simple --arch  --whiteboard 'Carbon: , ' "\
@@ -600,7 +600,7 @@ class TestBeakerProvisioner(TestCase):
         bkr_xml_file = os.path.join(self.obj._data_folder,
                                     self.obj._bkr_xml)
         self.obj.bxml.taskparam = [ "time=0600"]
-        self.obj.bxml.generateBKRXML(bkr_xml_file, savefile=True)
+        self.obj.bxml.generate_beaker_xml(bkr_xml_file, savefile=True)
 
     def test_generateBKRXML_family_and_virt(self):
         """Test create resource for the provisioner class with family and virt
@@ -612,7 +612,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj.bxml.family = "RedHatEnterpriseLinux7"
         self.obj.bxml.distro = ""
         self.obj.bxml.virtual_machine = True
-        self.obj.bxml.generateBKRXML(bkr_xml_file, savefile=True)
+        self.obj.bxml.generate_beaker_xml(bkr_xml_file, savefile=True)
         assert_equal(
             self.obj.bxml.cmd,
             "bkr workflow-simple --arch  --family RedHatEnterpriseLinux7 "

@@ -117,7 +117,7 @@ class OpenshiftProvider(CarbonProvider):
         :param value: The resource name
         :return: A boolean, true = valid, false = invalid
         """
-        self.logger.info("Validating Name: {0}".format(value))
+        self.logger.debug("Validating Name: {0}".format(value))
         # Quit when no value given
         if not value:
             self.logger.warn('Invalid data for name!')
@@ -136,7 +136,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating image: {0}".format(value))
+            self.logger.debug("Validating image: {0}".format(value))
             return isinstance(value, string_types)
         else:
             return True
@@ -147,7 +147,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating git: {0}".format(value))
+            self.logger.debug("Validating git: {0}".format(value))
             if isinstance(value, string_types):
                 return check_is_gitrepo_fine(value)
             else:
@@ -161,7 +161,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating template name: {0}".format(value))
+            self.logger.debug("Validating template name: {0}".format(value))
             return isinstance(value, string_types)
         else:
             return True
@@ -172,7 +172,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating template name: {0}".format(value))
+            self.logger.debug("Validating template name: {0}".format(value))
             return isinstance(value, string_types)
         else:
             return True
@@ -183,7 +183,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating env vars: {0}".format(value))
+            self.logger.debug("Validating env vars: {0}".format(value))
             return isinstance(value, dict)
         else:
             return True
@@ -194,7 +194,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating env vars: {0}".format(value))
+            self.logger.debug("Validating env vars: {0}".format(value))
             if isinstance(value, int) and value > 0:
                 return True
             else:
@@ -208,7 +208,7 @@ class OpenshiftProvider(CarbonProvider):
         :return: A boolean, true = valid, false = invalid
         """
         if value:
-            self.logger.info("Validating labels: {0}".format(value))
+            self.logger.debug("Validating labels: {0}".format(value))
 
             # Labels must be a list data type
             if not isinstance(value, list):

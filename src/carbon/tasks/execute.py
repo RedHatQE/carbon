@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from ..signals import task_execute_started, task_execute_finished
 
 
 class ExecuteTask(CarbonTask):
@@ -34,7 +35,9 @@ class ExecuteTask(CarbonTask):
         self.clean_msg = clean_msg
 
     def run(self, context):
+        task_execute_started.send(self, context)
         self.logger.info(self.msg)
+        task_execute_finished.send(self, context)
 
     def cleanup(self, context):
         self.logger.info(self.msg)

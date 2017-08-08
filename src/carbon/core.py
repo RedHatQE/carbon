@@ -29,6 +29,11 @@ from logging import Formatter, getLogger, StreamHandler, FileHandler
 import os
 from taskrunner import Task
 
+from .signals import (
+    provision_create_started, provision_create_finished,
+    provision_delete_started, provision_delete_finished
+)
+
 from .helpers import get_core_tasks_classes
 
 
@@ -371,12 +376,23 @@ class CarbonProvisioner(LoggerMixin):
     This is the base class for all provisioners for provisioning machines
     """
     __provisioner_name__ = None
+    host = None
+
+    def _create(self):
+        raise NotImplementedError
 
     def create(self):
+        provision_create_started.send(self, host=self.host)
+        self._create()
+        provision_create_finished.send(self, host=self.host)
+
+    def _delete(self):
         raise NotImplementedError
 
     def delete(self):
-        raise NotImplementedError
+        provision_delete_started.send(self, host=self.host)
+        self._delete()
+        provision_delete_finished.send(self, host=self.host)
 
     @property
     def name(self):

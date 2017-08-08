@@ -33,6 +33,9 @@ from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerError
 from ..core import CarbonProvisioner, CarbonProvisionerError
 from ..helpers import get_ansible_inventory_script
+from ..signals import (
+    prov_openshift_newapp_started, prov_openshift_newapp_finished,
+    prov_openshift_app_updated, prov_openshift_initiated)
 
 
 class OpenshiftProvisionerError(CarbonProvisionerError):
@@ -123,6 +126,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         self._ansible = AnsibleController(
             inventory=get_ansible_inventory_script(self.docker.name.lower())
         )
+        prov_openshift_initiated.send(self)
 
     @property
     def docker(self):
@@ -249,7 +253,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         except DockerControllerError as ex:
             raise OpenshiftProvisionerError(ex)
 
-    def create(self):
+    def _create(self):
         """Create a new application in openshift based on the type of
         application declared in the scenario.
 
@@ -316,7 +320,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         except DockerControllerError as ex:
             raise OpenshiftProvisionerError('Docker error. - %s' % ex.message)
 
-    def delete(self):
+    def _delete(self):
         """Delete all resources associated with an application. It will
         delete all resources for an application using the label associated to
         it. This ensures no stale resources are left laying around.
@@ -469,11 +473,12 @@ class OpenshiftProvisioner(CarbonProvisioner):
                    appname=str(self.host.oc_name).replace("_", "-"))
 
         self.logger.debug(_cmd)
+        prov_openshift_newapp_started.send(self, command=_cmd)
         results = self.ansible.run_module(
             dict(name='oc new-app {}'.format(oc_type), hosts=self.host.oc_name, gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
-
+        prov_openshift_newapp_finished.send(self, command=_cmd, results=results)
         self.ansible.results_analyzer(results['status'])
         if results['status'] != 0:
             raise OpenshiftProvisionerError('Error creating app. %s' % results)
@@ -702,6 +707,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         # update output values for the user
         self.host.oc_app_name = self._app_name
         self.host.oc_routes = self._routes
+        prov_openshift_app_updated.send(self, host=self.host)
 
     def get_final_labels(self):
         """get the required label(s) in the format expected by oc."""

@@ -34,7 +34,8 @@ class ReportTask(CarbonTask):
         self.clean_msg = clean_msg
 
     def run(self, context):
-        self.logger.info(self.msg)
+
+        self.logger.debug(self.msg)
 
     def cleanup(self, context):
-        self.logger.info(self.clean_msg)
+        self.logger.debub(self.clean_msg)

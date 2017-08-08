@@ -38,6 +38,11 @@ from ..controllers import AnsibleController
 from ..controllers import DockerController, DockerControllerError
 from ..core import CarbonProvisioner, CarbonProvisionerError
 from ..helpers import get_ansible_inventory_script
+from ..signals import (
+    prov_beaker_initiated, prov_beaker_xml_submit_started,
+    prov_beaker_xml_submit_finished, prov_beaker_wait_job_started,
+    prov_beaker_wait_job_finished
+)
 
 
 class BeakerProvisionerError(CarbonProvisionerError):
@@ -101,8 +106,6 @@ class BeakerProvisioner(CarbonProvisioner):
     __provisioner_name__ = "beaker"
     __provisioner_prefix__ = 'bkr_'
 
-    _bkr_xml = "bkrjob.xml"
-
     _bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
     def __init__(self, host):
@@ -120,16 +123,15 @@ class BeakerProvisioner(CarbonProvisioner):
         self.bxml = BeakerXML()
 
         # Create controller objects
-        self._docker = DockerController(
-            cname=self.host.bkr_name + '_' + str(uuid.uuid4())[:4]
-        )
+        self._docker = DockerController(cname=self.host.bkr_name)
 
         # Get unique name for beaker xml
-        self._bkr_xml = "brkjob" + self.docker._cname[-11:] + ".xml"
+        self._bkr_xml = "brkjob_{bkr_name}.xml".format(bkr_name=self.host.bkr_name)
 
         self._ansible = AnsibleController(
             inventory=get_ansible_inventory_script(self.docker.name.lower())
         )
+        prov_beaker_initiated.send(self)
 
     @property
     def docker(self):
@@ -187,7 +189,7 @@ class BeakerProvisioner(CarbonProvisioner):
                 and self.host.provider.credentials["username"] \
                 and "password" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["password"]:
-            self.logger.info("Authentication w/ username/pass")
+            self.logger.debug("Authentication w/ username/pass")
 
             # Modify the config file with correct data
             summary = "update beaker config - username"
@@ -207,7 +209,7 @@ class BeakerProvisioner(CarbonProvisioner):
                 and self.host.provider.credentials["keytab"] \
                 and "keytab_principal" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["keytab_principal"]:
-            self.logger.info("Authentication w/ keytab/keytab_principal")
+            self.logger.debug("Authentication w/ keytab/keytab_principal")
 
             # copy the keytab file to container
             src_file_path = os.path.join(self._data_folder, "assets", self.host.provider.credentials["keytab"])
@@ -301,7 +303,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # Generate Beaker workflow-simple command
         try:
-            self.bxml.generateBKRXML(bkr_xml_file, savefile=True)
+            self.bxml.generate_beaker_xml(bkr_xml_file, savefile=True)
         except Exception as ex:
             self.container_cleanup_and_error("Error Generating beaker xml data {}".format(ex))
 
@@ -347,14 +349,14 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # Generate Complete XML
         try:
-            self.bxml.generateXMLDOM(bkr_xml_file, output, savefile=True)
+            self.bxml.generate_xml_dom(bkr_xml_file, output, savefile=True)
         except Exception as ex:
             self.container_cleanup_and_error("Issue generating Beaker XML")
 
     def submit_bkr_xml(self):
         """ submit the beaker xml and retrieve Beaker JOBID
         """
-        self.logger.info("Submitting bkr job")
+        self.logger.debug("Submitting bkr job")
         # copy the xml to container
         src_file_path = os.path.join(self._data_folder, self._bkr_xml)
         dest_full_path_file = '/tmp'
@@ -395,11 +397,12 @@ class BeakerProvisioner(CarbonProvisioner):
                 self.host.bkr_job_id = mod_output[mod_output.find(
                     "[") + 2:mod_output.find("]") - 1].encode('ascii',
                                                               'ignore')
-                self.host.bkr_job_url = BEAKER_JOBS_URL +\
-                                        self.host.bkr_job_id[2:]
-                self.logger.info("Just submitted Beaker Job: {} Job URL: {}"
-                                 .format(self.host.bkr_job_id,
-                                         self.host.bkr_job_url))
+                self.host.bkr_job_url = \
+                    BEAKER_JOBS_URL + self.host.bkr_job_id[2:]
+
+                self.logger.debug("Just submitted Beaker Job: {} Job URL: {}"
+                                  .format(self.host.bkr_job_id,
+                                          self.host.bkr_job_url))
 
             else:
                 self.container_cleanup_and_error("Unexpected Error submitting job")
@@ -463,7 +466,7 @@ class BeakerProvisioner(CarbonProvisioner):
         self.cancel_job()
         self.container_cleanup_and_error("Timeout reached for Beaker job")
 
-    def create(self):
+    def _create(self):
         """Get a machine from Beaker based on the definition from the scenario.
         Steps:
         1.  start container
@@ -472,7 +475,7 @@ class BeakerProvisioner(CarbonProvisioner):
         4.  submit a beaker job
         5.  watch for the beaker job to be complete -> return success or failed
         """
-        self.logger.info('Provisioning machines from %s', self.__class__)
+        self.logger.debug('Provisioning machines from %s', self.__class__)
 
         # Start container
         self.start_container()
@@ -484,10 +487,14 @@ class BeakerProvisioner(CarbonProvisioner):
         self.gen_bkr_xml()
 
         # submit the Beaker job and get the Beaker Job ID
+        prov_beaker_xml_submit_started.send(self)
         self.submit_bkr_xml()
+        prov_beaker_xml_submit_finished.send(self)
 
         # wait for the bkr job to be complete and return pass or failed
+        prov_beaker_wait_job_started.send(self)
         self.wait_for_bkr_job()
+        prov_beaker_wait_job_finished.send(self)
 
         # copy ssh key to the machine
         if self.host.bkr_ssh_key:
@@ -526,7 +533,7 @@ class BeakerProvisioner(CarbonProvisioner):
             else:
                 self.container_cleanup_and_error("Unexpected Error cancelling job")
 
-    def delete(self):
+    def _delete(self):
         """ Return the bkr machine back to the pool"""
         self.logger.info('Tearing down machines from %s', self.__class__)
 
@@ -610,8 +617,8 @@ class BeakerProvisioner(CarbonProvisioner):
 
     def copy_ssh_key(self):
 
-        self.logger.info("Send keys over to the Beaker Nodes: {0} "
-                         "{1}".format(self.host.ip_address, self.host.bkr_hostname))
+        self.logger.debug("Send keys over to the Beaker Nodes: {0} "
+                          "{1}".format(self.host.ip_address, self.host.bkr_hostname))
 
         # setup prior to injecting ssh keys
         private_key = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key)
@@ -646,9 +653,9 @@ class BeakerProvisioner(CarbonProvisioner):
         finally:
             ssh_con.close()
 
-        self.logger.info("Successfully Sent key: {0}, "
-                         "{1}".format(self.host.ip_address,
-                                      self.host.bkr_hostname))
+        self.logger.debug("Successfully Sent key: {0}, "
+                          "{1}".format(self.host.ip_address,
+                                       self.host.bkr_hostname))
 
     def analyze_results(self, resultsdict):
         """
@@ -659,6 +666,7 @@ class BeakerProvisioner(CarbonProvisioner):
         :raises BeakerProvisionerError: if results cannot be analyzed successfully
         """
         # when is the job complete
+        # TODO: explain what each beaker results analysis means
         if resultsdict["job_result"].strip().lower() == "new" and \
            resultsdict["job_status"].strip().lower() in \
            ["new", "waiting", "queued", "scheduled", "processed", "installing"]:
@@ -722,32 +730,31 @@ class BeakerXML(object):
         self._kernel_options_post = ""
         self._kickstart = ""
         self._ksmeta = ""
-        self._removetask = False
+        self._remove_task = False
         self._virtmachine = False
         self._virtcapable = False
         self._ignore_panic = False
 
-    def generateBKRXML(self, x, savefile=False):
+    def generate_beaker_xml(self, x, savefile=False):
 
         xmlfile = x
 
         # How will we generate the XML dom
         # Step 1: take all the values and pass it to bkr workflow simple to create a xml for us.
-        file = open(xmlfile, 'w+')
-        file.write("<?xml version='1.0' ?>\n")
-        file.close()
+        with open(xmlfile, 'w+') as fp:
+            fp.write("<?xml version='1.0' ?>\n")
 
         # Set virtual machine if configured
-        if(self.virtual_machine):
+        if self.virtual_machine:
             self.sethostrequires('hypervisor', '!=', "")
 
         # Set virtual capable if configured
-        if(self.virt_capable):
+        if self.virt_capable:
             self.sethostrequires('system_type', '=', "Machine")
             self.setdistrorequires('distro_virt', '=', "")
 
         # Set User supplied host requires
-        if (self.host_requires_options):
+        if self.host_requires_options:
             for hro in self.host_requires_options:
                 for hro_op in self._op_list:
                     if hro_op in hro:
@@ -757,7 +764,7 @@ class BeakerXML(object):
                         break
 
         # Set User supplied host requires
-        if (self.distro_requires_options):
+        if self.distro_requires_options:
             for dro in self.distro_requires_options:
                 for dro_op in self._op_list:
                     if dro_op in dro:
@@ -767,7 +774,7 @@ class BeakerXML(object):
                         break
 
         # Set User supplied taskparam Only valid option currently is reservetime
-        if (self.taskparam):
+        if self.taskparam:
             for taskparam in self.taskparam:
                 for tp_op in self._op_list:
                     if tp_op in taskparam:
@@ -785,7 +792,7 @@ class BeakerXML(object):
         self.cmd += "bkr workflow-simple --arch " + self.arch
 
         # Generate Whiteboard Value if not specified
-        if (self.whiteboard == ""):
+        if self.whiteboard == "":
             self.whiteboard = "Carbon:"
             if self.runid != "":
                 self.whiteboard += " RunID:" + self.runid
@@ -814,19 +821,19 @@ class BeakerXML(object):
         self.cmd += " --method " + self.method
 
         # Set kernel options
-        if(self.kernel_options != ""):
+        if self.kernel_options != "":
             self.cmd += " --kernel_options '" + " ".join(self.kernel_options) + "'"
 
         # Set post kernel options
-        if(self.kernel_post_options != ""):
+        if self.kernel_post_options != "":
             self.cmd += " --kernel_options_post '" + " ".join(self.kernel_post_options) + "'"
 
         # Set kickstart file
-        if (self.kickstart != ""):
+        if self.kickstart != "":
             self.cmd += " --kickstart '" + "/tmp/" + self.kickstart + "'"
 
         # Set kick start meta options
-        if (self.ksmeta != ""):
+        if self.ksmeta != "":
             self.cmd += " --ks-meta '" + " ".join(self.ksmeta) + "'"
 
         # Set debug and dryrun
@@ -837,7 +844,7 @@ class BeakerXML(object):
 
         # workaround for no tasks, add one task and delete it later
         self.cmd += " --task " + "/distribution/reservesys"
-        self.removetask = True
+        self._remove_task = True
 
         # Set tag if distro empty else distro
         if self.tag:
@@ -847,11 +854,11 @@ class BeakerXML(object):
             self.cmd += " --distro " + self.distro
 
         # Set ignore panic
-        if(self.ignore_panic):
+        if self.ignore_panic:
             self.cmd += " --ignore-panic"
 
         # Set job group
-        if(self.jobgroup != ""):
+        if self.jobgroup != "":
             self.cmd += " --job-group " + self.jobgroup
 
         # Set priority
@@ -861,14 +868,13 @@ class BeakerXML(object):
         for kv in self.key_values:
             self.cmd += " --keyvalue '" + kv + "'"
 
-    def generateXMLDOM(self, x, xmldata, savefile=False):
+    def generate_xml_dom(self, x, xmldata, savefile=False):
 
         xmlfile = x
 
-        file = open(xmlfile, 'w+')
-        for xmlline in xmldata:
-            file.write(xmlline)
-        file.close()
+        with open(xmlfile, 'w+') as fp:
+            for xmlline in xmldata:
+                fp.write(xmlline)
 
         # parse the xml that was create and put it into a dom, so it can be modified
         dom1 = parse(xmlfile)
@@ -880,7 +886,7 @@ class BeakerXML(object):
 
         # If there were no tasks added delete the one placeholder task, which
         # was added because one task must be passed to simple workflow
-        if(self.removetask):
+        if self._remove_task:
             recipe_parent = dom1.getElementsByTagName('recipe')[0]
             tasklength = dom1.getElementsByTagName('task').length
             delete_index = tasklength - 1
@@ -955,9 +961,8 @@ class BeakerXML(object):
         self.xmldom = dom1
 
         # Output updated file
-        file = open(xmlfile, "wb")
-        self.xmldom.writexml(file)
-        file.close()
+        with open(xmlfile, "wb") as fp:
+            self.xmldom.writexml(fp)
 
     @property
     def kernel_post_options(self):
@@ -1126,7 +1131,7 @@ class BeakerXML(object):
 
     def get_xmldom_pretty(self):
         """Return the xmldom in pretty print format."""
-        return self.xmldom.toprettyxml()
+        return self._xmldom.toprettyxml()
 
     @property
     def whiteboard(self):
@@ -1228,7 +1233,7 @@ class BeakerXML(object):
     def hrname(self, hr_name):
         """Raises an exception when trying to set the host requires name
         directly. Must use sethostrequires.
-        :param value: The host requires name.
+        :param hr_name: The host requires name.
         """
         raise AttributeError('You cannot set Hostrequires name directly. '
                              'Use sethostrequires().')
@@ -1242,7 +1247,7 @@ class BeakerXML(object):
     def hrop(self, hr_op):
         """Raises an exception when trying to set the host requires op
         directly. Must use sethostrequires.
-        :param value: The host requires operation.
+        :param hr_op: The host requires operation.
         """
         raise AttributeError('You cannot set Hostrequires operation directly. '
                              'Use sethostrequires().')
@@ -1256,7 +1261,7 @@ class BeakerXML(object):
     def hrvalue(self, hr_value):
         """Raises an exception when trying to set the host requires value
         directly. Must use sethostrequires.
-        :param value: The host requires value.
+        :param hr_value: The host requires value.
         """
         raise AttributeError('You cannot set Hostrequires value directly. '
                              'Use sethostrequires().')
@@ -1270,7 +1275,7 @@ class BeakerXML(object):
     def drname(self, dr_name):
         """Raises an exception when trying to set the Distro requires name
         directly. Must use setdistrorequires.
-        :param value: The disto requires name.
+        :param dr_name: The disto requires name.
         """
         raise AttributeError('You cannot set Distrorequires name directly. '
                              'Use setdistrorequires().')
@@ -1284,7 +1289,7 @@ class BeakerXML(object):
     def drop(self, dr_op):
         """Raises an exception when trying to set the distro requires op
         directly. Must use setdistrorequires.
-        :param value: The distro requires operation.
+        :param dr_op: The distro requires operation.
         """
         raise AttributeError('You cannot set Distrorequires operation directly. '
                              'Use setdistrorequires().')
@@ -1298,7 +1303,7 @@ class BeakerXML(object):
     def drvalue(self, dr_value):
         """Raises an exception when trying to set the distro requires value
         directly. Must use setdistrorequires.
-        :param value: The distro requires value.
+        :param dr_value: The distro requires value.
         """
         raise AttributeError('You cannot set Distroequires value directly. '
                              'Use setdistrorequires().')
@@ -1358,7 +1363,7 @@ class BeakerXML(object):
         :param reservetime: time to reserve resource for (seconds)"""
         self._reservetime = reservetime
 
-    def getXMLtext(self):
+    def get_xml_text(self):
         """Returns pretty print format of xml"""
         return self.xmldom.toprettyxml()
 

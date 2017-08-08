@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from ..signals import task_provision_started, task_provision_finished
 
 
 class ProvisionTask(CarbonTask):
@@ -38,8 +39,10 @@ class ProvisionTask(CarbonTask):
         self.provisioner = host.provisioner(host)
 
     def run(self, context):
+        task_provision_started.send(self, context)
         self.logger.info(self.msg)
         self.provisioner.create()
+        task_provision_finished.send(self, context)
 
     def cleanup(self, context):
         self.logger.info(self.clean_msg)

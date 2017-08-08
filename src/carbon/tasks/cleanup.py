@@ -25,6 +25,7 @@
 """
 from ..constants import TASK_CLEANUP_CHOICES
 from ..core import CarbonTask
+from ..signals import task_cleanup_started, task_cleanup_finished
 
 
 class CleanupTask(CarbonTask):
@@ -37,6 +38,7 @@ class CleanupTask(CarbonTask):
         self.cleanup_level = kwargs['cleanup']
 
     def run(self, context):
+        task_cleanup_started.send(self, context)
         self.logger.info(self.msg)
 
         # Delete resources when cleanup level is not never or on_failure
@@ -46,6 +48,7 @@ class CleanupTask(CarbonTask):
             self.logger.warn('Skipping resource deletion.')
         else:
             self.provisioner.delete()
+        task_cleanup_finished.send(self, context)
 
     def cleanup(self, context):
         self.logger.info(self.clean_msg)

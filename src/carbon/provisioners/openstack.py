@@ -35,6 +35,9 @@ from novaclient.exceptions import ClientException, NotFound, OverLimit
 
 from .._compat import string_types
 from ..core import CarbonProvisioner, CarbonProvisionerError
+from ..signals import (
+    prov_openstack_initiated, prov_openstack_bootnode_started,
+    prov_openstack_bootnode_finished, prov_openstack_overlimit)
 
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
@@ -72,6 +75,7 @@ class OpenstackProvisioner(CarbonProvisioner):
         self._neutron = None
         self._glance = None
         self._session = None
+        prov_openstack_initiated.send(self)
 
     @property
     def key_session(self):
@@ -398,13 +402,14 @@ class OpenstackProvisioner(CarbonProvisioner):
         :returns: Node object"""
         attempt = 1
 
-        self.logger.info('Booting node %s' % name)
+        self.logger.debug('Booting node %s' % name)
         self.logger.debug('Node details:\n'
                           '* keypair=%s\n'
                           '* image=%s\n'
                           '* flavor=%s\n'
                           '* nics=%s' % (keypair, image, flavor, nics))
 
+        prov_openstack_bootnode_started.send(self)
         while attempt <= max_attempts:
             try:
                 node = self.nova.servers.create(
@@ -414,9 +419,11 @@ class OpenstackProvisioner(CarbonProvisioner):
                     flavor=flavor,
                     nics=nics
                 )
-                self.logger.info('Successfully booted node %s' % name)
+                self.logger.debug('Successfully booted node %s' % name)
+                prov_openstack_bootnode_finished.send(self)
                 return node
             except OverLimit:
+                prov_openstack_overlimit.send(self)
                 self.logger.warn('Quota is not available to create %s',
                                  name)
                 wait_time = random.randint(10, MAX_WAIT_TIME)
@@ -464,7 +471,7 @@ class OpenstackProvisioner(CarbonProvisioner):
                 'Maximum attempts reached to delete node %s' % node.name
             )
 
-    def create(self):
+    def _create(self):
         """Create nodes in openstack. This consists of the following:
             1. Create node.
             2. Assign floating ip to node.
@@ -525,7 +532,7 @@ class OpenstackProvisioner(CarbonProvisioner):
 
         self.logger.info('Successfully created node %s' % self.host.os_name)
 
-    def delete(self):
+    def _delete(self):
         """Delete nodes in openstack. This consists of the following:
             1. Check if node to be deleted actually exists.
             2. Delete floating ip from node.

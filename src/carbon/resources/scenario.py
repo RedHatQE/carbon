@@ -208,14 +208,14 @@ class Scenario(CarbonResource):
 
     def yaml_validate(self):
         """Validate the carbon scenario yaml file."""
-        self.logger.info('Validating the scenario yaml data')
+        self.logger.debug('Validating the scenario yaml data')
 
         try:
             c = Core(source_data=yaml.load(self._yaml_data),
                      schema_files=[SCENARIO_SCHEMA])
             c.validate(raise_exception=True)
 
-            self.logger.info(
+            self.logger.debug(
                 'Successfully validated scenario yaml based on schema.'
             )
         except (CoreError, SchemaError) as ex:

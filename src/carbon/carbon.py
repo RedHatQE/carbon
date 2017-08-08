@@ -558,17 +558,14 @@ class Carbon(LoggerMixin, ResultsMixin):
             for pipeline in self._pipelines:
                 if pipeline.name not in self.tasks:
                     continue
-
-                self.logger.info("." * 50)
-                self.logger.info("=> Starting tasks on pipeline: %s",
-                                 pipeline.name)
+                self.logger.debug("=> Starting tasks on pipeline: %s",
+                                  pipeline.name)
                 if not pipeline.tasks:
                     self.logger.warn("   ... nothing to be executed here ...")
                 else:
                     for task in pipeline.tasks:
                         ctx = taskrunner.execute([task], cleanup=self.cleanup)
                         self.update_results(pipeline.name, task, status, ctx)
-                self.logger.info("." * 50)
         except taskrunner.TaskExecutionException as ex:
             status = 1
             self.logger.error(ex)

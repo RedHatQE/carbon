@@ -33,6 +33,7 @@ from .carbon import Carbon
 from .constants import TASKLIST, TASK_CLEANUP_CHOICES, \
     TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
 from .helpers import template_render
+from .signals import provision_create_finished
 
 _VERBOSITY = 0
 
@@ -188,3 +189,8 @@ def carbon_help():
     internals.
     """
     raise NotImplementedError
+
+
+@provision_create_finished.connect
+def print_host_profile(sender, host):
+    print(" ===>> PROFILE: %s" % str(host.profile()))

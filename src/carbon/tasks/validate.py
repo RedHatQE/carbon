@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from ..signals import task_validation_started, task_validation_finished
 
 
 class ValidateTask(CarbonTask):
@@ -33,8 +34,10 @@ class ValidateTask(CarbonTask):
         self.resource = resource
 
     def run(self, context):
-        self.logger.info('Validating %s', self.resource.name)
+        task_validation_started.send(self, context=context, resource=self.resource)
+        self.logger.info('Validating %s (%s)', self.resource.__class__, self.resource.name)
         self.resource.validate()
+        task_validation_finished.send(self, context=context, resource=self.resource)
 
     def cleanup(self, context):
         pass
