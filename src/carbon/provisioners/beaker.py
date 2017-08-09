@@ -26,6 +26,7 @@
 """
 import socket
 import time
+import traceback
 import uuid
 from xml.dom.minidom import parse, parseString
 
@@ -477,35 +478,48 @@ class BeakerProvisioner(CarbonProvisioner):
         """
         self.logger.debug('Provisioning machines from %s', self.__class__)
 
-        # Start container
-        self.start_container()
-
-        # Authenticate to beaker
-        self.authenticate()
-
-        # generate the Beaker xml
-        self.gen_bkr_xml()
-
-        # submit the Beaker job and get the Beaker Job ID
-        prov_beaker_xml_submit_started.send(self)
-        self.submit_bkr_xml()
-        prov_beaker_xml_submit_finished.send(self)
-
-        # wait for the bkr job to be complete and return pass or failed
-        prov_beaker_wait_job_started.send(self)
-        self.wait_for_bkr_job()
-        prov_beaker_wait_job_finished.send(self)
-
-        # copy ssh key to the machine
-        if self.host.bkr_ssh_key:
-            self.copy_ssh_key()
+        do_final = True
 
         try:
-            # Stop/remove container
-            self.docker.stop_container()
-            self.docker.remove_container()
-        except DockerControllerError as ex:
-            raise BeakerProvisionerError(ex)
+            # Start container
+            self.start_container()
+
+            # Authenticate to beaker
+            self.authenticate()
+
+            # generate the Beaker xml
+            self.gen_bkr_xml()
+
+            # submit the Beaker job and get the Beaker Job ID
+            prov_beaker_xml_submit_started.send(self)
+            self.submit_bkr_xml()
+            prov_beaker_xml_submit_finished.send(self)
+
+            # wait for the bkr job to be complete and return pass or failed
+            prov_beaker_wait_job_started.send(self)
+            self.wait_for_bkr_job()
+            prov_beaker_wait_job_finished.send(self)
+
+            # copy ssh key to the machine
+            if self.host.bkr_ssh_key:
+                self.copy_ssh_key()
+
+        except BeakerProvisionerError:
+            do_final = False
+            raise
+
+        except Exception:
+            raise BeakerProvisionerError(
+                'An unexpected issue happened during '
+                'beaker provisioning... {0}'.format(traceback.print_exc())
+            )
+
+        finally:
+            if do_final:
+                # Stop/remove container
+                self.docker.stop_container()
+                self.docker.remove_container()
+                self.logger.debug('Successfully cleaned up container..')
 
     def cancel_job(self):
         """Cancel a Beaker job """
@@ -513,7 +527,8 @@ class BeakerProvisioner(CarbonProvisioner):
         _cmd = "bkr job-cancel {0}".format(self.host.bkr_job_id)
 
         results = self.ansible.run_module(
-            dict(name='bkr job cancel', hosts=self.docker.cname, gather_facts='no',
+            dict(name='bkr job cancel', hosts=self.docker.cname,
+                 gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
@@ -537,21 +552,35 @@ class BeakerProvisioner(CarbonProvisioner):
         """ Return the bkr machine back to the pool"""
         self.logger.info('Tearing down machines from %s', self.__class__)
 
-        # Start container
-        self.start_container()
-
-        # Authenticate to beaker
-        self.authenticate()
-
-        # cancel the job
-        self.cancel_job()
+        do_final = True
 
         try:
-            # Stop/remove container
-            self.docker.stop_container()
-            self.docker.remove_container()
-        except DockerControllerError as ex:
-            raise BeakerProvisionerError(ex)
+
+            # Start container
+            self.start_container()
+
+            # Authenticate to beaker
+            self.authenticate()
+
+            # cancel the job
+            self.cancel_job()
+
+        except BeakerProvisionerError:
+            do_final = False
+            raise
+
+        except Exception:
+            raise BeakerProvisionerError(
+                'An unexpected issue happened during '
+                'beaker provisioning... {0}'.format(traceback.print_exc())
+            )
+
+        finally:
+            if do_final:
+                # Stop/remove container
+                self.docker.stop_container()
+                self.docker.remove_container()
+                self.logger.debug('Successfully cleaned up container..')
 
     def get_job_status(self, xmldata):
         """
