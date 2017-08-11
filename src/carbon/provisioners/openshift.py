@@ -123,6 +123,10 @@ class OpenshiftProvisioner(CarbonProvisioner):
 
         # Create controller objects
         self._docker = DockerController(cname=self.host.oc_name)
+        self.host.container_name = self._docker.cname
+        self.logger.debug("Host: {0} Container: {1}".format(
+            self.host.oc_name, self.host.container_name))
+
         self._ansible = AnsibleController(
             inventory=get_ansible_inventory_script(self.docker.name.lower())
         )

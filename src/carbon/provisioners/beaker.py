@@ -125,6 +125,9 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # Create controller objects
         self._docker = DockerController(cname=self.host.bkr_name)
+        self.host.container_name = self.docker.cname
+        self.logger.debug("Host: {0} Container: {1}".format(
+            self.host.bkr_name, self.host.container_name))
 
         # Get unique name for beaker xml
         self._bkr_xml = "brkjob_{bkr_name}.xml".format(bkr_name=self.host.bkr_name)
