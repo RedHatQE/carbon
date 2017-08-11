@@ -23,6 +23,7 @@
 """
 from unittest import TestCase
 
+import errno
 import os
 
 try:
@@ -41,7 +42,7 @@ from nose.tools import assert_is_none, assert_not_equal, assert_equal, raises
 from carbon._compat import string_types
 from carbon.controllers import AnsibleController, CarbonCallback
 from carbon.controllers import DockerController, DockerControllerError
-from carbon.helpers import file_mgmt
+from carbon.helpers import file_mgmt, gen_random_str
 
 
 class TestDockerController(TestCase):
@@ -56,7 +57,7 @@ class TestDockerController(TestCase):
     @raises(DockerControllerError)
     def test_get_container():
         """Test method to get container object."""
-        obj = DockerController(cname='kingbob')
+        obj = DockerController(cname='kingbob_{}'.format(gen_random_str(8)))
 
         # Container present
         obj.run_container('fedora', command='bash')
@@ -65,7 +66,7 @@ class TestDockerController(TestCase):
         obj.remove_container()
 
         # Container absent
-        obj = DockerController(cname='kevin')
+        obj = DockerController(cname='kevin_{}'.format(gen_random_str(8)))
         obj.get_container()
 
     @staticmethod
@@ -83,7 +84,7 @@ class TestDockerController(TestCase):
     def test_get_container_status():
         """Test method to get container status."""
         _image = 'fedora'
-        obj = DockerController(cname='stuart')
+        obj = DockerController(cname='stuart_{}'.format(gen_random_str(8)))
 
         # Container present
         obj.pull_image(_image)
@@ -125,7 +126,7 @@ class TestDockerController(TestCase):
     def test_stop_container():
         """Test method to stop a container."""
         _image = 'fedora'
-        obj = DockerController(cname='bob')
+        obj = DockerController(cname='bob_{}'.format(gen_random_str(8)))
 
         # Container present
         obj.pull_image(_image)
@@ -140,7 +141,7 @@ class TestDockerController(TestCase):
     def test_start_container():
         """Test method to start a container."""
         _image = 'fedora'
-        obj = DockerController(cname='stewie')
+        obj = DockerController(cname='stewie_{}'.format(gen_random_str(8)))
 
         # Container present
         obj.pull_image(_image)
@@ -155,7 +156,7 @@ class TestDockerController(TestCase):
     def test_run_container():
         """Test method to run a command in a new container."""
         _image = 'fedora'
-        obj = DockerController(cname='peter')
+        obj = DockerController(cname='peter_{}'.format(gen_random_str(8)))
 
         obj.pull_image(_image)
 
@@ -231,7 +232,7 @@ class TestAnsibleController(TestCase):
             5. Delete the mock inventory file.
         """
         host = 'machine1'
-        inventory = '/tmp/tmp_inventory'
+        inventory = '/tmp/tmp_inventory_{}'.format(gen_random_str(8))
 
         # Create tmp inventory file
         config = ConfigParser()
@@ -253,7 +254,11 @@ class TestAnsibleController(TestCase):
         assert_is(results['callback'].unreachable, True)
 
         # Remove tmp inventory file
-        os.remove(inventory)
+        try:
+            os.remove(inventory)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
 
     @staticmethod
     def test_run_playbook_pass():
@@ -265,7 +270,7 @@ class TestAnsibleController(TestCase):
             4. Verify the return code and callback object.
             5. Delete the mock playbook.
         """
-        pb_file = '/tmp/example.yaml'
+        pb_file = '/tmp/example_{}.yaml'.format(gen_random_str(8))
 
         # Create tmp playbook
         pbdata = [{'tasks': [{'shell': 'whoami', 'register': 'result'}],
@@ -279,7 +284,11 @@ class TestAnsibleController(TestCase):
         assert_is_instance(results['callback'], CarbonCallback)
 
         # Remove tmp playbook
-        os.remove(pb_file)
+        try:
+            os.remove(pb_file)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
 
     @staticmethod
     def test_run_playbook_fail():
@@ -291,8 +300,8 @@ class TestAnsibleController(TestCase):
             4. Verify the return code and callback object.
             5. Delete the mock playbook.
         """
-        pb_file = '/tmp/example.yaml'
-        pb_retry = '/tmp/example.retry'
+        pb_file = '/tmp/example_{}.yaml'.format(gen_random_str(8))
+        pb_retry = '/tmp/example_().retry'.format(gen_random_str(8))
 
         # Create tmp playbook
         pbdata = [{'tasks': [{'shell': 'whoamx', 'register': 'result'}],
@@ -307,4 +316,8 @@ class TestAnsibleController(TestCase):
 
         # Remove tmp playbook
         for item in [pb_file, pb_retry]:
-            os.remove(item)
+            try:
+                os.remove(item)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
