@@ -29,14 +29,13 @@ import pkgutil
 import random
 import string
 import sys
-import jinja2
 from logging import getLogger
 from subprocess import Popen, PIPE
 
+import jinja2
 import os
 import stat
 import yaml
-
 from flask.helpers import get_root_path
 
 from .constants import PROVISIONERS

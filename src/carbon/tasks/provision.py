@@ -31,18 +31,15 @@ class ProvisionTask(CarbonTask):
     """The provision task object will call a provisioner to provision
     resources in their declared provider.
     """
+    __task_name__ = 'provision'
 
-    def __init__(self, msg, clean_msg, host, **kwargs):
+    def __init__(self, msg, host, **kwargs):
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
-        self.clean_msg = clean_msg
         self.provisioner = host.provisioner(host)
 
-    def run(self, context):
-        task_provision_started.send(self, context=context)
+    def run(self):
+        task_provision_started.send(self)
         self.logger.info(self.msg)
         self.provisioner.create()
-        task_provision_finished.send(self, context=context)
-
-    def cleanup(self, context):
-        self.logger.info(self.clean_msg)
+        task_provision_finished.send(self)

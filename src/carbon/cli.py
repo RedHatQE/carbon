@@ -30,8 +30,7 @@ import yaml
 from . import __version__
 from ._compat import string_types
 from .carbon import Carbon
-from .constants import TASKLIST, TASK_CLEANUP_CHOICES, \
-    TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
+from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
 from .helpers import template_render
 
 _VERBOSITY = 0
@@ -122,16 +121,12 @@ def validate(ctx, scenario, log_type, data_folder, log_level):
               default="file",
               type=click.Choice(LOGTYPE_CHOICES),
               help="log type")
-@click.option("-c", "--cleanup",
-              type=click.Choice(TASK_CLEANUP_CHOICES),
-              default='always',
-              help="taskrunner cleanup behavior. Default: 'always'")
 @click.option("--log-level",
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default='info',
               help="Select logging level. Default is 'INFO'")
 @click.pass_context
-def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type, assets_path):
+def run(ctx, task, scenario, log_level, data_folder, log_type, assets_path):
     """
     Run a carbon scenario, given the scenario YAML file configuration.
     """
@@ -160,8 +155,13 @@ def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type, assets_p
         assets_path = os.path.dirname(scenario)
 
     # Create a new carbon compound
-    cbn = Carbon(__name__, log_level=log_level, cleanup=cleanup,
-                 data_folder=data_folder, log_type=log_type, assets_path=assets_path)
+    cbn = Carbon(
+        __name__,
+        log_level=log_level,
+        data_folder=data_folder,
+        log_type=log_type,
+        assets_path=assets_path
+    )
 
     # This is the easiest way to configure a full scenario.
     cbn.load_from_yaml(scenario_data)

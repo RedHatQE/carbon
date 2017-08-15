@@ -23,18 +23,18 @@
 """
 import errno
 import inspect
+from collections import namedtuple
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
 
 import os
-from taskrunner import Task
 
+from .constants import TASKLIST
+from .helpers import get_core_tasks_classes
 from .signals import (
     provision_create_started, provision_create_finished,
     provision_delete_started, provision_delete_finished
 )
-
-from .helpers import get_core_tasks_classes
 
 
 class CarbonError(Exception):
@@ -246,25 +246,20 @@ class LoggerMixin(object):
         return getLogger(inspect.getmodule(inspect.stack()[1][0]).__name__)
 
 
-class CarbonTask(Task, LoggerMixin):
+class CarbonTask(LoggerMixin):
     """
     This is the base class for every task created for Carbon framework.
     All instances of this class can be found within the ~carbon.tasks
     package.
-
-    This class is an instance of taskrunner.Task.
     """
 
-    def __init__(self, name=None, **kwargs):
-        super(CarbonTask, self).__init__(**kwargs)
+    __task_name__ = None
 
+    def __init__(self, name=None, **kwargs):
         if name is not None:
             self.name = name
 
-    def run(self, context):
-        pass
-
-    def cleanup(self, context):
+    def run(self):
         pass
 
     def __str__(self):
@@ -278,6 +273,7 @@ class CarbonResource(LoggerMixin):
     package.
     """
     _valid_tasks_types = []
+    _req_tasks_methods = ['run']
     _fields = []
 
     def __init__(self, config=None, name=None, **kwargs):
@@ -786,4 +782,102 @@ class CarbonController(LoggerMixin):
 
         :param value: Name of controller to set.
         """
-        raise ValueError('You cannot set the controller name property.')
+        raise AttributeError('You cannot set the controller name property.')
+
+
+class PipelineBuilder(object):
+    """Carbon's pipeline builder.
+
+    The primary purpose of this class is to dynamically build pipelines at
+    carbon run time.
+    """
+    # A pipeline is a tuple with a name, type and a list of tasks.
+    # The Carbon object will have a list of pipelines that holds
+    # all types of pipelines and a list of tasks associated with the
+    # type of the pipeline.
+    pipeline_template = namedtuple('Pipeline', ('name', 'type', 'tasks'))
+
+    def __init__(self, name):
+        """Constructor.
+
+        :param name: Pipeline name.
+        :type name: str
+        """
+        self._name = name
+
+    @property
+    def name(self):
+        """Return the pipeline name"""
+        return self._name
+
+    def is_task_valid(self):
+        """Check if the pipeline task name is valid for carbon.
+
+        :return: Whether task is valid or not.
+        :rtype: bool
+        """
+        try:
+            TASKLIST.index(self.name)
+        except ValueError:
+            return False
+        return True
+
+    def task_cls_lookup(self):
+        """Lookup the pipeline task class type.
+
+        :return: The class associated for the pipeline task.
+        :rtype: class
+        """
+        for cls in get_core_tasks_classes():
+            if cls.__task_name__ == self.name:
+                return cls
+        raise CarbonError('Unable to lookup task %s class.' % self.name)
+
+    def build(self, scenario):
+        """Build carbon pipeline.
+
+        :param scenario: Carbon scenario object containing all scenario
+            data.
+        :type scenario: object
+        :return: Carbon pipeline to run for the given task.
+        :rtype: tuple
+        """
+        # initialize new pipeline
+        pipeline = self.pipeline_template(
+            self.name,
+            self.task_cls_lookup(),
+            list()
+        )
+
+        # RFE: consolodate configuring pipeline to reduce code duplication
+
+        # resource = scenario
+        for task in scenario.get_tasks():
+            if task['task'].__task_name__ == self.name:
+                pipeline.tasks.append(task)
+
+        # resource = host
+        for host in scenario.hosts:
+            for task in host.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    pipeline.tasks.append(task)
+
+        # resource = action
+        for action in scenario.actions:
+            for task in action.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    pipeline.tasks.append(task)
+
+        # resource = execute
+        for execute in scenario.executes:
+            for task in execute.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    pipeline.tasks.append(task)
+
+        # resource = report
+        for report in scenario.reports:
+            for task in report.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    pipeline.tasks.append(task)
+
+        return pipeline

@@ -28,16 +28,14 @@ from ..signals import task_execute_started, task_execute_finished
 
 
 class ExecuteTask(CarbonTask):
+    """Execute task."""
+    __task_name__ = 'execute'
 
-    def __init__(self, msg, clean_msg, **kwargs):
+    def __init__(self, msg, **kwargs):
         super(ExecuteTask, self).__init__(**kwargs)
         self.msg = msg
-        self.clean_msg = clean_msg
 
-    def run(self, context):
-        task_execute_started.send(self, context=context)
+    def run(self):
+        task_execute_started.send(self)
         self.logger.info(self.msg)
-        task_execute_finished.send(self, context=context)
-
-    def cleanup(self, context):
-        self.logger.info(self.msg)
+        task_execute_finished.send(self)

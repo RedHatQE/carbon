@@ -27,7 +27,6 @@
 import socket
 import time
 import traceback
-import uuid
 from xml.dom.minidom import parse, parseString
 
 import os

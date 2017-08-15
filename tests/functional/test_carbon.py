@@ -30,7 +30,8 @@ try:
 except ImportError:
     from test.support import EnvironmentVarGuard
 
-from nose.tools import assert_equal, assert_is_instance, raises, assert_true
+from nose.tools import assert_equal, assert_is_instance, raises, assert_true,\
+    nottest
 
 from carbon import Carbon
 from carbon.constants import STATUS_FILE, RESULTS_FILE
@@ -101,12 +102,6 @@ class TestCarbon(TestCase):
         """Test creating a carbon object with declaring the log level."""
         cbn = Carbon(__name__, log_level='debug')
         assert_equal(cbn.log_level, 'debug')
-
-    @staticmethod
-    def test_set_carbon_cleanup_level():
-        """Test creating a carbon object with declaring the cleanup level."""
-        cbn = Carbon(__name__, cleanup='always')
-        assert_equal(cbn.cleanup, 'always')
 
     @staticmethod
     def test_set_carbon_data_folder():
@@ -182,11 +177,10 @@ class TestResultsMixin(TestCase):
         os.remove(status_file)
 
     @staticmethod
+    @nottest
     def test_update_results():
         """Test method to update results for carbon scenario."""
         cbn = Carbon(__name__)
-        task1 = dict(resource=cbn.scenario)
-        task2 = dict(host=cbn.scenario)
-        context = dict(_taskrunner=dict())
-        cbn.update_results('provision', task1, 0, context)
-        cbn.update_results('provision', task2, 0, context)
+        # TODO: Update for support of blaster
+        cbn.update_results('provision', 0, dict)
+        cbn.update_results('provision', 0, dict)

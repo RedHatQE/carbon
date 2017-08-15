@@ -28,16 +28,17 @@ from ..signals import task_validation_started, task_validation_finished
 
 
 class ValidateTask(CarbonTask):
+    """Validate task."""
+    __task_name__ = 'validate'
 
     def __init__(self, resource, **kwargs):
         super(ValidateTask, self).__init__(**kwargs)
         self.resource = resource
 
-    def run(self, context):
-        task_validation_started.send(self, context=context, resource=self.resource)
-        self.logger.info('Validating %s (%s)', self.resource.__class__, self.resource.name)
+    def run(self):
+        task_validation_started.send(self, resource=self.resource)
+        self.logger.info(
+            'Validating %s (%s)', self.resource.__class__, self.resource.name
+        )
         self.resource.validate()
-        task_validation_finished.send(self, context=context, resource=self.resource)
-
-    def cleanup(self, context):
-        pass
+        task_validation_finished.send(self, resource=self.resource)

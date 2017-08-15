@@ -25,7 +25,7 @@ from unittest import TestCase
 
 import os
 from nose.tools import assert_is_instance, assert_equal, assert_true, \
-    nottest, raises
+    raises
 
 from carbon import Carbon
 from carbon.controllers import AnsibleController

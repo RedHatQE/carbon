@@ -215,6 +215,11 @@ class OpenstackProvider(CarbonProvider):
         sess = session.Session(auth=auth)
         self._neutron = neutronclient(session=sess)
 
+    def unref_attr(self, attribute):
+        """Un-reference a value from an attribute."""
+        delattr(self, attribute)
+        setattr(self, attribute, None)
+
     def validate_name(self, value):
         """Validate the resource name.
         :param value: The resource name
@@ -255,9 +260,11 @@ class OpenstackProvider(CarbonProvider):
                                  'string type!')
                 return False
         except ClientException as ex:
+            self.unref_attr('_nova')
             self.logger.error(ex)
             return False
 
+        self.unref_attr('_nova')
         return True
 
     def validate_image(self, value):
@@ -274,11 +281,13 @@ class OpenstackProvider(CarbonProvider):
         # Quit when no value given
         if not value:
             self.logger.warn('Invalid data for image!')
+            self.unref_attr('_glance')
             return False
 
         # Image must be a string
         if not isinstance(value, string_types):
             self.logger.warn('Image is required to be a string type!')
+            self.unref_attr('_glance')
             return False
 
         for image in self.glance.images.list():
@@ -289,8 +298,10 @@ class OpenstackProvider(CarbonProvider):
 
         if not _name and not _id:
             self.logger.warn('Image %s does not exist!', value)
+            self.unref_attr('_glance')
             return False
 
+        self.unref_attr('_glance')
         return True
 
     def validate_networks(self, value):
@@ -301,11 +312,13 @@ class OpenstackProvider(CarbonProvider):
         # Quit when no value given
         if not value:
             self.logger.warn('Invalid data for networks!')
+            self.unref_attr('_neutron')
             return False
 
         # Networks must be a list
         if not isinstance(value, list):
             self.logger.warn('Networks is required to be a list type!')
+            self.unref_attr('_neutron')
             return False
 
         try:
@@ -316,8 +329,10 @@ class OpenstackProvider(CarbonProvider):
                                       network)
                     raise RuntimeError
         except RuntimeError:
+            self.unref_attr('_neutron')
             return False
 
+        self.unref_attr('_neutron')
         return True
 
     def validate_keypair(self, value):
@@ -328,19 +343,23 @@ class OpenstackProvider(CarbonProvider):
         # Quit when no value given
         if not value:
             self.logger.warn('Invalid data for keypair!')
+            self.unref_attr('_nova')
             return False
 
         # Keypair must be a string
         if not isinstance(value, string_types):
             self.logger.warn('Keypair is required to be a string type!')
+            self.unref_attr('_nova')
             return False
 
         try:
             self.nova.keypairs.find(name=value)
         except ClientException as ex:
             self.logger.error(ex)
+            self.unref_attr('_nova')
             return False
 
+        self.unref_attr('_nova')
         return True
 
     @classmethod
@@ -379,12 +398,14 @@ class OpenstackProvider(CarbonProvider):
         # Quit when no value given
         if not value:
             self.logger.warn('Invalid data for floating ip pool!')
+            self.unref_attr('_neutron')
             return False
 
         # Floating ip pool must be a string
         if not isinstance(value, string_types):
             self.logger.warn('Floating ip pool is required to be a string '
                              'type!')
+            self.unref_attr('_neutron')
             return False
 
         try:
@@ -392,10 +413,13 @@ class OpenstackProvider(CarbonProvider):
             if len(data['networks']) <= 0:
                 self.logger.error('Floating IP pool: %s does not exist in '
                                   'tenant!' % value)
+                self.unref_attr('_neutron')
                 raise RuntimeError
         except RuntimeError:
+            self.unref_attr('_neutron')
             return False
 
+        self.unref_attr('_neutron')
         return True
 
     @classmethod

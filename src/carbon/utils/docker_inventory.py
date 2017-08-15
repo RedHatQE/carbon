@@ -37,11 +37,11 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from functools import partial
+import logging
 from argparse import ArgumentParser
 from copy import deepcopy
+from functools import partial
 from json import dumps
-import logging
 
 from docker import DockerClient
 

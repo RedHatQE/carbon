@@ -375,7 +375,9 @@ class Host(CarbonResource):
         """
         task = {
             'task': self._validate_task_cls,
+            'name': str(self.name),
             'resource': self,
+            'methods': self._req_tasks_methods
         }
         return task
 
@@ -388,7 +390,7 @@ class Host(CarbonResource):
             'name': str(self.name),
             'host': self,
             'msg': '   provisioning host %s' % self.name,
-            'clean_msg': '   cleanup after provisioning host %s' % self.name
+            'methods': self._req_tasks_methods
         }
         return task
 
@@ -401,7 +403,6 @@ class Host(CarbonResource):
             'name': str(self.name),
             'host': self,
             'msg': '   cleanup host %s' % self.name,
-            'clean_msg': '   cleanup after cleanup host %s' % self.name,
-            'cleanup': self.config['CLEANUP']
+            'methods': self._req_tasks_methods
         }
         return task

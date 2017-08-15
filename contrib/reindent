@@ -41,11 +41,11 @@ you'd prefer. You can always use the --nobackup option to prevent this.
 
 __version__ = "1"
 
+import shutil
 import sys
 import tokenize
 
 import os
-import shutil
 
 verbose    = 0
 recurse    = 0

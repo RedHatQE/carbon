@@ -60,7 +60,9 @@ class Action(CarbonResource):
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,
+            'name': str(self.name),
             'resource': self,
+            'methods': self._req_tasks_methods
         }
         return task
 
@@ -73,6 +75,6 @@ class Action(CarbonResource):
             'name': str(self.name),
             'package': self,
             'msg': '   running orchestration %s for %s' % (self.name, self.hosts),
-            'clean_msg': '   cleanup after orchestration %s' % self.name
+            'methods': self._req_tasks_methods
         }
         return task

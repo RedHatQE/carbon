@@ -102,6 +102,11 @@ class Scenario(CarbonResource):
                                     '%s' % ex.message)
 
     def add_resource(self, item):
+        """Add a scenario resource to its corresponding list.
+
+        :param item: Resource.
+        :type item: object
+        """
         if isinstance(item, Host):
             self._hosts.append(item)
         elif isinstance(item, Action):
@@ -113,6 +118,45 @@ class Scenario(CarbonResource):
         else:
             raise ValueError('Resource must be of a valid Resource type.'
                              'Check the type of the given item: %s' % item)
+
+    def initialize_resource(self, item):
+        """Initialize resource list.
+
+        The primary purpose for this method is to wipe out an entire resource
+        list if the resource passed in is a match. This is needed after
+        blaster run is finished to update the scenarios resources objects.
+        The reason to update them is because blaster uses multiprocessing which
+        spawns new processes which may alter a scenario resource object given
+        to it. Carbon then has no corelation with that updated resource object.
+        Which is why we need to refresh the scenario resources after run time.
+
+        :param item: Resource.
+        :type item: object
+        """
+        if isinstance(item, Host):
+            self._hosts = list()
+        elif isinstance(item, Action):
+            self._actions = list()
+        elif isinstance(item, Execute):
+            self._executes = list()
+        elif isinstance(item, Report):
+            self._reports = list()
+        else:
+            raise ValueError('Resource must be of a valid Resource type.'
+                             'Check the type of the given item: %s' % item)
+
+    def reload_resources(self, tasks):
+        """Reload scenario resources."""
+        count = 0
+
+        for task in tasks:
+            for key, value in task.items():
+                if isinstance(value, Host) and count <= 0:
+                    self.initialize_resource(value)
+                    self.add_resource(value)
+                    count += 1
+                elif isinstance(value, Host) and count >= 1:
+                    self.add_resource(value)
 
     @property
     def data_folder(self):
@@ -258,7 +302,9 @@ class Scenario(CarbonResource):
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,
+            'name': str(self.name),
             'resource': self,
+            'methods': self._req_tasks_methods
         }
 
         return task
