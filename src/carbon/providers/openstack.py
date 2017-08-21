@@ -26,7 +26,6 @@ from keystoneauth1 import identity, session
 from keystoneclient.v2_0.client import Client as keystoneclient
 from neutronclient.v2_0.client import Client as neutronclient
 from novaclient.client import Client as novaclient
-from novaclient.exceptions import ClientException
 
 from .._compat import string_types
 from ..core import CarbonProvider
@@ -259,7 +258,7 @@ class OpenstackProvider(CarbonProvider):
                 self.logger.warn('Flavor is required to be an integer or '
                                  'string type!')
                 return False
-        except ClientException as ex:
+        except Exception as ex:
             self.unref_attr('_nova')
             self.logger.error(ex)
             return False
@@ -290,19 +289,24 @@ class OpenstackProvider(CarbonProvider):
             self.unref_attr('_glance')
             return False
 
-        for image in self.glance.images.list():
-            if str(image.name) == value or str(image.id) == value:
-                _name = image.name
-                _id = image.id
-                break
+        try:
+            for image in self.glance.images.list():
+                if str(image.name) == value or str(image.id) == value:
+                    _name = image.name
+                    _id = image.id
+                    break
 
-        if not _name and not _id:
-            self.logger.warn('Image %s does not exist!', value)
+            if not _name and not _id:
+                self.logger.warn('Image %s does not exist!', value)
+                self.unref_attr('_glance')
+                return False
+
             self.unref_attr('_glance')
+            return True
+        except Exception as ex:
+            self.unref_attr('_glance')
+            self.logger.error(ex)
             return False
-
-        self.unref_attr('_glance')
-        return True
 
     def validate_networks(self, value):
         """Validate the resource network.
@@ -328,7 +332,7 @@ class OpenstackProvider(CarbonProvider):
                     self.logger.error('Network %s does not exist in tenant!',
                                       network)
                     raise RuntimeError
-        except RuntimeError:
+        except Exception:
             self.unref_attr('_neutron')
             return False
 
@@ -354,7 +358,7 @@ class OpenstackProvider(CarbonProvider):
 
         try:
             self.nova.keypairs.find(name=value)
-        except ClientException as ex:
+        except Exception as ex:
             self.logger.error(ex)
             self.unref_attr('_nova')
             return False
@@ -415,7 +419,7 @@ class OpenstackProvider(CarbonProvider):
                                   'tenant!' % value)
                 self.unref_attr('_neutron')
                 raise RuntimeError
-        except RuntimeError:
+        except Exception:
             self.unref_attr('_neutron')
             return False
 
