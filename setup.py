@@ -32,7 +32,7 @@ requires = [
     'docker==2.1.0',
     'ansible>=2.3.0',
     'blinker==1.4',
-    'blaster>=0.1.2'
+    'blaster>=0.1.4'
 ]
 
 
