@@ -1,3 +1,62 @@
+Version 0.3.0 (2017-08-25)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* exit carbon if any task raises an exception
+* host object does not contain container name
+* add retry function to docker_inventory script
+* **providers.beaker:** beaker provision not handling exception from ansible or container.
+* **providers.beaker:** make beaker xml file name unique
+* **providers.beaker:** adds beaker job url and cleanup logging
+* **providers.openstack:** catch all exceptions that may be raised by openstack client
+* **providers.openstack:** penstack node building exceeding timeout limit
+
+
+Features
+~~~~~~~~
+
+* **core:** run carbon tasks concurrently
+* **signals:** add signal generators
+* **cli:** add templating for framework scenario description
+
+Documentation
+~~~~~~~~~~~~~
+
+* add message guidelines
+
+Style
+~~~~~
+
+* update openstack urls and tenant ids
+* follow the standard naming convention for carbon exceptions
+* missing import for provisioner integration tests
+* organize imports for the entire project
+
+Refactor
+~~~~~~~~
+
+* remove additional code taken from Flask
+* remove config and compat from code base
+* remove unused code and keys from beaker provisioner
+
+Test
+~~~~
+
+* fix carbon issue with randomly failing tests
+
+Chore
+~~~~~
+
+* set new minimum version for blaster package
+* update OS descriptors to reflect updated floating ip pool for OSP10
+* add the jenkins job yaml for our nightly tests
+* do not start containers when provisioner class is instantiated
+* ignore data created by local tests
+* use click built-in function to display program version
+* include dockerfile for linchpin
+
 Version 0.2.2 (2017-07-24)
 --------------------------
 
