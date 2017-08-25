@@ -1,10 +1,10 @@
 #!flask/bin/python
-import six
-import os
 import logging
-from flask import Flask, jsonify, abort, request, make_response, url_for, send_from_directory, g
-from flask_httpauth import HTTPBasicAuth
 import random
+
+from flask import Flask, jsonify, request, make_response, send_from_directory, \
+    g
+from flask_httpauth import HTTPBasicAuth
 
 app = Flask(__name__, static_url_path="")
 auth = HTTPBasicAuth()

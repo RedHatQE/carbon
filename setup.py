@@ -22,15 +22,17 @@ VERSION_RE = re.compile(r'''__version__ = ['"]([a-zA-Z0-9.]+)['"]''')
 
 requires = [
     'pbr>=3.1.1',
+    'Flask>=0.12.2',
     'Werkzeug>=0.11.15',
     'Click>=6.7',
-    'taskrunner>=0.3.0',
     'PyYAML>=3.12',
     'pykwalify>=1.6.0',
     'python-openstackclient>=3.11.0',
     'python-neutronclient>=6.2.0',
     'docker==2.1.0',
-    'ansible>=2.3.0'
+    'ansible>=2.3.0',
+    'blinker==1.4',
+    'blaster>=0.1.4'
 ]
 
 

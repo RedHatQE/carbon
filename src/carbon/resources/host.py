@@ -25,15 +25,15 @@
 """
 from copy import copy
 
-from ..core import CarbonResource, CarbonResourceException
-from ..tasks import ProvisionTask, CleanupTask, ValidateTask
+from ..constants import RULE_HOST_NAMING
+from ..core import CarbonResource, CarbonResourceError
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
 from ..helpers import get_provisioner_class, get_default_provisioner
 from ..helpers import get_provisioners_list
-from ..constants import RULE_HOST_NAMING
+from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 
 
-class CarbonHostException(CarbonResourceException):
+class CarbonHostError(CarbonResourceError):
     """Host's base exception class."""
 
     def __init__(self, message):
@@ -42,7 +42,7 @@ class CarbonHostException(CarbonResourceException):
         :param message: Details about the error.
         """
         self.message = message
-        super(CarbonHostException, self).__init__(message)
+        super(CarbonHostError, self).__init__(message)
 
 
 class Host(CarbonResource):
@@ -85,8 +85,8 @@ class Host(CarbonResource):
         # TODO: we must define what role means for a host and document it.
         self._role = parameters.pop('role', None)
         if self._role is None:
-            raise CarbonHostException('A role must be set for host %s.' %
-                                      str(self.name))
+            raise CarbonHostError('A role must be set for host %s.' %
+                                  str(self.name))
 
         # metadata will be defined via yaml file
         self._metadata = parameters.pop('metadata', {})
@@ -100,11 +100,11 @@ class Host(CarbonResource):
         # we must have a provider set
         provider_param = parameters.pop('provider', provider)
         if provider_param is None:
-            raise CarbonHostException('A provider must be set for the host '
+            raise CarbonHostError('A provider must be set for the host '
                                       '%s.' % str(self.name))
         if provider_param not in get_providers_list():
-            raise CarbonHostException('Invalid provider for host '
-                                      '%s.' % str(self.name))
+            raise CarbonHostError('Invalid provider for host '
+                                  '%s.' % str(self.name))
         else:
             self._provider = get_provider_class(provider_param)()
 
@@ -113,20 +113,20 @@ class Host(CarbonResource):
         if provisioner_param is None:
             self._provisioner = get_default_provisioner(self.provider)
         elif provisioner_param not in get_provisioners_list():
-            raise CarbonHostException('Invalid provisioner for host '
-                                      '%s.' % str(self.name))
+            raise CarbonHostError('Invalid provisioner for host '
+                                  '%s.' % str(self.name))
         else:
             self._provisioner = get_provisioner_class(provisioner_param)
 
         # We must set the providers credentials initially
         self._credential = parameters.pop('credential', None)
         if self._credential is None:
-            raise CarbonHostException('A credential must be set for the hosts '
-                                      'provider %s.' % provider)
+            raise CarbonHostError('A credential must be set for the hosts '
+                                  'provider %s.' % provider)
         provider_creds = parameters.pop('provider_creds', None)
         if provider_creds is None:
-            raise CarbonHostException('Provider credentials must be set for '
-                                      'host %s.' % str(self.name))
+            raise CarbonHostError('Provider credentials must be set for '
+                                  'host %s.' % str(self.name))
         # Get the credentials for the host provider
         cdata = next(i for i in provider_creds if i['name'] == self._credential)
 
@@ -140,18 +140,18 @@ class Host(CarbonResource):
             parameters.update(
                 {p_name_param: 'cbn_{}_{}'.format(self.name, gen_random_str(5))})
         elif not p_name_set[:4] == 'cbn_':
-            raise CarbonHostException('The {0} parameter for {1} should not be'
-                                      ' set as it is under the framework\'s '
-                                      'control'.format(p_name_param, self._name))
+            raise CarbonHostError('The {0} parameter for {1} should not be'
+                                  ' set as it is under the framework\'s '
+                                  'control'.format(p_name_param, self._name))
 
         # check if we have all the mandatory fields set
         missing_mandatory_fields = \
             self.provider.check_mandatory_parameters(parameters)
         if len(missing_mandatory_fields) > 0:
-            raise CarbonHostException('Missing mandatory fields for node %s,'
-                                      ' based on the %s provider:\n\n%s'
-                                      % (self.name, self.provider.name,
-                                         missing_mandatory_fields))
+            raise CarbonHostError('Missing mandatory fields for node %s,'
+                                  ' based on the %s provider:\n\n%s'
+                                  % (self.name, self.provider.name,
+                                     missing_mandatory_fields))
 
         # create the provider attributes in the host object
         for p in self.provider.get_all_parameters():
@@ -162,12 +162,12 @@ class Host(CarbonResource):
         missing_mandatory_creds_fields = \
             self.provider.check_mandatory_creds_parameters(cdata)
         if len(missing_mandatory_creds_fields) > 0:
-            raise CarbonHostException('Missing mandatory credentials fields '
-                                      'for credentials section %s, for node '
-                                      '%s, based on the %s provider:\n\n%s' %
-                                      (parameters['credential'], self._name,
-                                       self.provider.name,
-                                       missing_mandatory_creds_fields))
+            raise CarbonHostError('Missing mandatory credentials fields '
+                                  'for credentials section %s, for node '
+                                  '%s, based on the %s provider:\n\n%s' %
+                                  (parameters['credential'], self._name,
+                                   self.provider.name,
+                                   missing_mandatory_creds_fields))
 
         # create the provider credentials in provider object
         self.provider.set_credentials(cdata)
@@ -342,7 +342,7 @@ class Host(CarbonResource):
             self.logger.error('Error with parameter "%s": %s', item[0], item[1])
 
         if status > 0:
-            raise CarbonHostException('Host %s validation failed!' % self.name)
+            raise CarbonHostError('Host %s validation failed!' % self.name)
 
     def data_folder(self):
         return str(self.config['DATA_FOLDER'])
@@ -375,7 +375,9 @@ class Host(CarbonResource):
         """
         task = {
             'task': self._validate_task_cls,
+            'name': str(self.name),
             'resource': self,
+            'methods': self._req_tasks_methods
         }
         return task
 
@@ -388,7 +390,7 @@ class Host(CarbonResource):
             'name': str(self.name),
             'host': self,
             'msg': '   provisioning host %s' % self.name,
-            'clean_msg': '   cleanup after provisioning host %s' % self.name
+            'methods': self._req_tasks_methods
         }
         return task
 
@@ -401,7 +403,6 @@ class Host(CarbonResource):
             'name': str(self.name),
             'host': self,
             'msg': '   cleanup host %s' % self.name,
-            'clean_msg': '   cleanup after cleanup host %s' % self.name,
-            'cleanup': self.config['CLEANUP']
+            'methods': self._req_tasks_methods
         }
         return task

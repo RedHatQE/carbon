@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os
 from subprocess import check_call
 from sys import platform, version_info
+
+import os
 
 _dname = os.path.dirname
 _pyver = 'cover/integration/py%s%s' % (version_info.major, version_info.minor)
@@ -31,4 +32,4 @@ if platform == "darwin":
 run('nosetests --with-coverage --cover-erase --cover-package carbon '
     '--with-xunit --xunit-file {0}/nosetests.xml --cover-xml '
     '--cover-xml-file {0}/coverage.xml --cover-html --cover-html-dir {0} -v '
-    '--disabledoc integration/'.format(_pyver))
+    '--disabledoc ./integration/ ./functional/'.format(_pyver))

@@ -4,10 +4,10 @@ description: Description of the scenario example.
 
 credentials:
 
-  - name: openstack_ciops
-    auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
+  - name: openstack
+    auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
     tenant_name: pit-jenkins
-    tenant_id: bf4de4c330bb47d6937af31fd5c71a18
+    tenant_id: 2e1c0cf8f1234ea5ad8933d0927fc837
     username: username
     password: password
 
@@ -17,16 +17,22 @@ credentials:
     username: username
     token: token
 
+  - name: beaker
+    keytab:
+    keytab_principal:
+    username:
+    password:
+
 provision:
 
   - name: machine_1
     provider: openstack
     provisioner: openstack
-    credential: openstack_ciops
+    credential: openstack
     os_image: rhel-7.3-workstation-x86_64-released
     os_flavor: m1.medium
     os_networks: [pit-jenkins]
-    os_floating_ip_pool: 10.8.172.0/22
+    os_floating_ip_pool: 10.8.240.0
     os_keypair: pit-jenkins
     os_admin_pass:
     os_description:
@@ -37,11 +43,11 @@ provision:
 
   - name: machine_2
     provider: openstack
-    credential: openstack_ciops
+    credential: openstack
     os_image: rhel-7.3-server-x86_64-released
     os_flavor: m1.medium
     os_networks: ['pit-jenkins']
-    os_floating_ip_pool: "10.8.172.0/22"
+    os_floating_ip_pool: "10.8.240.0"
     os_keypair: 'pit-jenkins'
     os_admin_pass:
     os_description:
@@ -52,11 +58,11 @@ provision:
 
   - name: machine_3
     provider: openstack
-    credential: openstack_ciops
+    credential: openstack
     os_image: rhel-7.3-workstation-x86_64-released
     os_flavor: m1.medium
     os_networks: ['pit-jenkins']
-    os_floating_ip_pool: "10.8.172.0/22"
+    os_floating_ip_pool: "10.8.240.0"
     os_keypair: 'pit-jenkins'
     os_admin_pass:
     os_description:
@@ -91,6 +97,21 @@ provision:
     oc_labels:
       - label1: label1
       - label2: git_app
+
+  - name: Machine from Beaker 1
+    provider: beaker
+    credential: beaker
+    role: bkr-machine
+    bkr_jobgroup: ci-ops-pit
+    bkr_arch: x86_64
+    bkr_variant: Workstation
+    bkr_whiteboard: Testing machine provisioning from Carbon
+    bkr_distro: RHEL-6.9
+    bkr_host_requires_options: ["arch=x86_64", "memory>=15000"]
+    bkr_key_values: ["DISKSPACE>=500000", "HVM=1"]
+    bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    bkr_kernel_post_options: ["isolcpus = 0,5"]
+    bkr_tag: "RTT_ACCEPTED"
 
 orchestrate:
 

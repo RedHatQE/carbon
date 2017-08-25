@@ -23,7 +23,6 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import uuid
 
 from ..core import CarbonResource
 from ..tasks import ReportTask, ValidateTask
@@ -55,7 +54,9 @@ class Report(CarbonResource):
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,
+            'name': str(self.name),
             'resource': self,
+            'methods': self._req_tasks_methods
         }
         return task
 
@@ -65,6 +66,6 @@ class Report(CarbonResource):
             'name': str(self.name),
             'package': self,
             'msg': '   reporting %s' % self.name,
-            'clean_msg': '   cleanup after reporting %s' % self.name
+            'methods': self._req_tasks_methods
         }
         return task

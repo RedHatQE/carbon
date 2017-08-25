@@ -21,8 +21,9 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 from unittest import TestCase
+
+import os
 
 try:
     from test.test_support import EnvironmentVarGuard
@@ -40,7 +41,8 @@ from nose.tools import nottest
 
 from carbon import Carbon
 from carbon._compat import string_types
-from carbon.helpers import file_mgmt, get_ansible_inventory_script
+from carbon.helpers import file_mgmt, gen_random_str
+from carbon.helpers import get_ansible_inventory_script
 from carbon.helpers import get_provisioner_class, get_provisioners_classes
 from carbon.helpers import get_provider_class, get_providers_classes
 from carbon.providers import OpenstackProvider
@@ -90,46 +92,58 @@ class TestFileManagement(TestCase):
         """Test carbons file management function attempting to read/write a
         yaml file type.
         """
-        _file = "test.yml"
+        _file = "test_{}.yml".format(gen_random_str(8))
         _data = {'name': 'carbon', 'group': [{'name': 'group'}]}
         try:
             file_mgmt('w', _file, _data)
             assert_is_instance(file_mgmt('r', _file), dict)
         finally:
-            os.remove(_file)
+            try:
+                os.remove(_file)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
 
     @staticmethod
     def test_json_file_extension():
         """Test carbons file management function attempting to read/write a
         json file type.
         """
-        _file = "test.json"
+        _file = "test_{}.json".format(gen_random_str(8))
         _data = {'name': 'carbon', 'group': [{'name': 'group'}]}
         try:
             file_mgmt('w', _file, _data)
             assert_is_instance(file_mgmt('r', _file), dict)
         finally:
-            os.remove(_file)
+            try:
+                os.remove(_file)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
 
     @staticmethod
     def test_txt_file_extension():
         """Test carbons file management function attempting to read/write a
         txt file type.
         """
-        _file = "test.txt"
+        _file = "test_{}.txt".format(gen_random_str(8))
         _data = "Carbon project"
         try:
             file_mgmt('w', _file, _data)
             assert_equal(file_mgmt('r', _file), "Carbon project")
         finally:
-            os.remove(_file)
+            try:
+                os.remove(_file)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
 
     @staticmethod
     def test_ini_file_extension():
         """Test carbons file management function attempting to read/write a
         ini file type.
         """
-        _file = "test.ini"
+        _file = "test_{}.ini".format(gen_random_str(8))
         cfg1, cfg2 = ConfigParser(), ConfigParser()
         cfg1.add_section('Carbon')
         cfg1.set('Carbon', 'Team', 'PIT')
@@ -138,8 +152,11 @@ class TestFileManagement(TestCase):
             file_mgmt('r', _file, cfg_parser=cfg2)
             assert_is_instance(cfg2, ConfigParser)
         finally:
-            os.remove(_file)
-
+            try:
+                os.remove(_file)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
 
 class TestGetModuleClasses(TestCase):
     """Unit tests to test carbon functions that get classes or a class from

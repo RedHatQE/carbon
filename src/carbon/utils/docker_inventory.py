@@ -37,12 +37,54 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-
+import logging
 from argparse import ArgumentParser
 from copy import deepcopy
+from functools import partial
 from json import dumps
 
 from docker import DockerClient
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('docker_inventory')
+
+
+class RetryException(Exception):
+    """
+    This exception throws when the max number of attempts
+    to run a function is reached.
+
+    See https://stackoverflow.com/a/21788159
+    """
+    u_str = "Exception ({}) raised after {} tries."
+
+    def __init__(self, exp, max_retry):
+        self.exp = exp
+        self.max_retry = max_retry
+
+    def __unicode__(self):
+        return self.u_str.format(self.exp, self.max_retry)
+
+    def __str__(self):
+        return self.__unicode__()
+
+
+def retry_func(func, max_retry=10):
+    """
+    @param func: The function that needs to be retry
+    @param max_retry: Maximum retry of `func` function, default is `10`
+    @return: func
+    @raise: RetryException if retries exceeded than max_retry
+    """
+    e = ""
+    for retry in range(1, max_retry + 1):
+        try:
+            return func()
+        except Exception as e:
+            logger.info('Failed to call {}, in retry({}/{})'.format(
+                func.func, retry, max_retry))
+    else:
+        raise RetryException(e, max_retry)
 
 
 class DockerInventory(object):
@@ -91,7 +133,13 @@ class DockerInventory(object):
 
         :return: Collection of containers.
         """
-        return self.docker.containers.list(all=True)
+        results = []
+        try:
+            results = retry_func(partial(self.docker.containers.list, all=True), max_retry=3)
+        except RetryException as e:
+            print(e)
+
+        return results
 
     def containers(self):
         """Return all docker containers to be used by ansible inventory host.

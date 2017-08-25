@@ -21,9 +21,9 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from .validate import ValidateTask
-from .provision import ProvisionTask
-from .orchestrate import OrchestrateTask
-from .execute import ExecuteTask
-from .report import ReportTask
 from .cleanup import CleanupTask
+from .execute import ExecuteTask
+from .orchestrate import OrchestrateTask
+from .provision import ProvisionTask
+from .report import ReportTask
+from .validate import ValidateTask

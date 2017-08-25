@@ -24,22 +24,28 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
-import stat
-import uuid
-import time
 import socket
+import time
+import traceback
 from xml.dom.minidom import parse, parseString
 
+import os
 import paramiko
+import stat
 
+from ..constants import BEAKER_JOBS_URL
 from ..controllers import AnsibleController
-from ..controllers import DockerController, DockerControllerException
-from ..core import CarbonProvisioner, CarbonProvisionerException
+from ..controllers import DockerController, DockerControllerError
+from ..core import CarbonProvisioner, CarbonProvisionerError
 from ..helpers import get_ansible_inventory_script
+from ..signals import (
+    prov_beaker_initiated, prov_beaker_xml_submit_started,
+    prov_beaker_xml_submit_finished, prov_beaker_wait_job_started,
+    prov_beaker_wait_job_finished
+)
 
 
-class BeakerProvisionerException(CarbonProvisionerException):
+class BeakerProvisionerError(CarbonProvisionerError):
     """ Base class for Beaker provisioner exceptions."""
 
     def __init__(self, message):
@@ -48,7 +54,7 @@ class BeakerProvisionerException(CarbonProvisionerException):
         :param message: Details about the error.
         """
         self.message = message
-        super(BeakerProvisionerException, self).__init__(message)
+        super(BeakerProvisionerError, self).__init__(message)
 
 
 class BeakerProvisioner(CarbonProvisioner):
@@ -61,24 +67,29 @@ class BeakerProvisioner(CarbonProvisioner):
     multiple requests with different authentication in the same namespace
     (with same config file). In order to handle this, we need to isolate
     each session with different namespaces. This will be handled by each
-    scenario, each resource will have its own dedicated container to perform the requests
-    to the beaker server. This will isolate multiple scenarios runs and resources on the
-    same server.
+    scenario, each resource will have its own dedicated container to perform
+    the requests to the beaker server. This will isolate multiple scenarios
+    runs and resources on the same server.
 
     Please see the diagram below for an example:
 
-    ------------      ------------
-    | Scenario | --> | Resources  |
-    ------------     | - machine1 |
-                     | - machine2 |
-                      ------------
-                            |      -----------       --------------------------------
-                            | --> | Container | --> | $ bkr job-submit machine1.xml  |
-                            |      -----------       --------------------------------
-                            |
-                            |      -----------       --------------------------------
-                            | --> | Container | --> | $ bkr job-submit machine2.xml  |
-                                   -----------       --------------------------------
+    -----------
+    | Scenario |
+    ------------
+        |
+        |     --------------
+        | --> | Resources  |
+              | - machine1 |
+              | - machine2 |
+              --------------
+                    |
+                    |     -------------     ---------------------------------
+                    | --> | Container | --> | $ bkr job-submit machine1.xml |
+                    |     -------------     ---------------------------------
+                    |
+                    |     -------------     ---------------------------------
+                    | --> | Container | --> | $ bkr job-submit machine2.xml |
+                    |     -------------     ---------------------------------
 
     This provisioner assumes that on the server, docker is installed and
     running.
@@ -95,34 +106,35 @@ class BeakerProvisioner(CarbonProvisioner):
     __provisioner_name__ = "beaker"
     __provisioner_prefix__ = 'bkr_'
 
-    _bkr_xml = "bkrjob.xml"
-
     _bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
     def __init__(self, host):
+        """Constructor.
+
+        :param host: The host object.
+        """
         super(BeakerProvisioner, self).__init__()
         self.host = host
 
         # Set Data Folder
-        self._data_folder = host.data_folder()
+        self._data_folder = self.host.data_folder()
 
         # Set beaker xml class
         self.bxml = BeakerXML()
 
         # Create controller objects
-        self._docker = DockerController(
-            cname=self.host.bkr_name + '_' + str(uuid.uuid4())[:4]
-        )
+        self._docker = DockerController(cname=self.host.bkr_name)
+        self.host.container_name = self.docker.cname
+        self.logger.debug("Host: {0} Container: {1}".format(
+            self.host.bkr_name, self.host.container_name))
+
+        # Get unique name for beaker xml
+        self._bkr_xml = "brkjob_{bkr_name}.xml".format(bkr_name=self.host.bkr_name)
+
         self._ansible = AnsibleController(
             inventory=get_ansible_inventory_script(self.docker.name.lower())
         )
-
-        # Run container
-        try:
-            self.docker.run_container(self._bkr_image, entrypoint='bash')
-        except DockerControllerException as ex:
-            self.logger.warn(ex)
-            raise BeakerProvisionerException("Issue bringing up the container")
+        prov_beaker_initiated.send(self)
 
     @property
     def docker(self):
@@ -131,13 +143,13 @@ class BeakerProvisioner(CarbonProvisioner):
 
     @docker.setter
     def docker(self, value):
-        """Raises an exception when trying to instantiate docker controller
-        after provisioner class has been instantiated.
+        """Set the docker object.
 
-        :param value: The name for docker container.
+        :param value: The docker container object.
         """
-        raise ValueError('You cannot create a docker controller object after '
-                         'provisioner class has been instantiated.')
+        raise AttributeError(
+            'Cannot set docker controller object once class is instantiated.'
+        )
 
     @property
     def ansible(self):
@@ -146,24 +158,28 @@ class BeakerProvisioner(CarbonProvisioner):
 
     @ansible.setter
     def ansible(self, value):
-        """Raises an exception when trying to instantiate the ansible
-        controller after provisioner class has been instantiated.
+        """Set the ansible object.
+
+        :param value: The ansible object.
         """
-        raise ValueError(
-            'You cannot create a ansible controller object after provisioner '
-            'class has been instantiated.'
+        raise AttributeError(
+            'Cannot set ansible controller object once class is instantiated.'
         )
 
+    def start_container(self):
+        """Start container."""
+        self.docker.run_container(self._bkr_image, entrypoint='bash')
+
     def container_cleanup_and_error(self, msg):
-        """ Cleanup Docker Container. Stop and remove"""
+        """Cleanup Docker Container. Stop and remove"""
         try:
             # Stop/remove container
             self.docker.stop_container()
             self.docker.remove_container()
-        except DockerControllerException as ex:
-            raise BeakerProvisionerException(ex.message)
+        except DockerControllerError as ex:
+            raise BeakerProvisionerError(ex.message)
         finally:
-            raise BeakerProvisionerException(msg)
+            raise BeakerProvisionerError(msg)
 
     def authenticate(self):
         """Authenticate to Beaker server, support
@@ -172,12 +188,11 @@ class BeakerProvisioner(CarbonProvisioner):
         """
         bkr_config = "/etc/beaker/client.conf"
         # Case 1: user has username and password set
-        if ["username", "password"] <= self.host.provider.credentials.keys() \
-                and "username" in self.host.provider.credentials.keys() \
+        if "username" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["username"] \
                 and "password" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["password"]:
-            self.logger.info("Authentication w/ username/pass")
+            self.logger.debug("Authentication w/ username/pass")
 
             # Modify the config file with correct data
             summary = "update beaker config - username"
@@ -193,12 +208,11 @@ class BeakerProvisioner(CarbonProvisioner):
             self.lineinfile_call(summary, replace_line, cmd)
 
         # Case 2: user has a keytab and principal set
-        elif ["keytab", "keytab_principal"] <= self.host.provider.credentials.keys() \
-                and "keytab" in self.host.provider.credentials.keys() \
+        elif "keytab" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["keytab"] \
                 and "keytab_principal" in self.host.provider.credentials.keys() \
                 and self.host.provider.credentials["keytab_principal"]:
-            self.logger.info("Authentication w/ keytab/keytab_principal")
+            self.logger.debug("Authentication w/ keytab/keytab_principal")
 
             # copy the keytab file to container
             src_file_path = os.path.join(self._data_folder, "assets", self.host.provider.credentials["keytab"])
@@ -292,7 +306,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # Generate Beaker workflow-simple command
         try:
-            self.bxml.generateBKRXML(bkr_xml_file, savefile=True)
+            self.bxml.generate_beaker_xml(bkr_xml_file, savefile=True)
         except Exception as ex:
             self.container_cleanup_and_error("Error Generating beaker xml data {}".format(ex))
 
@@ -338,14 +352,14 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # Generate Complete XML
         try:
-            self.bxml.generateXMLDOM(bkr_xml_file, output, savefile=True)
+            self.bxml.generate_xml_dom(bkr_xml_file, output, savefile=True)
         except Exception as ex:
             self.container_cleanup_and_error("Issue generating Beaker XML")
 
     def submit_bkr_xml(self):
         """ submit the beaker xml and retrieve Beaker JOBID
         """
-        self.logger.info("Submitting bkr job")
+        self.logger.debug("Submitting bkr job")
         # copy the xml to container
         src_file_path = os.path.join(self._data_folder, self._bkr_xml)
         dest_full_path_file = '/tmp'
@@ -384,8 +398,15 @@ class BeakerProvisioner(CarbonProvisioner):
                 mod_output = output[output.find("Submitted:"):]
                 # set the result as ascii instead of unicode
                 self.host.bkr_job_id = mod_output[mod_output.find(
-                    "[") + 2:mod_output.find("]") - 1].encode('ascii', 'ignore')
-                self.logger.info("just submitted: {}".format(self.host.bkr_job_id))
+                    "[") + 2:mod_output.find("]") - 1].encode('ascii',
+                                                              'ignore')
+                self.host.bkr_job_url = \
+                    BEAKER_JOBS_URL + self.host.bkr_job_id[2:]
+
+                self.logger.debug("Just submitted Beaker Job: {} Job URL: {}"
+                                  .format(self.host.bkr_job_id,
+                                          self.host.bkr_job_url))
+
             else:
                 self.container_cleanup_and_error("Unexpected Error submitting job")
 
@@ -448,38 +469,59 @@ class BeakerProvisioner(CarbonProvisioner):
         self.cancel_job()
         self.container_cleanup_and_error("Timeout reached for Beaker job")
 
-    def create(self):
+    def _create(self):
         """Get a machine from Beaker based on the definition from the scenario.
         Steps:
-        1.  authenticate
-        2.  generate a beaker xml from the host data
-        3.  submit a beaker job
-        4.  watch for the beaker job to be complete -> return success or failed
+        1.  start container
+        2.  authenticate
+        3.  generate a beaker xml from the host data
+        4.  submit a beaker job
+        5.  watch for the beaker job to be complete -> return success or failed
         """
-        self.logger.info('Provisioning machines from %s', self.__class__)
+        self.logger.debug('Provisioning machines from %s', self.__class__)
 
-        # Authenticate to beaker
-        self.authenticate()
-
-        # generate the Beaker xml
-        self.gen_bkr_xml()
-
-        # submit the Beaker job and get the Beaker Job ID
-        self.submit_bkr_xml()
-
-        # wait for the bkr job to be complete and return pass or failed
-        self.wait_for_bkr_job()
-
-        # copy ssh key to the machine
-        if self.host.bkr_ssh_key:
-            self.copy_ssh_key()
+        do_final = True
 
         try:
-            # Stop/remove container
-            self.docker.stop_container()
-            self.docker.remove_container()
-        except DockerControllerException as ex:
-            raise BeakerProvisionerException(ex)
+            # Start container
+            self.start_container()
+
+            # Authenticate to beaker
+            self.authenticate()
+
+            # generate the Beaker xml
+            self.gen_bkr_xml()
+
+            # submit the Beaker job and get the Beaker Job ID
+            prov_beaker_xml_submit_started.send(self)
+            self.submit_bkr_xml()
+            prov_beaker_xml_submit_finished.send(self)
+
+            # wait for the bkr job to be complete and return pass or failed
+            prov_beaker_wait_job_started.send(self)
+            self.wait_for_bkr_job()
+            prov_beaker_wait_job_finished.send(self)
+
+            # copy ssh key to the machine
+            if self.host.bkr_ssh_key:
+                self.copy_ssh_key()
+
+        except BeakerProvisionerError:
+            do_final = False
+            raise
+
+        except Exception:
+            raise BeakerProvisionerError(
+                'An unexpected issue happened during '
+                'beaker provisioning... {0}'.format(traceback.print_exc())
+            )
+
+        finally:
+            if do_final:
+                # Stop/remove container
+                self.docker.stop_container()
+                self.docker.remove_container()
+                self.logger.debug('Successfully cleaned up container..')
 
     def cancel_job(self):
         """Cancel a Beaker job """
@@ -487,7 +529,8 @@ class BeakerProvisioner(CarbonProvisioner):
         _cmd = "bkr job-cancel {0}".format(self.host.bkr_job_id)
 
         results = self.ansible.run_module(
-            dict(name='bkr job cancel', hosts=self.docker.cname, gather_facts='no',
+            dict(name='bkr job cancel', hosts=self.docker.cname,
+                 gather_facts='no',
                  tasks=[dict(action=dict(module='shell', args=_cmd))])
         )
 
@@ -507,22 +550,39 @@ class BeakerProvisioner(CarbonProvisioner):
             else:
                 self.container_cleanup_and_error("Unexpected Error cancelling job")
 
-    def delete(self):
+    def _delete(self):
         """ Return the bkr machine back to the pool"""
         self.logger.info('Tearing down machines from %s', self.__class__)
 
-        # Authenticate to beaker
-        self.authenticate()
-
-        # cancel the job
-        self.cancel_job()
+        do_final = True
 
         try:
-            # Stop/remove container
-            self.docker.stop_container()
-            self.docker.remove_container()
-        except DockerControllerException as ex:
-            raise BeakerProvisionerException(ex)
+
+            # Start container
+            self.start_container()
+
+            # Authenticate to beaker
+            self.authenticate()
+
+            # cancel the job
+            self.cancel_job()
+
+        except BeakerProvisionerError:
+            do_final = False
+            raise
+
+        except Exception:
+            raise BeakerProvisionerError(
+                'An unexpected issue happened during '
+                'beaker provisioning... {0}'.format(traceback.print_exc())
+            )
+
+        finally:
+            if do_final:
+                # Stop/remove container
+                self.docker.stop_container()
+                self.docker.remove_container()
+                self.logger.debug('Successfully cleaned up container..')
 
     def get_job_status(self, xmldata):
         """
@@ -530,7 +590,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         :param xmldata: xmldata of a beaker job status
         :return: dictionary of job and install task statuses
-        :raises BeakerProvisionerException: if results cannot be analyzed successfully
+        :raises BeakerProvisionerError: if results cannot be analyzed successfully
         """
 
         mydict = {}
@@ -569,7 +629,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         :param xmldata: xmldata of a beaker job status
         :return: dictionary of job and install task statuses
-        :raises BeakerProvisionerException: if results cannot be analyzed successfully
+        :raises BeakerProvisionerError: if results cannot be analyzed successfully
         """
         try:
             dom = parseString(xmldata)
@@ -588,8 +648,8 @@ class BeakerProvisioner(CarbonProvisioner):
 
     def copy_ssh_key(self):
 
-        self.logger.info("Send keys over to the Beaker Nodes: {0} "
-                         "{1}".format(self.host.ip_address, self.host.bkr_hostname))
+        self.logger.debug("Send keys over to the Beaker Nodes: {0} "
+                          "{1}".format(self.host.ip_address, self.host.bkr_hostname))
 
         # setup prior to injecting ssh keys
         private_key = os.path.join(self._data_folder, "assets", self.host.bkr_ssh_key)
@@ -624,9 +684,9 @@ class BeakerProvisioner(CarbonProvisioner):
         finally:
             ssh_con.close()
 
-        self.logger.info("Successfully Sent key: {0}, "
-                         "{1}".format(self.host.ip_address,
-                                      self.host.bkr_hostname))
+        self.logger.debug("Successfully Sent key: {0}, "
+                          "{1}".format(self.host.ip_address,
+                                       self.host.bkr_hostname))
 
     def analyze_results(self, resultsdict):
         """
@@ -634,9 +694,10 @@ class BeakerProvisioner(CarbonProvisioner):
 
         :param resultsdict: dictionary of job and install task statuses
         :return: action str [wait, success, or fail]
-        :raises BeakerProvisionerException: if results cannot be analyzed successfully
+        :raises BeakerProvisionerError: if results cannot be analyzed successfully
         """
         # when is the job complete
+        # TODO: explain what each beaker results analysis means
         if resultsdict["job_result"].strip().lower() == "new" and \
            resultsdict["job_status"].strip().lower() in \
            ["new", "waiting", "queued", "scheduled", "processed", "installing"]:
@@ -663,7 +724,7 @@ class BeakerProvisioner(CarbonProvisioner):
             self.container_cleanup_and_error("Unexpected Job status {}".format(resultsdict))
 
 
-class BeakerXML():
+class BeakerXML(object):
     """ Class to generate Beaker XML file from input host yaml"""
     _op_list = ['like', '==', '!=', '<=', '>=', '=', '<', '>']
 
@@ -674,19 +735,14 @@ class BeakerXML():
         self._xmldom = ""
         self._arch = ""
         self._family = ""
-        self._random = True
         self._component = ""
         self._cmd = ""
         self._runid = ""
         self._osvariant = ""
-        self._product = ""
         self._retention_tag = ""
         self._whiteboard = ""
-        self._packages = "None"
-        self._tasks = "None"
         self._method = "nfs"
         self._reservetime = "86400"
-        self._reservetime_always = ""
         self._host_requires_options = []
         self._distro_requires_options = []
         self._tasklist = []
@@ -698,7 +754,6 @@ class BeakerXML():
         self._drname = []
         self._drvalue = []
         self._drop = []
-        self._repolist = []
         self._tag = ""
         self._priority = "Normal"  # Low, Medium, Normal, High, or Urgent
         self._distro = ""
@@ -706,35 +761,31 @@ class BeakerXML():
         self._kernel_options_post = ""
         self._kickstart = ""
         self._ksmeta = ""
-        self._removetask = False
-        self._kdumpon = False
-        self._ndumpon = False
-        self._cclist = []
+        self._remove_task = False
         self._virtmachine = False
         self._virtcapable = False
         self._ignore_panic = False
 
-    def generateBKRXML(self, x, savefile=False):
+    def generate_beaker_xml(self, x, savefile=False):
 
         xmlfile = x
 
         # How will we generate the XML dom
         # Step 1: take all the values and pass it to bkr workflow simple to create a xml for us.
-        file = open(xmlfile, 'w+')
-        file.write("<?xml version='1.0' ?>\n")
-        file.close()
+        with open(xmlfile, 'w+') as fp:
+            fp.write("<?xml version='1.0' ?>\n")
 
         # Set virtual machine if configured
-        if(self.virtual_machine):
+        if self.virtual_machine:
             self.sethostrequires('hypervisor', '!=', "")
 
         # Set virtual capable if configured
-        if(self.virt_capable):
+        if self.virt_capable:
             self.sethostrequires('system_type', '=', "Machine")
             self.setdistrorequires('distro_virt', '=', "")
 
         # Set User supplied host requires
-        if (self.host_requires_options):
+        if self.host_requires_options:
             for hro in self.host_requires_options:
                 for hro_op in self._op_list:
                     if hro_op in hro:
@@ -744,7 +795,7 @@ class BeakerXML():
                         break
 
         # Set User supplied host requires
-        if (self.distro_requires_options):
+        if self.distro_requires_options:
             for dro in self.distro_requires_options:
                 for dro_op in self._op_list:
                     if dro_op in dro:
@@ -754,7 +805,7 @@ class BeakerXML():
                         break
 
         # Set User supplied taskparam Only valid option currently is reservetime
-        if (self.taskparam):
+        if self.taskparam:
             for taskparam in self.taskparam:
                 for tp_op in self._op_list:
                     if tp_op in taskparam:
@@ -764,20 +815,15 @@ class BeakerXML():
                             self.reservetime = tp_values[1]
                             break
                         else:
-                            self.logger.warning(
-                                "taskparam setting of %s not currently supported. Ingnoring" %
+                            raise AttributeError(
+                                "taskparam setting of %s not currently supported." %
                                 tp_key)
-                            break
 
         # Set arch
         self.cmd += "bkr workflow-simple --arch " + self.arch
 
-        # Set random if hostname not configured
-        # if(self.bkr_random and not("hostname" in self.hrname)):
-        #     self.cmd += " --random"
-
         # Generate Whiteboard Value if not specified
-        if (self.whiteboard == ""):
+        if self.whiteboard == "":
             self.whiteboard = "Carbon:"
             if self.runid != "":
                 self.whiteboard += " RunID:" + self.runid
@@ -805,33 +851,21 @@ class BeakerXML():
         self.cmd += " --whiteboard '" + self.whiteboard + "'"
         self.cmd += " --method " + self.method
 
-        # Set repos
-        for repo in self.repolist:
-            self.cmd += " --repo " + repo
-
-        # Set email recipients
-        for email in self.cclist:
-            self.cmd += " --cc " + email
-
         # Set kernel options
-        if(self.kernel_options != ""):
+        if self.kernel_options != "":
             self.cmd += " --kernel_options '" + " ".join(self.kernel_options) + "'"
 
         # Set post kernel options
-        if(self.kernel_post_options != ""):
+        if self.kernel_post_options != "":
             self.cmd += " --kernel_options_post '" + " ".join(self.kernel_post_options) + "'"
 
         # Set kickstart file
-        if (self.kickstart != ""):
+        if self.kickstart != "":
             self.cmd += " --kickstart '" + "/tmp/" + self.kickstart + "'"
 
         # Set kick start meta options
-        if (self.ksmeta != ""):
+        if self.ksmeta != "":
             self.cmd += " --ks-meta '" + " ".join(self.ksmeta) + "'"
-
-        # Set product
-        if(self.product != ""):
-            self.cmd += " --product '" + self.product + "'"
 
         # Set debug and dryrun
         self.cmd += " --debug --dryrun"
@@ -839,21 +873,9 @@ class BeakerXML():
         # Removal of --prettyxml option because it creates too many line breaks.
         # self.cmd += " --prettyxml"
 
-        # Set packages to install
-        if(self.packages != "None"):
-            packagelist = self.packages.split(",")
-            for package in packagelist:
-                self.cmd += " --install " + package
-
-        # Set tasks
-        if(self.tasks != "None"):
-            tasklist = self.tasks.split(",")
-            for task in tasklist:
-                self.cmd += " --task " + task
-        else:
-            # workaround for no tasks, add one task and delete it later
-            self.cmd += " --task " + "/distribution/reservesys"
-            self.removetask = True
+        # workaround for no tasks, add one task and delete it later
+        self.cmd += " --task " + "/distribution/reservesys"
+        self._remove_task = True
 
         # Set tag if distro empty else distro
         if self.tag:
@@ -862,20 +884,12 @@ class BeakerXML():
         if self.distro:
             self.cmd += " --distro " + self.distro
 
-        # Set kdumo on
-        if(self.kdump):
-            self.cmd += " --kdump"
-
-        # Set ndump on
-        if(self.ndump):
-            self.cmd += " --ndump"
-
         # Set ignore panic
-        if(self.ignore_panic):
+        if self.ignore_panic:
             self.cmd += " --ignore-panic"
 
         # Set job group
-        if(self.jobgroup != ""):
+        if self.jobgroup != "":
             self.cmd += " --job-group " + self.jobgroup
 
         # Set priority
@@ -885,14 +899,13 @@ class BeakerXML():
         for kv in self.key_values:
             self.cmd += " --keyvalue '" + kv + "'"
 
-    def generateXMLDOM(self, x, xmldata, savefile=False):
+    def generate_xml_dom(self, x, xmldata, savefile=False):
 
         xmlfile = x
 
-        file = open(xmlfile, 'w+')
-        for xmlline in xmldata:
-            file.write(xmlline)
-        file.close()
+        with open(xmlfile, 'w+') as fp:
+            for xmlline in xmldata:
+                fp.write(xmlline)
 
         # parse the xml that was create and put it into a dom, so it can be modified
         dom1 = parse(xmlfile)
@@ -904,7 +917,7 @@ class BeakerXML():
 
         # If there were no tasks added delete the one placeholder task, which
         # was added because one task must be passed to simple workflow
-        if(self.removetask):
+        if self._remove_task:
             recipe_parent = dom1.getElementsByTagName('recipe')[0]
             tasklength = dom1.getElementsByTagName('task').length
             delete_index = tasklength - 1
@@ -952,78 +965,35 @@ class BeakerXML():
 
                 dre_parent.appendChild(dre)
 
-        for index, val in enumerate(self.tasklist):
-            paramlist = self.paramlist[index]
+        # Reserve if it fails
+        te = dom1.createElement('task')
+        te.attributes['name'] = "/distribution/reservesys"
+        te.attributes['role'] = "STANDALONE"
 
-            te = dom1.createElement('task')
-            te.attributes['name'] = val
-            te.attributes['role'] = "STANDALONE"
+        tpe = dom1.createElement('params')
 
-            tpe = dom1.createElement('params')
+        tpce = dom1.createElement('param')
+        # tpce.attributes['name'] = "RESERVE_IF_FAIL"
+        # tpce.attributes['value'] = "true"
 
-            te_parent = dom1.getElementsByTagName("recipe")[0]
+        tpce2 = dom1.createElement('param')
+        tpce2.attributes['name'] = "RESERVETIME"
+        tpce2.attributes['value'] = str(self.reservetime)
 
-            # Add the task to the xml
-            te_parent.appendChild(te)
-            te.appendChild(tpe)
+        te_parent = dom1.getElementsByTagName("recipe")[0]
 
-            keyindex = 0
-            for key in paramlist:
-                tpce = dom1.createElement('param')
-                tpce.attributes['name'] = key
-
-                tpce.attributes['value'] = paramlist[key]
-                keyindex = keyindex + 1
-                tpe.appendChild(tpce)
-
-        if self.reservetime_always != "":
-            te = dom1.createElement('task')
-            te.attributes['name'] = "/distribution/reservesys"
-            te.attributes['role'] = "STANDALONE"
-
-            tpe = dom1.createElement('params')
-
-            tpce = dom1.createElement('param')
-            tpce.attributes['name'] = "RESERVETIME"
-            tpce.attributes['value'] = str(self.reservetime_always)
-
-            te_parent = dom1.getElementsByTagName("recipe")[0]
-
-            # Add reservetime to the xml
-            te_parent.appendChild(te)
-            te.appendChild(tpe)
-            tpe.appendChild(tpce)
-        else:
-            # Reserve if it fails
-            te = dom1.createElement('task')
-            te.attributes['name'] = "/distribution/reservesys"
-            te.attributes['role'] = "STANDALONE"
-
-            tpe = dom1.createElement('params')
-
-            tpce = dom1.createElement('param')
-            # tpce.attributes['name'] = "RESERVE_IF_FAIL"
-            # tpce.attributes['value'] = "true"
-
-            tpce2 = dom1.createElement('param')
-            tpce2.attributes['name'] = "RESERVETIME"
-            tpce2.attributes['value'] = str(self.reservetime)
-
-            te_parent = dom1.getElementsByTagName("recipe")[0]
-
-            # Add reservetime to the xml
-            te_parent.appendChild(te)
-            te.appendChild(tpe)
-            tpe.appendChild(tpce)
-            tpe.appendChild(tpce2)
+        # Add reservetime to the xml
+        te_parent.appendChild(te)
+        te.appendChild(tpe)
+        tpe.appendChild(tpce)
+        tpe.appendChild(tpce2)
 
         # set the completed DOM and return 0 for a successfull creation of the Beaker XML
         self.xmldom = dom1
 
         # Output updated file
-        file = open(xmlfile, "wb")
-        self.xmldom.writexml(file)
-        file.close()
+        with open(xmlfile, "wb") as fp:
+            self.xmldom.writexml(fp)
 
     @property
     def kernel_post_options(self):
@@ -1103,28 +1073,6 @@ class BeakerXML():
         self._ignore_panic = ipbool
 
     @property
-    def kdump(self):
-        """Return the k dump on setting."""
-        return self._kdumpon
-
-    @kdump.setter
-    def kdump(self, kbool):
-        """Set k dump on.
-        :param kbool: k dump on setting (bool)"""
-        self._kdumpon = kbool
-
-    @property
-    def ndump(self):
-        """Return the n dump on setting."""
-        return self._ndumpon
-
-    @ndump.setter
-    def ndump(self, nbool):
-        """Set n dump on.
-        :param nbool: n dump on setting (bool)"""
-        self._ndumpon = nbool
-
-    @property
     def retention_tag(self):
         """Return the retention tag."""
         return self._retention_tag
@@ -1180,17 +1128,6 @@ class BeakerXML():
         self._distro = distro
 
     @property
-    def product(self):
-        """Return the product."""
-        return self._product
-
-    @product.setter
-    def product(self, product):
-        """Set the product.
-        :param product: Product to set"""
-        self._product = product
-
-    @property
     def method(self):
         """Return the method."""
         return self._method
@@ -1225,7 +1162,7 @@ class BeakerXML():
 
     def get_xmldom_pretty(self):
         """Return the xmldom in pretty print format."""
-        return self.xmldom.toprettyxml()
+        return self._xmldom.toprettyxml()
 
     @property
     def whiteboard(self):
@@ -1239,17 +1176,6 @@ class BeakerXML():
         self._whiteboard = whiteboard
 
     @property
-    def packages(self):
-        """Return the packages."""
-        return self._packages
-
-    @packages.setter
-    def packages(self, packages):
-        """Set packages to install for job.
-        :param packages: List of packages to install"""
-        self._packages = packages
-
-    @property
     def runid(self):
         """Return the runid of job ."""
         return self._runid
@@ -1259,17 +1185,6 @@ class BeakerXML():
         """Set runid.
         :param runid: runid of job"""
         self._runid = runid
-
-    @property
-    def tasks(self):
-        """Return the tasks."""
-        return self._tasks
-
-    @tasks.setter
-    def tasks(self, tasks):
-        """Set tasks of job.
-        :param tasks: List of tasks"""
-        self._tasks = tasks
 
     @property
     def paramlist(self):
@@ -1341,17 +1256,6 @@ class BeakerXML():
         self._distro_requires_options = dr_values
 
     @property
-    def cclist(self):
-        """Return the cc list."""
-        return self._cclist
-
-    @cclist.setter
-    def cclist(self, email):
-        """Set cc list for job.
-        :param email: List of emails to cc"""
-        self._cclist.append(email)
-
-    @property
     def hrname(self):
         """Return the host requires names."""
         return self._hrname
@@ -1360,7 +1264,7 @@ class BeakerXML():
     def hrname(self, hr_name):
         """Raises an exception when trying to set the host requires name
         directly. Must use sethostrequires.
-        :param value: The host requires name.
+        :param hr_name: The host requires name.
         """
         raise AttributeError('You cannot set Hostrequires name directly. '
                              'Use sethostrequires().')
@@ -1374,7 +1278,7 @@ class BeakerXML():
     def hrop(self, hr_op):
         """Raises an exception when trying to set the host requires op
         directly. Must use sethostrequires.
-        :param value: The host requires operation.
+        :param hr_op: The host requires operation.
         """
         raise AttributeError('You cannot set Hostrequires operation directly. '
                              'Use sethostrequires().')
@@ -1388,7 +1292,7 @@ class BeakerXML():
     def hrvalue(self, hr_value):
         """Raises an exception when trying to set the host requires value
         directly. Must use sethostrequires.
-        :param value: The host requires value.
+        :param hr_value: The host requires value.
         """
         raise AttributeError('You cannot set Hostrequires value directly. '
                              'Use sethostrequires().')
@@ -1402,7 +1306,7 @@ class BeakerXML():
     def drname(self, dr_name):
         """Raises an exception when trying to set the Distro requires name
         directly. Must use setdistrorequires.
-        :param value: The disto requires name.
+        :param dr_name: The disto requires name.
         """
         raise AttributeError('You cannot set Distrorequires name directly. '
                              'Use setdistrorequires().')
@@ -1416,7 +1320,7 @@ class BeakerXML():
     def drop(self, dr_op):
         """Raises an exception when trying to set the distro requires op
         directly. Must use setdistrorequires.
-        :param value: The distro requires operation.
+        :param dr_op: The distro requires operation.
         """
         raise AttributeError('You cannot set Distrorequires operation directly. '
                              'Use setdistrorequires().')
@@ -1430,21 +1334,10 @@ class BeakerXML():
     def drvalue(self, dr_value):
         """Raises an exception when trying to set the distro requires value
         directly. Must use setdistrorequires.
-        :param value: The distro requires value.
+        :param dr_value: The distro requires value.
         """
         raise AttributeError('You cannot set Distroequires value directly. '
                              'Use setdistrorequires().')
-
-    @property
-    def repolist(self):
-        """Return the repos list."""
-        return self._repolist
-
-    @repolist.setter
-    def repolist(self, repo):
-        """Set the repos for the resource.
-        :param repo: repo to add to list"""
-        self._repolist.append(repo)
 
     @property
     def cmd(self):
@@ -1456,17 +1349,6 @@ class BeakerXML():
         """Set bkr cmd to run to create xml.
         :param cmd: bkr xml creation cmd"""
         self._cmd = cmd
-
-    @property
-    def bkr_random(self):
-        """Return the random setting of job."""
-        return self._random
-
-    @bkr_random.setter
-    def bkr_random(self, rbool):
-        """Set random setting of job.
-        :param rbool: random setting (bool)"""
-        self._random = rbool
 
     @property
     def virtual_machine(self):
@@ -1512,30 +1394,7 @@ class BeakerXML():
         :param reservetime: time to reserve resource for (seconds)"""
         self._reservetime = reservetime
 
-    @property
-    def reservetime_always(self):
-        """Return the reserve time always setting."""
-        return self._reservetime_always
-
-    @reservetime_always.setter
-    def reservetime_always(self, reservetime_always):
-        """Set reserve time always.
-        :param reservetime_always: time setting"""
-        self._reservetime_always = reservetime_always
-
-    def isRandom(self):
-        """Returns if random"""
-        return self._random
-
-    def isVirtEnable(self):
-        """Returns if virtual machine"""
-        return self._virtmachine
-
-    def isVirtCapable(self):
-        """Returns if virtual capable"""
-        return self._virtcapable
-
-    def getXMLtext(self):
+    def get_xml_text(self):
         """Returns pretty print format of xml"""
         return self.xmldom.toprettyxml()
 
@@ -1570,46 +1429,3 @@ class BeakerXML():
     def settaskparam(self, task, paramdict):
         self.tasklist.append(task)
         self.paramlist.append(paramdict)
-
-    def set(self, param, value):
-        """Set parameters value.
-        :param param: Parameter to set
-        :value value: Value of parameter
-        :returns: 0 on success 1 if failed"""
-        if param == "variant":
-            self.variant = value
-        elif param == "priority":
-            self.priority = value
-        elif param == "family":
-            self.family = value
-        elif param == "retentiontag":
-            self.retention_tag = value
-        elif param == "whiteboard":
-            self.whiteboard = value
-        elif param == "packages":
-            self.packages = value
-        elif param == "tasks":
-            self.tasks = value
-        elif param == "tag":
-            self.tag = value
-        elif param == "distro":
-            self.distro = value
-        elif param == "arch":
-            self.arch = value
-        elif param == "reservetime":
-            self.reservetime = value
-        elif param == "method":
-            self.method = value
-        elif param == "component":
-            self.component = value
-        elif param == "product":
-            self.product = value
-        elif param == "kernel_options":
-            self.kernel_options = value
-        elif param == "kernel_post_options":
-            self.kernel_post_options = value
-        elif param == "cclist":
-            self.cclist = value
-        else:
-            return(1)
-        return(0)

@@ -21,10 +21,11 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 from copy import deepcopy
-from distutils import dir_util
 from unittest import TestCase
+
+import os
+from distutils import dir_util
 
 try:
     from test.test_support import EnvironmentVarGuard

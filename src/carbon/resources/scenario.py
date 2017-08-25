@@ -23,22 +23,24 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 import errno
 
+import os
+import yaml
 from pykwalify.core import Core
 from pykwalify.errors import CoreError, SchemaError
+
+from .actions import Action
+from .executes import Execute
+from .host import Host
+from .reports import Report
 from ..constants import SCENARIO_SCHEMA
-from ..core import CarbonResource, CarbonResourceException
+from ..core import CarbonResource, CarbonResourceError
 from ..helpers import gen_random_str
 from ..tasks import ValidateTask
-from .actions import Action
-from .host import Host
-from .executes import Execute
-from .reports import Report
 
 
-class ScenarioException(CarbonResourceException):
+class ScenarioError(CarbonResourceError):
     """Scenario's base exception class."""
 
     def __init__(self, message):
@@ -46,7 +48,7 @@ class ScenarioException(CarbonResourceException):
 
         :param message: Details about the error.
         """
-        super(ScenarioException, self).__init__(message)
+        super(ScenarioError, self).__init__(message)
 
 
 class Scenario(CarbonResource):
@@ -56,7 +58,6 @@ class Scenario(CarbonResource):
     _fields = [
         'name',         # the name of the scenario
         'description',  # a brief description of what the scenario is
-        'filename',  # location of the file that is the scenario
     ]
 
     def __init__(self,
@@ -77,6 +78,7 @@ class Scenario(CarbonResource):
         self._actions = list()
         self._executes = list()
         self._reports = list()
+        self._yaml_data = None
         self._validate_task_cls = validate_task_cls
 
         self.reload_tasks()
@@ -93,13 +95,18 @@ class Scenario(CarbonResource):
                 os.makedirs(self._data_folder)
         except OSError as ex:
             if ex.errno == errno.EACCES:
-                raise ScenarioException('You do not have permission to create'
-                                        ' the workspace.')
+                raise ScenarioError('You do not have permission to create'
+                                    ' the workspace.')
             else:
-                raise ScenarioException('Error creating scenario workspace: '
-                                        '%s' % ex.message)
+                raise ScenarioError('Error creating scenario workspace: '
+                                    '%s' % ex.message)
 
     def add_resource(self, item):
+        """Add a scenario resource to its corresponding list.
+
+        :param item: Resource.
+        :type item: object
+        """
         if isinstance(item, Host):
             self._hosts.append(item)
         elif isinstance(item, Action):
@@ -111,6 +118,45 @@ class Scenario(CarbonResource):
         else:
             raise ValueError('Resource must be of a valid Resource type.'
                              'Check the type of the given item: %s' % item)
+
+    def initialize_resource(self, item):
+        """Initialize resource list.
+
+        The primary purpose for this method is to wipe out an entire resource
+        list if the resource passed in is a match. This is needed after
+        blaster run is finished to update the scenarios resources objects.
+        The reason to update them is because blaster uses multiprocessing which
+        spawns new processes which may alter a scenario resource object given
+        to it. Carbon then has no corelation with that updated resource object.
+        Which is why we need to refresh the scenario resources after run time.
+
+        :param item: Resource.
+        :type item: object
+        """
+        if isinstance(item, Host):
+            self._hosts = list()
+        elif isinstance(item, Action):
+            self._actions = list()
+        elif isinstance(item, Execute):
+            self._executes = list()
+        elif isinstance(item, Report):
+            self._reports = list()
+        else:
+            raise ValueError('Resource must be of a valid Resource type.'
+                             'Check the type of the given item: %s' % item)
+
+    def reload_resources(self, tasks):
+        """Reload scenario resources."""
+        count = 0
+
+        for task in tasks:
+            for key, value in task.items():
+                if isinstance(value, Host) and count <= 0:
+                    self.initialize_resource(value)
+                    self.add_resource(value)
+                    count += 1
+                elif isinstance(value, Host) and count >= 1:
+                    self.add_resource(value)
 
     @property
     def data_folder(self):
@@ -128,6 +174,14 @@ class Scenario(CarbonResource):
     def hosts(self, value):
         raise ValueError('You can not set hosts directly.'
                          'Use function ~Scenario.add_hosts')
+
+    @property
+    def yaml_data(self):
+        return self._yaml_data
+
+    @yaml_data.setter
+    def yaml_data(self, value):
+        self._yaml_data = value
 
     def add_hosts(self, h):
         if not isinstance(h, Host):
@@ -198,21 +252,21 @@ class Scenario(CarbonResource):
 
     def yaml_validate(self):
         """Validate the carbon scenario yaml file."""
-        self.logger.info('Validating the scenario yaml file %s', self.filename)
+        self.logger.debug('Validating the scenario yaml data')
 
         try:
-            c = Core(source_file=self.filename,
+            c = Core(source_data=yaml.load(self._yaml_data),
                      schema_files=[SCENARIO_SCHEMA])
             c.validate(raise_exception=True)
 
-            self.logger.info(
+            self.logger.debug(
                 'Successfully validated scenario yaml based on schema.'
             )
         except (CoreError, SchemaError) as ex:
             self.logger.error(
                 'Unsuccessfully validated scenario yaml based on schema.'
             )
-            raise ScenarioException(ex.msg)
+            raise ScenarioError(ex.msg)
 
     def profile(self):
         """
@@ -248,7 +302,9 @@ class Scenario(CarbonResource):
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,
+            'name': str(self.name),
             'resource': self,
+            'methods': self._req_tasks_methods
         }
 
         return task

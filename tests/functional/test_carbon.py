@@ -21,19 +21,21 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 from unittest import TestCase
+
+import os
 
 try:
     from test.test_support import EnvironmentVarGuard
 except ImportError:
     from test.support import EnvironmentVarGuard
 
-from nose.tools import assert_equal, assert_is_instance, raises, assert_true
+from nose.tools import assert_equal, assert_is_instance, raises, assert_true,\
+    nottest
 
 from carbon import Carbon
 from carbon.constants import STATUS_FILE, RESULTS_FILE
-from carbon.resources.host import CarbonHostException
+from carbon.resources.host import CarbonHostError
 
 
 class TestCarbon(TestCase):
@@ -64,15 +66,18 @@ class TestCarbon(TestCase):
         the carbon object.
         """
         obj = Carbon(__name__)
-        obj.load_from_yaml('assets/scenario.yaml')
+        # apply templating before loading the data
+        scenario_data = open("assets/scenario.yaml")
+        obj.load_from_yaml(scenario_data)
 
     def test_load_scenario_with_host_name_set_wrongly(self):
         """Test carbons function to load a scenario descriptor (yaml) file into
         the carbon object.
         """
         obj = Carbon(__name__)
-        with self.assertRaises(CarbonHostException) as cm:
-            obj.load_from_yaml('assets/invalid_scenario_provider_name_error.yaml')
+        with self.assertRaises(CarbonHostError) as cm:
+            scenario_data = open("assets/invalid_scenario_provider_name_error.yaml")
+            obj.load_from_yaml(scenario_data)
         raised_exception = cm.exception
         self.assertEqual(raised_exception.message,
                          ('The os_name parameter for machine1 should not be set'
@@ -83,7 +88,8 @@ class TestCarbon(TestCase):
         a missing required section. An exception will be raised.
         """
         obj = Carbon(__name__)
-        obj.load_from_yaml('assets/invalid_scenario.yaml')
+        scenario_data = open("assets/invalid_scenario.yaml")
+        obj.load_from_yaml(scenario_data)
 
     @staticmethod
     def test_set_carbon_log_type():
@@ -96,12 +102,6 @@ class TestCarbon(TestCase):
         """Test creating a carbon object with declaring the log level."""
         cbn = Carbon(__name__, log_level='debug')
         assert_equal(cbn.log_level, 'debug')
-
-    @staticmethod
-    def test_set_carbon_cleanup_level():
-        """Test creating a carbon object with declaring the cleanup level."""
-        cbn = Carbon(__name__, cleanup='always')
-        assert_equal(cbn.cleanup, 'always')
 
     @staticmethod
     def test_set_carbon_data_folder():
@@ -177,11 +177,10 @@ class TestResultsMixin(TestCase):
         os.remove(status_file)
 
     @staticmethod
+    @nottest
     def test_update_results():
         """Test method to update results for carbon scenario."""
         cbn = Carbon(__name__)
-        task1 = dict(resource=cbn.scenario)
-        task2 = dict(host=cbn.scenario)
-        context = dict(_taskrunner=dict())
-        cbn.update_results('provision', task1, 0, context)
-        cbn.update_results('provision', task2, 0, context)
+        # TODO: Update for support of blaster
+        cbn.update_results('provision', 0, dict)
+        cbn.update_results('provision', 0, dict)

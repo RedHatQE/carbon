@@ -34,13 +34,16 @@ from novaclient.client import Client as Nova_client
 from novaclient.exceptions import ClientException, NotFound, OverLimit
 
 from .._compat import string_types
-from ..core import CarbonProvisioner, CarbonProvisionerException
+from ..core import CarbonProvisioner, CarbonProvisionerError
+from ..signals import (
+    prov_openstack_initiated, prov_openstack_bootnode_started,
+    prov_openstack_bootnode_finished, prov_openstack_overlimit)
 
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
 
 
-class OpenstackProvisionerException(CarbonProvisionerException):
+class OpenstackProvisionerError(CarbonProvisionerError):
     """Base class for openstack provisioner exceptions."""
 
     def __init__(self, message):
@@ -49,7 +52,7 @@ class OpenstackProvisionerException(CarbonProvisionerException):
         :param message: Details about the error.
         """
         self.message = message
-        super(OpenstackProvisionerException, self).__init__(message)
+        super(OpenstackProvisionerError, self).__init__(message)
 
 
 class OpenstackProvisioner(CarbonProvisioner):
@@ -72,6 +75,7 @@ class OpenstackProvisioner(CarbonProvisioner):
         self._neutron = None
         self._glance = None
         self._session = None
+        prov_openstack_initiated.send(self)
 
     @property
     def key_session(self):
@@ -187,7 +191,7 @@ class OpenstackProvisioner(CarbonProvisioner):
         self.logger.debug('%s - START', label)
         while not condition(obj):
             if (datetime.datetime.now() - start) > timeout:
-                raise OpenstackProvisionerException(label)
+                raise OpenstackProvisionerError(label)
             time.sleep(wait_sec)
             obj = obj_getter()
         self.logger.debug('%s - DONE', label)
@@ -223,7 +227,7 @@ class OpenstackProvisioner(CarbonProvisioner):
         node = self._wait_till_node_not_deleting(node)
 
         if node is not None:
-            raise OpenstackProvisionerException(
+            raise OpenstackProvisionerError(
                 'Unable to delete node %s' % node.name
             )
         return node
@@ -237,7 +241,7 @@ class OpenstackProvisioner(CarbonProvisioner):
         node = self._wait_till_node_not_building(node)
 
         if node is None:
-            raise OpenstackProvisionerException(
+            raise OpenstackProvisionerError(
                 'Node %s did not become active!' % node.name
             )
         elif node.status != 'ACTIVE' and node.status != 'ERROR':
@@ -254,7 +258,7 @@ class OpenstackProvisioner(CarbonProvisioner):
             ('Waiting for %s to finish building..' % node.name),
             lambda node: node.status != 'BUILD',
             lambda: self.get_node_by_id(node.id),
-            timeout_sec=120
+            timeout_sec=300
         )
 
     def _wait_till_node_not_deleting(self, node):
@@ -322,7 +326,7 @@ class OpenstackProvisioner(CarbonProvisioner):
                 time.sleep(wait_time)
                 attempt += 1
         else:
-            raise OpenstackProvisionerException(
+            raise OpenstackProvisionerError(
                 'Maximum attempts reached to associate a floating ip to node '
                 '%s!' % node.name
             )
@@ -377,7 +381,7 @@ class OpenstackProvisioner(CarbonProvisioner):
                 time.sleep(wait_time)
                 attempt += 1
         else:
-            raise OpenstackProvisionerException(
+            raise OpenstackProvisionerError(
                 'Maximum attempts reached to disassociate a floating ip from '
                 'node %s!' % node.name
             )
@@ -398,13 +402,14 @@ class OpenstackProvisioner(CarbonProvisioner):
         :returns: Node object"""
         attempt = 1
 
-        self.logger.info('Booting node %s' % name)
+        self.logger.debug('Booting node %s' % name)
         self.logger.debug('Node details:\n'
                           '* keypair=%s\n'
                           '* image=%s\n'
                           '* flavor=%s\n'
                           '* nics=%s' % (keypair, image, flavor, nics))
 
+        prov_openstack_bootnode_started.send(self)
         while attempt <= max_attempts:
             try:
                 node = self.nova.servers.create(
@@ -414,9 +419,11 @@ class OpenstackProvisioner(CarbonProvisioner):
                     flavor=flavor,
                     nics=nics
                 )
-                self.logger.info('Successfully booted node %s' % name)
+                self.logger.debug('Successfully booted node %s' % name)
+                prov_openstack_bootnode_finished.send(self)
                 return node
             except OverLimit:
+                prov_openstack_overlimit.send(self)
                 self.logger.warn('Quota is not available to create %s',
                                  name)
                 wait_time = random.randint(10, MAX_WAIT_TIME)
@@ -425,7 +432,7 @@ class OpenstackProvisioner(CarbonProvisioner):
                 time.sleep(wait_time)
                 attempt += 1
         else:
-            raise OpenstackProvisionerException(
+            raise OpenstackProvisionerError(
                 'Maximum attempts reached to boot node %s' % name
             )
 
@@ -452,7 +459,7 @@ class OpenstackProvisioner(CarbonProvisioner):
 
                 self.logger.info('Successfully deleted node %s' % node.name)
                 break
-            except (ClientException, OpenstackProvisionerException):
+            except (ClientException, OpenstackProvisionerError):
                 self.logger.info('Failed to delete node %s' % node.name)
                 wait_time = random.randint(10, MAX_WAIT_TIME)
                 self.logger.info('Attempt %s of %s: retrying in %s seconds.',
@@ -460,11 +467,11 @@ class OpenstackProvisioner(CarbonProvisioner):
                 time.sleep(wait_time)
                 attempt += 1
         else:
-            raise OpenstackProvisionerException(
+            raise OpenstackProvisionerError(
                 'Maximum attempts reached to delete node %s' % node.name
             )
 
-    def create(self):
+    def _create(self):
         """Create nodes in openstack. This consists of the following:
             1. Create node.
             2. Assign floating ip to node.
@@ -486,7 +493,7 @@ class OpenstackProvisioner(CarbonProvisioner):
                 keypair=self.host.os_keypair
             )
         except Exception as ex:
-            raise OpenstackProvisionerException(
+            raise OpenstackProvisionerError(
                 'Unable to create node %s. Traceback: %s' %
                 (self.host.os_name, ex)
             )
@@ -494,24 +501,24 @@ class OpenstackProvisioner(CarbonProvisioner):
         try:
             # Wait for node to be active
             self.wait_for_active_state(node)
-        except OpenstackProvisionerException as ex:
+        except OpenstackProvisionerError as ex:
             self.logger.error('%s Deleting node %s.', ex.message, node.name)
 
             # Delete node
             self.delete_node(node)
 
-            raise OpenstackProvisionerException(ex.message)
+            raise OpenstackProvisionerError(ex.message)
 
         try:
             # Associate floating ip to node
             float_ips = self.associate_floating_ip(node)
-        except OpenstackProvisionerException as ex:
+        except OpenstackProvisionerError as ex:
             self.logger.error('%s Deleting node %s.', ex.message, node.name)
 
             # Delete node
             self.delete_node(node)
 
-            raise OpenstackProvisionerException(ex.message)
+            raise OpenstackProvisionerError(ex.message)
 
         # Update host object with node name and node id
         self.host.os_name = str(node.name)
@@ -525,7 +532,7 @@ class OpenstackProvisioner(CarbonProvisioner):
 
         self.logger.info('Successfully created node %s' % self.host.os_name)
 
-    def delete(self):
+    def _delete(self):
         """Delete nodes in openstack. This consists of the following:
             1. Check if node to be deleted actually exists.
             2. Delete floating ip from node.
@@ -541,7 +548,7 @@ class OpenstackProvisioner(CarbonProvisioner):
                                  'deletion.' % self.host.os_name)
                 return
         except ClientException as ex:
-            raise OpenstackProvisionerException(
+            raise OpenstackProvisionerError(
                 'Unable to get node object for %s. Traceback: %s' %
                 (self.host.os_name, ex)
             )

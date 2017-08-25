@@ -25,11 +25,12 @@
 """
 import ast
 import json
-import os
 import shutil
-import yaml
 
+import os
+import yaml
 from distutils import dir_util
+
 # from linchpin.cli.context import LinchpinContext
 # from linchpin.api import LinchpinAPI
 from ..constants import CARBON_ROOT

@@ -16,43 +16,33 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.scenario
+    carbon
 
     Here you add brief description of what this module is about
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
-import sys
-import shutil
 import errno
-import collections
+import shutil
+import sys
 import tempfile
 from threading import Lock
 
+import blaster
+import os
 import yaml
-import taskrunner
+from flask.config import Config, ConfigAttribute
+from flask.helpers import locked_cached_property, get_root_path
 
 from . import __name__ as __carbon_name__
-from .config import Config, ConfigAttribute
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
-from .core import CarbonException, LoggerMixin
-from .helpers import LockedCachedProperty, get_root_path, file_mgmt, gen_random_str
+from .core import CarbonError, LoggerMixin, PipelineBuilder
+from .helpers import file_mgmt, gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
-from .tasks import ValidateTask, ProvisionTask
-from .tasks import OrchestrateTask, ExecuteTask
-from .tasks import ReportTask, CleanupTask
-
 
 # a lock used for logger initialization
 _logger_lock = Lock()
-
-# A pipeline is a tuple with a name, type and a list of tasks.
-# The Carbon object will have a list of pipelines that holds
-# all types of pipelines and a list of tasks associated with the
-# type of the pipeline.
-Pipeline = collections.namedtuple('Pipeline', ('name', 'type', 'tasks'))
 
 
 class ResultsMixin(object):
@@ -78,13 +68,12 @@ class ResultsMixin(object):
         """Raise exception when setting scenario results directly."""
         raise ValueError('You cannot set scenario results directly.')
 
-    def update_results(self, task_name, task, status, context):
+    def update_results(self, task_name, status, blaster_data):
         """Update scenario results.
 
         :param task_name: Name of executed task.
-        :param task: Task configuration.
         :param status: Status of executed task.
-        :param context: Context shared by taskrunner.
+        :param blaster_data: Data returned by blaster.
         """
         self._results['last_executed'] = task_name
         self._results['last_executed_status'] = status
@@ -94,19 +83,20 @@ class ResultsMixin(object):
 
         self._task_results[task_name]['status'] = status
 
-        try:
-            _res = task['resource']
-        except KeyError:
-            _res = task['host']
+        for item in blaster_data:
+            try:
+                _res = item['resource']
+            except KeyError:
+                _res = item['host']
 
-        self._task_results[task_name]['resources'].append(
-            {
-                _res.__class__.__name__.lower(): {
-                    'name': _res.name,
-                    'taskrunner': context['_taskrunner']
+            self._task_results[task_name]['resources'].append(
+                {
+                    _res.__class__.__name__.lower(): {
+                        'name': _res.name,
+                        'methods_executed': item['methods']
+                    }
                 }
-            }
-        )
+            )
 
         self._results['executed_tasks'] = self._task_results
 
@@ -205,33 +195,11 @@ class Carbon(LoggerMixin, ResultsMixin):
     # sign messages and other things.
     secret_key = ConfigAttribute('SECRET_KEY')
 
-    # The cleanup flag. Set this to your cleanup behavior you wish to have with
-    # taskrunner.
-    #
-    # This attribute can also be configured by carbon run --cleanup always or
-    # from the config with the ``CLEANUP`` configuration key.
-    cleanup = ConfigAttribute('CLEANUP')
-
     # set a workspace folder, for where files will be updated
     data_folder = ConfigAttribute('DATA_FOLDER')
 
     # set the log type
     logger_type = ConfigAttribute('LOGGER_TYPE')
-
-    # The pipeline of pipelines. All pipelines in the lists starts an
-    # empty tasks list and tasks will be added later when the
-    # :function:`~carbon.Carbon.run` is executed. The framework will run
-    # through each resource object within the scenario and look for
-    # variables that start with `_task_`. If found, it will verify what
-    # type of task it is and add into its respective task_list.
-    _pipelines = [
-        Pipeline(TASKLIST[0], ValidateTask, list()),
-        Pipeline(TASKLIST[1], ProvisionTask, list()),
-        Pipeline(TASKLIST[2], OrchestrateTask, list()),
-        Pipeline(TASKLIST[3], ExecuteTask, list()),
-        Pipeline(TASKLIST[4], ReportTask, list()),
-        Pipeline(TASKLIST[5], CleanupTask, list()),
-    ]
 
     # Default configuration parameters.
     default_config = {
@@ -241,13 +209,11 @@ class Carbon(LoggerMixin, ResultsMixin):
         'LOGGER_TYPE': 'file',
         'LOGGER_NAME': __carbon_name__,
         'LOG_LEVEL': 'info',
-        'SECRET_KEY': 'secret-key',
-        'CLEANUP': 'always'
+        'SECRET_KEY': 'secret-key'
     }
 
     def __init__(self, import_name, root_path=None, log_level=None,
-                 cleanup=None, data_folder=None, log_type=None,
-                 assets_path=None):
+                 data_folder=None, log_type=None, assets_path=None):
 
         # The name of the package or module.  Do not change this once
         # it was set by the constructor.
@@ -270,9 +236,6 @@ class Carbon(LoggerMixin, ResultsMixin):
         if log_level:
             self.log_level = log_level
 
-        if cleanup:
-            self.cleanup = cleanup
-
         # Load/process carbon configuration settings in the following order:
         #    /etc/carbon/carbon.cfg
         #    ./carbon.cfg (location where carbon is run)
@@ -293,15 +256,15 @@ class Carbon(LoggerMixin, ResultsMixin):
             os.makedirs(self.config['DATA_FOLDER'])
         except IOError as ex:
             if ex.errno == errno.EACCES:
-                raise CarbonException("You don't have permission to create '"
-                                      "the data folder.")
+                raise CarbonError("You don't have permission to create '"
+                                  "the data folder.")
             else:
-                raise CarbonException('Error creating data folder - '
-                                      '%s'.format(ex.message))
+                raise CarbonError('Error creating data folder - '
+                                  '%s'.format(ex.message))
 
         # Setup logging handlers
         self.create_carbon_logger(self.config)
-        self.create_custom_logger(self.config, "taskrunner")
+        self.create_custom_logger(self.config, 'blaster')
         # commented out pykwalify as it logged too much
         # self.create_custom_logger(self.config, "pykwalify.core")
 
@@ -318,7 +281,7 @@ class Carbon(LoggerMixin, ResultsMixin):
 
         self.scenario = Scenario(config=self.config)
 
-    @LockedCachedProperty
+    @locked_cached_property
     def name(self):
         """The name of the application.  This is usually the import name
         with the difference that it's guessed from the run file if the
@@ -333,19 +296,19 @@ class Carbon(LoggerMixin, ResultsMixin):
             return os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
 
-    @LockedCachedProperty
+    @locked_cached_property
     def uid(self):
         return self._uid
 
-    @LockedCachedProperty
+    @locked_cached_property
     def data_folder(self):
         return self.config['DATA_FOLDER']
 
-    @LockedCachedProperty
+    @locked_cached_property
     def status_file(self):
         return os.path.join(self.data_folder, STATUS_FILE)
 
-    @LockedCachedProperty
+    @locked_cached_property
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
 
@@ -358,7 +321,7 @@ class Carbon(LoggerMixin, ResultsMixin):
         root_path = self.root_path
         return self.config_class(root_path, self.default_config)
 
-    def load_from_yaml(self, filepath):
+    def load_from_yaml(self, filedata):
         """
         Given the YAML filename with the scenario description, this
         function will load all resources described in the file with
@@ -375,10 +338,12 @@ class Carbon(LoggerMixin, ResultsMixin):
         then be be loaded in each respective lists within the
         ~self.scenario object.
 
-        :param filepath: the full path for the YAML file descriptor
+        :param filedata: the full data object for the YAML file descriptor
         :return:
         """
-        data = dict(yaml.safe_load(open(filepath, 'r')))
+
+        self.scenario.yaml_data = filedata
+        data = dict(yaml.safe_load(filedata))
 
         try:
             cred_items = data.pop('credentials', None)
@@ -387,9 +352,8 @@ class Carbon(LoggerMixin, ResultsMixin):
             exe_items = data.pop('execute', None)
             rpt_items = data.pop('report', None)
         except KeyError as ex:
-            raise CarbonException(ex)
+            raise CarbonError(ex)
 
-        data["filename"] = filepath
         self.scenario.load(data)
 
         # setting up credentials
@@ -400,7 +364,7 @@ class Carbon(LoggerMixin, ResultsMixin):
             for item in cred_items:
                 self.scenario.add_credentials(item)
         if not self.scenario.credentials:
-            raise CarbonException("Credentials are not being set!!")
+            raise CarbonError("Credentials are not being set!!")
 
         self._load_resources(Host, pro_items)
         self._load_resources(Action, orc_items)
@@ -432,7 +396,8 @@ class Carbon(LoggerMixin, ResultsMixin):
         resource with Host(parameter=item) and load it within the list
         ~self.hosts.
 
-        :param res_type: The type of resources the function will load into its list
+        :param res_type: The type of resources the function will load into its
+            list
         :param res_list: A list of resources dict
         :return: None
         """
@@ -448,18 +413,6 @@ class Carbon(LoggerMixin, ResultsMixin):
                 res_type(config=self.config,
                          parameters=item))
 
-    def _add_task_into_pipeline(self, t):
-        """
-        Given a task object, it will find in which pipeline within
-        ~self.pipelines it belongs to and add it into its respective
-        queue of tasks.
-
-        :param t: a task object instance from one of the carbon.tasks package
-        """
-        for pipeline in self._pipelines:
-            if pipeline.type.__name__ == t['task'].__name__:
-                pipeline.tasks.append(t)
-
     def _copy_assets(self):
         """
         Copy the assets from the `self.assets_path` to the assets
@@ -474,7 +427,8 @@ class Carbon(LoggerMixin, ResultsMixin):
             if ex.errno == errno.EEXIST:
                 pass
             else:
-                raise CarbonException('Error creating assets folder - %s' % ex.message)
+                raise CarbonError('Error creating assets folder - %s' %
+                                  ex.message)
 
         for asset in self.scenario.get_assets_list():
             src_file = os.path.join(self.assets_path, asset)
@@ -503,75 +457,85 @@ class Carbon(LoggerMixin, ResultsMixin):
         of them has a task to be loaded in the pipelines.
 
         Once a task is found, it is loaded within its respective
-        pipeline and then each pipeline is sent to taskrunner execution.
+        pipeline and then each pipeline is sent to blaster blastoff.
         For every pipeline within ~self.pipelines,
         """
         self.tasks = tasklist
 
         # check if scenario was set
         if self.scenario is None:
-            raise CarbonException(
+            raise CarbonError(
                 'You must set a scenario before running the framework!'
             )
 
-        # get the list of resources for each main section, including
-        # the ~self.scenario object itself.
-        # adding in scenario taks first so scenario validation occurs first
-        for scenario_task in self.scenario.get_tasks():
-            self._add_task_into_pipeline(scenario_task)
-
-        for host in self.scenario.hosts:
-            for host_task in host.get_tasks():
-                self._add_task_into_pipeline(host_task)
-
-        for action in self.scenario.actions:
-            for action_task in action.get_tasks():
-                self._add_task_into_pipeline(action_task)
-
-        for execute in self.scenario.executes:
-            for execute_task in execute.get_tasks():
-                self._add_task_into_pipeline(execute_task)
-
-        for report in self.scenario.reports:
-            for report_task in report.get_tasks():
-                self._add_task_into_pipeline(report_task)
-
-        # ensure that all assets are copied to the assets folder
-        # if assets exists
+        # check that all assets are copied to assets folder (if assets exist)
         try:
             self._copy_assets()
         except shutil.Error as ex:
             self.logger.error('Error while copying assets. %s' % ex.message)
-            raise CarbonException('Error while copying assets %s' % ex.message)
+            raise CarbonError('Error while copying assets %s' % ex.message)
         except IOError as ex:
             if ex.errno == errno.ENOENT:
-                self.logger.error('Error while copying the asset "%s"' % ex.filename)
-                raise CarbonException('Asset "%s" does not exist. Check if '
-                                      'the asset folder was set correctly.' % ex.filename)
+                self.logger.error(
+                    'Error while copying the asset "%s"' % ex.filename
+                )
+                raise CarbonError('Asset "%s" does not exist. Check if '
+                                  'the asset folder was set correctly.' %
+                                  ex.filename)
             else:
-                raise CarbonException('Error while copying assets. Msg: %s' % ex.message)
+                raise CarbonError(
+                    'Error while copying assets. Msg: %s' % ex.message
+                )
 
         try:
+            # overall status
             status = 0
-            for pipeline in self._pipelines:
-                if pipeline.name not in self.tasks:
+
+            for task in self.tasks:
+
+                # create a pipeline builder object
+                pipe_builder = PipelineBuilder(task)
+
+                # check if carbon supports the task
+                if not pipe_builder.is_task_valid():
+                    self.logger.warn('Task %s is not valid by carbon.', task)
                     continue
 
-                self.logger.info("." * 50)
-                self.logger.info("=> Starting tasks on pipeline: %s",
+                # build task pipeline
+                pipeline = pipe_builder.build(self.scenario)
+
+                self.logger.info('.' * 50)
+                self.logger.info('Starting tasks on pipeline: %s',
                                  pipeline.name)
+
+                # check if pipeline has tasks to be run
                 if not pipeline.tasks:
-                    self.logger.warn("   ... nothing to be executed here ...")
-                else:
-                    for task in pipeline.tasks:
-                        ctx = taskrunner.execute([task], cleanup=self.cleanup)
-                        self.update_results(pipeline.name, task, status, ctx)
+                    self.logger.warn('... no tasks to be executed ...')
+                    continue
+
+                # create blaster object with pipeline to run
+                blast = blaster.Blaster(pipeline.tasks)
+
+                # blast off the pipeline list of tasks
+                data = blast.blastoff(raise_on_failure=True)
+
+                # update results
+                self.update_results(pipeline.name, status, data)
+
+                # reload resource objects
+                self.scenario.reload_resources(data)
+
                 self.logger.info("." * 50)
-        except taskrunner.TaskExecutionException as ex:
+        except blaster.BlasterError as ex:
+            # set overall status
             status = 1
+
             self.logger.error(ex)
-            self.update_results(pipeline.name, task, status, ex.context)
+
+            # update results
+            self.update_results(pipeline.name, status, ex.results)
         finally:
+            # write carbon status file
             self.write_status_file(self.status_file)
             self.logger.info('Scenario status file ~ %s' % self.status_file)
 
@@ -580,7 +544,7 @@ class Carbon(LoggerMixin, ResultsMixin):
 
             # Raise final carbon exception based on status of task execution
             if status:
-                raise CarbonException(
-                    "Carbon scenario '%s' failed to execute successfully!" %
+                raise CarbonError(
+                    'Scenario %s failed to run successfully!' %
                     self.scenario.name
                 )

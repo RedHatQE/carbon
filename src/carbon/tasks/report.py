@@ -24,17 +24,18 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from ..signals import task_report_started, task_report_finished
 
 
 class ReportTask(CarbonTask):
+    """Report task."""
+    __task_name__ = 'report'
 
-    def __init__(self, msg, clean_msg, **kwargs):
+    def __init__(self, msg, **kwargs):
         super(ReportTask, self).__init__(**kwargs)
         self.msg = msg
-        self.clean_msg = clean_msg
 
-    def run(self, context):
-        self.logger.info(self.msg)
-
-    def cleanup(self, context):
-        self.logger.info(self.clean_msg)
+    def run(self):
+        task_report_started.send(self)
+        self.logger.debug(self.msg)
+        task_report_finished.send(self)

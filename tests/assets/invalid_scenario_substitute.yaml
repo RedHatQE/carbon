@@ -1,26 +1,39 @@
 ---
-scenario: Scenario Example
+name: Scenario Example
 description: Description of the scenario example.
 
 credentials:
 
-  - name: openstack
-    auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
+  - name: openstack_ciops
+    auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
     tenant_name: pit-jenkins
-    tenant_id: 2e1c0cf8f1234ea5ad8933d0927fc837
+    tenant_id: bf4de4c330bb47d6937af31fd5c71a18
     username: username
     password: password
 
-PROVISION:
+  - name: openshift
+    auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
+    project: myproject
+    username: username
+    token: token
 
-  - name: machine_1
+  - name: beaker
+    keytab:
+    keytab_principal:
+    username:
+    password:
+
+provision:
+
+  - name: {{some_name}}
     provider: openstack
-    credential: openstack
+    provisioner: openstack
+    credential: openstack_ciops
     os_image: rhel-7.3-workstation-x86_64-released
     os_flavor: m1.medium
-    os_networks: ['pit-jenkins']
-    os_floating_ip_pool: "10.8.240.0"
-    os_keypair: 'pit-jenkins'
+    os_networks: [pit-jenkins]
+    os_floating_ip_pool: 10.8.240.0
+    os_keypair: pit-jenkins
     os_admin_pass:
     os_description:
     os_files:
@@ -30,7 +43,7 @@ PROVISION:
 
   - name: machine_2
     provider: openstack
-    credential: openstack
+    credential: openstack_ciops
     os_image: rhel-7.3-server-x86_64-released
     os_flavor: m1.medium
     os_networks: ['pit-jenkins']
@@ -45,9 +58,8 @@ PROVISION:
 
   - name: machine_3
     provider: openstack
-    provisioner: invalid
-    credential: openstack
-    os_image: rhel-7.3-server-x86_64-released
+    credential: openstack_ciops
+    os_image: rhel-7.3-workstation-x86_64-released
     os_flavor: m1.medium
     os_networks: ['pit-jenkins']
     os_floating_ip_pool: "10.8.240.0"
@@ -57,8 +69,49 @@ PROVISION:
     os_files:
     os_security_groups:
     ip_address:
-    role: test_pilot
+    role: w_client
 
+  - name: Application by image
+    provider: openshift
+    credential: openshift
+    role: application1
+    oc_image: rywillia/example
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:
+      - label1: label1
+      - label2: image_app
+
+  - name: Application by git
+    provider: openshift
+    provisioner: openshift
+    credential: openshift
+    # timeout for builds to complete, in seconds, default 30mins = 1800 sec
+    oc_build_timeout: 3600
+    role: application2
+    oc_git: https://github.com/openshift/django-ex
+    oc_env_vars:
+      var1: var1
+      var2: var2
+    oc_labels:
+      - label1: label1
+      - label2: git_app
+
+  - name: Machine from Beaker 1
+    provider: beaker
+    credential: beaker
+    role: bkr-machine
+    bkr_jobgroup: ci-ops-pit
+    bkr_arch: x86_64
+    bkr_variant: Workstation
+    bkr_whiteboard: Testing machine provisioning from Carbon
+    bkr_distro: RHEL-6.9
+    bkr_host_requires_options: ["arch=x86_64", "memory>=15000"]
+    bkr_key_values: ["DISKSPACE>=500000", "HVM=1"]
+    bkr_kernel_options: ["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]
+    bkr_kernel_post_options: ["isolcpus = 0,5"]
+    bkr_tag: "RTT_ACCEPTED"
 
 orchestrate:
 
@@ -90,6 +143,7 @@ orchestrate:
 execute:
 
   - framework: restraint
+    name: restraint
     vars:
       execute_xml: http://file.bos.redhat.com/~vipatel/FFinterop-rhel6.xml
       role: ['w_client', 's390x_client']

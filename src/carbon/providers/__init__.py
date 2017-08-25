@@ -15,9 +15,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from .beaker import BeakerProvider
-from .openstack import OpenstackProvider
 from .aws import AwsProvider
+from .beaker import BeakerProvider
 from .digitalocean import DigitalOceanProvider
 from .openshift import OpenshiftProvider
+from .openstack import OpenstackProvider
 from .rackspace import RackspaceProvider

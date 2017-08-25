@@ -21,8 +21,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import CarbonProvider
 from .._compat import string_types
+from ..core import CarbonProvider
 
 
 class BeakerProvider(CarbonProvider):
@@ -207,20 +207,6 @@ class BeakerProvider(CarbonProvider):
     def validate_retention_tag(cls, value):
         if value:
             return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_kdump(cls, value):
-        if value:
-            return isinstance(value, bool)
-        else:
-            return True
-
-    @classmethod
-    def validate_ndump(cls, value):
-        if value:
-            return isinstance(value, bool)
         else:
             return True
 

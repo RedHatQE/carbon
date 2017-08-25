@@ -21,21 +21,23 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import shutil
-import sys
-import os
 import errno
 import inspect
-from distutils.dir_util import copy_tree
-
+from collections import namedtuple
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
-from taskrunner import Task
 
+import os
+
+from .constants import TASKLIST
 from .helpers import get_core_tasks_classes
+from .signals import (
+    provision_create_started, provision_create_finished,
+    provision_delete_started, provision_delete_finished
+)
 
 
-class CarbonException(Exception):
+class CarbonError(Exception):
     """Carbon's base Exception class"""
 
     def __init__(self, message):
@@ -44,10 +46,10 @@ class CarbonException(Exception):
         :param message: Details about the error.
         """
         self.message = message
-        super(CarbonException, self).__init__(message)
+        super(CarbonError, self).__init__(message)
 
 
-class CarbonTaskException(CarbonException):
+class CarbonTaskError(CarbonError):
     """Carbon's task base exception class."""
 
     def __init__(self, message):
@@ -55,10 +57,10 @@ class CarbonTaskException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonTaskException, self).__init__(message)
+        super(CarbonTaskError, self).__init__(message)
 
 
-class CarbonResourceException(CarbonException):
+class CarbonResourceError(CarbonError):
     """Carbon's resource base exception class."""
 
     def __init__(self, message):
@@ -66,10 +68,10 @@ class CarbonResourceException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonResourceException, self).__init__(message)
+        super(CarbonResourceError, self).__init__(message)
 
 
-class CarbonProvisionerException(CarbonException):
+class CarbonProvisionerError(CarbonError):
     """Carbon's provisioner base exception class."""
 
     def __init__(self, message):
@@ -77,10 +79,10 @@ class CarbonProvisionerException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonProvisionerException, self).__init__(message)
+        super(CarbonProvisionerError, self).__init__(message)
 
 
-class CarbonProviderException(CarbonException):
+class CarbonProviderError(CarbonError):
     """Carbon's provider base exception class."""
 
     def __init__(self, message):
@@ -88,10 +90,10 @@ class CarbonProviderException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonProviderException, self).__init__(message)
+        super(CarbonProviderError, self).__init__(message)
 
 
-class CarbonControllerException(CarbonException):
+class CarbonControllerError(CarbonError):
     """Carbon's controller base exception class."""
 
     def __init__(self, message):
@@ -99,10 +101,10 @@ class CarbonControllerException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonControllerException, self).__init__(message)
+        super(CarbonControllerError, self).__init__(message)
 
 
-class LoggerMixinException(CarbonException):
+class LoggerMixinError(CarbonError):
     """Carbon's logger mixin base exception class."""
 
     def __init__(self, message):
@@ -110,7 +112,7 @@ class LoggerMixinException(CarbonException):
 
         :param message: Details about the error.
         """
-        super(CarbonTaskException, self).__init__(message)
+        super(LoggerMixinError, self).__init__(message)
 
 
 class LoggerMixin(object):
@@ -176,18 +178,18 @@ class LoggerMixin(object):
                         os.makedirs(logdir)
                     except OSError as ex:
                         if ex.errno == errno.EACCES:
-                            raise LoggerMixinException(
+                            raise LoggerMixinError(
                                 'You do not have permission to create the '
                                 'workspace.'
                             )
                         else:
-                            raise LoggerMixinException(
+                            raise LoggerMixinError(
                                 'Error creating scenario workspace: %s' %
                                 ex.message
                             )
                 chandler = FileHandler(logfile)
             else:
-                raise LoggerMixinException(
+                raise LoggerMixinError(
                     'Please set a valid LOGGER_TYPE value.'
                 )
             chandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
@@ -217,18 +219,18 @@ class LoggerMixin(object):
                     os.makedirs(logdir)
                 except OSError as ex:
                     if ex.errno == errno.EACCES:
-                        raise LoggerMixinException(
+                        raise LoggerMixinError(
                             'You do not have permission to create the '
                             'workspace.'
                         )
                     else:
-                        raise LoggerMixinException(
+                        raise LoggerMixinError(
                             'Error creating scenario workspace: %s' %
                             ex.message
                         )
             thandler = FileHandler(logfile)
         else:
-            raise LoggerMixinException(
+            raise LoggerMixinError(
                 'Please set a valid LOGGER_TYPE value.'
             )
         thandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
@@ -244,25 +246,20 @@ class LoggerMixin(object):
         return getLogger(inspect.getmodule(inspect.stack()[1][0]).__name__)
 
 
-class CarbonTask(Task, LoggerMixin):
+class CarbonTask(LoggerMixin):
     """
     This is the base class for every task created for Carbon framework.
     All instances of this class can be found within the ~carbon.tasks
     package.
-
-    This class is an instance of taskrunner.Task.
     """
 
-    def __init__(self, name=None, **kwargs):
-        super(CarbonTask, self).__init__(**kwargs)
+    __task_name__ = None
 
+    def __init__(self, name=None, **kwargs):
         if name is not None:
             self.name = name
 
-    def run(self, context):
-        pass
-
-    def cleanup(self, context):
+    def run(self):
         pass
 
     def __str__(self):
@@ -276,6 +273,7 @@ class CarbonResource(LoggerMixin):
     package.
     """
     _valid_tasks_types = []
+    _req_tasks_methods = ['run']
     _fields = []
 
     def __init__(self, config=None, name=None, **kwargs):
@@ -310,7 +308,7 @@ class CarbonResource(LoggerMixin):
         Add a task to the list of tasks for the resource
         """
         if t['task'] not in set(get_core_tasks_classes()):
-            raise CarbonResourceException(
+            raise CarbonResourceError(
                 'The task class "%s" used is not valid.' % t['task']
             )
         self._tasks.append(t)
@@ -374,12 +372,23 @@ class CarbonProvisioner(LoggerMixin):
     This is the base class for all provisioners for provisioning machines
     """
     __provisioner_name__ = None
+    host = None
+
+    def _create(self):
+        raise NotImplementedError
 
     def create(self):
+        provision_create_started.send(self, host=self.host)
+        self._create()
+        provision_create_finished.send(self, host=self.host)
+
+    def _delete(self):
         raise NotImplementedError
 
     def delete(self):
-        raise NotImplementedError
+        provision_delete_started.send(self, host=self.host)
+        self._delete()
+        provision_delete_finished.send(self, host=self.host)
 
     @property
     def name(self):
@@ -722,7 +731,7 @@ class CarbonProvider(LoggerMixin):
             # It then returns the list of parameters that the validate
             # functions will return false.
             #
-            # It throws an CarbonProviderException if the host doesn't have the
+            # It throws an CarbonProviderError if the host doesn't have the
             # attribute to be validated or if the provider has not implemented
             # the validate_<param> function.
             items = [
@@ -732,7 +741,7 @@ class CarbonProvider(LoggerMixin):
                 for param in (self._mandatory_parameters + self._optional_parameters)]
             return [(param, value) for param, value, func in [item for item in items] if not func(value)]
         except AttributeError as e:
-            raise CarbonProviderException(e.args[0])
+            raise CarbonProviderError(e.args[0])
 
     @classmethod
     def build_profile(cls, host):
@@ -773,4 +782,102 @@ class CarbonController(LoggerMixin):
 
         :param value: Name of controller to set.
         """
-        raise ValueError('You cannot set the controller name property.')
+        raise AttributeError('You cannot set the controller name property.')
+
+
+class PipelineBuilder(object):
+    """Carbon's pipeline builder.
+
+    The primary purpose of this class is to dynamically build pipelines at
+    carbon run time.
+    """
+    # A pipeline is a tuple with a name, type and a list of tasks.
+    # The Carbon object will have a list of pipelines that holds
+    # all types of pipelines and a list of tasks associated with the
+    # type of the pipeline.
+    pipeline_template = namedtuple('Pipeline', ('name', 'type', 'tasks'))
+
+    def __init__(self, name):
+        """Constructor.
+
+        :param name: Pipeline name.
+        :type name: str
+        """
+        self._name = name
+
+    @property
+    def name(self):
+        """Return the pipeline name"""
+        return self._name
+
+    def is_task_valid(self):
+        """Check if the pipeline task name is valid for carbon.
+
+        :return: Whether task is valid or not.
+        :rtype: bool
+        """
+        try:
+            TASKLIST.index(self.name)
+        except ValueError:
+            return False
+        return True
+
+    def task_cls_lookup(self):
+        """Lookup the pipeline task class type.
+
+        :return: The class associated for the pipeline task.
+        :rtype: class
+        """
+        for cls in get_core_tasks_classes():
+            if cls.__task_name__ == self.name:
+                return cls
+        raise CarbonError('Unable to lookup task %s class.' % self.name)
+
+    def build(self, scenario):
+        """Build carbon pipeline.
+
+        :param scenario: Carbon scenario object containing all scenario
+            data.
+        :type scenario: object
+        :return: Carbon pipeline to run for the given task.
+        :rtype: tuple
+        """
+        # initialize new pipeline
+        pipeline = self.pipeline_template(
+            self.name,
+            self.task_cls_lookup(),
+            list()
+        )
+
+        # RFE: consolodate configuring pipeline to reduce code duplication
+
+        # resource = scenario
+        for task in scenario.get_tasks():
+            if task['task'].__task_name__ == self.name:
+                pipeline.tasks.append(task)
+
+        # resource = host
+        for host in scenario.hosts:
+            for task in host.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    pipeline.tasks.append(task)
+
+        # resource = action
+        for action in scenario.actions:
+            for task in action.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    pipeline.tasks.append(task)
+
+        # resource = execute
+        for execute in scenario.executes:
+            for task in execute.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    pipeline.tasks.append(task)
+
+        # resource = report
+        for report in scenario.reports:
+            for task in report.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    pipeline.tasks.append(task)
+
+        return pipeline

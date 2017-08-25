@@ -23,26 +23,17 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import click
 import os
 import yaml
-
-import click
 
 from . import __version__
 from ._compat import string_types
 from .carbon import Carbon
-from .constants import TASKLIST, TASK_CLEANUP_CHOICES,\
-    TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
+from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
+from .helpers import template_render
 
 _VERBOSITY = 0
-
-
-def print_version(ctx, param, value):
-    """Print carbon version for the command line"""
-    if not value or ctx.resilient_parsing:
-        return
-    click.echo('%s' % __version__)
-    ctx.exit()
 
 
 def print_header():
@@ -53,11 +44,9 @@ def print_header():
 
 
 @click.group()
-@click.option("--version", is_flag=True, callback=print_version,
-              expose_value=False, is_eager=True,
-              help="Show version and exit.")
 @click.option("-v", "--verbose", count=True,
               help="Add verbosity to the commands.")
+@click.version_option()
 def cli(verbose):
     """
     This is Carbon command line utility.
@@ -78,8 +67,19 @@ def create():
 @click.option("-s", "--scenario",
               default=None,
               help="Scenario definition file to be executed.")
+@click.option("--log-type",
+              default="file",
+              type=click.Choice(LOGTYPE_CHOICES),
+              help="log type")
+@click.option("-d", "--data-folder",
+              default=None,
+              help="Scenario workspace path.")
+@click.option("--log-level",
+              type=click.Choice(TASK_LOGLEVEL_CHOICES),
+              default='info',
+              help="Select logging level. Default is 'INFO'")
 @click.pass_context
-def validate(ctx, scenario):
+def validate(ctx, scenario, log_type, data_folder, log_level):
     """Validate a scenario configuration."""
     # Make sure the file exists and gets its absolute path
     if os.path.isfile(scenario):
@@ -88,18 +88,15 @@ def validate(ctx, scenario):
         click.echo('You have to provide a valid scenario file.')
         ctx.exit()
 
-    # Create a new carbon compound
-    cbn = Carbon(__name__)
+    # apply templating before loading the data
+    scenario_data = template_render(scenario, os.environ)
 
-    # Read configuration first from etc, then overwrite from CARBON_SETTINGS
-    # environment variable and the look gor a carbon.cfg from within the
-    # directory where this command is running from.
-    cbn.config.from_pyfile('/etc/carbon/carbon.cfg', silent=True)
-    cbn.config.from_envvar('CARBON_SETTINGS', silent=True)
-    cbn.config.from_pyfile(os.path.join(os.getcwd(), 'carbon.cfg'), silent=True)
+    # Create a new carbon compound
+    cbn = Carbon(__name__, log_level=log_level, data_folder=data_folder,
+                 log_type=log_type)
 
     # This is the easiest way to configure a full scenario.
-    cbn.load_from_yaml(scenario)
+    cbn.load_from_yaml(scenario_data)
 
     # The scenario will start the main pipeline and run through the ordered list
     # of pipelines. See :function:`~carbon.Carbon.run` for more details.
@@ -124,16 +121,12 @@ def validate(ctx, scenario):
               default="file",
               type=click.Choice(LOGTYPE_CHOICES),
               help="log type")
-@click.option("-c", "--cleanup",
-              type=click.Choice(TASK_CLEANUP_CHOICES),
-              default='always',
-              help="taskrunner cleanup behavior. Default: 'always'")
 @click.option("--log-level",
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default='info',
               help="Select logging level. Default is 'INFO'")
 @click.pass_context
-def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type, assets_path):
+def run(ctx, task, scenario, log_level, data_folder, log_type, assets_path):
     """
     Run a carbon scenario, given the scenario YAML file configuration.
     """
@@ -146,10 +139,12 @@ def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type, assets_p
         click.echo('You have to provide a valid scenario file.')
         ctx.exit()
 
-    # Try to load the yaml. If it fails it is a malformed yaml
+    # apply templating before loading the data
+    scenario_data = template_render(scenario, os.environ)
+
+    # Verify the updated data is valid
     try:
-        with open(scenario, 'r') as fp:
-            yaml.safe_load(fp)
+        yaml.safe_load(scenario_data)
     except yaml.YAMLError as ex:
         click.echo('Error:\n%s\n%s' % (ex.problem, ex.problem_mark))
         ctx.exit()
@@ -160,11 +155,16 @@ def run(ctx, task, scenario, cleanup, log_level, data_folder, log_type, assets_p
         assets_path = os.path.dirname(scenario)
 
     # Create a new carbon compound
-    cbn = Carbon(__name__, log_level=log_level, cleanup=cleanup,
-                 data_folder=data_folder, log_type=log_type, assets_path=assets_path)
+    cbn = Carbon(
+        __name__,
+        log_level=log_level,
+        data_folder=data_folder,
+        log_type=log_type,
+        assets_path=assets_path
+    )
 
     # This is the easiest way to configure a full scenario.
-    cbn.load_from_yaml(scenario)
+    cbn.load_from_yaml(scenario_data)
 
     # Setup the list of tasks to run
     if task is None:

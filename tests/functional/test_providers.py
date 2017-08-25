@@ -21,10 +21,11 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import os
 from copy import deepcopy
-from nose.tools import assert_true, assert_false, assert_is_instance, raises
 from unittest import TestCase
+
+import os
+from nose.tools import assert_true, assert_false, assert_is_instance, raises
 
 try:
     from test.test_support import EnvironmentVarGuard
@@ -78,7 +79,8 @@ class TestOpenshift(TestCase):
             3. Name defined and is a invalid data type.
         """
         obj = Carbon(__name__)
-        obj.load_from_yaml('assets/scenario_openshift.yaml')
+        scenario_data = open("assets/scenario_openshift.yaml")
+        obj.load_from_yaml(scenario_data)
 
         host = obj.scenario.hosts[0]
 
@@ -225,6 +227,8 @@ class TestBeaker(TestCase):
 
     def test_tag(self):
         """Test the validate tag method."""
+        assert_false(self._beaker.validate_tag(11))
+        assert_true(self._beaker.validate_tag(None))
         assert_true(self._beaker.validate_tag('RTT_ACCEPTED'))
 
     def test_family(self):
@@ -297,26 +301,6 @@ class TestBeaker(TestCase):
         assert_true(self._beaker.validate_retention_tag('Rhel-7'))
         assert_true(self._beaker.validate_retention_tag('Scratch'))
 
-    def test_kdump(self):
-        """Test the validate kdump method."""
-        assert_false(self._beaker.validate_kdump(1001))
-        assert_false(self._beaker.validate_kdump(1))
-        assert_false(self._beaker.validate_kdump('True'))
-        assert_true(self._beaker.validate_kdump(None))
-        assert_true(self._beaker.validate_kdump(True))
-        assert_true(self._beaker.validate_kdump(False))
-        assert_true(self._beaker.validate_kdump(0))
-
-    def test_ndump(self):
-        """Test the validate ndump method."""
-        assert_false(self._beaker.validate_ndump(11))
-        assert_false(self._beaker.validate_ndump(1))
-        assert_false(self._beaker.validate_ndump('True'))
-        assert_true(self._beaker.validate_ndump(None))
-        assert_true(self._beaker.validate_ndump(True))
-        assert_true(self._beaker.validate_ndump(False))
-        assert_true(self._beaker.validate_ndump(0))
-
     def test_priority(self):
         """Test the validate priority method."""
         assert_false(self._beaker.validate_priority(11))
@@ -344,6 +328,78 @@ class TestBeaker(TestCase):
         assert_true(self._beaker.validate_key_values(None))
         assert_true(self._beaker.validate_key_values(["DISKSPACE>=500000", "HVM=1"]))
         assert_true(self._beaker.validate_key_values([1, 2, 3]))
+
+    def test_username(self):
+        """Test the validate username method."""
+        assert_false(self._beaker.validate_username(11))
+        assert_true(self._beaker.validate_username(None))
+        assert_true(self._beaker.validate_username('ci-ops-pit'))
+
+    def test_password(self):
+        """Test the validate password method."""
+        assert_false(self._beaker.validate_password(11))
+        assert_true(self._beaker.validate_password(None))
+        assert_true(self._beaker.validate_password('ci-ops-pit'))
+
+    def test_keytab(self):
+        """Test the validate keytab method."""
+        assert_false(self._beaker.validate_keytab(11))
+        assert_true(self._beaker.validate_keytab(None))
+        assert_true(self._beaker.validate_keytab('ci-ops-pit'))
+
+    def test_ssh_key(self):
+        """Test the validate ssh_key method."""
+        assert_false(self._beaker.validate_ssh_key(11))
+        assert_true(self._beaker.validate_ssh_key(None))
+        assert_true(self._beaker.validate_ssh_key('ci-ops-pit'))
+
+    def test_kickstart(self):
+        """Test the validate kickstart method."""
+        assert_false(self._beaker.validate_kickstart(11))
+        assert_true(self._beaker.validate_kickstart(None))
+        assert_true(self._beaker.validate_kickstart('ci-ops-pit'))
+
+    def test_hostname(self):
+        """Test the validate hostname method."""
+        assert_false(self._beaker.validate_hostname(11))
+        assert_true(self._beaker.validate_hostname(None))
+        assert_true(self._beaker.validate_hostname('ci-ops-pit'))
+
+    def test_ip_address(self):
+        """Test the validate ip_address method."""
+        assert_false(self._beaker.validate_ip_address(11))
+        assert_true(self._beaker.validate_ip_address(None))
+        assert_true(self._beaker.validate_ip_address('ci-ops-pit'))
+
+    def test_job_id(self):
+        """Test the validate job_id method."""
+        assert_false(self._beaker.validate_job_id(11))
+        assert_true(self._beaker.validate_job_id(None))
+        assert_true(self._beaker.validate_job_id('ci-ops-pit'))
+
+    def test_taskparam(self):
+        """Test the validate taskparam method."""
+        assert_false(self._beaker.validate_taskparam(11))
+        assert_true(self._beaker.validate_taskparam(None))
+        assert_true(self._beaker.validate_taskparam(["DISKSPACE>=500000", "HVM=1"]))
+        assert_true(self._beaker.validate_taskparam([1, 2, 3]))
+
+    def test_ksmeta(self):
+        """Test the validate ksmeta method."""
+        assert_false(self._beaker.validate_ksmeta(11))
+        assert_true(self._beaker.validate_ksmeta(None))
+        assert_true(self._beaker.validate_ksmeta(["DISKSPACE>=500000", "HVM=1"]))
+        assert_true(self._beaker.validate_ksmeta([1, 2, 3]))
+
+    def test_ignore_panic(self):
+        """Test the validate ignore panic method."""
+        assert_false(self._beaker.validate_ignore_panic(3))
+        assert_false(self._beaker.validate_ignore_panic(1))
+        assert_false(self._beaker.validate_ignore_panic('True'))
+        assert_true(self._beaker.validate_ignore_panic(None))
+        assert_true(self._beaker.validate_ignore_panic(True))
+        assert_true(self._beaker.validate_ignore_panic(False))
+        assert_true(self._beaker.validate_ignore_panic(0))
 
 
 class TestAws(TestCase):

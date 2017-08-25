@@ -24,17 +24,18 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from ..signals import task_orchestrate_started, task_orchestrate_finished
 
 
 class OrchestrateTask(CarbonTask):
+    """Orchestrate task."""
+    __task_name__ = 'orchestrate'
 
-    def __init__(self, msg, clean_msg, **kwargs):
+    def __init__(self, msg, **kwargs):
         super(OrchestrateTask, self).__init__(**kwargs)
         self.msg = msg
-        self.clean_msg = clean_msg
 
-    def run(self, context):
+    def run(self):
+        task_orchestrate_started.send(self)
         self.logger.info(self.msg)
-
-    def cleanup(self, context):
-        self.logger.info(self.msg)
+        task_orchestrate_finished.send(self)
