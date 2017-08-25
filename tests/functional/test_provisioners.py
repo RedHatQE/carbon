@@ -104,7 +104,7 @@ class TestOpenshiftProvisioner(TestCase):
         assigned to the application when created.
         """
         obj = OpenshiftProvisioner(self.host)
-        obj.setup_labels()
+        obj.create_labels()
         assert_is_instance(obj.labels, list)
 
 
