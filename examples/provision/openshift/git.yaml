@@ -8,7 +8,6 @@ credentials:
   - name: openshift
     auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
     project: myproject
-    username: username
     token: token
 
 provision:
