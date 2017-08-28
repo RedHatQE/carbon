@@ -54,6 +54,7 @@ def runner(method):
     :param method: Method to call.
     :type method: object
     """
+
     def wrapper(self):
         """Wrapper function which calls the method given to the decorator.
 
@@ -82,6 +83,7 @@ def retry(method, attempts=3):
     :param attempts: Number of attempts to run method given.
     :type attempts: int
     """
+
     def wrapper(self, *args, **kwargs):
         """Wrapper function which calls the method given to the decorator.
 
@@ -245,12 +247,13 @@ class BeakerProvisioner(CarbonProvisioner):
         bkr_conf = os.path.join(bkr_dir, 'client.conf')
 
         # configure beaker configuration for defined authentication method
-        if 'username' in credentials and 'password' in credentials:
+        if 'username' in credentials and credentials['username'] \
+                and 'password' in credentials and credentials['password']:
             self.logger.debug('Username/password selected for authentication.')
 
             # set username in client.conf
             args = 'path=%s regexp=^#USERNAME line=USERNAME=\"%s\"' %\
-                  (bkr_conf, credentials['username'])
+                (bkr_conf, credentials['username'])
             self.remote_module_call(
                 'Set username in beaker client.conf',
                 'lineinfile',
@@ -265,13 +268,17 @@ class BeakerProvisioner(CarbonProvisioner):
                 'lineinfile',
                 args
             )
-        elif 'keytab' in credentials and 'keytab_principal' in credentials:
+        elif 'keytab' in credentials and credentials['keytab'] \
+             and 'keytab_principal' in credentials \
+             and credentials["keytab_principal"]:
             self.logger.debug('Keytab selected for authentication.')
 
-            # check if /etc/beaker directory exists
-            args = 'path=%s recurse=yes state=directory' % bkr_dir
+            dest_file = os.path.join('/etc/beaker', credentials['keytab'])
+            dest_dir = os.path.dirname(dest_file)
+            # check if remote /etc/beaker directory exists
+            args = 'path=%s recurse=yes state=directory' % dest_dir
             self.remote_module_call(
-                'Ensure %s directory exists' % bkr_dir,
+                'Ensure %s directory exists' % dest_dir,
                 'file',
                 args
             )
@@ -279,7 +286,6 @@ class BeakerProvisioner(CarbonProvisioner):
             # copy keytab to container
             src_file = os.path.join(self.host.data_folder(), 'assets',
                                     credentials['keytab'])
-            dest_file = os.path.join('/etc/beaker', credentials['keytab'])
             args = 'src=%s dest=%s mode=0755' % (src_file, dest_file)
             self.remote_module_call(
                 'Copy keytab to container',
