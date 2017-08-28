@@ -365,7 +365,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj.authenticate()
 
         # Obtain xml path
-        bkr_xml_file = os.path.join(self.obj._data_folder,
+        bkr_xml_file = os.path.join(self.obj.host.data_folder(),
                                     self.obj._bkr_xml)
 
         host_desc = self.obj.host.profile()
