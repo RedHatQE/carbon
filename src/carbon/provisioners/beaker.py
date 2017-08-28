@@ -34,7 +34,7 @@ import stat
 
 from ..constants import BEAKER_JOBS_URL
 from ..controllers import AnsibleController
-from ..controllers import DockerController, DockerControllerError
+from ..controllers import DockerController
 from ..core import CarbonProvisioner, CarbonProvisionerError
 from ..helpers import get_ansible_inventory_script
 from ..signals import (
@@ -42,6 +42,7 @@ from ..signals import (
     prov_beaker_xml_submit_finished, prov_beaker_wait_job_started,
     prov_beaker_wait_job_finished
 )
+
 
 # TODO: Any failure during create method after job submitted, we need to
 # TODO: (cont). cancel that job. We can raise a BeakerCancelJob exception and
@@ -76,6 +77,36 @@ def runner(method):
     return wrapper
 
 
+def retry(method, attempts=3):
+    """Decorator to retry running any given class method.
+
+    :param method: Method to call.
+    :type method: object
+    :param attempts: Number of attempts to run method given.
+    :type attempts: int
+    """
+    def wrapper(self, *args, **kwargs):
+        """Wrapper function which calls the method given to the decorator.
+
+        :param self: Beaker class object.
+        :type self: object
+        """
+        ex = None
+
+        for i in range(0, attempts):
+            try:
+                # call method
+                return method(self, *args, **kwargs)
+            except RemoteConnectionError as ex:
+                # log exception message and continue on to retry
+                self.logger.error(ex.message)
+                continue
+
+        # maximum attempts reached, raise final exception
+        raise BeakerProvisionerError(ex)
+    return wrapper
+
+
 class BeakerProvisionerError(CarbonProvisionerError):
     """Base class for Beaker provisioner exceptions."""
 
@@ -87,6 +118,19 @@ class BeakerProvisionerError(CarbonProvisionerError):
         """
         self.message = message
         super(BeakerProvisionerError, self).__init__(message)
+
+
+class RemoteConnectionError(BeakerProvisionerError):
+    """Base class for remote connection exceptions."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        :type message: str
+        """
+        self.message = message
+        super(RemoteConnectionError, self).__init__(message)
 
 
 class BeakerProvisioner(CarbonProvisioner):
@@ -289,6 +333,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         self.logger.info('Succesfully authenticated with Beaker!')
 
+    @retry
     def remote_module_call(self, name, module, args):
         """Run a Ansible module on a remote system.
 
@@ -314,6 +359,12 @@ class BeakerProvisioner(CarbonProvisioner):
                 tasks=[dict(action=dict(module=module, args=args))]
             )
         )
+
+        # raise exception if remote system not contacted to start retry
+        if len(results['callback'].contacted) != 1:
+            raise RemoteConnectionError(
+                'Remote connection to %s failed!' % self.docker.cname
+            )
 
         # exit if ansible call failed
         if results['status'] != 0:
@@ -369,16 +420,12 @@ class BeakerProvisioner(CarbonProvisioner):
             _cmd
         )
 
-        if len(results["callback"].contacted) == 1:
-            parsed_results = results["callback"].contacted[0]["results"]
-            output = parsed_results["stdout"]
-        else:
-            raise BeakerProvisionerError('No remote systems contacted!')
+        output = results['callback'].contacted[0]['results']['stdout']
 
         # generate complete beaker job XML
         self.bxml.generate_xml_dom(bkr_xml_file, output, savefile=True)
 
-        self.logger.info('Sucessfully generated beaker job XML!')
+        self.logger.info('Successfully generated beaker job XML!')
 
     def submit_bkr_xml(self):
         """Submit a beaker job XML to Beaker.
@@ -408,12 +455,7 @@ class BeakerProvisioner(CarbonProvisioner):
             _cmd
         )
 
-        # post results tasks
-        if len(results["callback"].contacted) == 1:
-            parsed_results = results["callback"].contacted[0]["results"]
-            output = parsed_results["stdout"]
-        else:
-            raise BeakerProvisionerError('No remote systems contacted!')
+        output = results['callback'].contacted[0]['results']['stdout']
 
         # post results tasks
         if output.find("Submitted:") != "-1":
@@ -464,18 +506,11 @@ class BeakerProvisioner(CarbonProvisioner):
                 _cmd
             )
 
-            # post results tasks
-            if len(results["callback"].contacted) == 1:
-                parsed_results = results["callback"].contacted[0]["results"]
-            else:
-                raise BeakerProvisionerError(
-                    'No remote systems contacted while fetching job status!'
-                )
+            xml_output = results['callback'].contacted[0]['results']['stdout']
 
             self.logger.info('Successfully fetched beaker job status!')
 
-            bkr_xml_output = parsed_results["stdout"]
-            bkr_job_status_dict = self.get_job_status(bkr_xml_output)
+            bkr_job_status_dict = self.get_job_status(xml_output)
             self.logger.debug("Beaker job status: %s" % bkr_job_status_dict)
             status = self.analyze_results(bkr_job_status_dict)
 
@@ -487,7 +522,7 @@ class BeakerProvisioner(CarbonProvisioner):
                 self.logger.info("Machine is successfully provisioned from "
                                  "Beaker!")
                 # get machine info
-                self.get_machine_info(bkr_xml_output)
+                self.get_machine_info(xml_output)
                 return
             elif status == "fail":
                 raise BeakerProvisionerError(
@@ -557,12 +592,8 @@ class BeakerProvisioner(CarbonProvisioner):
             _cmd
         )
 
-        if len(results["callback"].contacted) == 1:
-            parsed_results = results["callback"].contacted[0]["results"]
-        else:
-            raise BeakerProvisionerError('No remote systems contacted!')
+        output = results['callback'].contacted[0]['results']['stdout']
 
-        output = parsed_results["stdout"]
         if "Cancelled" in output:
             self.logger.info("Job %s cancelled." % self.host.bkr_job_id)
         else:
