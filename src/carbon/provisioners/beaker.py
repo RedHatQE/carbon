@@ -48,9 +48,6 @@ from ..signals import (
 # TODO: (cont). cancel that job. We can raise a BeakerCancelJob exception and
 # TODO: (cont). catch that in the decorator. Which will call self.cancel_job()
 
-# TODO: Review all logging statements and make sure they flow properly
-
-
 def runner(method):
     """Decorator to run the given class method and handle container clean up.
 
@@ -497,7 +494,7 @@ class BeakerProvisioner(CarbonProvisioner):
             # setup beaker job results command
             _cmd = "bkr job-results %s" % self.host.bkr_job_id
 
-            self.logger.info('Fetching beaker job status..')
+            self.logger.debug('Fetching beaker job status..')
 
             # fetch beaker job status
             results = self.remote_module_call(
@@ -508,11 +505,14 @@ class BeakerProvisioner(CarbonProvisioner):
 
             xml_output = results['callback'].contacted[0]['results']['stdout']
 
-            self.logger.info('Successfully fetched beaker job status!')
+            self.logger.debug('Successfully fetched beaker job status!')
 
             bkr_job_status_dict = self.get_job_status(xml_output)
             self.logger.debug("Beaker job status: %s" % bkr_job_status_dict)
             status = self.analyze_results(bkr_job_status_dict)
+
+            self.logger.info('Beaker Job: id: %s status: %s.' %
+                             (self.host.bkr_job_id, status))
 
             if status == "wait":
                 wait -= 60
