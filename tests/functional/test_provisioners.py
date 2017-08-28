@@ -579,7 +579,7 @@ class TestBeakerProvisioner(TestCase):
     def test_generateBKRXML(self):
         """Test create resource for the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
-        bkr_xml_file = os.path.join(self.obj._data_folder,
+        bkr_xml_file = os.path.join(self.obj.host.data_folder(),
                                     self.obj._bkr_xml)
 
         self.obj.bxml.generate_beaker_xml(bkr_xml_file, savefile=True)
@@ -597,7 +597,7 @@ class TestBeakerProvisioner(TestCase):
         """
         self.obj = BeakerProvisioner(self.host)
 
-        bkr_xml_file = os.path.join(self.obj._data_folder,
+        bkr_xml_file = os.path.join(self.obj.host.data_folder(),
                                     self.obj._bkr_xml)
         self.obj.bxml.taskparam = [ "time=0600"]
         self.obj.bxml.generate_beaker_xml(bkr_xml_file, savefile=True)
@@ -607,7 +607,7 @@ class TestBeakerProvisioner(TestCase):
         set.
         """
         self.obj = BeakerProvisioner(self.host)
-        bkr_xml_file = os.path.join(self.obj._data_folder,
+        bkr_xml_file = os.path.join(self.obj.host.data_folder(),
                                     self.obj._bkr_xml)
         self.obj.bxml.family = "RedHatEnterpriseLinux7"
         self.obj.bxml.distro = ""

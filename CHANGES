@@ -1,3 +1,22 @@
+Version 0.3.1 (2017-08-28)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* beaker provisioner fixes for relative assets and keys used for auth
+
+Style
+~~~~~
+
+* log beaker job status while fetching job details
+
+Chore
+~~~~~
+
+* simplify removing containers for Beaker provisioner
+* retry ansible calls if no remote system was contacted for beaker
+
 Version 0.3.0 (2017-08-25)
 --------------------------
 
