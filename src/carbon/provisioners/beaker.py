@@ -771,6 +771,9 @@ class BeakerProvisioner(CarbonProvisioner):
                 resultsdict["install_status"].strip().lower() in \
                 ["new", "waiting", "queued", "scheduled", "running", "processed"]:
             return "wait"
+        elif resultsdict["job_status"].strip().lower() == "waiting" or \
+                resultsdict["install_status"].strip().lower() == "waiting":
+            return "wait"
         elif resultsdict["job_result"].strip().lower() == "pass" and \
             resultsdict["job_status"].strip().lower() == "running" and \
             resultsdict["install_result"].strip().lower() == "pass" and \
