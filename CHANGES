@@ -1,3 +1,11 @@
+Version 0.3.2 (2017-09-01)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* beaker provisioner fix for unexpected status
+
 Version 0.3.1 (2017-08-28)
 --------------------------
 
