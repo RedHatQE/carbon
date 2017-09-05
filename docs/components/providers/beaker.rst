@@ -273,8 +273,6 @@ Examples
       - name: beaker
         keytab:
         keytab_principal:
-        username: username
-        password: password
 
     provision:
 
@@ -299,8 +297,6 @@ Examples
       - name: beaker
         keytab:
         keytab_principal:
-        username: username
-        password: password
 
     provision:
 
