@@ -38,8 +38,8 @@ either keytab and keytab_principal or username and password.
         - True
 
     *   - keytab
-        - keytab file, must be placed in the assets directory
-        - File
+        - name of the keytab file, which must be placed in the assets directory.
+        - String
         - False
 
     *   - keytab_principal
@@ -207,7 +207,8 @@ resource section with the available Beaker provider keys.
         - False
 
     *   - bkr_ssh_key
-        - Name of the ssh key to inject to the test system, file must be placed in assets folder.
+        - Name of the ssh key to inject to the test system, file must be
+          placed in assets directory.
         - String
         - False
 

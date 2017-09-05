@@ -160,7 +160,8 @@ keys.
         - False
 
     *   - oc_custom_template
-        - The custom template name to boot the application based on.
+        - Name of the custom template file that defines your application,
+          which must be placed in assets directory.
         - String
         - False
 
