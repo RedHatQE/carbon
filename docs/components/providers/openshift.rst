@@ -6,6 +6,13 @@ applications. This page will help you understand the required keys that are
 needed within your scenario descriptor file to provision applications in
 OpenShift.
 
+Assets
+++++++
+
+Assets are any files that are needed by the Provider, the following OpenShift
+keys are assets: **oc_custom_template**. They must reside in the assets
+directory.
+
 Credentials
 +++++++++++
 

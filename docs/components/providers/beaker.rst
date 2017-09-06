@@ -5,6 +5,14 @@ Carbon framework supports Beaker as a provider to provision and teardown
 nodes. This page will help you understand the required keys that are needed
 within your scenario descriptor file to provision resources using Beaker.
 
+Assets
+++++++
+
+Assets are any files that are needed by the Provider, the following Beaker
+keys are assets: **keytab** and **bkr_ssh_key**. They must reside in the
+assets directory.
+
+
 Credentials
 +++++++++++
 
