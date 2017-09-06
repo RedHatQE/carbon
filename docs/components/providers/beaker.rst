@@ -9,8 +9,8 @@ Assets
 ++++++
 
 Assets are any files that are needed by the Provider, the following Beaker
-keys are assets: **keytab** and **bkr_ssh_key**. They must reside in the
-assets directory.
+keys are assets: **keytab**, **bkr_ssh_key**, and **bkr_kickstart**. They must
+reside in the assets directory.
 
 
 Credentials
@@ -236,7 +236,8 @@ resource section with the available Beaker provider keys.
         - False
 
     *   - bkr_kickstart
-        - filename of the kickstart template for installation
+        - Name of the kickstart template for installation, the file must be
+          placed in assets directory.
         - String
         - False
 
