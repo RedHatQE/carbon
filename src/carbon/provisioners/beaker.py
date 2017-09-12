@@ -191,10 +191,11 @@ class BeakerProvisioner(CarbonProvisioner):
         """
         super(BeakerProvisioner, self).__init__()
         self.host = host
+        self._data_folder = host.data_folder()
         self._bkr_xml = 'brkjob_{0}.xml'.format(self.host.bkr_name)
-
         self.bxml = BeakerXML()
-        self._docker = DockerController(cname=self.host.bkr_name)
+        self._docker = DockerController(cname=self.host.bkr_name,
+                                        mountpath="/tmp/{0}".format(self.host.bkr_name))
         self._ansible = AnsibleController(
             inventory=get_ansible_inventory_script(self.docker.name.lower())
         )
@@ -233,7 +234,9 @@ class BeakerProvisioner(CarbonProvisioner):
 
     def start_container(self):
         """Start container."""
-        self.docker.run_container(self._bkr_image, entrypoint='bash')
+        assetsdir = os.path.join(self._data_folder, "assets")
+        self.docker.run_container(self._bkr_image, entrypoint='bash',
+                                  volumes={assetsdir: {'bind': self.docker.mountpath, 'mode': 'rw,z'}})
 
     def authenticate(self):
         """Authenticate with Beaker.
@@ -273,23 +276,11 @@ class BeakerProvisioner(CarbonProvisioner):
              and credentials["keytab_principal"]:
             self.logger.debug('Keytab selected for authentication.')
 
-            dest_file = os.path.join('/etc/beaker', credentials['keytab'])
-            dest_dir = os.path.dirname(dest_file)
             # check if remote /etc/beaker directory exists
-            args = 'path=%s recurse=yes state=directory' % dest_dir
+            args = 'path=%s recurse=yes state=directory' % bkr_dir
             self.remote_module_call(
-                'Ensure %s directory exists' % dest_dir,
+                'Ensure %s directory exists' % bkr_dir,
                 'file',
-                args
-            )
-
-            # copy keytab to container
-            src_file = os.path.join(self.host.data_folder(), 'assets',
-                                    credentials['keytab'])
-            args = 'src=%s dest=%s mode=0755' % (src_file, dest_file)
-            self.remote_module_call(
-                'Copy keytab to container',
-                'copy',
                 args
             )
 
@@ -303,8 +294,10 @@ class BeakerProvisioner(CarbonProvisioner):
             )
 
             # set keytab file in client.conf
+            keytab_location = os.path.join(self.docker.mountpath,
+                                           credentials['keytab'])
             args = 'path=%s regexp=^#KRB_KEYTAB line=KRB_KEYTAB=\"%s\"' %\
-                   (bkr_conf, dest_file)
+                   (bkr_conf, keytab_location)
             self.remote_module_call(
                 'Set kerberos keytab in beaker client.conf',
                 'lineinfile',
@@ -385,7 +378,7 @@ class BeakerProvisioner(CarbonProvisioner):
         host_desc = self.host.profile()
 
         # set beaker xml absolute file path
-        bkr_xml_file = os.path.join(self.host.data_folder(), self._bkr_xml)
+        bkr_xml_file = os.path.join(self.host.data_folder(), "assets", self._bkr_xml)
 
         # set attributes for beaker xml object
         for key in host_desc:
@@ -399,19 +392,6 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # format beaker client command to run
         _cmd = self.bxml.cmd.replace('=', "\=")
-
-        # copy the ks file to container if set
-        if self.bxml.kickstart != "":
-            src_file = os.path.join(self.host.data_folder(), "assets",
-                                    self.bxml.kickstart)
-            dest_file = '/tmp'
-
-            args = 'src=%s dest=%s mode=0755' % (src_file, dest_file)
-            self.remote_module_call(
-                'Copy kickstart to container',
-                'copy',
-                args
-            )
 
         self.logger.info('Generating beaker job XML..')
         self.logger.debug('Command to be run: %s' % _cmd)
@@ -436,18 +416,8 @@ class BeakerProvisioner(CarbonProvisioner):
         This method will upload (submit) a beaker job XML to Beaker. If the
         job was successfully uploaded, the beaker job id will be returned.
         """
-        # copy the beaker job xml to container
-        src_file = os.path.join(self.host.data_folder(), self._bkr_xml)
-        dest_file = '/tmp'
-        args = 'src=%s dest=%s mode=0755' % (src_file, dest_file)
-        self.remote_module_call(
-            'Copy beaker job XML to container',
-            'copy',
-            args
-        )
-
         # setup beaker client job submit commnand
-        _cmd = "bkr job-submit --xml %s" % os.path.join(dest_file, self._bkr_xml)
+        _cmd = "bkr job-submit --xml %s" % os.path.join(self.docker.mountpath, self._bkr_xml)
 
         self.logger.info('Submitting beaker job XML..')
 
