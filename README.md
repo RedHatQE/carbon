@@ -124,4 +124,40 @@ you would need to install the packages declared inside the requirements.txt.
 This file contains packages such as sphinx or nose as an example. They are not
 required in order to run carbon.
 
+## Run carbon framework within a container
+
+This section will explain how you can run carbon framework within a container.
+At the root of the project you will find a Dockerfile. You will need to build
+a carbon image before running. To build an image, run the following commands:
+
+```commandline
+$ cd /path/to/carbon-project
+# replace <tag> with the tag name you wish to give
+$ docker build -t carbon:<tag> .
+```
+
+Once the image is successfully built, you can start the container:
+
+```commandline
+# replace <tag> with the tag name you gave to the image when created
+$ docker run --name carbon -it carbon:<tag> /bin/sh
+/ # carbon --version
+carbon, version 0.3.2
+```
+
+If you are looking to use beaker and openshift providers you should run this
+comamnd when starting container. These providers spawn containers to perform
+provisioning. It will mount the docker socket of the host which allows carbon
+container to spawn containers on the host system:
+
+```commandline
+# replace <tag> with the tag name you gave to the image when created
+$ docker run --name carbon -it -v /var/run/docker.sock:/var/run/docker.sock \
+carbon:<tag> /bin/sh
+```
+
+If you wish to install the develop version of carbon in a new container image.
+You will need to append @develop to the end of the git url within the
+dockerfile. Then rebuild a new image.
+
 Happy hacking!
