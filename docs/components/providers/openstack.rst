@@ -22,6 +22,7 @@ credentials section with all available OpenStack credential keys.
         tenant_id: <tenant_id>
         username: <username>
         password: <password>
+        region: <region>
 
 .. list-table::
     :widths: auto
@@ -61,6 +62,11 @@ credentials section with all available OpenStack credential keys.
         - The password of your OpenStack tenant.
         - String
         - True
+
+    *   - region
+        - The region of your OpenStack tenant to authenticate with.
+        - String
+        - False
 
 Resources
 +++++++++

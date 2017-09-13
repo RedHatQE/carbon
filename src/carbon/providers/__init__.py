@@ -20,4 +20,5 @@ from .beaker import BeakerProvider
 from .digitalocean import DigitalOceanProvider
 from .openshift import OpenshiftProvider
 from .openstack import OpenstackProvider
+from .openstack_v2 import OpenstackProviderV2
 from .rackspace import RackspaceProvider

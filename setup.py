@@ -27,6 +27,7 @@ requires = [
     'Click>=6.7',
     'PyYAML>=3.12',
     'pykwalify>=1.6.0',
+    'apache-libcloud>=2.2.0',
     'python-openstackclient>=3.11.0',
     'python-neutronclient>=6.2.0',
     'docker==2.1.0',

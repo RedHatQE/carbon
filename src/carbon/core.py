@@ -505,6 +505,8 @@ class CarbonProvider(LoggerMixin):
         for p in self.get_optional_creds_parameters():
             if p in cdata:
                 self._credentials[p] = cdata[p]
+            else:
+                self._credentials[p] = None
 
     @classmethod
     def check_mandatory_parameters(cls, parameters):
