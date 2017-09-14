@@ -388,7 +388,9 @@ class BeakerProvisioner(CarbonProvisioner):
                     setattr(self.bxml, xml_key, host_desc[key])
 
         # generate beaker job xml (workflow-simple command)
-        self.bxml.generate_beaker_xml(bkr_xml_file, savefile=True)
+        self.bxml.generate_beaker_xml(
+            bkr_xml_file, kickstart_path=self.docker.mountpath, savefile=True
+        )
 
         # format beaker client command to run
         _cmd = self.bxml.cmd.replace('=', "\=")
@@ -806,7 +808,7 @@ class BeakerXML(object):
         self._virtcapable = False
         self._ignore_panic = False
 
-    def generate_beaker_xml(self, x, savefile=False):
+    def generate_beaker_xml(self, x, kickstart_path='/tmp', savefile=False):
 
         xmlfile = x
 
@@ -901,7 +903,7 @@ class BeakerXML(object):
 
         # Set kickstart file
         if self.kickstart != "":
-            self.cmd += " --kickstart '" + "/tmp/" + self.kickstart + "'"
+            self.cmd += " --kickstart '" + kickstart_path + "/" + self.kickstart + "'"
 
         # Set kick start meta options
         if self.ksmeta != "":
