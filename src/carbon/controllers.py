@@ -311,15 +311,17 @@ class DockerController(CarbonController):
     """
     __controller_name__ = 'Docker'
 
-    def __init__(self, cname=None):
+    def __init__(self, cname=None, mountpath=None):
         """Constructor.
 
         Instantiates docker client class.
 
         :param cname: Name of the container.
+        :param mountpath: a file path of where a volume will be mounted
         """
         super(DockerController, self).__init__()
         self._cname = cname
+        self._mountpath = mountpath
 
         self.client = DockerClient()
 
@@ -339,6 +341,18 @@ class DockerController(CarbonController):
             'You cannot set the container name after class has been '
             'instantiated.'
         )
+
+    @property
+    def mountpath(self):
+        """Return the name of the container."""
+        return self._mountpath
+
+    @mountpath.setter
+    def volume(self, value):
+        """Updates the mountpath attribute
+        :param value: The name for the docker container.
+        """
+        self._mountpath = value
 
     def run_container(self, image, command=None, entrypoint=None,
                       volumes=None):
