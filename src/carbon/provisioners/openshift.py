@@ -139,13 +139,15 @@ class OpenshiftProvisioner(CarbonProvisioner):
         """
         super(OpenshiftProvisioner, self).__init__()
         self.host = host
+        self._data_folder = host.data_folder()
         self._routes = list()
         self._labels = list()
         self._finallabels = list()
         self._app_name = ""
         self._env_opts = ""
 
-        self._docker = DockerController(cname=self.host.oc_name)
+        self._docker = DockerController(cname=self.host.oc_name,
+                                        mountpath="/tmp/{0}".format(self.host.oc_name))
         self._ansible = AnsibleController(
             inventory=get_ansible_inventory_script(self.docker.name.lower())
         )
@@ -197,7 +199,9 @@ class OpenshiftProvisioner(CarbonProvisioner):
 
     def start_container(self):
         """Start container."""
-        self.docker.run_container(self._oc_image, entrypoint='bash')
+        assetsdir = os.path.join(self._data_folder, "assets")
+        self.docker.run_container(self._oc_image, entrypoint='bash',
+                                  volumes={assetsdir: {'bind': self.docker.mountpath, 'mode': 'rw,z'}})
 
     def create_labels(self):
         """Creates the labels list to be applied to an application.
@@ -485,25 +489,8 @@ class OpenshiftProvisioner(CarbonProvisioner):
             _template_file = filepath
             _template_filename = os.path.basename(filepath)
 
-        # copy file to container
         if _template_file:
-
-            src_file_path = _template_file
-            dest_full_path_file = '/tmp/'
-
-            cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
-
-            results = self.ansible.run_module(
-                dict(name='copy file', hosts=self.host.oc_name, gather_facts='no',
-                     tasks=[dict(action=dict(module='copy', args=cp_args))])
-            )
-
-            if results['status'] != 0:
-                raise OpenshiftProvisionerError(
-                    'Failed to create new application by template.'
-                )
-
-            custom_template_file = os.path.join("/tmp", _template_filename)
+            custom_template_file = os.path.join(self.docker.mountpath, _template_filename)
             custom_template_call = "--file\={}".format(custom_template_file)
 
             # we will not use env vars for custom templates
