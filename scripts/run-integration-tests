@@ -32,4 +32,4 @@ if platform == "darwin":
 run('nosetests --with-coverage --cover-erase --cover-package carbon '
     '--with-xunit --xunit-file {0}/nosetests.xml --cover-xml '
     '--cover-xml-file {0}/coverage.xml --cover-html --cover-html-dir {0} -v '
-    '--disabledoc ./integration/ ./functional/'.format(_pyver))
+    '--disabledoc ./integration'.format(_pyver))

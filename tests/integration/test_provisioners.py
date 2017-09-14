@@ -16,15 +16,41 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    Unit tests to test carbon provisioners.
+    carbon.tests.integration.test_provisioners
+
+    Integration tests to test carbon provisioners. Integration tests require
+    credential details to communicate with various providers
+    (openstack, beaker, etc.). You will need to configure a conf file which
+    will hold all your provider credentials. Please see the example conf file
+    at carbon/tests/assets/carbon.cfg. Once you have your conf file setup, you
+    will want to export the following environment variable:
+
+        export CARBON_SETTINGS=/etc/carbon/carbon.cfg
+
+    You will want to replace the path to the location of your conf file. These
+    tests will read credentials from that file.
+
+    Beaker tests require you to set the environment variable below to define
+    the path to your assets folder:
+
+        export CARBON_ASSETS_PATH=/path/to/your/assets/folder
+
+    You will want to replace the path to the location of your assets folder.
+    Within this folder should contain three files:
+
+        1. SSH private key
+        2. Key tab file
+        3. Example kick start file (example saved at carbon/tests/assets)
+
+    Once this is all set you can run the tests!
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import ast
 from unittest import TestCase
 
 import os
+from flask.config import Config
 from glanceclient.v2.client import Client as Glance_client
 from keystoneauth1 import session
 from neutronclient.v2_0 import client as neutron_client
@@ -50,7 +76,6 @@ try:
 except ImportError:
     from test.support import EnvironmentVarGuard
 
-
 CARBON_CFG = None
 CARBON_CFGS = [
     os.path.join(os.getcwd(), 'assets/carbon.cfg'),
@@ -63,51 +88,55 @@ SCENARIO_CFGS = [
 ]
 
 
-def read_data(file_location):
-    myvars = {}
-    with open(file_location) as myfile:
-        for line in myfile:
-            if "=" in line:
-                name = line.split("=")[0]
-                var = line.split("=")[1]
-                myvars[name.strip()] = var
-    return myvars
-
-
 class TestOpenstackProvisioner(TestCase):
-    """Unit tests to test carbon provisioner ~ openstack."""
+    """Integration tests to test openstack provisioner.
+
+    The purpose of this class is to test different methods of the provisioner
+    class that require communicating with openstack to provision and delete
+    resources.
+    """
 
     def setUp(self):
-        """Actions to be performed before each test case."""
+        """Setup tasks to be run before each test case."""
         global CARBON_CFG, CARBON_CFGS
         global SCENARIO_CFG, SCENARIO_CFGS
 
-        # Determine abs path to carbon config
+        # get carbon config file path
         for f in CARBON_CFGS:
             if os.path.exists(f):
                 CARBON_CFG = f
 
-        # Determine abs path to scenario config
+        # get carbon scenario file path
         for f in SCENARIO_CFGS:
             if os.path.exists(f):
                 SCENARIO_CFG = f
 
-        # Set carbon settings env variable
+        # set carbon settings env variable
         self.env = EnvironmentVarGuard()
-        #self.env.set('CARBON_SETTINGS', CARBON_CFG)
 
-        # Create carbon object
+        # create a carbon object
         self.cbn = Carbon(__name__, assets_path="assets")
 
-        # Load scenario data
+        # load scenario
         self.data = file_mgmt('r', SCENARIO_CFG)
-        params = self.data.pop('provision')[0]
-        if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(
-                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
+        host_params = self.data['provision'][0]
+
+        if os.getenv('CARBON_SETTINGS'):
+            # load conf file
+            config = Config(os.getcwd())
+            config.from_pyfile(os.environ['CARBON_SETTINGS'], silent=True)
+
+            # set provider credentials for host
+            for item in config['CREDENTIALS']:
+                if 'openstack' in item['name']:
+                    host_params['provider_creds'] = [item]
+                    break
         else:
-            params['provider_creds'] = self.data.pop('credentials')
-        self.host = Host(config=self.cbn.config, parameters=params)
+            # set provider credentials for host
+            host_params['provider_creds'] = self.data.pop('credentials')
+
+        # create host object
+        self.host = Host(config=self.cbn.config, parameters=host_params)
 
     def test_key_session_property(self):
         """Test creating a keystoneclient session. Verifies object is instance
@@ -198,98 +227,88 @@ class TestOpenstackProvisioner(TestCase):
 class TestBeakerProvisioner(TestCase):
     """Unit tests to test carbon provisioner ~ beaker."""
 
+    # attribute place holders
+    host = object
+    host2 = object
+    host3 = object
+    host4 = object
+    host5 = object
+    host6 = object
+
+
     def setUp(self):
-        """Actions to be performed before each test case."""
+        """Setup tasks to be run before each test case."""
         global CARBON_CFG, CARBON_CFGS
         global SCENARIO_CFG, SCENARIO_CFGS
 
-        # BeakerProvisioner obj
-        self.obj = None
+        # beaker provisioner object
+        self.obj = object
 
-        # Determine abs path to carbon config
+        # get carbon conf file path
         for f in CARBON_CFGS:
             if os.path.exists(f):
                 CARBON_CFG = f
 
-        # Determine abs path to scenario config
+        # get carbon scenario file path
         for f in SCENARIO_CFGS:
             if os.path.exists(f):
                 SCENARIO_CFG = f
 
-        # Set carbon settings env variable
+        # set carbon settings env variable
         self.env = EnvironmentVarGuard()
-        #self.env.set('CARBON_SETTINGS', CARBON_CFG)
 
-        # Create carbon object
-        if os.getenv("CARBON_ASSETS_PATH") is not None:
+        # create carbon object
+        if os.getenv("CARBON_ASSETS_PATH"):
             self.cbn = Carbon(__name__, assets_path = \
                 os.environ["CARBON_ASSETS_PATH"])
         else:
+            # static to carbon jenkins slave
             self.cbn = Carbon(__name__, assets_path="/home/fedora/assets")
 
         BeakerProvisioner._bkr_image = \
             "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
-        # Load scenario data
+        # load scenario
         self.data = file_mgmt('r', SCENARIO_CFG)
-        params = self.data.pop('provision')[5]
-        if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(
-                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
-        else:
-            params['provider_creds'] = self.data.pop('credentials')
-        self.host = Host(config=self.cbn.config, parameters=params)
-        self.cbn.scenario.add_hosts(self.host)
 
-        self.data = file_mgmt('r', SCENARIO_CFG)
-        params = self.data.pop('provision')[6]
-        if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(
-                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
-        else:
-            params['provider_creds'] = self.data.pop('credentials')
-        self.host2 = Host(config=self.cbn.config, parameters=params)
-        self.cbn.scenario.add_hosts(self.host2)
+        # create host objects
+        base = 0
+        for index in range(5, 11):
+            # get host data
+            host_params = self.data['provision'][index]
 
-        self.data = file_mgmt('r', SCENARIO_CFG)
-        params = self.data.pop('provision')[7]
-        if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(
-                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
-        else:
-            params['provider_creds'] = self.data.pop('credentials')
-        self.host3 = Host(config=self.cbn.config, parameters=params)
-        self.cbn.scenario.add_hosts(self.host3)
+            if os.getenv('CARBON_SETTINGS'):
+                # load conf file
+                config = Config(os.getcwd())
+                config.from_pyfile(os.environ['CARBON_SETTINGS'], silent=True)
 
-        self.data = file_mgmt('r', SCENARIO_CFG)
-        params = self.data.pop('provision')[8]
-        if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(
-                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
-        else:
-            params['provider_creds'] = self.data.pop('credentials')
-        self.host4 = Host(config=self.cbn.config, parameters=params)
-        self.cbn.scenario.add_hosts(self.host4)
+                # set provider credentials for host
+                for item in config['CREDENTIALS']:
+                    if 'beaker' in item['name']:
+                        host_params['provider_creds'] = [item]
+                        break
+            else:
+                host_params['provider_creds'] = self.data.pop('credentials')
 
-        self.data = file_mgmt('r', SCENARIO_CFG)
-        params = self.data.pop('provision')[9]
-        if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(
-                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
-        else:
-            params['provider_creds'] = self.data.pop('credentials')
-        self.host5 = Host(config=self.cbn.config, parameters=params)
-        self.cbn.scenario.add_hosts(self.host5)
+            # create host object
+            if index == 5:
+                host_attr = 'host'
+                # set base to be used to determine attribute name based on
+                # position in provision list of hosts.
+                base = index - 1
+            else:
+                host_attr = 'host%s' % (index - base)
 
-        self.data = file_mgmt('r', SCENARIO_CFG)
-        params = self.data.pop('provision')[10]
-        if os.getenv("CARBON_SETTINGS") is not None:
-            params['provider_creds'] = ast.literal_eval(read_data(
-                os.environ["CARBON_SETTINGS"])["CREDENTIALS"].strip())
-        else:
-            params['provider_creds'] = self.data.pop('credentials')
-        self.host6 = Host(config=self.cbn.config, parameters=params)
-        self.cbn.scenario.add_hosts(self.host6)
+            # set attribute
+            setattr(
+                self,
+                host_attr,
+                Host(config=self.cbn.config, parameters=host_params)
+            )
+
+            # add host to carbon scenario
+            self.cbn.scenario.add_hosts(getattr(self, host_attr))
+
 
     def tearDown(self):
         """ Cleanup Docker Container. Stop and remove"""
@@ -378,8 +397,9 @@ class TestBeakerProvisioner(TestCase):
                     try:
                         setattr(self.obj.bxml, xml_key, host_desc[key])
                     except Exception as ex:
-                        self.obj.container_cleanup_and_error(
-                            "Error setting Beaker attribute data %s" % ex)
+                        raise Exception(
+                            'Error setting beaker attribute data: %s' % ex
+                        )
 
         # Generate Beaker XML
         self.obj.bxml.generate_beaker_xml(bkr_xml_file, savefile=False)
@@ -407,15 +427,12 @@ class TestBeakerProvisioner(TestCase):
         self.obj.ansible.results_analyzer(results['status'])
 
         if results['status'] != 0:
-            self.obj.container_cleanup_and_error("Issue generating Beaker XML")
-
+            raise Exception('Issue generating beaker xml.')
         else:
             if len(results["callback"].contacted) == 1:
                 parsed_results = results["callback"].contacted[0]["results"]
             else:
-                self.obj.container_cleanup_and_error(
-                    "Unexpected Error creating XML")
-
+                raise Exception('Unexpected error creating beaker xml.')
             output = parsed_results["stdout"]
 
         # Test generation of XML DOM

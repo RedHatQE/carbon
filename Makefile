@@ -1,11 +1,36 @@
 .PHONY: clean-pyc clean-tests clean docs
 
-all: clean-pyc clean-tests clean test
+ATTENTION = \033[0;31m
+COLORLESS = \033[0m
+WARNING = \033[0;33m
+
+all: clean-pyc clean-tests clean test-functional
 
 clean-all: clean-pyc clean-tests clean
 
-test:
-	tox
+test-all:
+	@echo -e "$(ATTENTION)**** ATTENTION: CREDENTIALS REQUIRED ****"
+	@echo -e "$(WARNING)"
+	@echo -e "Please view each module under carbon.tests to see"
+	@echo -e "which environment variables need to be set to run tests"
+	@echo -e "$(COLORLESS)"
+	@echo
+	@echo -e "**** CARBON ALL TESTS ****"
+	tox -e py27-functional,py36-functional,py27-integration
+
+test-functional:
+	@echo "**** CARBON FUNCTIONAL TESTS ****"
+	tox -e py27-functional,py36-functional
+
+test-integration:
+	@echo -e "$(ATTENTION)**** ATTENTION: CREDENTIALS REQUIRED ****"
+	@echo -e "$(WARNING)"
+	@echo -e "Please view each module under carbon.tests to see"
+	@echo -e "which environment variables need to be set to run tests."
+	@echo -e "$(COLORLESS)"
+	@echo
+	@echo "**** CARBON INTEGRATION TESTS ****"
+	tox -e py27-integration
 
 release:
 	python scripts/make-release.py
