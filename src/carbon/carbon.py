@@ -37,7 +37,7 @@ from flask.helpers import locked_cached_property, get_root_path
 
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
-from .core import CarbonError, LoggerMixin, PipelineBuilder
+from .core import CarbonError, LoggerMixin, PipelineBuilder, TimeMixin
 from .helpers import file_mgmt, gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
 
@@ -129,7 +129,7 @@ class ResultsMixin(object):
         file_mgmt('w', status_file, self.results)
 
 
-class Carbon(LoggerMixin, ResultsMixin):
+class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
     """
     The Carbon object acts as the central object. We call this object
     'the carbon compound'. Like in chemistry, a carbon molecule helps on the
@@ -488,6 +488,9 @@ class Carbon(LoggerMixin, ResultsMixin):
                 )
 
         try:
+            # save start time
+            self.start()
+
             # overall status
             status = 0
 
@@ -535,6 +538,12 @@ class Carbon(LoggerMixin, ResultsMixin):
             # update results
             self.update_results(pipeline.name, status, ex.results)
         finally:
+            # save end time
+            self.end()
+
+            self.logger.info('Carbon run time duration: %dh:%dm:%ds' %
+                             (self.hours, self.minutes, self.seconds))
+
             # write carbon status file
             self.write_status_file(self.status_file)
             self.logger.info('Scenario status file ~ %s' % self.status_file)

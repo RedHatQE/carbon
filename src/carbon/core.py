@@ -26,6 +26,7 @@ import inspect
 from collections import namedtuple
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
+from time import time
 
 import os
 
@@ -246,7 +247,106 @@ class LoggerMixin(object):
         return getLogger(inspect.getmodule(inspect.stack()[1][0]).__name__)
 
 
-class CarbonTask(LoggerMixin):
+class TimeMixin(object):
+    """Carbon's time mixin class.
+
+    This class provides an easy interface for other carbon classes to save
+    a start and end time. Once times are saved they can calculate the time
+    delta between the two points in time.
+    """
+    _start_time = None
+    _end_time = None
+    _hours = 0
+    _minutes = 0
+    _secounds = 0
+
+    def start(self):
+        """Set the start time."""
+        self._start_time = time()
+
+    def end(self):
+        """Set the end time."""
+        self._end_time = time()
+
+        # calculate time delta
+        delta = self._end_time - self._start_time
+        self.hours = delta // 3600
+        delta = delta - 3600 * self.hours
+        self.minutes = delta // 60
+        self.seconds = delta - 60 * self.minutes
+
+    @property
+    def start_time(self):
+        """Return the start time."""
+        return self._start_time
+
+    @start_time.setter
+    def start_time(self, value):
+        """Set the start time.
+
+        :param value: Start time.
+        :type value: int
+        """
+        raise CarbonError('You cannot set the start time.')
+
+    @property
+    def end_time(self):
+        """Return the end time."""
+        return self._end_time
+
+    @end_time.setter
+    def end_time(self, value):
+        """Set the end time.
+
+        :param value: End time.
+        :type value: int
+        """
+        raise CarbonError('You cannot set the end time.')
+
+    @property
+    def hours(self):
+        """Return hours."""
+        return self._hours
+
+    @hours.setter
+    def hours(self, value):
+        """Set hours.
+
+        :param value: Hours to set.
+        :type value: int
+        """
+        self._hours = value
+
+    @property
+    def minutes(self):
+        """Return minutes."""
+        return self._minutes
+
+    @minutes.setter
+    def minutes(self, value):
+        """Set minutes.
+
+        :param value: Minutes to set.
+        :type value: int
+        """
+        self._minutes = value
+
+    @property
+    def seconds(self):
+        """Return seconds."""
+        return self._secounds
+
+    @seconds.setter
+    def seconds(self, value):
+        """Set seconds.
+
+        :param value: Seconds to set.
+        :type value: int
+        """
+        self._secounds = value
+
+
+class CarbonTask(LoggerMixin, TimeMixin):
     """
     This is the base class for every task created for Carbon framework.
     All instances of this class can be found within the ~carbon.tasks
@@ -266,7 +366,7 @@ class CarbonTask(LoggerMixin):
         return self.name
 
 
-class CarbonResource(LoggerMixin):
+class CarbonResource(LoggerMixin, TimeMixin):
     """
     This is the base class for every resource created for Carbon Framework.
     All instances of this class can be found within ~carbon.resources
@@ -367,7 +467,7 @@ class CarbonResource(LoggerMixin):
         pass
 
 
-class CarbonProvisioner(LoggerMixin):
+class CarbonProvisioner(LoggerMixin, TimeMixin):
     """
     This is the base class for all provisioners for provisioning machines
     """
@@ -404,7 +504,7 @@ class CarbonProvisioner(LoggerMixin):
         raise AttributeError('You cannot set name for the provisioner.')
 
 
-class CarbonProvider(LoggerMixin):
+class CarbonProvider(LoggerMixin, TimeMixin):
     """
     This is the base class for all providers.
 
@@ -760,7 +860,7 @@ class CarbonProvider(LoggerMixin):
         return profile
 
 
-class CarbonController(LoggerMixin):
+class CarbonController(LoggerMixin, TimeMixin):
     """This is the base class for all controllers.
 
     Every controller will need to inherit the carbon controller. Controllers
