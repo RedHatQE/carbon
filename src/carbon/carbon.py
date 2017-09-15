@@ -537,6 +537,9 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
             # update results
             self.update_results(pipeline.name, status, ex.results)
+
+            # reload resource objects
+            self.scenario.reload_resources(ex.results)
         finally:
             # save end time
             self.end()
