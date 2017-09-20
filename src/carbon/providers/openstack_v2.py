@@ -123,10 +123,10 @@ class OpenstackProviderV2(CarbonProvider):
         'flavor',
         'image',
         'networks',
-        'floating_ip_pool',
     )
 
     _optional_parameters = (
+        'floating_ip_pool',
         'keypair',
         'admin_pass',
         'description',
@@ -552,8 +552,7 @@ class OpenstackProviderV2(CarbonProvider):
         """
         # quit when no value given
         if not value:
-            self.logger.error('Invalid data for floating ip pool!')
-            return False
+            return True
 
         # check floating ip pool data type
         if not isinstance(value, string_types):
@@ -833,6 +832,11 @@ class OpenstackProviderV2(CarbonProvider):
         :param fip: Floating ip pool.
         :type fip: str
         """
+        # do not attach floating ip if variable has None value
+        if not fip:
+            self.logger.warn('Node %s does not require fip.' % node.name)
+            return
+
         self.logger.info('Attaching fip to node %s.' % node.name)
 
         try:
@@ -876,6 +880,8 @@ class OpenstackProviderV2(CarbonProvider):
 
             # delete ip
             self.driver.ex_delete_floating_ip(_fip_obj)
+        except OpenstackProviderError:
+            self.logger.warn('Node %s does not have fip.' % node.name)
         except Exception as ex:
             self.logger.error(ex.message)
             raise OpenstackProviderError('Unable to detach FIP from %s' % node)

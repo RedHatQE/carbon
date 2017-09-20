@@ -145,7 +145,7 @@ resource section with all available OpenStack provider keys.
     *   - os_floating_ip_pool
         - The name of the external network to attach node too.
         - String
-        - True
+        - False
 
     *   - os_keypair
         - The name of the keypair to associate the node with.
@@ -190,7 +190,7 @@ Examples
         os_image: Fedora-Cloud-Base-25-compose-latest
         os_flavor: m1.small
         os_networks: [pit-jenkins]
-        os_floating_ip_pool: 10.8.172.0/22
+        os_floating_ip_pool: 10.8.240.0
         os_keypair: pit-jenkins
 
 .. code-block:: yaml
@@ -215,7 +215,7 @@ Examples
         os_image: Fedora-Cloud-Base-24-compose-latest
         os_flavor: m1.small
         os_networks: [pit-jenkins]
-        os_floating_ip_pool: 10.8.172.0/22
+        os_floating_ip_pool: 10.8.240.0
         os_keypair: pit-jenkins
 
       - name: test_client2
@@ -225,7 +225,7 @@ Examples
         os_image: Fedora-Cloud-Base-25-compose-latest
         os_flavor: m1.small
         os_networks: [pit-jenkins]
-        os_floating_ip_pool: 10.8.172.0/22
+        os_floating_ip_pool: 10.8.240.0
         os_keypair: pit-jenkins
         # Example with metadata defined
         metadata:
