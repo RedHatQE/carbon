@@ -27,11 +27,18 @@ from collections import namedtuple
 
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.executor.task_queue_manager import TaskQueueManager
-from ansible.inventory import Inventory
 from ansible.parsing.dataloader import DataLoader
 from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
-from ansible.vars import VariableManager
+
+# TODO: future release we should depreciate ansible < 2.4 for python 3 support
+try:
+    from ansible.inventory import Inventory
+    from ansible.vars import VariableManager
+except ImportError:
+    from ansible.inventory.manager import InventoryManager as Inventory
+    from ansible.vars.manager import VariableManager
+
 from docker import DockerClient
 from docker.errors import APIError, ContainerError, NotFound, ImageNotFound
 
@@ -98,11 +105,11 @@ class AnsibleController(CarbonController):
         :param inventory: The inventory host file.
         """
         super(AnsibleController, self).__init__()
-        self.variable_manager = VariableManager()
         self.loader = DataLoader()
         self.callback = CarbonCallback()
         self.ansible_inventory = inventory
         self.inventory = None
+        self.variable_manager = None
 
         # Module options
         self.module_options = namedtuple(
@@ -114,7 +121,8 @@ class AnsibleController(CarbonController):
                         'become_user',
                         'check',
                         'remote_user',
-                        'private_key_file']
+                        'private_key_file',
+                        'diff']
         )
 
         # Playbook options
@@ -131,17 +139,29 @@ class AnsibleController(CarbonController):
                         'listhosts',
                         'syntax',
                         'remote_user',
-                        'private_key_file']
+                        'private_key_file',
+                        'diff']
         )
 
     def set_inventory(self):
         """Instantiate the inventory class with the inventory file in-use."""
-        self.inventory = Inventory(
-            loader=self.loader,
-            variable_manager=self.variable_manager,
-            host_list=self.ansible_inventory
-        )
-        self.variable_manager.set_inventory(self.inventory)
+        try:
+            # supports ansible < 2.4
+            self.variable_manager = VariableManager()
+            self.inventory = Inventory(
+                loader=self.loader,
+                variable_manager=self.variable_manager,
+                host_list=self.ansible_inventory
+            )
+        except TypeError:
+            # supports ansible > 2.4
+            self.variable_manager = VariableManager(loader=self.loader)
+            self.inventory = Inventory(
+                loader=self.loader,
+                sources=self.ansible_inventory
+            )
+        finally:
+            self.variable_manager.set_inventory(self.inventory)
 
     def run_module(self, play_source, remote_user="root", become=False,
                    become_method="sudo", become_user="root",
@@ -182,7 +202,8 @@ class AnsibleController(CarbonController):
             become_user=become_user,
             check=False,
             remote_user=remote_user,
-            private_key_file=private_key_file
+            private_key_file=private_key_file,
+            diff=False
         )
 
         # Load the play
@@ -244,7 +265,8 @@ class AnsibleController(CarbonController):
             listhosts=False,
             syntax=False,
             remote_user=remote_user,
-            private_key_file=private_key_file
+            private_key_file=private_key_file,
+            diff=False
         )
 
         # Set additional variables for use by playbook
