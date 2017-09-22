@@ -25,7 +25,7 @@
 """
 from .._compat import string_types
 from ..core import CarbonProvider
-from ..helpers import check_is_gitrepo_fine
+from ..helpers import is_url_valid
 
 
 class OpenshiftProvider(CarbonProvider):
@@ -149,7 +149,7 @@ class OpenshiftProvider(CarbonProvider):
         if value:
             self.logger.debug("Validating git: {0}".format(value))
             if isinstance(value, string_types):
-                return check_is_gitrepo_fine(value)
+                return is_url_valid(value)
             else:
                 return False
         else:

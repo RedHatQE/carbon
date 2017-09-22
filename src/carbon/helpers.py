@@ -30,10 +30,10 @@ import random
 import string
 import sys
 from logging import getLogger
-from subprocess import Popen, PIPE
 
 import jinja2
 import os
+import requests
 import stat
 import yaml
 from flask.helpers import get_root_path
@@ -306,25 +306,20 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
         raise HelpersError("Unknown file operation: %s." % operation)
 
 
-def check_is_gitrepo_fine(git_repo_url):
-    """
-    :param git_repo_url: a git url to validate
-    :return: Boolean if the git url is good or not
-    :rtype: Boolean
-    """
+def is_url_valid(url):
+    """Check if a url is valid.
 
+    :param url: URL path.
+    :type url: str
+    :return: True if url exists or false if url does not exist.
+    :rtype: bool
+    """
     try:
-        p = Popen(["git", "ls-remote", git_repo_url], stdout=PIPE)
-        output = p.communicate()[0]
-        if p.returncode != 0:
-            LOG.warn('Unable to access %s - Returncode %s - Output %s',
-                     git_repo_url, p.returncode, output)
-            return False
-    except:
-        LOG.error(sys.exc_info()[0])
-        LOG.error('Unable to access %s', git_repo_url)
+        response = requests.get(url)
+        response.raise_for_status()
+    except requests.HTTPError as ex:
+        LOG.error(ex)
         return False
-
     return True
 
 
