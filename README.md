@@ -47,7 +47,7 @@ framework has been developed to run with python 2.7.x and above.
 Download the source code and follow the commands below:
 
 ```commandline
-$ pip install -r requirements.txt
+$ pip install -r requirements/dev.txt
 ```
 
 This is going to install the necessary packages to develop/contribute to Carbon.
@@ -116,13 +116,16 @@ Carbon's setup.py module declares packages needed by carbon in order to run.
 What does this mean? If you were to install carbon (pip install carbon) in a
 fresh environment. It would install all of its required package dependencies.
 
-**requirements.txt**
+**requirements/*.txt**
 
-Carbon's requirements.txt declares packages needed by carbon for development
-purposes only. What does this mean? If you wanted to run carbon's unit tests
-you would need to install the packages declared inside the requirements.txt.
-This file contains packages such as sphinx or nose as an example. They are not
-required in order to run carbon.
+Carbon project has a folder which holds all its requirements files.
+Within this folder you will find different requirements files for
+development purposes. What does this mean? If you wanted to run carbon's
+unit tests, you would need to install the packages declared inside the
+tests.txt. This file contains packages such as sphinx or nose as an
+example. They are not required in order to run carbon. To
+development for carbon, you would want to install the packages from
+dev.txt.
 
 ## Run carbon framework within a container
 
