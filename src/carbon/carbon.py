@@ -262,11 +262,11 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
                 raise CarbonError('Error creating data folder - '
                                   '%s'.format(ex.message))
 
-        # Setup logging handlers
-        self.create_carbon_logger(self.config)
-        self.create_custom_logger(self.config, 'blaster')
-        # commented out pykwalify as it logged too much
-        # self.create_custom_logger(self.config, "pykwalify.core")
+        # configure loggers
+        self.create_logger(__carbon_name__, self.config)
+        self.create_logger('blaster', self.config)
+        # pykwalify logging disabled for too much logging
+        # self.create_logger('pykwalify.core', self.config)
 
         # the assets can be located wherever the user wants or it
         # will look at the running folder (getcwd())

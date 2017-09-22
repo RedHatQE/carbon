@@ -158,88 +158,54 @@ class LoggerMixin(object):
     }
 
     @classmethod
-    def create_carbon_logger(cls, carbon_config):
-        """Create carbons logger.
+    def create_logger(cls, name, config=None):
+        """Create logger.
 
-        :param name: Logger name.
-        :param log_level: Log level to set for logger.
-        :return: Carbon logger object.
+        This method will create logger's to be used throughout carbon.
+
+        :param name: Name for the logger to create.
+        :type name: str
+        :param config: Carbon config object.
+        :type config: dict
         """
-        clogger = getLogger(carbon_config["LOGGER_NAME"])
-        if not clogger.handlers:
-            if carbon_config["LOGGER_TYPE"] == "stream":
-                chandler = StreamHandler()
-            elif carbon_config["LOGGER_TYPE"] == "file":
-                logfile = os.path.join(carbon_config["DATA_FOLDER"], "logs", "carbon_scenario.log")
-                logdir = os.path.dirname(logfile)
-                if os.path.exists(logdir):
-                    pass
+        # get logger
+        logger = getLogger(name)
+
+        # skip creating logger if handler already exists
+        if len(logger.handlers) > 0:
+            return
+
+        # configure handler type
+        if config['LOGGER_TYPE'] == 'stream':
+            handler = StreamHandler()
+        elif config['LOGGER_TYPE'] == 'file':
+            log_dir = os.path.join(config['DATA_FOLDER'], 'logs')
+            log_file = os.path.join(log_dir, 'carbon_scenario.log')
+
+            # create log directory
+            try:
+                if not os.path.exists(log_dir):
+                    os.makedirs(log_dir)
+            except OSError as ex:
+                msg = 'Unable to create %s directory' % log_dir
+                if ex.errno == errno.EACCES:
+                    msg += ', permission defined.'
                 else:
-                    try:
-                        os.makedirs(logdir)
-                    except OSError as ex:
-                        if ex.errno == errno.EACCES:
-                            raise LoggerMixinError(
-                                'You do not have permission to create the '
-                                'workspace.'
-                            )
-                        else:
-                            raise LoggerMixinError(
-                                'Error creating scenario workspace: %s' %
-                                ex.message
-                            )
-                chandler = FileHandler(logfile)
-            else:
-                raise LoggerMixinError(
-                    'Please set a valid LOGGER_TYPE value.'
-                )
-            chandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
-            chandler.setFormatter(Formatter(cls._LOG_FORMAT))
-            clogger.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
-            clogger.addHandler(chandler)
-        return clogger
-
-    @classmethod
-    def create_custom_logger(cls, carbon_config, name):
-        """Create custom logger.
-
-        :param name: Logger name.
-        :param log_level: Log level to set for logger.
-        :param name: name of a python class to log
-        :return: Taskrunner logger object.
-        """
-        if carbon_config["LOGGER_TYPE"] == "stream":
-            thandler = StreamHandler()
-        elif carbon_config["LOGGER_TYPE"] == "file":
-            logfile = os.path.join(carbon_config["DATA_FOLDER"], "logs", "carbon_scenario.log")
-            logdir = os.path.dirname(logfile)
-            if os.path.exists(logdir):
-                pass
-            else:
-                try:
-                    os.makedirs(logdir)
-                except OSError as ex:
-                    if ex.errno == errno.EACCES:
-                        raise LoggerMixinError(
-                            'You do not have permission to create the '
-                            'workspace.'
-                        )
-                    else:
-                        raise LoggerMixinError(
-                            'Error creating scenario workspace: %s' %
-                            ex.message
-                        )
-            thandler = FileHandler(logfile)
+                    msg += ', %s.' % ex
+                raise LoggerMixinError(msg)
+            handler = FileHandler(log_file)
         else:
             raise LoggerMixinError(
-                'Please set a valid LOGGER_TYPE value.'
+                'Invalid logger type. Supported types: (file or stream).'
             )
-        thandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
-        thandler.setFormatter(Formatter(cls._LOG_FORMAT))
-        tlogger = getLogger(name)
-        tlogger.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
-        tlogger.addHandler(thandler)
-        return tlogger
+
+        # configure handler
+        handler.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
+        handler.setFormatter(Formatter(cls._LOG_FORMAT))
+
+        # configure logger
+        logger.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
+        logger.addHandler(handler)
 
     @property
     def logger(self):
