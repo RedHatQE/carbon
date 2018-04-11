@@ -503,6 +503,5 @@ class TestOpenstack(TestCase):
         """
         key = '%sfloating_ip_pool' % self._osp.__provider_prefix__
         cp_parameters = deepcopy(self._host)
-        assert_true(self._osp.validate_floating_ip_pool(None))
         cp_parameters[key] = ['192.168.1.0/22']
         assert_false(self._osp.validate_floating_ip_pool(cp_parameters[key]))

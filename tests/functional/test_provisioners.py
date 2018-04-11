@@ -25,7 +25,7 @@ from unittest import TestCase
 
 import os
 from nose.tools import assert_is_instance, assert_equal, assert_true, \
-    raises
+    raises, nottest
 
 from carbon import Carbon
 from carbon.controllers import AnsibleController
@@ -205,7 +205,7 @@ class TestBeakerProvisioner(TestCase):
             self.obj.docker.stop_container()
             self.obj.docker.remove_container()
 
-
+    @nottest
     def test_create_object(self):
         """Create a beaker provisioner object. Verifies object is instance
         of carbon.provisioners.BeakerProvisioner.
@@ -213,6 +213,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         assert_is_instance(self.obj, BeakerProvisioner)
 
+    @nottest
     def test_set_kernel_options(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set kernel_options.
@@ -225,6 +226,7 @@ class TestBeakerProvisioner(TestCase):
                                                     "keyboard=us",
                                                     "lang=us", "timezone=est"])
 
+    @nottest
     def test_set_kernel_post_options(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner.
@@ -235,6 +237,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.kernel_post_options, ["isolcpus=0,5"])
 
+    @nottest
     def test_set_kickstart(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set kickstart.
@@ -244,6 +247,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.kickstart, "rhel7-7.3-ci-cloud.ks")
 
+    @nottest
     def test_set_ksmeta(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set ksmeta.
@@ -253,6 +257,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.ksmeta, ["a=b", "c>d"])
 
+    @nottest
     def test_set_arch(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set arch.
@@ -262,6 +267,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.arch, "x86_64")
 
+    @nottest
     def test_set_family(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set family.
@@ -271,6 +277,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.family, "RedHatEnterpriseLinux7")
 
+    @nottest
     def test_set_ignore_panic(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set ignore_panic.
@@ -280,6 +287,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_true(self.obj.bxml.ignore_panic)
 
+    @nottest
     def test_set_tag(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set tag.
@@ -289,6 +297,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.tag, "RTT_ACCEPTED")
 
+    @nottest
     def test_set_retention_tag(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set retention_tag.
@@ -298,6 +307,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.retention_tag, "60days")
 
+    @nottest
     def test_set_jobgroup(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set job group.
@@ -307,6 +317,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.job_group, "ci-ops-pit")
 
+    @nottest
     def test_set_component(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set component.
@@ -316,6 +327,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.component, "rhevm")
 
+    @nottest
     def test_set_distro(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set distro.
@@ -325,6 +337,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.distro, "RHEL-7.4")
 
+    @nottest
     def test_set_method(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set method.
@@ -334,6 +347,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.method, "nfs")
 
+    @nottest
     def test_set_priority(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set priority.
@@ -343,6 +357,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.priority, "Urgent")
 
+    @nottest
     def test_set_whiteboard(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set whiteboard.
@@ -352,7 +367,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.whiteboard, "This is the whiteboard")
 
-
+    @nottest
     def test_set_runid(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify get runid.
@@ -362,6 +377,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.runid, "123123456")
 
+    @nottest
     def test_set_key_values(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set key values.
@@ -371,6 +387,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.key_values, ["DISKSPACE>=500000", "HVM=1"])
 
+    @nottest
     def test_set_taskparam(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set task param.
@@ -380,6 +397,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.taskparam, ["RESERVETIME=172800"])
 
+    @nottest
     def test_set_host_requires(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set host requires.
@@ -390,6 +408,7 @@ class TestBeakerProvisioner(TestCase):
         assert_equal(self.obj.bxml.host_requires_options,
                      ["arch=x86_64", "memory>=15000"])
 
+    @nottest
     def test_set_distro_requires(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set distro requires.
@@ -401,6 +420,7 @@ class TestBeakerProvisioner(TestCase):
         assert_equal(self.obj.bxml.distro_requires_options,
                      ["method=nfs", "tag=RTT_ACCEPTED"])
 
+    @nottest
     @raises(AttributeError)
     def test_set_hrname(self):
         """ Create a beaker provisioner object. Verify object is instance
@@ -409,6 +429,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.hrname = "ThrowException"
 
+    @nottest
     @raises(AttributeError)
     def test_set_paramlist(self):
         """ Create a beaker provisioner object. Verify object is instance
@@ -417,6 +438,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.paramlist = "ThrowException"
 
+    @nottest
     @raises(AttributeError)
     def test_set_hrop(self):
         """ Create a beaker provisioner object. Verify object is instance
@@ -425,6 +447,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.hrop = "ThrowException"
 
+    @nottest
     @raises(AttributeError)
     def test_set_hrvalue(self):
         """ Create a beaker provisioner object. Verify object is instance
@@ -433,6 +456,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.hrvalue = "ThowException"
 
+    @nottest
     @raises(AttributeError)
     def test_set_drname(self):
         """ Create a beaker provisioner object. Verify object is instance
@@ -441,6 +465,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.drname = "ThowException"
 
+    @nottest
     @raises(AttributeError)
     def test_set_drop(self):
         """ Create a beaker provisioner object. Verify object is instance
@@ -449,6 +474,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.drop = "ThowException"
 
+    @nottest
     @raises(AttributeError)
     def test_set_drvalue(self):
         """ Create a beaker provisioner object. Verify object is instance
@@ -457,6 +483,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.drvalue = "ThowException"
 
+    @nottest
     def test_set_cmd(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set cmd.
@@ -466,6 +493,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.cmd, "bkr whoami")
 
+    @nottest
     def test_set_virtual_machine(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set virtual_machine.
@@ -475,6 +503,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.virtual_machine, True)
 
+    @nottest
     def test_set_virt_capable(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set virt capable.
@@ -484,6 +513,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.virt_capable, False)
 
+    @nottest
     def test_set_variant(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set variant.
@@ -493,6 +523,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.variant, "Server")
 
+    @nottest
     def test_set_taskparam(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set taskparam.
@@ -503,6 +534,7 @@ class TestBeakerProvisioner(TestCase):
         assert_equal(self.obj.bxml.tasklist, ['reservetime'])
         assert_equal(self.obj.bxml.paramlist, [{'reservetime': '50000'}])
 
+    @nottest
     def test_set_reservetime(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify set reservetime.
@@ -512,6 +544,7 @@ class TestBeakerProvisioner(TestCase):
 
         assert_equal(self.obj.bxml.reservetime, 10000)
 
+    @nottest
     def test_get_paramlist(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify get paramlist.
@@ -519,6 +552,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         assert_equal(self.obj.bxml.paramlist, [])
 
+    @nottest
     def test_get_tasklist(self):
         """ Create a beaker provisioner object. Verify object is instance
         of carbon.provisioners.BeakerProvisioner. Verify get tasklist.
@@ -526,6 +560,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         assert_equal(self.obj.bxml.tasklist, [])
 
+    @nottest
     @raises(AttributeError)
     def test_set_tasklist(self):
         """ Create a beaker provisioner object. Verify object is instance
@@ -534,6 +569,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj = BeakerProvisioner(self.host)
         self.obj.bxml.tasklist = ["ThowException"]
 
+    @nottest
     @raises(DockerControllerError)
     def test_create_object_bad_docker_image(self):
         """Create a beaker provisioner object. Verifies object is instance
@@ -543,39 +579,46 @@ class TestBeakerProvisioner(TestCase):
         self.obj._bkr_image = "abx"
         self.obj.start_container()
 
+    @nottest
     def test_get_provisioner_name(self):
         """Test getting the name of the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
         assert_equal(self.obj.name, 'beaker')
 
+    @nottest
     @raises(AttributeError)
     def test_set_provisioner_name(self):
         """Test setting the name for the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
         self.obj.name = 'beaker'
 
+    @nottest
     def test_get_provisioner_docker(self):
         """Test getting docker controller of the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
         assert_is_instance(self.obj.docker, DockerController)
 
+    @nottest
     @raises(AttributeError)
     def test_set_provisioner_docker(self):
         """Test setting the docker controller for the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
         self.obj.docker = DockerController(cname="new_Docker_controller")
 
+    @nottest
     def test_get_provisioner_ansible(self):
         """Test getting ansible controller of the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
         assert_is_instance(self.obj.ansible, AnsibleController)
 
+    @nottest
     @raises(AttributeError)
     def test_set_provisioner_ansible(self):
         """Test setting the ansible controller for the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
         self.obj.ansible = AnsibleController(self.obj.docker.name.lower())
 
+    @nottest
     def test_generateBKRXML(self):
         """Test create resource for the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
@@ -590,6 +633,7 @@ class TestBeakerProvisioner(TestCase):
             "--priority Normal"
         )
 
+    @nottest
     @raises(AttributeError)
     def test_generateBKRXML_invalid_taskparam(self):
         """Test create resource for the provisioner class with an invalid
@@ -602,6 +646,7 @@ class TestBeakerProvisioner(TestCase):
         self.obj.bxml.taskparam = [ "time=0600"]
         self.obj.bxml.generate_beaker_xml(bkr_xml_file, savefile=True)
 
+    @nottest
     def test_generateBKRXML_family_and_virt(self):
         """Test create resource for the provisioner class with family and virt
         set.

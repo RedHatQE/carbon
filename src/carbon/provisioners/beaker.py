@@ -33,77 +33,13 @@ import paramiko
 import stat
 
 from ..constants import BEAKER_JOBS_URL
-from ..controllers import AnsibleController
-from ..controllers import DockerController
 from ..core import CarbonProvisioner, CarbonProvisionerError
-from ..helpers import get_ansible_inventory_script
+from ..helpers import exec_local_cmd
 from ..signals import (
     prov_beaker_initiated, prov_beaker_xml_submit_started,
     prov_beaker_xml_submit_finished, prov_beaker_wait_job_started,
     prov_beaker_wait_job_finished
 )
-
-
-# TODO: Any failure during create method after job submitted, we need to
-# TODO: (cont). cancel that job. We can raise a BeakerCancelJob exception and
-# TODO: (cont). catch that in the decorator. Which will call self.cancel_job()
-
-def runner(method):
-    """Decorator to run the given class method and handle container clean up.
-
-    :param method: Method to call.
-    :type method: object
-    """
-
-    def wrapper(self):
-        """Wrapper function which calls the method given to the decorator.
-
-        :param self: Beaker class object.
-        :type self: object
-        """
-        try:
-            # call method
-            method(self)
-        except Exception as ex:
-            # log exception message and raise provisioner exception
-            self.logger.error(ex.message)
-            raise BeakerProvisionerError(ex)
-        finally:
-            # always clean up container (pass or fail)
-            self.docker.stop_container()
-            self.docker.remove_container()
-    return wrapper
-
-
-def retry(method, attempts=3):
-    """Decorator to retry running any given class method.
-
-    :param method: Method to call.
-    :type method: object
-    :param attempts: Number of attempts to run method given.
-    :type attempts: int
-    """
-
-    def wrapper(self, *args, **kwargs):
-        """Wrapper function which calls the method given to the decorator.
-
-        :param self: Beaker class object.
-        :type self: object
-        """
-        ex = None
-
-        for i in range(0, attempts):
-            try:
-                # call method
-                return method(self, *args, **kwargs)
-            except RemoteConnectionError as ex:
-                # log exception message and continue on to retry
-                self.logger.error(ex.message)
-                continue
-
-        # maximum attempts reached, raise final exception
-        raise BeakerProvisionerError(ex)
-    return wrapper
 
 
 class BeakerProvisionerError(CarbonProvisionerError):
@@ -119,69 +55,19 @@ class BeakerProvisionerError(CarbonProvisionerError):
         super(BeakerProvisionerError, self).__init__(message)
 
 
-class RemoteConnectionError(BeakerProvisionerError):
-    """Base class for remote connection exceptions."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        :type message: str
-        """
-        self.message = message
-        super(RemoteConnectionError, self).__init__(message)
-
-
 class BeakerProvisioner(CarbonProvisioner):
     """The main class for carbon Beaker provisioner.
 
     This provisioner will interact with the Beaker server using the
     beaker client (bkr) to submit jobs to get resources from Beaker.
 
-    Clashing (potential loss of data) will occur when trying to perform
-    multiple requests with different authentication in the same namespace
-    (with same config file). In order to handle this, we need to isolate
-    each session with different namespaces. This will be handled by each
-    scenario, each resource will have its own dedicated container to perform
-    the requests to the beaker server. This will isolate multiple scenarios
-    runs and resources on the same server.
-
-    Please see the diagram below for an example:
-
-    -----------
-    | Scenario |
-    ------------
-        |
-        |     --------------
-        | --> | Resources  |
-              | - machine1 |
-              | - machine2 |
-              --------------
-                    |
-                    |     -------------     ---------------------------------
-                    | --> | Container | --> | $ bkr job-submit machine1.xml |
-                    |     -------------     ---------------------------------
-                    |
-                    |     -------------     ---------------------------------
-                    | --> | Container | --> | $ bkr job-submit machine2.xml |
-                    |     -------------     ---------------------------------
-
-    This provisioner assumes that on the server, docker is installed and
-    running.
-
-    Docker has their own Python SDK that could be used to run the bkr commands
-    inside a container. From trying out the SDK, there is a big limitation
-    around getting the return code (status code) from the command run inside
-    the container. They only return a string and it would be challenging to
-    parse that since each bkr command may log different results. We will be
-    able to take advtange of using Ansible to run commands into a running
-    container. This way we can get both the stdout/stderr plus the return
-    code to determine pass or fail.
+    Warning:
+        Clashing (potential loss of data) will occur when trying to perform
+        multiple requests with different authentication in the same namespace
+        (with same config file).
     """
     __provisioner_name__ = "beaker"
     __provisioner_prefix__ = 'bkr_'
-
-    _bkr_image = "docker-registry.engineering.redhat.com/carbon/bkr-client"
 
     def __init__(self, host):
         """Constructor.
@@ -191,183 +77,65 @@ class BeakerProvisioner(CarbonProvisioner):
         """
         super(BeakerProvisioner, self).__init__()
         self.host = host
-        self._data_folder = host.data_folder()
-        self._bkr_xml = 'brkjob_{0}.xml'.format(self.host.bkr_name)
-        self.bxml = BeakerXML()
-        self._docker = DockerController(cname=self.host.bkr_name,
-                                        mountpath="/tmp/{0}".format(self.host.bkr_name))
-        self._ansible = AnsibleController(
-            inventory=get_ansible_inventory_script(self.docker.name.lower())
-        )
-
-        self.host.container_name = self.docker.cname
-        self.logger.debug("Host: {0} Container: {1}".format(
-            self.host.bkr_name, self.host.container_name))
+        self.data_folder = getattr(host, 'data_folder')()
+        self.job_xml = 'bkrjob_%s.xml' % getattr(host, 'bkr_name')
+        self.bkr_xml = BeakerXML()
+        self.conf_dir = '%s/.beaker_client' % os.path.expanduser('~')
+        self.conf = '%s/config' % self.conf_dir
 
         prov_beaker_initiated.send(self)
 
-    @property
-    def docker(self):
-        """Return the docker object."""
-        return self._docker
+    def _build_config(self):
+        """Build beaker configuration for authentication.
 
-    @docker.setter
-    def docker(self, value):
-        """Set the docker object.
-
-        :param value: The docker container object.
+        This method will build the configuration file based on the type of
+        authentication method (username/password or kerberos).
         """
-        raise AttributeError('Docker controller cannot be set!')
+        credentials = getattr(getattr(self.host, 'provider'), 'credentials')
 
-    @property
-    def ansible(self):
-        """Return the ansible object."""
-        return self._ansible
+        # create conf directory
+        if not os.path.isdir(self.conf_dir):
+            os.makedirs(self.conf_dir)
 
-    @ansible.setter
-    def ansible(self, value):
-        """Set the ansible object.
+        # open conf file for writing
+        conf_obj = open(self.conf, 'w')
 
-        :param value: The ansible object.
-        """
-        raise AttributeError('Ansible controller cannot be set!')
+        conf_obj.write('HUB_URL = "https://beaker.engineering.redhat.com"\n')
 
-    def start_container(self):
-        """Start container."""
-        assetsdir = os.path.join(self._data_folder, "assets")
-        self.docker.run_container(self._bkr_image, entrypoint='bash',
-                                  volumes={assetsdir: {'bind': self.docker.mountpath, 'mode': 'rw,z'}})
-
-    def authenticate(self):
-        """Authenticate with Beaker.
-
-        This method will attempt to authenticate with Beaker using either
-        username/password or keytab/kerberos principal.
-        """
-        # save provider credentials
-        credentials = self.host.provider.credentials
-        bkr_dir = '/etc/beaker'
-        bkr_conf = os.path.join(bkr_dir, 'client.conf')
-
-        # configure beaker configuration for defined authentication method
         if 'username' in credentials and credentials['username'] \
                 and 'password' in credentials and credentials['password']:
-            self.logger.debug('Username/password selected for authentication.')
+            self.logger.debug('Authentication by username/password.')
 
-            # set username in client.conf
-            args = 'path=%s regexp=^#USERNAME line=USERNAME=\"%s\"' %\
-                (bkr_conf, credentials['username'])
-            self.remote_module_call(
-                'Set username in beaker client.conf',
-                'lineinfile',
-                args
-            )
-
-            # set password in client.conf
-            args = 'path=%s regexp=^#PASSWORD line=PASSWORD=\"%s\"' %\
-                   (bkr_conf, credentials['password'])
-            self.remote_module_call(
-                'Set password in beaker client.conf',
-                'lineinfile',
-                args
-            )
+            conf_obj.write('AUTH_METHOD = "password"\n')
+            conf_obj.write('USERNAME = "%s"\n' % credentials['username'])
+            conf_obj.write('PASSWORD = "%s"\n' % credentials['password'])
         elif 'keytab' in credentials and credentials['keytab'] \
-             and 'keytab_principal' in credentials \
-             and credentials["keytab_principal"]:
-            self.logger.debug('Keytab selected for authentication.')
+                and 'keytab_principal' in credentials \
+                and credentials["keytab_principal"]:
+            self.logger.debug('Authentication by keytab.')
 
-            # check if remote /etc/beaker directory exists
-            args = 'path=%s recurse=yes state=directory' % bkr_dir
-            self.remote_module_call(
-                'Ensure %s directory exists' % bkr_dir,
-                'file',
-                args
-            )
+            conf_obj.write('AUTH_METHOD = "krbv"\n')
 
-            # set authentication method in client.conf
-            args = 'path=%s regexp=^AUTH_METHOD line=AUTH_METHOD=\"krbv\"' %\
-                   bkr_conf
-            self.remote_module_call(
-                'Set authentication method in beaker client.conf',
-                'lineinfile',
-                args
-            )
+            keytab = os.path.join(self.data_folder, "assets",
+                                  credentials['keytab'])
+            conf_obj.write('KRB_KEYTAB = "%s"\n' % keytab)
+            conf_obj.write('KRB_PRINCIPAL = "%s"\n' % credentials[
+                'keytab_principal'])
+            conf_obj.write('KRB_REALM = "REDHAT.COM"\n')
+        conf_obj.close()
 
-            # set keytab file in client.conf
-            keytab_location = os.path.join(self.docker.mountpath,
-                                           credentials['keytab'])
-            args = 'path=%s regexp=^#KRB_KEYTAB line=KRB_KEYTAB=\"%s\"' %\
-                   (bkr_conf, keytab_location)
-            self.remote_module_call(
-                'Set kerberos keytab in beaker client.conf',
-                'lineinfile',
-                args
-            )
+    def _connect(self):
+        """Connect to beaker."""
+        data = exec_local_cmd('bkr whoami')
+        if data[0] != 0:
+            self.logger.error(data[2])
+            raise BeakerProvisionerError('Connection to beaker failed!')
+        self.logger.info('Connected to beaker!')
 
-            # Set kerberos principal in client.conf
-            args = 'path=%s regexp=^#KRB_PRINCIPAL line=KRB_PRINCIPAL=\"%s\"' \
-                   % (bkr_conf, credentials['keytab_principal'])
-            self.remote_module_call(
-                'Set kerberos principal in beaker client.conf',
-                'lineinfile',
-                args
-            )
-        else:
-            raise BeakerProvisionerError('No authentication method defined!')
-
-        # beaker command to verify authentication worked
-        _cmd = "bkr whoami"
-
-        self.logger.info('Authenticating with Beaker..')
-
-        # authenticate with beaker
-        self.remote_module_call(
-            'Authenticate with Beaker',
-            'shell',
-            _cmd
-        )
-
-        self.logger.info('Succesfully authenticated with Beaker!')
-
-    @retry
-    def remote_module_call(self, name, module, args):
-        """Run a Ansible module on a remote system.
-
-        This is a generic method for running Ansible modules. This removes the
-        need to duplication the ansible.run_module call. It will only run one
-        task.
-
-        :param name: Play task name.
-        :type name: str
-        :param module: Module name to execute.
-        :type module: str
-        :param args: Module arguments.
-        :type args: str
-        :return: Ansible play results.
-        :rtype: dict
-        """
-        # run ansible
-        results = self.ansible.run_module(
-            dict(
-                name=name,
-                hosts=self.docker.cname,
-                gather_facts='no',
-                tasks=[dict(action=dict(module=module, args=args))]
-            )
-        )
-
-        # raise exception if remote system not contacted to start retry
-        if len(results['callback'].contacted) != 1:
-            raise RemoteConnectionError(
-                'Remote connection to %s failed!' % self.docker.cname
-            )
-
-        # exit if ansible call failed
-        if results['status'] != 0:
-            # analyze results
-            self.ansible.results_analyzer(results)
-            raise BeakerProvisionerError('Failed to run %s.' % name)
-        return results
+    def authenticate(self):
+        """Authenticate with beaker."""
+        self._build_config()
+        self._connect()
 
     def gen_bkr_xml(self):
         """Create beaker job xml based on host requirements.
@@ -378,37 +146,35 @@ class BeakerProvisioner(CarbonProvisioner):
         host_desc = self.host.profile()
 
         # set beaker xml absolute file path
-        bkr_xml_file = os.path.join(self.host.data_folder(), "assets", self._bkr_xml)
+        bkr_xml_file = os.path.join(self.data_folder, self.job_xml)
 
         # set attributes for beaker xml object
         for key in host_desc:
             if key is not 'bkr_name' and key.startswith('bkr_'):
                 xml_key = key.split("bkr_", 1)[1]
                 if host_desc[key]:
-                    setattr(self.bxml, xml_key, host_desc[key])
+                    setattr(self.bkr_xml, xml_key, host_desc[key])
 
         # generate beaker job xml (workflow-simple command)
-        self.bxml.generate_beaker_xml(
-            bkr_xml_file, kickstart_path=self.docker.mountpath, savefile=True
+        self.bkr_xml.generate_beaker_xml(
+            bkr_xml_file, kickstart_path=self.data_folder, savefile=True
         )
 
         # format beaker client command to run
-        _cmd = self.bxml.cmd.replace('=', "\=")
+        _cmd = self.bkr_xml.cmd.replace('=', "\=")
 
         self.logger.info('Generating beaker job XML..')
         self.logger.debug('Command to be run: %s' % _cmd)
 
         # generate beaker job XML
-        results = self.remote_module_call(
-            'Generate beaker job XML',
-            'shell',
-            _cmd
-        )
-
-        output = results['callback'].contacted[0]['results']['stdout']
+        results = exec_local_cmd(_cmd)
+        if results[0] != 0:
+            self.logger.error(results[2])
+            raise BeakerProvisionerError('Failed to generate beaker job XML!')
+        output = results[1]
 
         # generate complete beaker job XML
-        self.bxml.generate_xml_dom(bkr_xml_file, output, savefile=True)
+        self.bkr_xml.generate_xml_dom(bkr_xml_file, output, savefile=True)
 
         self.logger.info('Successfully generated beaker job XML!')
 
@@ -419,18 +185,17 @@ class BeakerProvisioner(CarbonProvisioner):
         job was successfully uploaded, the beaker job id will be returned.
         """
         # setup beaker client job submit commnand
-        _cmd = "bkr job-submit --xml %s" % os.path.join(self.docker.mountpath, self._bkr_xml)
+        _cmd = "bkr job-submit --xml %s" % os.path.join(
+            self.data_folder, self.job_xml)
 
         self.logger.info('Submitting beaker job XML..')
 
         # submit beaker XML
-        results = self.remote_module_call(
-            'Submit beaker XML',
-            'shell',
-            _cmd
-        )
-
-        output = results['callback'].contacted[0]['results']['stdout']
+        results = exec_local_cmd(_cmd)
+        if results[0] != 0:
+            self.logger.error(results[2])
+            raise BeakerProvisionerError('Failed to submit beaker job XML!')
+        output = results[1]
 
         # post results tasks
         if output.find("Submitted:") != "-1":
@@ -475,13 +240,11 @@ class BeakerProvisioner(CarbonProvisioner):
             self.logger.debug('Fetching beaker job status..')
 
             # fetch beaker job status
-            results = self.remote_module_call(
-                'Fetch beaker job status',
-                'shell',
-                _cmd
-            )
-
-            xml_output = results['callback'].contacted[0]['results']['stdout']
+            results = exec_local_cmd(_cmd)
+            if results[0] != 0:
+                self.logger.error(results[2])
+                raise BeakerProvisionerError('Failed to fetch job status!')
+            xml_output = results[1]
 
             self.logger.debug('Successfully fetched beaker job status!')
 
@@ -521,7 +284,6 @@ class BeakerProvisioner(CarbonProvisioner):
             'Timeout reached waiting for beaker job to finish!'
         )
 
-    @runner
     def _create(self):
         """Create a new job in Beaker.
 
@@ -529,9 +291,6 @@ class BeakerProvisioner(CarbonProvisioner):
         submit the job to Beaker and wait for the job to be complete.
         """
         self.logger.debug('Provisioning machines from %s', self.__class__)
-
-        # start container
-        self.start_container()
 
         # authenticate with beaker
         self.authenticate()
@@ -564,13 +323,11 @@ class BeakerProvisioner(CarbonProvisioner):
         self.logger.info('Canceling beaker job..')
 
         # cancel beaker job
-        results = self.remote_module_call(
-            'Cancel beaker job',
-            'shell',
-            _cmd
-        )
-
-        output = results['callback'].contacted[0]['results']['stdout']
+        results = exec_local_cmd(_cmd)
+        if results[0] != 0:
+            self.logger.error(results[2])
+            raise BeakerProvisionerError('Failed to cancel job.')
+        output = results[1]
 
         if "Cancelled" in output:
             self.logger.info("Job %s cancelled." % self.host.bkr_job_id)
@@ -579,7 +336,6 @@ class BeakerProvisioner(CarbonProvisioner):
 
         self.logger.info('Successfully cancelled beaker job!')
 
-    @runner
     def _delete(self):
         """Delete a beaker job to release system back to the pool.
 
@@ -588,7 +344,7 @@ class BeakerProvisioner(CarbonProvisioner):
         self.logger.info('Tearing down machines from %s', self.__class__)
 
         # start container
-        self.start_container()
+        # self.start_container()
 
         # authenticate with beaker
         self.authenticate()
@@ -659,7 +415,7 @@ class BeakerProvisioner(CarbonProvisioner):
             cname = task.getAttribute('name')
 
             if cname == '/distribution/install':
-                hostname = task.getElementsByTagName('system')[0].\
+                hostname = task.getElementsByTagName('system')[0]. \
                     getAttribute("value")
                 addr = socket.gethostbyname(hostname)
                 self.host.bkr_hostname = hostname.encode('ascii', 'ignore')
@@ -673,7 +429,7 @@ class BeakerProvisioner(CarbonProvisioner):
         """
         # setup absolute path for private key
         private_key = os.path.join(
-            self.host.data_folder(), "assets", self.host.bkr_ssh_key
+            self.data_folder, "assets", self.host.bkr_ssh_key
         )
 
         # set permission of the private key
@@ -688,7 +444,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # generate public key from private
         public_key = os.path.join(
-            self.host.data_folder(), "assets", self.host.bkr_ssh_key + ".pub"
+            self.data_folder, "assets", self.host.bkr_ssh_key + ".pub"
         )
         rsa_key = paramiko.RSAKey(filename=private_key)
         with open(public_key, 'w') as f:
@@ -736,24 +492,26 @@ class BeakerProvisioner(CarbonProvisioner):
         # when is the job complete
         # TODO: explain what each beaker results analysis means
         if resultsdict["job_result"].strip().lower() == "new" and \
-           resultsdict["job_status"].strip().lower() in \
-           ["new", "waiting", "queued", "scheduled", "processed", "installing"]:
+                resultsdict["job_status"].strip().lower() in \
+                ["new", "waiting", "queued", "scheduled", "processed",
+                 "installing"]:
             return "wait"
         elif resultsdict["install_result"].strip().lower() == "new" and \
                 resultsdict["install_status"].strip().lower() in \
-                ["new", "waiting", "queued", "scheduled", "running", "processed"]:
+                ["new", "waiting", "queued", "scheduled", "running",
+                 "processed"]:
             return "wait"
         elif resultsdict["job_status"].strip().lower() == "waiting" or \
                 resultsdict["install_status"].strip().lower() == "waiting":
             return "wait"
         elif resultsdict["job_result"].strip().lower() == "pass" and \
-            resultsdict["job_status"].strip().lower() == "running" and \
-            resultsdict["install_result"].strip().lower() == "pass" and \
+                resultsdict["job_status"].strip().lower() == "running" and \
+                resultsdict["install_result"].strip().lower() == "pass" and \
                 resultsdict["install_status"].strip().lower() == "completed":
             return "success"
         elif resultsdict["job_result"].strip().lower() == "new" and \
-            resultsdict["job_status"].strip().lower() == "running" and \
-            resultsdict["install_result"].strip().lower() == "new" and \
+                resultsdict["job_status"].strip().lower() == "running" and \
+                resultsdict["install_result"].strip().lower() == "new" and \
                 resultsdict["install_status"].strip().lower() == "completed":
             return "success"
         elif resultsdict["job_result"].strip().lower() == "warn":
@@ -895,11 +653,13 @@ class BeakerXML(object):
 
         # Set kernel options
         if self.kernel_options != "":
-            self.cmd += " --kernel_options '" + " ".join(self.kernel_options) + "'"
+            self.cmd += " --kernel_options '" + " ".join(
+                self.kernel_options) + "'"
 
         # Set post kernel options
         if self.kernel_post_options != "":
-            self.cmd += " --kernel_options_post '" + " ".join(self.kernel_post_options) + "'"
+            self.cmd += " --kernel_options_post '" + " ".join(
+                self.kernel_post_options) + "'"
 
         # Set kickstart file
         if self.kickstart != "":
@@ -1364,8 +1124,9 @@ class BeakerXML(object):
         directly. Must use setdistrorequires.
         :param dr_op: The distro requires operation.
         """
-        raise AttributeError('You cannot set Distrorequires operation directly. '
-                             'Use setdistrorequires().')
+        raise AttributeError(
+            'You cannot set Distrorequires operation directly. '
+            'Use setdistrorequires().')
 
     @property
     def drvalue(self):

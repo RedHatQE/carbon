@@ -28,6 +28,7 @@ import json
 import pkgutil
 import random
 import string
+import subprocess
 import sys
 from logging import getLogger
 
@@ -335,6 +336,18 @@ def template_render(filepath, env_dict):
     path, filename = os.path.split(filepath)
     return jinja2.Environment(loader=jinja2.FileSystemLoader(
         path)).get_template(filename).render(env_dict)
+
+
+def exec_local_cmd(cmd):
+    """Execute command locally."""
+    proc = subprocess.Popen(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    output = proc.communicate()
+    return proc.returncode, output[0], output[1]
 
 
 class CustomDict(dict):
