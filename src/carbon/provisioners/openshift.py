@@ -737,7 +737,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         mydict = yaml.load(parsed_results["stdout"])
         try:
             app_name = mydict["items"][0]["metadata"]["name"]
-        except:
+        except KeyError:
             # this may be the case where there is no svc for the application
             self.logger.warn("unable to get application name " + parsed_results)
 
