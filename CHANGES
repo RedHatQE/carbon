@@ -82,7 +82,6 @@ Chore
 * do not start containers when provisioner class is instantiated
 * ignore data created by local tests
 * use click built-in function to display program version
-* include dockerfile for linchpin
 
 Version 0.2.2 (2017-07-24)
 --------------------------

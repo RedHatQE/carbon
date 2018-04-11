@@ -46,7 +46,7 @@ from carbon.helpers import get_ansible_inventory_script
 from carbon.helpers import get_provisioner_class, get_provisioners_classes
 from carbon.helpers import get_provider_class, get_providers_classes
 from carbon.providers import OpenstackProvider
-from carbon.provisioners import LinchpinProvisioner
+from carbon.provisioners import OpenstackProvisioner
 
 
 class TestLogging(TestCase):
@@ -175,11 +175,11 @@ class TestGetModuleClasses(TestCase):
     @staticmethod
     def test_get_provisioner_class():
         """Test the function to get a provisioner class. It will attempt to
-        get the linchpin provisioner class and then verify that the class
-        returned is the linchpin provisioner class.
+        get the openstack provisioner class and then verify that the class
+        returned is the openstack provisioner class.
         """
-        provisioner = get_provisioner_class('linchpin')
-        assert_is(provisioner, LinchpinProvisioner)
+        provisioner = get_provisioner_class('openstack')
+        assert_is(provisioner, OpenstackProvisioner)
 
     @staticmethod
     def test_get_providers_classes():
