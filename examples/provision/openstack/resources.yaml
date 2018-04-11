@@ -15,8 +15,8 @@ credentials:
 provision:
 
   - name: machine_1
-    provider: openstack_v2
-    provisioner: openstack_v2
+    provider: openstack
+    provisioner: openstack
     credential: openstack
     os_image: rhel-7.3-workstation-x86_64-released
     os_flavor: m1.medium
@@ -31,8 +31,8 @@ provision:
     role: w_client
 
   - name: machine_2
-    provider: openstack_v2
-    provisioner: openstack_v2
+    provider: openstack
+    provisioner: openstack
     credential: openstack
     os_image: rhel-7.3-server-x86_64-released
     os_flavor: m1.medium

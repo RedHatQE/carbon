@@ -20,4 +20,3 @@ from .ciops import CiopsProvisioner
 from .linch_pin import LinchpinProvisioner
 from .openshift import OpenshiftProvisioner
 from .openstack import OpenstackProvisioner
-from .openstack_v2 import OpenstackProvisionerV2
