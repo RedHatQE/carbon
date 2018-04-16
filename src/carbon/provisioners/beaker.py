@@ -83,6 +83,9 @@ class BeakerProvisioner(CarbonProvisioner):
         self.conf_dir = '%s/.beaker_client' % os.path.expanduser('~')
         self.conf = '%s/config' % self.conf_dir
 
+        # configure beaker conf
+        self._build_config()
+
         prov_beaker_initiated.send(self)
 
     def _build_config(self):
@@ -96,6 +99,10 @@ class BeakerProvisioner(CarbonProvisioner):
         # create conf directory
         if not os.path.isdir(self.conf_dir):
             os.makedirs(self.conf_dir)
+
+        if os.path.isfile(self.conf):
+            self.logger.info('Beaker config already exists, skip creation.')
+            return
 
         # open conf file for writing
         conf_obj = open(self.conf, 'w')
@@ -134,7 +141,6 @@ class BeakerProvisioner(CarbonProvisioner):
 
     def authenticate(self):
         """Authenticate with beaker."""
-        self._build_config()
         self._connect()
 
     def gen_bkr_xml(self):
@@ -161,13 +167,15 @@ class BeakerProvisioner(CarbonProvisioner):
         )
 
         # format beaker client command to run
-        _cmd = self.bkr_xml.cmd.replace('=', "\=")
+        # Latest version of beaker client fails to generate xml with this
+        # replacement
+        # _cmd = self.bkr_xml.cmd.replace('=', "\=")
 
         self.logger.info('Generating beaker job XML..')
-        self.logger.debug('Command to be run: %s' % _cmd)
+        self.logger.debug('Command to be run: %s' % self.bkr_xml.cmd)
 
         # generate beaker job XML
-        results = exec_local_cmd(_cmd)
+        results = exec_local_cmd(self.bkr_xml.cmd)
         if results[0] != 0:
             self.logger.error(results[2])
             raise BeakerProvisionerError('Failed to generate beaker job XML!')
