@@ -786,23 +786,34 @@ class OpenstackProvider(CarbonProvider):
     def wait_for_building_finish(self, node):
         """Wait until a node is finished building.
 
-        This method uses libcloud built-in method to wait for a node to
-        finish building. Currently it is using the default timeout values
-        that libcloud defines.
-
-        :param node: Node object.
-        :type node: object
+        :param node: node object
         """
         self.logger.info('Wait for node %s to finish building.' % node.name)
-        try:
-            self.driver.wait_until_running([node])
-        except Exception as ex:
-            self.logger.error(ex.message)
-            raise OpenstackProviderError('Node was unable to build, %s' % ex)
-        finally:
-            self.unset_driver()
 
-        self.logger.info('Node %s successfully finished building.' % node.name)
+        status = 0
+        attempt = 1
+        while attempt <= 30:
+            node = self.driver.ex_get_node_details(node.id)
+            state = getattr(node, 'state')
+            msg = '%s. VM %s, STATE=%s' % (attempt, node.name, state)
+
+            if state.lower() != 'running':
+                self.logger.info('%s, rechecking in 20 seconds.', msg)
+                time.sleep(20)
+            else:
+                self.logger.info(msg)
+                self.logger.info('VM %s successfully finished building!' %
+                                 node.name)
+                status = 1
+                break
+
+        self.unset_driver()
+        if status:
+            self.logger.info('Node %s successfully finished building.' %
+                             node.name)
+        else:
+            raise OpenstackProviderError('Node was unable to build, %s' %
+                                         node.name)
 
     def attach_floating_ip(self, node, fip):
         """Attach a floating ip address to a node.
