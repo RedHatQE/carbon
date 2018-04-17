@@ -58,3 +58,23 @@ clean-pyc:
 
 docs:
 	python setup.py build_sphinx
+
+build-image-devel:
+	docker build -t carbon-framework:devel .
+	docker images --filter=reference='carbon-framework:devel'
+	docker tag carbon-framework:devel docker-registry.engineering.redhat.com/carbon/carbon-framework:devel
+	docker images --filter=reference='docker-registry.engineering.redhat.com/carbon/carbon-framework:devel'
+
+build-image-latest:
+	docker build -t carbon-framework:latest .
+	docker images --filter=reference='carbon-framework:latest'
+	docker tag carbon-framework:latest docker-registry.engineering.redhat.com/carbon/carbon-framework:latest
+	docker images --filter=reference='docker-registry.engineering.redhat.com/carbon/carbon-framework:latest'
+
+deploy-image-devel:
+	docker login -u $$USER docker-registry.engineering.redhat.com
+	docker push docker-registry.engineering.redhat.com/carbon/carbon-framework:devel
+
+deploy-image-latest:
+	docker login -u $$USER docker-registry.engineering.redhat.com
+	docker push docker-registry.engineering.redhat.com/carbon/carbon-framework:latest
