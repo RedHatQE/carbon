@@ -34,112 +34,95 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from copy import deepcopy
-from unittest import TestCase
+
+import unittest
 
 import os
 from flask.config import Config
 from nose.tools import assert_true, assert_false
 
-try:
-    from test.test_support import EnvironmentVarGuard
-except ImportError:
-    from test.support import EnvironmentVarGuard
-
 from carbon.helpers import file_mgmt
 from carbon.providers import OpenstackProvider
 
 
-scenario_description = file_mgmt('r', 'assets/scenario.yaml')
-scenario_description_cred = file_mgmt('r', 'assets/scenario_nocreds.yaml')
-
-
-class TestOpenstack(TestCase):
-    """Integration tests to test openstack provider.
-
-    The purpose of this class is to test different methods of the provider
-    class that require communicating to openstack.
-    """
-
-    # load descriptor file and carbon settings if applicable
-    if os.getenv('CARBON_SETTINGS'):
-        # load conf file
-        config = Config(os.getcwd())
-        config.from_pyfile(os.environ['CARBON_SETTINGS'], silent=True)
-        _credentials = config['CREDENTIALS']
-        _cp_scenario_description = dict(scenario_description_cred)
-    else:
-        _cp_scenario_description = dict(scenario_description)
-        _credentials = _cp_scenario_description.pop('credentials')[0]
-
-    _host = _cp_scenario_description.pop('provision')[0]
-    _osp = OpenstackProvider()
+class TestOpenStack(unittest.TestCase):
+    """OpenStack provider integration tests."""
 
     def setUp(self):
-        """Setup tasks to be run before each test case."""
-        for item in self._credentials:
-            if 'openstack' in item['name']:
-                self._osp.set_credentials(item)
+        """Test fixture setup."""
+        if 'integration' in os.getcwd():
+            _file = os.path.join(os.getcwd(), '../assets/scenario.yaml')
+        else:
+            _file = os.path.join(os.getcwd(), 'assets/scenario.yaml')
+        descriptor = file_mgmt('r', _file)
+
+        # get resource under test
+        for host in descriptor['provision']:
+            if host['provider'].lower() == 'openstack':
+                self.host = host
                 break
 
-    def test_flavor(self):
-        """Test the openstack provider validate_flavor method.
+        # initialize credentials variable
+        credentials = dict()
 
-        This test will communicate with openstack to test whether a flavor
-        provided is valid or invalid.
-        """
-        key = '%sflavor' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_true(self._osp.validate_flavor(cp_parameters.pop(key)))
-        cp_parameters[key] = 3
-        assert_true(self._osp.validate_flavor(cp_parameters.pop(key)))
-        cp_parameters[key] = -1
-        assert_false(self._osp.validate_flavor(cp_parameters.pop(key)))
+        # get provider credentials
+        if os.getenv('CARBON_SETTINGS'):
+            # read from conf file
+            config = Config(os.getcwd())
+            config.from_pyfile(os.getenv('CARBON_SETTINGS'), silent=True)
+            _credentials = config['CREDENTIALS']
+        else:
+            # read from descriptor
+            _credentials = descriptor['credentials']
 
-    def test_image(self):
-        """Test the openstack provider validate_image method.
+        # select credentials
+        for item in _credentials:
+            if item['name'].lower() == 'openstack':
+                credentials = item
+                break
+        del _credentials
 
-        This test will communicate with openstack to test whether a image
-        provided is valid or invalid.
-        """
-        key = '%simage' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_true(self._osp.validate_image(cp_parameters.pop(key)))
-        cp_parameters[key] = 'my_image_123'
-        assert_false(self._osp.validate_image(cp_parameters.pop(key)))
+        # instantiate openstack provider class
+        self.provider = OpenstackProvider()
 
-    def test_networks(self):
-        """Test the openstack provider validate_networks method.
+        # set provider credentials
+        getattr(self.provider, 'set_credentials')(credentials)
 
-        This test will communicate with openstack to test whether a network
-        provided is valid or invalid.
-        """
-        key = '%snetworks' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_true(self._osp.validate_networks(cp_parameters.pop(key)))
-        cp_parameters[key] = ['local-network']
-        assert_false(self._osp.validate_networks(cp_parameters.pop(key)))
+    def tearDown(self):
+        """Test fixture teardown."""
+        pass
 
-    def test_keypair(self):
-        """Test the openstack provider validate_keypair method.
+    def test_valid_flavor(self):
+        key = '{0}flavor'.format(self.provider.__provider_prefix__)
+        assert_true(self.provider.validate_flavor(self.host[key]))
 
-        This test will communicate with openstack to test whether a key pair
-        provided is valid or invalid.
-        """
-        key = '%skeypair' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_true(self._osp.validate_keypair(cp_parameters[key]))
-        cp_parameters[key] = 'carbon-123'
-        assert_false(self._osp.validate_keypair(cp_parameters[key]))
+    def test_invalid_flavor(self):
+        assert_true(self.provider.validate_flavor(3))
 
-    def test_floating_ip_pool(self):
-        """Test the openstack provider validate_floating_ip_pool method.
+    def test_valid_image(self):
+        key = '{0}image'.format(self.provider.__provider_prefix__)
+        assert_true(self.provider.validate_image(self.host[key]))
 
-        This test will communicate with openstack to test whether a floating
-        ip pool provided is valid or invalid.
-        """
-        key = '%sfloating_ip_pool' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_true(self._osp.validate_floating_ip_pool(cp_parameters[key]))
-        cp_parameters[key] = '192.168.1.0/22'
-        assert_false(self._osp.validate_floating_ip_pool(cp_parameters[key]))
+    def test_invalid_image(self):
+        assert_false(self.provider.validate_image('my_image_123'))
+
+    def test_valid_network(self):
+        key = '{0}networks'.format(self.provider.__provider_prefix__)
+        assert_true(self.provider.validate_networks(self.host[key]))
+
+    def test_invalid_network(self):
+        assert_false(self.provider.validate_networks('local'))
+
+    def test_valid_keypair(self):
+        key = '{0}keypair'.format(self.provider.__provider_prefix__)
+        assert_true(self.provider.validate_keypair(self.host[key]))
+
+    def test_invalid_keypair(self):
+        assert_false(self.provider.validate_keypair('keypair-123'))
+
+    def test_valid_floating_ip_pool(self):
+        key = '{0}floating_ip_pool'.format(self.provider.__provider_prefix__)
+        assert_true(self.provider.validate_floating_ip_pool(self.host[key]))
+
+    def test_invalid_floating_ip_pool(self):
+        assert_false(self.provider.validate_floating_ip_pool('192.168.1.0/22'))
