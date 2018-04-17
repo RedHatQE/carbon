@@ -28,7 +28,6 @@ requires = [
     'PyYAML>=3.12',
     'pykwalify>=1.6.0',
     'apache-libcloud==2.2.0',
-    'docker==2.1.0',
     'ansible>=2.3.2.0',
     'blinker==1.4',
     'blaster>=0.1.4'

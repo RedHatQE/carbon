@@ -29,8 +29,6 @@ from nose.tools import assert_is_instance, assert_equal, assert_true, \
 
 from carbon import Carbon
 from carbon.controllers import AnsibleController
-from carbon.controllers import DockerController
-from carbon.controllers import DockerControllerError
 from carbon.helpers import file_mgmt
 from carbon.provisioners.beaker import BeakerProvisioner
 from carbon.provisioners.openshift import OpenshiftProvisioner
@@ -570,7 +568,6 @@ class TestBeakerProvisioner(TestCase):
         self.obj.bxml.tasklist = ["ThowException"]
 
     @nottest
-    @raises(DockerControllerError)
     def test_create_object_bad_docker_image(self):
         """Create a beaker provisioner object. Verifies object is instance
         of carbon.provisioners.BeakerProvisioner.
@@ -596,14 +593,15 @@ class TestBeakerProvisioner(TestCase):
     def test_get_provisioner_docker(self):
         """Test getting docker controller of the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
-        assert_is_instance(self.obj.docker, DockerController)
+        # assert_is_instance(self.obj.docker, DockerController)
 
     @nottest
     @raises(AttributeError)
     def test_set_provisioner_docker(self):
         """Test setting the docker controller for the provisioner class."""
         self.obj = BeakerProvisioner(self.host)
-        self.obj.docker = DockerController(cname="new_Docker_controller")
+        # self.obj.docker = DockerController(cname="new_Docker_controller")
+        # self.obj.docker = DockerController(cname="new_Docker_controller")
 
     @nottest
     def test_get_provisioner_ansible(self):

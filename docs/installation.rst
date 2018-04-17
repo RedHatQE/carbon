@@ -4,26 +4,6 @@ Installation
 Prerequisites
 +++++++++++++
 
-Carbon framework stack utilizes docker containers. Docker needs to be
-installed and running on your system. Please select your operating system
-from the table below and follow docker's installation.
-
-.. list-table::
-    :widths: auto
-    :header-rows: 1
-
-    *   - Operating System
-        - Docker Install Guide
-
-    *   - CentOS
-        - https://docs.docker.com/engine/installation/linux/centos
-
-    *   - Fedora
-        - https://docs.docker.com/engine/installation/linux/fedora
-
-    *   - RHEL
-        - https://docs.docker.com/engine/installation/linux/rhel
-
 Carbon framework requires the following system packages to be installed.
 
 .. code-block:: bash

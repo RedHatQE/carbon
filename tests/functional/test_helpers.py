@@ -203,8 +203,6 @@ def test_get_ansible_inv_script():
     """Test the function to get the absolute path to the ansible dynamic
     inventory script for a given provider.
     """
-    _script = get_ansible_inventory_script('docker')
-    assert_is_instance(_script, string_types)
     _script = get_ansible_inventory_script('gru')
     assert_is_none(_script)
 
