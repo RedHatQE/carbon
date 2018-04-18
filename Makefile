@@ -22,7 +22,7 @@ test-functional:
 	@echo "**** CARBON FUNCTIONAL TESTS ****"
 	tox -e py27-functional,py36-functional
 
-test-integration:
+test-integration: install-oc-client
 	@echo -e "$(ATTENTION)**** ATTENTION: CREDENTIALS REQUIRED ****"
 	@echo -e "$(WARNING)"
 	@echo -e "Please view each module under carbon.tests to see"
@@ -78,3 +78,11 @@ deploy-image-devel:
 deploy-image-latest:
 	docker login -u $$USER docker-registry.engineering.redhat.com
 	docker push docker-registry.engineering.redhat.com/carbon/carbon-framework:latest
+
+install-oc-client:
+	wget -O oc.tar.gz https://github.com/openshift/origin/releases/download/\
+	v1.5.0/openshift-origin-client-tools-v1.5.0-031cbe4-linux-64bit.tar.gz
+	tar xvf oc.tar.gz
+	rm oc.tar.gz
+	mv openshift-*/oc /home/$$USER/.local/bin
+	rm -rf openshift-*
