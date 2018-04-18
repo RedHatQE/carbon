@@ -57,7 +57,8 @@ from nose.tools import raises
 
 from carbon import Carbon
 from carbon.helpers import file_mgmt
-from carbon.provisioners import OpenshiftProvisioner
+from carbon.provisioners import BeakerProvisioner, OpenshiftProvisioner
+from carbon.provisioners.beaker import BeakerProvisionerError
 from carbon.provisioners.openshift import OpenshiftProvisionerError
 from carbon.resources import Host
 
@@ -148,3 +149,130 @@ class TestOpenshiftProvisioner(unittest.TestCase):
     def test_select_invalid_project(self):
         self.provider.authenticate()
         self.provider.select_project()
+
+
+class TestBeakerProvisioner(unittest.TestCase):
+
+    def setUp(self):
+        """Test fixture setup."""
+        if 'integration' in os.getcwd():
+            _file = os.path.join(os.getcwd(), '../assets/scenario.yaml')
+            _assets = os.path.join(os.getcwd(), '../assets')
+        else:
+            _file = os.path.join(os.getcwd(), 'assets/scenario.yaml')
+            _assets = os.path.join(os.getcwd(), 'assets')
+        descriptor = file_mgmt('r', _file)
+
+        # get resource under test
+        for host in descriptor['provision']:
+            if host['provider'].lower() == 'beaker':
+                self.host = host
+                break
+
+        # initialize credentials variable
+        credentials = dict()
+
+        # get provider credentials
+        if os.getenv('CARBON_SETTINGS'):
+            # read from conf file
+            config = Config(os.getcwd())
+            config.from_pyfile(os.getenv('CARBON_SETTINGS'), silent=True)
+            _credentials = config['CREDENTIALS']
+        else:
+            # read from descriptor
+            _credentials = descriptor['credentials']
+
+        # select credentials
+        for item in _credentials:
+            if item['name'].lower() == 'beaker':
+                credentials = item
+                break
+        del _credentials
+
+        # get assets path
+        if os.getenv('CARBON_ASSETS_PATH'):
+            assets = os.getenv('CARBON_ASSETS_PATH')
+        else:
+            assets = _assets
+
+        # create carbon object for config attribute
+        self.cbn = Carbon(__name__, assets_path=assets)
+
+        # create the host object
+        self.host['provider_creds'] = [credentials]
+        self.host = Host(config=self.cbn.config, parameters=self.host)
+
+        # add host to carbon object
+        self.cbn.scenario.add_hosts(self.host)
+
+    def tearDown(self):
+        """Test fixture teardown."""
+        conf = os.path.join(os.path.expanduser('~'), '.beaker_client/config')
+        if os.path.isfile(conf):
+            os.remove(conf)
+
+    @SkipTest
+    def test_valid_password_authentication(self):
+        # disabled since valid authentication is required and its not
+        # available to have a generic account for beaker
+        self.provider = BeakerProvisioner(self.host)
+        self.provider.authenticate()
+
+    @raises(BeakerProvisionerError)
+    def test_invalid_password_authentication(self):
+        self.host.provider.credentials['username'] = 'kingbob'
+        self.host.provider.credentials['password'] = 'stuart'
+        self.provider = BeakerProvisioner(self.host)
+        self.provider.authenticate()
+
+    def test_valid_kerberos_authentication(self):
+        if 'username' in self.host.provider.credentials:
+            del self.host.provider.credentials['username']
+        if 'password' in self.host.provider.credentials:
+            del self.host.provider.credentials['password']
+        self.cbn._copy_assets()
+        self.provider = BeakerProvisioner(self.host)
+        self.provider.authenticate()
+
+    @raises(BeakerProvisionerError)
+    def test_invalid_kerberos_authentication(self):
+        if 'username' in self.host.provider.credentials:
+            del self.host.provider.credentials['username']
+        if 'password' in self.host.provider.credentials:
+            del self.host.provider.credentials['password']
+        self.host.provider.credentials['keytab'] = 'abcitseasyas123'
+        self.host.provider.credentials['keytab_principal'] = 'abcitseasyas123'
+        self.provider = BeakerProvisioner(self.host)
+        self.provider.authenticate()
+
+    def test_create_valid_xml(self):
+        if 'username' in self.host.provider.credentials:
+            del self.host.provider.credentials['username']
+        if 'password' in self.host.provider.credentials:
+            del self.host.provider.credentials['password']
+        self.cbn._copy_assets()
+        self.provider = BeakerProvisioner(self.host)
+        self.provider.authenticate()
+        self.provider.gen_bkr_xml()
+
+    def test_submit_job(self):
+        if 'username' in self.host.provider.credentials:
+            del self.host.provider.credentials['username']
+        if 'password' in self.host.provider.credentials:
+            del self.host.provider.credentials['password']
+        self.cbn._copy_assets()
+        self.provider = BeakerProvisioner(self.host)
+        self.provider.authenticate()
+        self.provider.gen_bkr_xml()
+        self.provider.submit_bkr_xml()
+        self.provider.cancel_job()
+
+    def test_create_machine(self):
+        if 'username' in self.host.provider.credentials:
+            del self.host.provider.credentials['username']
+        if 'password' in self.host.provider.credentials:
+            del self.host.provider.credentials['password']
+        self.cbn._copy_assets()
+        self.provider = BeakerProvisioner(self.host)
+        self.provider.create()
+        self.provider.delete()
