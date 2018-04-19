@@ -19,7 +19,6 @@ credentials section with all available OpenStack credential keys.
       - name: openstack
         auth_url: <auth_url>
         tenant_name: <tenant_name>
-        tenant_id: <tenant_id>
         username: <username>
         password: <password>
         region: <region>
@@ -45,11 +44,6 @@ credentials section with all available OpenStack credential keys.
 
     *   - tenant_name
         - The name of your OpenStack tenant.
-        - String
-        - True
-
-    *   - tenant_id
-        - The ID of your OpenStack tenant.
         - String
         - True
 
@@ -178,7 +172,6 @@ Examples
       - name: openstack
         auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
         tenant_name: pit-jenkins
-        tenant_id: 2e1c0cf8f1234ea5ad8933d0927fc837
         username: username
         password: password
 
@@ -203,7 +196,6 @@ Examples
       - name: openstack
         auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
         tenant_name: pit-jenkins
-        tenant_id: 2e1c0cf8f1234ea5ad8933d0927fc837
         username: username
         password: password
 

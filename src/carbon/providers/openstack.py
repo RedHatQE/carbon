@@ -38,9 +38,6 @@ from ..signals import (
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
 
-# ALERT: when v2 becomes default openstack provider, we should remove the
-# ALERT: (cont). user to define tenant_id and ask them to define region
-
 
 class OpenstackProviderError(CarbonProviderError):
     """Base class for openstack provider exceptions."""
@@ -128,7 +125,6 @@ class OpenstackProvider(CarbonProvider):
     _mandatory_creds_parameters = (
         'auth_url',
         'tenant_name',
-        'tenant_id',
         'username',
         'password',
     )
