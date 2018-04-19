@@ -264,8 +264,8 @@ class OpenstackProvider(CarbonProvider):
         _images = self.images
 
         # filter images
-        by_name = filter(lambda elm: elm.name == name, _images)
-        by_id = filter(lambda elm: elm.id == name, _images)
+        by_name = list(filter(lambda elm: elm.name == name, _images))
+        by_id = list(filter(lambda elm: elm.id == name, _images))
 
         # process results
         if len(by_name) != 0:
@@ -291,7 +291,7 @@ class OpenstackProvider(CarbonProvider):
         _sizes = self.sizes
 
         # filter sizes
-        by_name = filter(lambda elm: elm.name == name, _sizes)
+        by_name = list(filter(lambda elm: elm.name == name, _sizes))
         by_id = list()
         for size in _sizes:
             try:
@@ -328,10 +328,10 @@ class OpenstackProvider(CarbonProvider):
         # filter networks
         nets = list()
         if isinstance(name, string_types):
-            nets = filter(lambda elm: elm.name == name, _networks)
+            nets = list(filter(lambda elm: elm.name == name, _networks))
         elif isinstance(name, list):
             for net in name:
-                data = filter(lambda elm: elm.name == net, _networks)
+                data = list(filter(lambda elm: elm.name == net, _networks))
                 if len(data) != 0:
                     nets.append(data)
 
@@ -354,7 +354,7 @@ class OpenstackProvider(CarbonProvider):
         :rtype: object
         """
         # filter nodes
-        data = filter(lambda elm: elm.name == name, self.nodes)
+        data = list(filter(lambda elm: elm.name == name, self.nodes))
 
         # process results
         if len(data) == 0:
@@ -375,7 +375,8 @@ class OpenstackProvider(CarbonProvider):
         :rtype: object
         """
         # filter floating ip pools
-        data = filter(lambda elm: elm.name == name, self.floating_ip_pools)
+        data = list(filter(lambda elm: elm.name == name,
+                           self.floating_ip_pools))
 
         # process results
         if len(data) == 0:
@@ -396,7 +397,7 @@ class OpenstackProvider(CarbonProvider):
         :rtype: object
         """
         # filter key pairs
-        data = filter(lambda elm: elm.name == name, self.key_pairs)
+        data = list(filter(lambda elm: elm.name == name, self.key_pairs))
 
         # process results
         if len(data) == 0:
