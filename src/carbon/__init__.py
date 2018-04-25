@@ -27,5 +27,5 @@ from .carbon import Carbon
 from .helpers import CustomDict
 from .resources import Scenario, Host, Action, Execute, Report
 
-__version__ = '0.4.0'
+__version__ = '0.5.0'
 __author__ = 'PIT Team Red Hat'
