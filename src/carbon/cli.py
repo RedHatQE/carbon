@@ -107,6 +107,7 @@ def validate(ctx, scenario, log_type, data_folder, log_level):
 @click.option("--task",
               default=None,
               type=click.Choice(TASKLIST),
+              multiple=True,
               help="Select a specific task to run. Default all tasks run.")
 @click.option("-s", "--scenario",
               default=None,
@@ -167,10 +168,10 @@ def run(ctx, task, scenario, log_level, data_folder, log_type, assets_path):
     cbn.load_from_yaml(scenario_data)
 
     # Setup the list of tasks to run
-    if task is None:
+    if not task:
         task = TASKLIST
-    elif isinstance(task, string_types):
-        task = [task]
+    else:
+        task = list(task)
 
     # The scenario will start the main pipeline and run through the task
     # pipelines declared. See :function:`~carbon.Carbon.run` for more details.
