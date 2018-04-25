@@ -37,16 +37,16 @@ except ImportError:
 
 from nose.tools import assert_is_instance, assert_equal, assert_is, raises
 from nose.tools import assert_not_equal, assert_is_not, assert_is_none
-from nose.tools import nottest
+from nose.tools import nottest, assert_true, assert_false
 
 from carbon import Carbon
 from carbon._compat import string_types
-from carbon.helpers import file_mgmt, gen_random_str
+from carbon.helpers import file_mgmt, gen_random_str, is_url_valid
 from carbon.helpers import get_ansible_inventory_script
 from carbon.helpers import get_provisioner_class, get_provisioners_classes
 from carbon.helpers import get_provider_class, get_providers_classes
 from carbon.providers import OpenstackProvider
-from carbon.provisioners import LinchpinProvisioner
+from carbon.provisioners import OpenstackProvisioner
 
 
 class TestLogging(TestCase):
@@ -158,6 +158,7 @@ class TestFileManagement(TestCase):
                 if e.errno != errno.ENOENT:
                     raise
 
+
 class TestGetModuleClasses(TestCase):
     """Unit tests to test carbon functions that get classes or a class from
     carbon modules.
@@ -174,11 +175,11 @@ class TestGetModuleClasses(TestCase):
     @staticmethod
     def test_get_provisioner_class():
         """Test the function to get a provisioner class. It will attempt to
-        get the linchpin provisioner class and then verify that the class
-        returned is the linchpin provisioner class.
+        get the openstack provisioner class and then verify that the class
+        returned is the openstack provisioner class.
         """
-        provisioner = get_provisioner_class('linchpin')
-        assert_is(provisioner, LinchpinProvisioner)
+        provisioner = get_provisioner_class('openstack')
+        assert_is(provisioner, OpenstackProvisioner)
 
     @staticmethod
     def test_get_providers_classes():
@@ -202,7 +203,11 @@ def test_get_ansible_inv_script():
     """Test the function to get the absolute path to the ansible dynamic
     inventory script for a given provider.
     """
-    _script = get_ansible_inventory_script('docker')
-    assert_is_instance(_script, string_types)
     _script = get_ansible_inventory_script('gru')
     assert_is_none(_script)
+
+
+def test_is_url_valid():
+    """Test function to check if a url is valid."""
+    assert_true(is_url_valid('https://github.com/ansible/ansible'))
+    assert_false(is_url_valid('https://github.com/ansible/xansible'))

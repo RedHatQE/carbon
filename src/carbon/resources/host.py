@@ -165,7 +165,7 @@ class Host(CarbonResource):
             raise CarbonHostError('Missing mandatory credentials fields '
                                   'for credentials section %s, for node '
                                   '%s, based on the %s provider:\n\n%s' %
-                                  (parameters['credential'], self._name,
+                                  (self._credential, self._name,
                                    self.provider.name,
                                    missing_mandatory_creds_fields))
 

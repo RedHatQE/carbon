@@ -7,14 +7,12 @@ credentials:
   - name: openstack_ciops
     auth_url: http://dashboard.centralci.eng.rdu2.redhat.com:5000/v2.0
     tenant_name: pit-jenkins
-    tenant_id: bf4de4c330bb47d6937af31fd5c71a18
     username: username
     password: password
 
   - name: openshift
     auth_url: https://osemaster.sbu.lab.eng.bos.redhat.com:8443
     project: myproject
-    username: username
     token: token
 
   - name: beaker

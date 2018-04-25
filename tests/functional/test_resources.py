@@ -374,7 +374,7 @@ class TestHost(TestCase):
         """
         cp_parameters = deepcopy(self._parameters)
         host = Host(config=self.cbn.config, parameters=cp_parameters)
-        host.provisioner = 'linchpin'
+        host.provisioner = 'openstack'
 
     @raises(Exception)
     def test_role_undeclared(self):

@@ -435,27 +435,6 @@ class TestOpenstack(TestCase):
         instance of the provider class."""
         assert_is_instance(self._osp, OpenstackProvider)
 
-    @raises(ValueError)
-    def test_instantiate_novaclient(self):
-        """Test the method to create novaclient object after class was
-        instantiated. An exception will be raised.
-        """
-        self._osp.nova = self._credentials
-
-    @raises(ValueError)
-    def test_instantiate_glanceclient(self):
-        """Test the method to create glanceclient object after class was
-        instantiated. An exception will be raised.
-        """
-        self._osp.glance = self._credentials
-
-    @raises(ValueError)
-    def test_instantiate_neutronclient(self):
-        """Test the method to create neutronclient object after class was
-        instantiated. An exception will be raised.
-        """
-        self._osp.neutron = self._credentials
-
     def test_name(self):
         """Test the validate name method. This test performs the following:
             1. Name undefined.
@@ -524,6 +503,5 @@ class TestOpenstack(TestCase):
         """
         key = '%sfloating_ip_pool' % self._osp.__provider_prefix__
         cp_parameters = deepcopy(self._host)
-        assert_false(self._osp.validate_floating_ip_pool(None))
         cp_parameters[key] = ['192.168.1.0/22']
         assert_false(self._osp.validate_floating_ip_pool(cp_parameters[key]))

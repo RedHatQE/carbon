@@ -5,6 +5,14 @@ Carbon framework supports Beaker as a provider to provision and teardown
 nodes. This page will help you understand the required keys that are needed
 within your scenario descriptor file to provision resources using Beaker.
 
+Assets
+++++++
+
+Assets are any files that are needed by the Provider, the following Beaker
+keys are assets: **keytab**, **bkr_ssh_key**, and **bkr_kickstart**. They must
+reside in the assets directory.
+
+
 Credentials
 +++++++++++
 
@@ -38,8 +46,8 @@ either keytab and keytab_principal or username and password.
         - True
 
     *   - keytab
-        - keytab file, must be placed in the assets directory
-        - File
+        - name of the keytab file, which must be placed in the assets directory.
+        - String
         - False
 
     *   - keytab_principal
@@ -207,7 +215,8 @@ resource section with the available Beaker provider keys.
         - False
 
     *   - bkr_ssh_key
-        - Name of the ssh key to inject to the test system, file must be placed in assets folder.
+        - Name of the ssh key to inject to the test system, file must be
+          placed in assets directory.
         - String
         - False
 
@@ -227,7 +236,8 @@ resource section with the available Beaker provider keys.
         - False
 
     *   - bkr_kickstart
-        - filename of the kickstart template for installation
+        - Name of the kickstart template for installation, the file must be
+          placed in assets directory.
         - String
         - False
 
@@ -273,8 +283,6 @@ Examples
       - name: beaker
         keytab:
         keytab_principal:
-        username: username
-        password: password
 
     provision:
 
@@ -299,8 +307,6 @@ Examples
       - name: beaker
         keytab:
         keytab_principal:
-        username: username
-        password: password
 
     provision:
 

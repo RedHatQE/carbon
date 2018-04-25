@@ -29,10 +29,8 @@ import time
 import os
 import yaml
 
-from ..controllers import AnsibleController
-from ..controllers import DockerController, DockerControllerError
+from ..helpers import exec_local_cmd
 from ..core import CarbonProvisioner, CarbonProvisionerError
-from ..helpers import get_ansible_inventory_script
 from ..signals import (
     prov_openshift_newapp_started, prov_openshift_newapp_finished,
     prov_openshift_app_updated, prov_openshift_initiated)
@@ -68,99 +66,29 @@ class OpenshiftProvisioner(CarbonProvisioner):
 
     Clashing (potential loss of data) will occur when trying to perform
     multiple requests with different authentication in the same namespace
-    (with same config file). In order to handle this, we need to isolate
-    each session with different namespaces. This will be handled by each
-    scenario will have its own dedicated container to perform all the request
-    to openshift server. This will isolate multiple scenarios runs on the
-    same server.
-
-    Please see the diagram below for an example:
-
-    ------------      ------------
-    | Scenario | --> | Container |
-    ------------      ------------
-         |                  |     ------------------------
-    ------------            | --> | $ oc new-app app1 .. |
-    | - app1   |            |     ------------------------
-    | - app2   |            |
-    ------------            |     ------------------------
-                            | --> | $ oc new-app app2 .. |
-                                  ------------------------
-
-    This provisioner assumes that on the server, docker is installed and
-    running.
-
-    Docker has their own Python SDK that could be used to run the oc commands
-    inside a container. From trying out the SDK, there is a big limitation
-    around getting the return code (status code) from the command run inside
-    the container. They only return a string and it would be challenging to
-    parse that since each oc command may log different results. We will be
-    able to take advtange of using Ansible to run commands into a running
-    container. This way we can get both the stdout/stderr plus the return
-    code to determine pass or fail.
+    (with same config file).
     """
     __provisioner_name__ = "openshift"
     __provisioner_prefix__ = 'oc_'
 
-    _oc_image = "rywillia/openshift-client"
-    _app_choices = ['image', 'git', 'template']
+    _app_choices = ['image', 'git', 'template', 'custom_template']
 
     def __init__(self, host):
         """Constructor.
 
         :param host: The host object.
+        :type host: object
         """
         super(OpenshiftProvisioner, self).__init__()
         self.host = host
-        self._data_folder = self.host.data_folder()
-
-        # Define attributes assigned after constructor is initialized
-        self._routes = []
-        self._labels = []
-        self._finallabels = []
+        self._data_folder = host.data_folder()
+        self._routes = list()
+        self._labels = list()
+        self._finallabels = list()
         self._app_name = ""
         self._env_opts = ""
 
-        # Create controller objects
-        self._docker = DockerController(cname=self.host.oc_name)
-        self.host.container_name = self._docker.cname
-        self.logger.debug("Host: {0} Container: {1}".format(
-            self.host.oc_name, self.host.container_name))
-
-        self._ansible = AnsibleController(
-            inventory=get_ansible_inventory_script(self.docker.name.lower())
-        )
         prov_openshift_initiated.send(self)
-
-    @property
-    def docker(self):
-        """Return the docker object."""
-        return self._docker
-
-    @docker.setter
-    def docker(self, value):
-        """Set the docker object
-
-        :param value: The docker object.
-        """
-        raise AttributeError(
-            'Cannot set docker controller object once class is instantiated.'
-        )
-
-    @property
-    def ansible(self):
-        """Return the ansible object."""
-        return self._ansible
-
-    @ansible.setter
-    def ansible(self, value):
-        """Set the ansible object.
-
-        :param value: The ansible object.
-        """
-        raise AttributeError(
-            'Cannot set ansible controller object once class is instantiated.'
-        )
 
     @property
     def labels(self):
@@ -173,17 +101,13 @@ class OpenshiftProvisioner(CarbonProvisioner):
 
         :param value: The application labels.
         """
-        raise AttributeError('You cannot set the labels through the '
-                             'provisioning classes. Use the scenario '
-                             'descriptor instead.')
+        raise AttributeError('Labels cannot be set! Only by descriptor file.')
 
-    def start_container(self):
-        """Start container."""
-        self.docker.run_container(self._oc_image, entrypoint='bash')
+    def create_labels(self):
+        """Creates the labels list to be applied to an application.
 
-    def setup_labels(self):
-        """Sets a normalized list of key:values for the label, which is a list.
-        The keys cannot have spaces, they will be replaced w/an underscore
+        This method will build the list of labels in the form of key:values.
+        Any key which contains spaces will be replaced with a underscore.
         """
         for label in self.host.oc_labels:
             for k, v in label.items():
@@ -191,193 +115,175 @@ class OpenshiftProvisioner(CarbonProvisioner):
                     str(k.strip().replace(' ', '_')) + '=' + str(v)
                 )
 
+        labels = ""
+        for label in self.labels:
+            labels = labels + label + ","
+        labels = labels[:-1]
+        finallabel = "'" + labels + "'"
+        self._finallabels = finallabel
+
     def authenticate(self):
-        """Establish an authenticated session with openshift server.
+        """Authenticate with OpenShift.
 
-        Connection will be saved to the default configuration file under the
-        users home directory.
+        This method will attempt to authenticate with OpenShift using either
+        a API token or username/password.
         """
-        _cmd = 'oc login %s --insecure-skip-tls-verify\=True' % \
-               self.host.provider.credentials['auth_url']
+        # save provider credentials
+        credentials = self.host.provider.credentials
 
-        # Choose which authentication to use. Token will always be used first.
-        if 'token' in self.host.provider.credentials:
-            _cmd += ' --token\=%s' % self.host.provider.credentials['token']
-        elif 'username' and 'password' in self.host.provider.credentials:
-            _cmd += ' --username\=%s --password\=%s' % \
-                    (self.host.provider.credentials['username'],
-                     self.host.provider.credentials['password'])
+        # setup base oc login command
+        _cmd = 'oc login %s --insecure-skip-tls-verify=True' % \
+               credentials['auth_url']
+
+        # append to oc login command based on authentication type
+        if 'token' in credentials:
+            _cmd += ' --token=%s' % credentials['token']
+        elif 'username' and 'password' in credentials:
+            _cmd += ' --username=%s --password=%s' % \
+                    (credentials['username'], credentials['password'])
         else:
-            self.logger.error('Authentication type not found. Supported types:'
-                              ' <token|username/password>.')
-            # Stop/remove container
-            self.docker.stop_container()
-            self.docker.remove_container()
             raise OpenshiftProvisionerError(
-                'Authentication type not found. Supported types:'
-                ' <token|username/password>.')
+                'Authentication type not supplied (token|username/password)'
+            )
 
-        results = self.ansible.run_module(
-            dict(name='oc authenticate', hosts=self.host.oc_name, gather_facts='no',
-                 tasks=[dict(action=dict(module='shell', args=_cmd))])
-        )
+        self.logger.info('Authenticating with OpenShift..')
 
-        self.ansible.results_analyzer(results['status'])
-        if results['status'] != 0:
-            try:
-                # Stop/remove container
-                self.docker.stop_container()
-                self.docker.remove_container()
-            except DockerControllerError as ex:
-                raise OpenshiftProvisionerError(ex.message)
-            finally:
-                raise OpenshiftProvisionerError(
-                    'Could not authenticate. Please check credentials.')
+        # authenticate with openshift
+        results = exec_local_cmd(_cmd)
+        if results[0] != 0:
+            self.logger.error(results[2])
+            raise OpenshiftProvisionerError(
+                'Authentication failed! Verify that your credentials are set'
+                ' properly')
+        self.logger.info('Successfully authenticated with OpenShift!')
 
     def select_project(self):
-        """Switch to another project.
+        """Select project to create applications in.
 
-        Scenario is declared within the scenario openshift credentials section.
-        Once project is switched it will become the default project.
+        This method will switch to the project defined in the scenario
+        descriptor file.
         """
-        _cmd = "oc project {0}".format(
-            self.host.provider.credentials['project'])
-        results = self.ansible.run_module(
-            dict(name='oc project', hosts=self.host.oc_name, gather_facts='no',
-                 tasks=[dict(action=dict(module='shell', args=_cmd))])
-        )
+        # setup oc project command
+        _cmd = 'oc project %s' % self.host.provider.credentials['project']
 
-        self.ansible.results_analyzer(results['status'])
-        try:
-            if results['status'] != 0:
-                # Stop/remove container
-                self.docker.stop_container()
-                self.docker.remove_container()
-                raise OpenshiftProvisionerError('Failed to select project')
-        except DockerControllerError as ex:
-            raise OpenshiftProvisionerError(ex)
+        self.logger.info('Selecting OpenShift project..')
+
+        # select openshift project
+        results = exec_local_cmd(_cmd)
+        if results[0] != 0:
+            self.logger.error(results[2])
+            raise OpenshiftProvisionerError(
+                'Failed to select project! Verify that your project defined '
+                'actually exists in OpenShift.')
+        self.logger.info('Successfully selected OpenShift project!')
 
     def _create(self):
-        """Create a new application in openshift based on the type of
-        application declared in the scenario.
+        """Create a new application in OpenShift.
 
-        First we will determine which application method to call based on the
-        application declared in the host profile. If a profile has multiple
-        application types declared, an exception will be raised. We are not
-        able to tell which one the user actually wanted to use.
+        This method will create a application based on the application type
+        declared for the host. If multiple application types are defined, it
+        will raise an exception (since we cannot determine which one the user
+        wanted to create).
         """
         self.logger.info('Create application from %s', self.__class__)
 
-        # Start container
-        self.start_container()
-
-        # Authenticate with openshift
+        # authenticate with openshift
         self.authenticate()
 
-        # Select project to use
+        # select project to use
         self.select_project()
 
-        # Set a normalized label list
-        self.setup_labels()
+        # create labels to apply to application
+        self.create_labels()
 
-        # set the labels
-        self.get_final_labels()
+        # create environment variables to apply to application
+        self.create_env_vars()
 
-        # set the env_vars if set
-        self.env_opts()
-
-        newapp = None
+        # determine if multiple application types are defined
+        application = None
         count = 0
-        for app in self._app_choices:
-            _app = self.__provisioner_prefix__ + app
-            val = getattr(self.host, _app, None)
-            if val and val is not None:
-                count += 1
-                newapp = app
+        for atype in self._app_choices:
+            # create key name
+            app = self.__provisioner_prefix__ + atype
 
-        try:
-            try:
-                if count > 1:
-                    self.logger.error('More than one application type are '
-                                      'declared for resource. Unable to '
-                                      'determine which one to use.')
-                    raise OpenshiftProvisionerError('More than one application type are '
-                                                    'declared for resource. Unable to '
-                                                    'determine which one to use.')
+            # does the host have this attribute?
+            found = False
+            if hasattr(self.host, app):
+                found = True
 
-                if newapp is None:
-                    # check for custom template
-                    if getattr(self.host, "oc_custom_template", None):
-                        newapp = "template"
-                    else:
-                        self.logger.error('Application type not defined for '
-                                          'resource. Available choices ~ %s' %
-                                          self._app_choices)
-                        raise OpenshiftProvisionerError('Application type not '
-                                                        'defined for resource.')
+            # is the attribute None?
+            if found and not getattr(self.host, app):
+                continue
 
-                getattr(self, 'app_by_%s' % newapp)()
-            finally:
-                # Stop/remove container
-                self.docker.stop_container()
-                self.docker.remove_container()
-        except DockerControllerError as ex:
-            raise OpenshiftProvisionerError('Docker error. - %s' % ex.message)
+            # increment counter
+            count += 1
+
+            if count > 1:
+                raise OpenshiftProvisionerError(
+                    'Multiple application types defined, unable to decide '
+                    'which to create!'
+                )
+
+            # save application type
+            application = atype
+
+        # exit if no application type given
+        if not application:
+            raise OpenshiftProvisionerError(
+                'No application type declared for resource. Unable to create!'
+            )
+
+        self.logger.info('Provisioning application in OpenShift..')
+
+        # call method to create application based on application type
+        getattr(self, 'app_by_%s' % application)()
+
+        self.logger.info('Successfully provisioned application in OpenShift!')
 
     def _delete(self):
-        """Delete all resources associated with an application. It will
-        delete all resources for an application using the label associated to
-        it. This ensures no stale resources are left laying around.
+        """Delete a application in OpenShift.
+
+        This method will delete a application based on the labels associated
+        to it. This will ensure no stale application elements are left
+        laying around.
         """
         self.logger.info('Deleting application from %s', self.__class__)
 
-        # Start container
-        self.start_container()
-
-        # Authenticate with openshift
+        # authenticate with openshift
         self.authenticate()
 
-        # Select project to use
+        # select project to use
         self.select_project()
 
-        # Set a normalized label list
-        self.setup_labels()
+        # create labels to use to delete application
+        self.create_labels()
 
-        # set the labels
-        self.get_final_labels()
-
-        _cmd = 'oc delete all -l app\={appname}'. \
+        # setup oc delete command
+        _cmd = 'oc delete all -l app={appname}'. \
             format(appname=str(self.host.oc_name).replace("_", "-"))
 
-        results = self.ansible.run_module(
-            dict(name='oc delete all', hosts=self.host.oc_name, gather_facts='no',
-                 tasks=[dict(action=dict(module='shell', args=_cmd))])
-        )
+        self.logger.info('Deleting application in OpenShift..')
 
-        self.ansible.results_analyzer(results['status'])
-
-        try:
-            # Stop/remove container
-            self.docker.stop_container()
-            self.docker.remove_container()
-
-            if results['status'] != 0:
-                raise OpenshiftProvisionerError(
-                    'Failed to delete application.'
-                )
-        except DockerControllerError as ex:
-            raise OpenshiftProvisionerError(ex)
+        # delete application
+        results = exec_local_cmd(_cmd)
+        if results[0] != 0:
+            self.logger.error(results[2])
+            raise OpenshiftProvisionerError(
+                'Failed to delete application.')
+        self.logger.info('Successfully deleted application in OpenShift!')
 
     def app_by_image(self):
-        """Create a new application in an openshift server from a docker image.
+        """Create application by docker image.
 
-        E.g. $ oc new-app --docker-image=<image> -l app=<label>
+        This method creates a application in OpenShift based on a image. It
+        will create the application, wait for the pod to be ready and expose
+        the routes. It runs the following oc client command:
+            - oc new-app --docker-image=<image> -l app=<label>
         """
-        image = self.host.oc_image
-        image_call = "--docker-image\={}".format(image)
+        image_call = "--docker-image={0}".format(self.host.oc_image)
 
         # call oc new-app
-        self.newapp("image", image_call)
+        self.create_application("image", image_call)
 
         # wait for all pods to be up
         self.wait_for_pods()
@@ -389,15 +295,15 @@ class OpenshiftProvisioner(CarbonProvisioner):
         self.show_results()
 
     def app_by_git(self):
-        """Create a new application in an openshift server from a git
-        repository (source code).
+        """Create application by git repository.
 
-        E.g. $ oc new-app <git_url> -l app=<label>
+        This method creates a application in OpenShift based on a git. It
+        will create the application, wait for the pod to be ready and expose
+        the routes. It runs the following oc client command:
+            - oc new-app <git_url> -l app=<label>
         """
-        git_url = self.host.oc_git
-
         # call oc new-app
-        self.newapp("git", git_url)
+        self.create_application("git", self.host.oc_git)
 
         # wait for all pods to be up
         self.wait_for_pods()
@@ -408,13 +314,23 @@ class OpenshiftProvisioner(CarbonProvisioner):
         # show results for the app
         self.show_results()
 
-    def app_by_template(self):
-        """Create a new application in openshift from a template. This can
-        either use an existing template stored in openshift or a local
-        template.
+    def app_by_custom_template(self):
+        """Create application by custom template.
 
-        E.g. $ oc new-app --template=<name> --env=[] -l app=<label>
-        E.g. $ oc new-app --file=./template --env=[] -l app=<label>
+        This method creates a application in OpenShift based on a template.
+        It will create the application, wait for the pod to be ready and
+        expose the routes. It runs the following oc client command:
+            - oc new-app --file=./template --env=[] -l app=<label>
+        """
+        self.app_by_template()
+
+    def app_by_template(self):
+        """Create application by default template.
+
+        This method creates a application in OpenShift based on a template.
+        It will create the application, wait for the pod to be ready and
+        expose the routes. It runs the following oc client command:
+            - oc new-app --template=<name> --env=[] -l app=<label>
         """
         if self.host.oc_template:
             _template = self.host.oc_template
@@ -423,39 +339,23 @@ class OpenshiftProvisioner(CarbonProvisioner):
         _template_file = None
         _template_filename = None
 
-        filepath = os.path.join(self._data_folder, "assets", _template)
+        filepath = os.path.join(self.host.data_folder(), "assets", _template)
 
         if os.path.isfile(filepath):
             _template_file = filepath
             _template_filename = os.path.basename(filepath)
 
-        # copy file to container
         if _template_file:
-
-            src_file_path = _template_file
-            dest_full_path_file = '/tmp/'
-
-            cp_args = 'src={0} dest={1} mode=0755'.format(src_file_path, dest_full_path_file)
-
-            results = self.ansible.run_module(
-                dict(name='copy file', hosts=self.host.oc_name, gather_facts='no',
-                     tasks=[dict(action=dict(module='copy', args=cp_args))])
-            )
-
-            if results['status'] != 0:
-                raise OpenshiftProvisionerError(
-                    'Failed to create new application by template.'
-                )
-
-            custom_template_file = os.path.join("/tmp", _template_filename)
-            custom_template_call = "--file\={}".format(custom_template_file)
+            custom_template_file = os.path.join(self._data_folder, "assets",
+                                                _template_filename)
+            custom_template_call = "--file={}".format(custom_template_file)
 
             # we will not use env vars for custom templates
             # as they can be set in the template itself
-            self.newapp("custom_template", custom_template_call)
+            self.create_application("custom_template", custom_template_call)
 
         else:
-            self.newapp("template", _template)
+            self.create_application("template", _template)
 
         # wait for all pods to be up
         self.wait_for_pods()
@@ -463,43 +363,63 @@ class OpenshiftProvisioner(CarbonProvisioner):
         # show results for the app
         self.show_results()
 
-    def newapp(self, oc_type, value):
-        """
-        generic newapp call that should work for almost all use cases that we support
+    def create_application(self, oc_type, value):
+        """Create applications in OpenShift using oc client new-app.
 
-        :param oc_type: used for the name of the call
-        :param value: data that will be passed in after oc new-app <value>
+        This method will create applications in OpenShift based on the
+        application type defined. Other class methods call this method. This
+        is used as a generic method to call.
+
+        :param oc_type: Application type to create
+        :type oc_type: str
+        :param value: Data required for creating applicaton type defined.
+        :type value: str
         """
-        _cmd = 'oc new-app {value} -l {labels} --name\={appname} {opts}'.\
+        # setup oc new-app command
+        _cmd = 'oc new-app {value} -l {labels} --name={appname} {opts}'.\
             format(value=value,
                    labels=self._finallabels,
                    opts=self._env_opts,
                    appname=str(self.host.oc_name).replace("_", "-"))
 
-        self.logger.debug(_cmd)
-        prov_openshift_newapp_started.send(self, command=_cmd)
-        results = self.ansible.run_module(
-            dict(name='oc new-app {}'.format(oc_type), hosts=self.host.oc_name, gather_facts='no',
-                 tasks=[dict(action=dict(module='shell', args=_cmd))])
-        )
-        prov_openshift_newapp_finished.send(self, command=_cmd, results=results)
-        self.ansible.results_analyzer(results['status'])
-        if results['status'] != 0:
-            raise OpenshiftProvisionerError('Error creating app. %s' % results)
+        self.logger.debug('OpenShift Client comamnd: %s' % _cmd)
 
-    def env_opts(self):
+        self.logger.info('Creating application from %s..' % oc_type)
+
+        # send start signal
+        prov_openshift_newapp_started.send(self, command=_cmd)
+
+        # create application
+        results = exec_local_cmd(_cmd)
+        if results[0] != 0:
+            self.logger.error(results[2])
+            raise OpenshiftProvisionerError(
+                'Error creating application from %s.' % oc_type)
+        self.logger.info('Successfully created application from %s!' % oc_type)
+
+        # send finished signal
+        prov_openshift_newapp_finished.send(self, command=_cmd, results=results)
+
+    def create_env_vars(self):
+        """Create the environment variables to be applied to the application.
+
+        This method creates the environment variables to be passed to the
+        application created.
+        """
         self._env_opts = ""
         # get the env vars if set
         env_vars = getattr(self.host, 'oc_env_vars', None)
         if env_vars is not None:
             for env_key in env_vars:
-                self._env_opts = self._env_opts + "-p " + env_key + "=" + env_vars[env_key] + " "
-            self._env_opts = self._env_opts.strip().replace("=", "\=")
+                self._env_opts = self._env_opts + "-p " + env_key + "=" +\
+                                 env_vars[env_key] + " "
 
     def wait_for_pods(self):
-        """ waiting for all pods to be up
-        also need to check to see if any builds are running, as they need
-        to be complete before any pods will come up.
+        """Wait for pods to be ready.
+
+        This method will wait for pods to be ready. It will check if any builds
+        are running as they need tobe complete before pods will become ready
+        (up).
         """
         self.logger.info("Sleeping for 10 secs for buildconfigs to be started")
         time.sleep(10)
@@ -523,74 +443,54 @@ class OpenshiftProvisioner(CarbonProvisioner):
             self.logger.info("Attempt {0} of {1}: Checking for pods to all "
                              "be running".format(attempt, total_attempts))
 
-            # check the build status, which needs to be No resources found or Complete
+            # check build status, needs to be 'no resources found or complete'
 
-            _cmd = 'oc get builds -l app\={appname} -o yaml'. \
+            _cmd = 'oc get builds -l app={appname} -o yaml'. \
                 format(appname=str(self.host.oc_name).replace("_", "-"))
 
 #             self.logger.debug(_cmd)
-            results = self.ansible.run_module(
-                dict(name='oc get builds {}', hosts=self.host.oc_name, gather_facts='no',
-                     tasks=[dict(action=dict(module='shell', args=_cmd))])
-            )
-            self.ansible.results_analyzer(results['status'])
-            if len(results["callback"].contacted) == 1:
-                parsed_results = results["callback"].contacted[0]["results"]
-            else:
-                raise OpenshiftProvisionerError("Unexpected Error")
-            if "stdout" in parsed_results and "stderr" in parsed_results["stdout"]:
-                if "No resources" in parsed_results["stdout"]["stderr"]:
+            # check the build status
+
+            results = exec_local_cmd(_cmd)
+            if results[0] != 0:
+                error_msg = results[2]
+                if "No resources" in error_msg:
+                    buildcheck = False
                     pass
                 else:
-                    raise OpenshiftProvisionerError(
-                        "Unexpected Error checking builds: {}".format(
-                            parsed_results["stdout"]["stderr"])
-                    )
-            elif "stdout" in parsed_results:
-                mydict = yaml.load(parsed_results["stdout"])
-                for item in mydict["items"]:
-                    build_status = item['status']['phase']
-                    if build_status == "Complete":
-                        buildcheck = buildcheck and True
-                    elif build_status == "Failed":
-                        self.logger.error("The build failed")
-                        raise OpenshiftProvisionerError('The build failed')
-                    else:
-                        # Build is still in progress
-                        buildcheck = False
-                # if all builds are not Complete, retry, else continue
-                if not buildcheck:
-                    self.logger.info("Sleeping for 10 secs for all builds to complete")
-                    time.sleep(10)
-                    wait -= 10
-                    continue
-            elif "stderr_lines" in parsed_results and parsed_results["stderr_lines"]:
-                raise OpenshiftProvisionerError(
-                    "Unexpected Error when Checking the build:: {}".format(
-                        parsed_results["stderr_lines"])
-                )
-            else:
-                raise OpenshiftProvisionerError(
-                    "Unexpected Error when Checking the build: {}".format(
-                        parsed_results)
-                )
+                    self.logger.error(results[2])
+                    raise OpenshiftProvisionerError("Unable to get the builds")
+            mydict = yaml.load(results[1])
 
-            _cmd = 'oc get pods -l app\={appname} -o yaml'. \
+            # no builds yet
+            if not mydict["items"]:
+                pass
+            for item in mydict["items"]:
+                build_status = item['status']['phase']
+                if build_status == "Complete":
+                    buildcheck = buildcheck and True
+                elif build_status == "Failed":
+                    self.logger.error("The build failed")
+                    raise OpenshiftProvisionerError('The build failed')
+                else:
+                    # Build is still in progress
+                    buildcheck = False
+                    # if all builds are not Complete, retry, else continue
+            if not buildcheck:
+                self.logger.info("Sleeping for 10 secs for all builds to complete")
+                time.sleep(10)
+                wait -= 10
+                continue
+
+            _cmd = 'oc get pods -l app={appname} -o yaml'. \
                 format(appname=str(self.host.oc_name).replace("_", "-"))
 
 #             self.logger.debug(_cmd)
-            results = self.ansible.run_module(
-                dict(name='oc get pods', hosts=self.host.oc_name, gather_facts='no',
-                     tasks=[dict(action=dict(module='shell', args=_cmd))])
-            )
 
-            if len(results["callback"].contacted) == 1:
-                parsed_results2 = results["callback"].contacted[0]["results"]
-            else:
-                raise OpenshiftProvisionerError("Unexpected Error")
-            if "stderr" in parsed_results2 and parsed_results2["stderr"]:
-                # check if pods have not been created yet
-                if "No resources" in parsed_results2["stderr"]:
+            results = exec_local_cmd(_cmd)
+            if results[0] != 0:
+                error_msg = results[2]
+                if "No resources" in error_msg:
                     self.logger.info("Pod not created yet")
                     errcheck += 1
                     time.sleep(10)
@@ -599,37 +499,29 @@ class OpenshiftProvisioner(CarbonProvisioner):
                 else:
                     raise OpenshiftProvisionerError(
                         "Unexpected output when checking for created pods: "
-                        "{}".format(parsed_results2["stderr"]))
-            elif "stdout" in parsed_results2 and parsed_results2["stdout"]:
-                mydict = {}
-                mydict = yaml.load(parsed_results2["stdout"])
+                        "{}".format(error_msg))
 
-#                 self.logger.debug(len(mydict["items"]))
-                for item in mydict["items"]:
-                    build_status = item['status']['phase']
-                    if build_status == "Running":
-                        # set the app name
-                        self._app_name = item["metadata"]["labels"]["app"]
-                        podcheck = podcheck and True
-                    else:
-                        # Build is still in progress
-                        podcheck = False
-                # if all pods are Running, retry, else continue
-                if not podcheck:
-                    self.logger.debug("Sleeping for 10 secs waiting for all pods to be Running")
-                    time.sleep(10)
-                    wait -= 10
-                    continue
-            elif "stderr_lines" in parsed_results2 and parsed_results2["stderr_lines"]:
-                raise OpenshiftProvisionerError(
-                    "Unexpected Error when Checking the pod: {}".format(
-                        parsed_results["stderr_lines"])
-                )
-            else:
-                raise OpenshiftProvisionerError(
-                    "Unexpected Error when Checking the build: {}".format(
-                        parsed_results)
-                )
+            mydict = yaml.load(results[1])
+
+            # no pods displayed
+            if not mydict["items"]:
+                podcheck = False
+
+            for item in mydict["items"]:
+                build_status = item['status']['phase']
+                if build_status == "Running":
+                    # set the app name
+                    self._app_name = item["metadata"]["labels"]["app"]
+                    podcheck = podcheck and True
+                else:
+                    # Build is still in progress
+                    podcheck = False
+            # if all pods are Running, retry, else continue
+            if not podcheck:
+                self.logger.debug("Sleeping for 10 secs waiting for all pods to be Running")
+                time.sleep(10)
+                wait -= 10
+                continue
 
             # complete if all conditions passed and no Exceptions thrown
             self.logger.info("Build Complete and all pods are up")
@@ -639,66 +531,63 @@ class OpenshiftProvisioner(CarbonProvisioner):
                                         "to complete and pods to come up")
 
     def expose_route(self):
-        """Expose an existing container externally via routes.
+        """Expose application routes for external access.
 
-        E.g. $ oc expose server <name>
-        oc get svc -l -> extract app name
-        oc expose svc <app_name>
+        This method will expose application routes for external access to the
+        application. It runs the following oc client command:
+            - oc get svc -l (extract application name)
+            - oc expose svc <name>
         """
-        _cmd = 'oc get svc -l app\={appname} -o yaml'. \
+        _cmd = 'oc get svc -l app={appname} -o yaml'. \
             format(appname=str(self.host.oc_name).replace("_", "-"))
 
-#             self.logger.debug(_cmd)
-        results = self.ansible.run_module(
-            dict(name='oc get svc -l', hosts=self.host.oc_name, gather_facts='no',
-                 tasks=[dict(action=dict(module='shell', args=_cmd))])
-        )
+        results = exec_local_cmd(_cmd)
+        if results[0] != 0:
+            self.logger.error(results[2])
+            raise OpenshiftProvisionerError(
+                'Unable to get application name')
 
-        if len(results["callback"].contacted) == 1:
-            parsed_results = results["callback"].contacted[0]["results"]
-        else:
-            raise OpenshiftProvisionerError("Unexpected Error")
-        mydict = yaml.load(parsed_results["stdout"])
+        parsed_results = results[1]
+        mydict = yaml.load(parsed_results)
         try:
             app_name = mydict["items"][0]["metadata"]["name"]
-        except:
+        except KeyError:
             # this may be the case where there is no svc for the application
             self.logger.warn("unable to get application name " + parsed_results)
 
         if app_name:
             _cmd = 'oc expose svc {0}'.format(self._app_name)
 
-            results = self.ansible.run_module(
-                dict(name='oc expose svc', hosts=self.host.oc_name, gather_facts='no',
-                     tasks=[dict(action=dict(module='shell', args=_cmd))])
-            )
-            self.ansible.results_analyzer(results['status'])
+            results = exec_local_cmd(_cmd)
+            if results[0] != 0:
+                self.logger.warning("Unable to expose routes")
+                self.logger.warning(results[2])
+            self.logger.info('Successfully exposed routes')
 
     def show_results(self):
-        """return the data from the creation of pods (App name & routes if exist)
-        oc get pod -l -> extract app name from any pod
-        oc get route -l -> extract all routes that are set
-        TODO: this function should set these vals in a temporary yaml of the input
-              will wait for the implementation of where to update before adding that
-              functionality.
+        """Show the results from a pod creation.
+
+        This method will return the data (application name & routes if they
+        are defined). It runs the following commands:
+            - oc get pod -l (extract application name from a pod)
+            - oc get route -l (extract all routes that are defined for a pod)
         """
+        # TODO: Function should set these values in temporary yaml of the input
+        # TODO: (cont). will wait for implementation to update before adding
         # app name should already be set
         self.logger.debug("return app name: {}".format(self._app_name))
 
-        _cmd = 'oc get route -l app\={appname} -o yaml'.\
+        _cmd = 'oc get route -l app={appname} -o yaml'.\
             format(appname=str(self.host.oc_name).replace("_", "-"))
 
-        results = self.ansible.run_module(
-            dict(name='oc get route', hosts=self.host.oc_name, gather_facts='no',
-                 tasks=[dict(action=dict(module='shell', args=_cmd))])
-        )
+        results = exec_local_cmd(_cmd)
+        if results[0] != 0:
+            self.logger.error(results[2])
+            raise OpenshiftProvisionerError(
+                'Failed getting routes')
 
-        if len(results["callback"].contacted) == 1:
-            parsed_results = results["callback"].contacted[0]["results"]
-        else:
-            raise OpenshiftProvisionerError("Unexpected Error")
-        self.ansible.results_analyzer(results['status'])
-        mydict = yaml.load(parsed_results["stdout"])
+        parsed_results = results[1]
+        mydict = yaml.load(parsed_results)
 
         if mydict["items"]:
             for item in mydict["items"]:
@@ -712,13 +601,3 @@ class OpenshiftProvisioner(CarbonProvisioner):
         self.host.oc_app_name = self._app_name
         self.host.oc_routes = self._routes
         prov_openshift_app_updated.send(self, host=self.host)
-
-    def get_final_labels(self):
-        """get the required label(s) in the format expected by oc."""
-        labels = ""
-        for label in self.labels:
-            labels = labels + label + ","
-        labels = labels[:-1]
-        finallabel = "'" + labels + "'"
-        finallabel = finallabel.replace("=", "\=")
-        self._finallabels = finallabel

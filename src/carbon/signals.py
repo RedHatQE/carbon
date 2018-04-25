@@ -42,9 +42,6 @@ provision_create_finished = _signals.signal('provision-create-finished')
 provision_delete_started = _signals.signal('provision-delete-started')
 provision_delete_finished = _signals.signal('provision-delete-finished')
 
-prov_linchpin_initiated = _signals.signal('prov-linchpin-initialized')
-prov_ciosp_initiated = _signals.signal('prov-ciosp-initialized')
-
 #
 # Openstack provisioner signals
 #

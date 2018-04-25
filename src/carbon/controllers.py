@@ -27,13 +27,17 @@ from collections import namedtuple
 
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.executor.task_queue_manager import TaskQueueManager
-from ansible.inventory import Inventory
 from ansible.parsing.dataloader import DataLoader
 from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
-from ansible.vars import VariableManager
-from docker import DockerClient
-from docker.errors import APIError, ContainerError, NotFound, ImageNotFound
+
+# TODO: future release we should depreciate ansible < 2.4 for python 3 support
+try:
+    from ansible.inventory import Inventory
+    from ansible.vars import VariableManager
+except ImportError:
+    from ansible.inventory.manager import InventoryManager as Inventory
+    from ansible.vars.manager import VariableManager
 
 from .core import CarbonController, CarbonControllerError
 
@@ -98,11 +102,11 @@ class AnsibleController(CarbonController):
         :param inventory: The inventory host file.
         """
         super(AnsibleController, self).__init__()
-        self.variable_manager = VariableManager()
         self.loader = DataLoader()
         self.callback = CarbonCallback()
         self.ansible_inventory = inventory
         self.inventory = None
+        self.variable_manager = None
 
         # Module options
         self.module_options = namedtuple(
@@ -114,7 +118,8 @@ class AnsibleController(CarbonController):
                         'become_user',
                         'check',
                         'remote_user',
-                        'private_key_file']
+                        'private_key_file',
+                        'diff']
         )
 
         # Playbook options
@@ -131,17 +136,29 @@ class AnsibleController(CarbonController):
                         'listhosts',
                         'syntax',
                         'remote_user',
-                        'private_key_file']
+                        'private_key_file',
+                        'diff']
         )
 
     def set_inventory(self):
         """Instantiate the inventory class with the inventory file in-use."""
-        self.inventory = Inventory(
-            loader=self.loader,
-            variable_manager=self.variable_manager,
-            host_list=self.ansible_inventory
-        )
-        self.variable_manager.set_inventory(self.inventory)
+        try:
+            # supports ansible < 2.4
+            self.variable_manager = VariableManager()
+            self.inventory = Inventory(
+                loader=self.loader,
+                variable_manager=self.variable_manager,
+                host_list=self.ansible_inventory
+            )
+        except TypeError:
+            # supports ansible > 2.4
+            self.variable_manager = VariableManager(loader=self.loader)
+            self.inventory = Inventory(
+                loader=self.loader,
+                sources=self.ansible_inventory
+            )
+        finally:
+            self.variable_manager.set_inventory(self.inventory)
 
     def run_module(self, play_source, remote_user="root", become=False,
                    become_method="sudo", become_user="root",
@@ -182,7 +199,8 @@ class AnsibleController(CarbonController):
             become_user=become_user,
             check=False,
             remote_user=remote_user,
-            private_key_file=private_key_file
+            private_key_file=private_key_file,
+            diff=False
         )
 
         # Load the play
@@ -244,7 +262,8 @@ class AnsibleController(CarbonController):
             listhosts=False,
             syntax=False,
             remote_user=remote_user,
-            private_key_file=private_key_file
+            private_key_file=private_key_file,
+            diff=False
         )
 
         # Set additional variables for use by playbook
@@ -289,199 +308,3 @@ class AnsibleController(CarbonController):
             if 'msg' in item['results']:
                 self.logger.info('Message:')
                 self.logger.info(item['results']['msg'])
-
-
-class DockerControllerError(CarbonControllerError):
-    """Base class for docker controller exceptions."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        self.message = message
-        super(DockerControllerError, self).__init__(message)
-
-
-class DockerController(CarbonController):
-    """Docker controller class.
-
-    The docker controller interfaces with the docker service. It handles
-    actions with containers.
-    """
-    __controller_name__ = 'Docker'
-
-    def __init__(self, cname=None):
-        """Constructor.
-
-        Instantiates docker client class.
-
-        :param cname: Name of the container.
-        """
-        super(DockerController, self).__init__()
-        self._cname = cname
-
-        self.client = DockerClient()
-
-    @property
-    def cname(self):
-        """Return the name of the container."""
-        return self._cname
-
-    @cname.setter
-    def cname(self, value):
-        """Raises an exception when trying to set name of container after the
-        controller class has been instantiated.
-
-        :param value: The name for the docker container.
-        """
-        raise ValueError(
-            'You cannot set the container name after class has been '
-            'instantiated.'
-        )
-
-    def run_container(self, image, command=None, entrypoint=None,
-                      volumes=None):
-        """Run a command in new container.
-
-        :param image: Image to create container.
-        :param command: Command to run inside the container.
-        :param entrypoint: Override the default entrypoint.
-        :param volumes: Volumes (dict form) to mount inside container. You
-            can declare multiple volumes.
-            {'/home/user': {'bind': '/tmp', 'mode': 'rw'}, ..}
-        :return: A dict of the return code and ansible callback object.
-        """
-        status = self.get_container_status()
-        if status == 'running':
-            raise DockerControllerError(
-                'Container %s is %s! Re-use container.' % (self.cname, status))
-        elif status == 'exited':
-            self.logger.warn('Container %s is %s! Remove container before '
-                             'starting a new one.', self.cname, status)
-            self.remove_container()
-
-        try:
-            self.client.containers.run(
-                image,
-                name=self.cname,
-                detach=True,
-                tty=True,
-                entrypoint=entrypoint,
-                command=command,
-                volumes=volumes
-            )
-        except (APIError, ContainerError, ImageNotFound) as ex:
-            raise DockerControllerError(ex)
-        self.logger.info('Successfully started container: %s', self.cname)
-
-    def remove_container(self):
-        """Remove a container."""
-        container = self.get_container()
-
-        try:
-            container.remove()
-        except APIError as ex:
-            raise DockerControllerError(ex)
-        self.logger.info('Container %s successfully removed.', self.cname)
-
-    def start_container(self):
-        """Start a stopped container."""
-        status = self.get_container_status()
-        if status != 'exited':
-            self.logger.warn(
-                'Container %s is not stopped (status=%s).', self.cname, status
-            )
-            return
-
-        container = self.get_container()
-
-        try:
-            container.start()
-        except APIError as ex:
-            raise DockerControllerError(ex)
-        self.logger.info('Container %s successfully started.', self.cname)
-
-    def stop_container(self):
-        """Stop a running container."""
-        status = self.get_container_status()
-        if status != 'running':
-            self.logger.warn(
-                'Container %s is not running (status=%s).', self.cname, status
-            )
-            return
-
-        container = self.get_container()
-
-        try:
-            container.stop()
-        except APIError as ex:
-            raise DockerControllerError(ex)
-        self.logger.info('Container: %s successfully stopped.', self.cname)
-
-    def pull_image(self, name, tag='latest'):
-        """Pull an image from a registry.
-
-        :param name: Name of the image.
-        :param tag: Name of the tag for the image.
-        """
-        try:
-            self.client.images.pull(name, tag=tag)
-        except APIError as ex:
-            raise DockerControllerError(ex)
-        self.logger.info('Successfully pulled image %s:%s.', name, tag)
-
-    def remove_image(self, name, tag='latest'):
-        """Remove an image.
-
-        :param name: Name of the image.
-        :param tag: Tag for the image.
-        """
-        _image = '%s:%s' % (name, tag)
-
-        try:
-            self.client.images.remove(image=_image)
-        except APIError as ex:
-            raise DockerControllerError(ex)
-        self.logger.info('Successfully removed image %s.', _image)
-
-    def get_container_status(self):
-        """Get the container status.
-
-        :return: Status of the container.
-        """
-        try:
-            container = self.client.containers.get(self.cname)
-            status = str(container.status)
-        except (APIError, NotFound):
-            status = None
-        return status
-
-    def get_container(self):
-        """Check to see if the container is already running.
-
-        :return: A boolean, true = alive, false = not alive.
-        """
-        try:
-            container = self.client.containers.get(self.cname)
-        except (APIError, NotFound):
-            raise DockerControllerError(
-                'Container %s not found.' % self.cname
-            )
-        return container
-
-    def get_image(self, name):
-        """Check to see if the image name given already exists.
-
-        The image name can be given with or without a tag:
-            - fedora or fedora:25
-
-        :param name: Name of the image.
-        :return: A boolean, true = exists, false = not exist.
-        """
-        found = True
-        try:
-            self.client.images.get(name)
-        except (APIError, ImageNotFound):
-            found = False
-        return found

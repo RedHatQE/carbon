@@ -1,3 +1,64 @@
+Version 0.4.0 (2018-04-25)
+--------------------------
+
+Features
+~~~~~~~~
+
+* do not require floating ip for openstack resources.
+* carbon's own time mixin class.
+* ability to run carbon framework as a container.
+* apache libcloud openstack provider support.
+
+Bug Fixes
+~~~~~~~~~
+
+* only allow beaker config to be created once.
+* lock ansible version until carbon supports latest ansible.
+* always save the beaker job id in carbon results file.
+* unable to locate kickstart file during beaker provisioning.
+
+Chore
+~~~~~
+
+* python 3 support for openstack provider module.
+* remove need to define openstack tenant id.
+* add make targets for building/deploying container images.
+* remove code regarding docker implementation for carbon.
+* update dockerfile for carbon.
+* clean up unused modules, tests, etc from code base.
+* set the default openstack provisioner to use apache libcloud.
+* split requirements.txt into multiple requirements.txt files.
+* convert function checking git urls to be a generic url checker.
+* provide support for ansible greater than 2.4.
+* integration test improvements.
+* update Beaker container to have mounted volume.
+* update OpenShift container to have mounted volume.
+
+Documentation
+~~~~~~~~~~~~~
+
+* updating the Beaker documentation to reference bkr_kickstart as an asset.
+* describing assets for Beaker and OpenShift providers
+* updating the assets keys to be consistent throughout the doc.
+* only show one authentication type for beaker examples.
+
+Refactor
+~~~~~~~~
+
+* log node state when waiting for node to finish building.
+* refactor OpenShift provisioning/deleting to run locally.
+* refactor beaker provisioner to run beaker client calls locally.
+* simplify the method for creating loggers.
+
+Tests
+~~~~~
+
+* enable and revise beaker provisioner functional tests.
+* adds revised beaker provisioner integration tests.
+* adds revised openshift provisioner integration tests.
+* update openstack provider integration tests.
+
+
 Version 0.3.2 (2017-09-01)
 --------------------------
 
@@ -82,7 +143,6 @@ Chore
 * do not start containers when provisioner class is instantiated
 * ignore data created by local tests
 * use click built-in function to display program version
-* include dockerfile for linchpin
 
 Version 0.2.2 (2017-07-24)
 --------------------------

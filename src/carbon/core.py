@@ -26,6 +26,7 @@ import inspect
 from collections import namedtuple
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
+from time import time
 
 import os
 
@@ -157,88 +158,54 @@ class LoggerMixin(object):
     }
 
     @classmethod
-    def create_carbon_logger(cls, carbon_config):
-        """Create carbons logger.
+    def create_logger(cls, name, config=None):
+        """Create logger.
 
-        :param name: Logger name.
-        :param log_level: Log level to set for logger.
-        :return: Carbon logger object.
+        This method will create logger's to be used throughout carbon.
+
+        :param name: Name for the logger to create.
+        :type name: str
+        :param config: Carbon config object.
+        :type config: dict
         """
-        clogger = getLogger(carbon_config["LOGGER_NAME"])
-        if not clogger.handlers:
-            if carbon_config["LOGGER_TYPE"] == "stream":
-                chandler = StreamHandler()
-            elif carbon_config["LOGGER_TYPE"] == "file":
-                logfile = os.path.join(carbon_config["DATA_FOLDER"], "logs", "carbon_scenario.log")
-                logdir = os.path.dirname(logfile)
-                if os.path.exists(logdir):
-                    pass
+        # get logger
+        logger = getLogger(name)
+
+        # skip creating logger if handler already exists
+        if len(logger.handlers) > 0:
+            return
+
+        # configure handler type
+        if config['LOGGER_TYPE'] == 'stream':
+            handler = StreamHandler()
+        elif config['LOGGER_TYPE'] == 'file':
+            log_dir = os.path.join(config['DATA_FOLDER'], 'logs')
+            log_file = os.path.join(log_dir, 'carbon_scenario.log')
+
+            # create log directory
+            try:
+                if not os.path.exists(log_dir):
+                    os.makedirs(log_dir)
+            except OSError as ex:
+                msg = 'Unable to create %s directory' % log_dir
+                if ex.errno == errno.EACCES:
+                    msg += ', permission defined.'
                 else:
-                    try:
-                        os.makedirs(logdir)
-                    except OSError as ex:
-                        if ex.errno == errno.EACCES:
-                            raise LoggerMixinError(
-                                'You do not have permission to create the '
-                                'workspace.'
-                            )
-                        else:
-                            raise LoggerMixinError(
-                                'Error creating scenario workspace: %s' %
-                                ex.message
-                            )
-                chandler = FileHandler(logfile)
-            else:
-                raise LoggerMixinError(
-                    'Please set a valid LOGGER_TYPE value.'
-                )
-            chandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
-            chandler.setFormatter(Formatter(cls._LOG_FORMAT))
-            clogger.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
-            clogger.addHandler(chandler)
-        return clogger
-
-    @classmethod
-    def create_custom_logger(cls, carbon_config, name):
-        """Create custom logger.
-
-        :param name: Logger name.
-        :param log_level: Log level to set for logger.
-        :param name: name of a python class to log
-        :return: Taskrunner logger object.
-        """
-        if carbon_config["LOGGER_TYPE"] == "stream":
-            thandler = StreamHandler()
-        elif carbon_config["LOGGER_TYPE"] == "file":
-            logfile = os.path.join(carbon_config["DATA_FOLDER"], "logs", "carbon_scenario.log")
-            logdir = os.path.dirname(logfile)
-            if os.path.exists(logdir):
-                pass
-            else:
-                try:
-                    os.makedirs(logdir)
-                except OSError as ex:
-                    if ex.errno == errno.EACCES:
-                        raise LoggerMixinError(
-                            'You do not have permission to create the '
-                            'workspace.'
-                        )
-                    else:
-                        raise LoggerMixinError(
-                            'Error creating scenario workspace: %s' %
-                            ex.message
-                        )
-            thandler = FileHandler(logfile)
+                    msg += ', %s.' % ex
+                raise LoggerMixinError(msg)
+            handler = FileHandler(log_file)
         else:
             raise LoggerMixinError(
-                'Please set a valid LOGGER_TYPE value.'
+                'Invalid logger type. Supported types: (file or stream).'
             )
-        thandler.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
-        thandler.setFormatter(Formatter(cls._LOG_FORMAT))
-        tlogger = getLogger(name)
-        tlogger.setLevel(cls._LOG_LEVELS[carbon_config["LOG_LEVEL"]])
-        tlogger.addHandler(thandler)
-        return tlogger
+
+        # configure handler
+        handler.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
+        handler.setFormatter(Formatter(cls._LOG_FORMAT))
+
+        # configure logger
+        logger.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
+        logger.addHandler(handler)
 
     @property
     def logger(self):
@@ -246,7 +213,106 @@ class LoggerMixin(object):
         return getLogger(inspect.getmodule(inspect.stack()[1][0]).__name__)
 
 
-class CarbonTask(LoggerMixin):
+class TimeMixin(object):
+    """Carbon's time mixin class.
+
+    This class provides an easy interface for other carbon classes to save
+    a start and end time. Once times are saved they can calculate the time
+    delta between the two points in time.
+    """
+    _start_time = None
+    _end_time = None
+    _hours = 0
+    _minutes = 0
+    _secounds = 0
+
+    def start(self):
+        """Set the start time."""
+        self._start_time = time()
+
+    def end(self):
+        """Set the end time."""
+        self._end_time = time()
+
+        # calculate time delta
+        delta = self._end_time - self._start_time
+        self.hours = delta // 3600
+        delta = delta - 3600 * self.hours
+        self.minutes = delta // 60
+        self.seconds = delta - 60 * self.minutes
+
+    @property
+    def start_time(self):
+        """Return the start time."""
+        return self._start_time
+
+    @start_time.setter
+    def start_time(self, value):
+        """Set the start time.
+
+        :param value: Start time.
+        :type value: int
+        """
+        raise CarbonError('You cannot set the start time.')
+
+    @property
+    def end_time(self):
+        """Return the end time."""
+        return self._end_time
+
+    @end_time.setter
+    def end_time(self, value):
+        """Set the end time.
+
+        :param value: End time.
+        :type value: int
+        """
+        raise CarbonError('You cannot set the end time.')
+
+    @property
+    def hours(self):
+        """Return hours."""
+        return self._hours
+
+    @hours.setter
+    def hours(self, value):
+        """Set hours.
+
+        :param value: Hours to set.
+        :type value: int
+        """
+        self._hours = value
+
+    @property
+    def minutes(self):
+        """Return minutes."""
+        return self._minutes
+
+    @minutes.setter
+    def minutes(self, value):
+        """Set minutes.
+
+        :param value: Minutes to set.
+        :type value: int
+        """
+        self._minutes = value
+
+    @property
+    def seconds(self):
+        """Return seconds."""
+        return self._secounds
+
+    @seconds.setter
+    def seconds(self, value):
+        """Set seconds.
+
+        :param value: Seconds to set.
+        :type value: int
+        """
+        self._secounds = value
+
+
+class CarbonTask(LoggerMixin, TimeMixin):
     """
     This is the base class for every task created for Carbon framework.
     All instances of this class can be found within the ~carbon.tasks
@@ -266,7 +332,7 @@ class CarbonTask(LoggerMixin):
         return self.name
 
 
-class CarbonResource(LoggerMixin):
+class CarbonResource(LoggerMixin, TimeMixin):
     """
     This is the base class for every resource created for Carbon Framework.
     All instances of this class can be found within ~carbon.resources
@@ -367,7 +433,7 @@ class CarbonResource(LoggerMixin):
         pass
 
 
-class CarbonProvisioner(LoggerMixin):
+class CarbonProvisioner(LoggerMixin, TimeMixin):
     """
     This is the base class for all provisioners for provisioning machines
     """
@@ -404,7 +470,7 @@ class CarbonProvisioner(LoggerMixin):
         raise AttributeError('You cannot set name for the provisioner.')
 
 
-class CarbonProvider(LoggerMixin):
+class CarbonProvider(LoggerMixin, TimeMixin):
     """
     This is the base class for all providers.
 
@@ -505,6 +571,8 @@ class CarbonProvider(LoggerMixin):
         for p in self.get_optional_creds_parameters():
             if p in cdata:
                 self._credentials[p] = cdata[p]
+            else:
+                self._credentials[p] = None
 
     @classmethod
     def check_mandatory_parameters(cls, parameters):
@@ -758,7 +826,7 @@ class CarbonProvider(LoggerMixin):
         return profile
 
 
-class CarbonController(LoggerMixin):
+class CarbonController(LoggerMixin, TimeMixin):
     """This is the base class for all controllers.
 
     Every controller will need to inherit the carbon controller. Controllers

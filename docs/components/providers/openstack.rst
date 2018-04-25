@@ -19,9 +19,9 @@ credentials section with all available OpenStack credential keys.
       - name: openstack
         auth_url: <auth_url>
         tenant_name: <tenant_name>
-        tenant_id: <tenant_id>
         username: <username>
         password: <password>
+        region: <region>
 
 .. list-table::
     :widths: auto
@@ -47,11 +47,6 @@ credentials section with all available OpenStack credential keys.
         - String
         - True
 
-    *   - tenant_id
-        - The ID of your OpenStack tenant.
-        - String
-        - True
-
     *   - username
         - The username of your OpenStack tenant.
         - String
@@ -61,6 +56,11 @@ credentials section with all available OpenStack credential keys.
         - The password of your OpenStack tenant.
         - String
         - True
+
+    *   - region
+        - The region of your OpenStack tenant to authenticate with.
+        - String
+        - False
 
 Resources
 +++++++++
@@ -139,7 +139,7 @@ resource section with all available OpenStack provider keys.
     *   - os_floating_ip_pool
         - The name of the external network to attach node too.
         - String
-        - True
+        - False
 
     *   - os_keypair
         - The name of the keypair to associate the node with.
@@ -172,7 +172,6 @@ Examples
       - name: openstack
         auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
         tenant_name: pit-jenkins
-        tenant_id: 2e1c0cf8f1234ea5ad8933d0927fc837
         username: username
         password: password
 
@@ -184,7 +183,7 @@ Examples
         os_image: Fedora-Cloud-Base-25-compose-latest
         os_flavor: m1.small
         os_networks: [pit-jenkins]
-        os_floating_ip_pool: 10.8.172.0/22
+        os_floating_ip_pool: 10.8.240.0
         os_keypair: pit-jenkins
 
 .. code-block:: yaml
@@ -197,7 +196,6 @@ Examples
       - name: openstack
         auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
         tenant_name: pit-jenkins
-        tenant_id: 2e1c0cf8f1234ea5ad8933d0927fc837
         username: username
         password: password
 
@@ -209,7 +207,7 @@ Examples
         os_image: Fedora-Cloud-Base-24-compose-latest
         os_flavor: m1.small
         os_networks: [pit-jenkins]
-        os_floating_ip_pool: 10.8.172.0/22
+        os_floating_ip_pool: 10.8.240.0
         os_keypair: pit-jenkins
 
       - name: test_client2
@@ -219,7 +217,7 @@ Examples
         os_image: Fedora-Cloud-Base-25-compose-latest
         os_flavor: m1.small
         os_networks: [pit-jenkins]
-        os_floating_ip_pool: 10.8.172.0/22
+        os_floating_ip_pool: 10.8.240.0
         os_keypair: pit-jenkins
         # Example with metadata defined
         metadata:

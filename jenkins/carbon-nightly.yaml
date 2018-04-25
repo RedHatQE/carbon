@@ -36,8 +36,7 @@
           . $WORKSPACE/venv/bin/activate
           echo $CARBON_SETTINGS
           export CARBON_SETTINGS=$CARBON_SETTINGS
-          pip install -r $WORKSPACE/requirements.txt
-          pip install --process-dependency-links --editable .
+          pip install -r $WORKSPACE/requirements/tests.txt
           rc=$?
           if [ $rc -eq 0 ]; then
               echo "*** Virtual Environment created successfully : " $rc
