@@ -27,19 +27,13 @@ from collections import namedtuple
 
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.executor.task_queue_manager import TaskQueueManager
+from ansible.inventory.manager import InventoryManager
 from ansible.parsing.dataloader import DataLoader
 from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
+from ansible.vars.manager import VariableManager
 
-# TODO: future release we should depreciate ansible < 2.4 for python 3 support
-try:
-    from ansible.inventory import Inventory
-    from ansible.vars import VariableManager
-except ImportError:
-    from ansible.inventory.manager import InventoryManager as Inventory
-    from ansible.vars.manager import VariableManager
-
-from .core import CarbonController, CarbonControllerError
+from .core import CarbonController
 
 
 class CarbonCallback(CallbackBase):
@@ -142,23 +136,12 @@ class AnsibleController(CarbonController):
 
     def set_inventory(self):
         """Instantiate the inventory class with the inventory file in-use."""
-        try:
-            # supports ansible < 2.4
-            self.variable_manager = VariableManager()
-            self.inventory = Inventory(
-                loader=self.loader,
-                variable_manager=self.variable_manager,
-                host_list=self.ansible_inventory
-            )
-        except TypeError:
-            # supports ansible > 2.4
-            self.variable_manager = VariableManager(loader=self.loader)
-            self.inventory = Inventory(
-                loader=self.loader,
-                sources=self.ansible_inventory
-            )
-        finally:
-            self.variable_manager.set_inventory(self.inventory)
+        self.variable_manager = VariableManager(loader=self.loader)
+        self.inventory = InventoryManager(
+            loader=self.loader,
+            sources=self.ansible_inventory
+        )
+        self.variable_manager.set_inventory(self.inventory)
 
     def run_module(self, play_source, remote_user="root", become=False,
                    become_method="sudo", become_user="root",
