@@ -28,7 +28,6 @@ import os
 import yaml
 
 from . import __version__
-from ._compat import string_types
 from .carbon import Carbon
 from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
 from .helpers import template_render
@@ -104,7 +103,7 @@ def validate(ctx, scenario, log_type, data_folder, log_level):
 
 
 @cli.command()
-@click.option("--task",
+@click.option("-t", "--task",
               default=None,
               type=click.Choice(TASKLIST),
               multiple=True,
