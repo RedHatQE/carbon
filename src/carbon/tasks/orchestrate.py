@@ -30,6 +30,7 @@ from ..signals import task_orchestrate_started, task_orchestrate_finished
 class OrchestrateTask(CarbonTask):
     """Orchestrate task."""
     __task_name__ = 'orchestrate'
+    __concurrent__ = False
 
     def __init__(self, msg, package, **kwargs):
         super(OrchestrateTask, self).__init__(**kwargs)

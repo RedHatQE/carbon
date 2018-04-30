@@ -309,6 +309,7 @@ class CarbonTask(LoggerMixin, TimeMixin):
     """
 
     __task_name__ = None
+    __concurrent__ = True
 
     def __init__(self, name=None, **kwargs):
         if name is not None:
@@ -911,16 +912,45 @@ class PipelineBuilder(object):
                 return cls
         raise CarbonError('Unable to lookup task %s class.' % self.name)
 
-    def _fetch_hosts(self, hosts, task):
+    @staticmethod
+    def _fetch_hosts(hosts, task):
         """Set the hosts for a task requiring hosts.
 
-        This method is helpful to the action/execute tasks.
+        This method is helpful for action/execute resources. These resources
+        need the actual host objects instead of the referenced string name for
+        the host in the given scenario descriptor file.
+
+        It will fetch the correct hosts if the hosts for the given task are
+        either string or host class type.
 
         :param hosts: scenario hosts
         :param task: task requiring hosts
-        :return: hosts objects for the given task
+        :return: updated task object including host objects
         """
-        return [host for host in hosts if host.name in task['package'].hosts]
+
+        # placeholders
+        _hosts = list()
+        _type = None
+
+        # determine the task attribute where hosts are stored
+        if 'resource' in task:
+            _type = 'resource'
+        elif 'package' in task:
+            _type = 'package'
+
+        # determine the task host data types
+        from ._compat import string_types
+        if all(isinstance(item, string_types) for item in task[_type].hosts):
+            for host in hosts:
+                if host.name in task[_type].hosts:
+                    _hosts.append(host)
+        else:
+            for host in hosts:
+                for task_host in task[_type].hosts:
+                    if host.name == task_host.name:
+                        _hosts.append(host)
+        task[_type].hosts = _hosts
+        return task
 
     def build(self, scenario):
         """Build carbon pipeline.
@@ -938,7 +968,7 @@ class PipelineBuilder(object):
             list()
         )
 
-        # RFE: consolodate configuring pipeline to reduce code duplication
+        # RFE: consolidate configuring pipeline to reduce code duplication
 
         # resource = scenario
         for task in scenario.get_tasks():
@@ -956,9 +986,7 @@ class PipelineBuilder(object):
             for task in action.get_tasks():
                 if task['task'].__task_name__ == self.name:
                     # fetch & set hosts for the given action task
-                    task['package'].hosts = self._fetch_hosts(
-                        scenario.hosts, task
-                    )
+                    task = self._fetch_hosts(scenario.hosts, task)
                     pipeline.tasks.append(task)
 
         # resource = execute

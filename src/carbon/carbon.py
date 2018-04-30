@@ -523,7 +523,10 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
                 blast = blaster.Blaster(pipeline.tasks)
 
                 # blast off the pipeline list of tasks
-                data = blast.blastoff(raise_on_failure=True)
+                data = blast.blastoff(
+                    serial=not pipeline.type.__concurrent__,
+                    raise_on_failure=True
+                )
 
                 # update results
                 self.update_results(pipeline.name, status, data)

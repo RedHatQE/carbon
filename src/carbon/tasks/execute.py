@@ -30,6 +30,7 @@ from ..signals import task_execute_started, task_execute_finished
 class ExecuteTask(CarbonTask):
     """Execute task."""
     __task_name__ = 'execute'
+    __concurrent__ = False
 
     def __init__(self, msg, **kwargs):
         super(ExecuteTask, self).__init__(**kwargs)
