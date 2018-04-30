@@ -15,14 +15,14 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-"""
-    carbon.controllers
 
-    Here you add brief description of what this module is about
+"""
+    carbon.orchestrators._ansible
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+
 from collections import namedtuple
 
 from ansible.executor.playbook_executor import PlaybookExecutor
@@ -33,7 +33,7 @@ from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
 
-from .core import CarbonController
+from ..core import CarbonOrchestrator
 
 
 class CarbonCallback(CallbackBase):
@@ -77,7 +77,7 @@ class CarbonCallback(CallbackBase):
         self.unreachable = True
 
 
-class AnsibleController(CarbonController):
+class AnsibleController(object):
     """Ansible controller class.
 
     This is carbons Ansible controller class to drive remote machine
@@ -95,7 +95,6 @@ class AnsibleController(CarbonController):
 
         :param inventory: The inventory host file.
         """
-        super(AnsibleController, self).__init__()
         self.loader = DataLoader()
         self.callback = CarbonCallback()
         self.ansible_inventory = inventory
@@ -271,23 +270,37 @@ class AnsibleController(CarbonController):
 
         return dict(status=result, callback=self.callback)
 
-    def results_analyzer(self, status):
-        """Results analyzer.
 
-        This is a simple method that performs results analzying. It is good to
-        use when you need to log the standard error/output based on the
-        return code from ansible call.
+class AnsibleOrchestrator(CarbonOrchestrator):
+    """Ansible orchestrator."""
 
-        :param status: Status code of ansible call
+    __orchestrator_name__ = 'ansible'
+
+    def __init__(self, action, hosts, **kwargs):
+        """Constructor.
+
+        :param action: action to be executed (module/playbook)
+        :param hosts: action runs against these hosts
+        :param kwargs: action parameters
         """
-        for item in self.callback.contacted:
-            if status != 0:
-                if 'stderr' in item['results']:
-                    self.logger.info('Standard error:')
-                    self.logger.error(item['results']['stderr'])
-            if 'stdout' in item['results']:
-                self.logger.debug('Standard output:')
-                self.logger.debug(item['results']['stdout'])
-            if 'msg' in item['results']:
-                self.logger.info('Message:')
-                self.logger.info(item['results']['msg'])
+        super(AnsibleOrchestrator, self).__init__(action, hosts, **kwargs)
+
+    def validate(self):
+        """Validate."""
+        raise NotImplementedError
+
+    def run(self):
+        """Run."""
+        # TODO: ..
+        # For the first implementation or ansible orchestrator, we are focused
+        # solely on playbooks. Since each action's name key defines the
+        # item to run. We need to determine if the item is a common one
+        # supplied by carbon or custom to the scenario run by carbon.
+
+        # TODO: ..
+        # We need to setup inventory for the hosts associated to the action
+
+        # TODO: ..
+        # Now that we have the absolute path and all information regarding the
+        # action to execute, lets go ahead and begin..
+        self.logger.info('Processing %s.' % self.action)

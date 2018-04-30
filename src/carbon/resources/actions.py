@@ -24,8 +24,22 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-from ..core import CarbonResource
+from ..constants import DEFAULT_ORCHESTRATOR
+from ..core import CarbonResource, CarbonResourceError
+from ..helpers import get_orchestrator_class, get_orchestrators_list
 from ..tasks import OrchestrateTask, ValidateTask
+
+
+class CarbonActionError(CarbonResourceError):
+    """Action's base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        self.message = message
+        super(CarbonActionError, self).__init__(message)
 
 
 class Action(CarbonResource):
@@ -47,15 +61,62 @@ class Action(CarbonResource):
 
         super(Action, self).__init__(config=config, name=name, **kwargs)
 
+        # Every action is REQUIRED to have a name. The name for each action
+        # is the actual action to be executed. i.e. an ansible action's name
+        # is the name of the module or playbook to be executed. This cannot
+        # be null, user needs to set this.
+        if name is None:
+            self._name = parameters.pop('name', None)
+            if self._name is None:
+                raise CarbonActionError('All actions require a name!')
+        else:
+            self._name = name
+
+        # Every action object will have 'x' number of hosts associated with
+        # it. Every action is also going to have an orchestrator associated
+        # to it. Each orchestrator will require different configuration for
+        # connecting to the remote host(s). Once defined the orchestrator can
+        # execute the given action against the remote host(s). Most
+        # orchestrator's are going to require an IP address and authentication
+        # details (SSH) to connect to host(s).
+
+        # Lets associate the list of hosts for the action to the action
+        # object itself. Don't worry these hosts are currently strings. When
+        # carbon goes to build the pipeline it does a lookup and gets the
+        # actual host object from the scenario including all the required
+        # information. i.e. IP address, SSH keys, etc..
+        self.hosts = [parameters.pop('hosts')]
+        if self.hosts is None:
+            raise CarbonActionError('An action must have hosts associated '
+                                    'to it.')
+
+        # We must have an orchestrator set for each action, default=ansible
+        orchestrator_param = parameters.pop(
+            'orchestrator',
+            DEFAULT_ORCHESTRATOR
+        )
+        if orchestrator_param not in get_orchestrators_list():
+            raise CarbonActionError('Invalid orchestrator: %s for action %s.'
+                                    % (orchestrator_param, str(self.name)))
+
+        # We need to get the orchestrator class
+        self._orchestrator_cls = get_orchestrator_class(orchestrator_param)
+
         self._validate_task_cls = validate_task_cls
         self._orchestrate_task_cls = orchestrate_task_cls
-
-        self.hosts = []
 
         self.reload_tasks()
 
         if parameters:
             self.load(parameters)
+
+    @property
+    def orchestrator_cls(self):
+        return self._orchestrator_cls
+
+    @orchestrator_cls.setter
+    def orchestrator_cls(self, value):
+        raise AttributeError('Orchestrator class property cannot be set.')
 
     def _construct_validate_task(self):
         task = {
@@ -74,7 +135,8 @@ class Action(CarbonResource):
             'task': self._orchestrate_task_cls,
             'name': str(self.name),
             'package': self,
-            'msg': '   running orchestration %s for %s' % (self.name, self.hosts),
+            'msg': '   running orchestration %s for %s' % (
+                self.name, self.hosts),
             'methods': self._req_tasks_methods
         }
         return task

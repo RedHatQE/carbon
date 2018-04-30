@@ -94,17 +94,6 @@ class CarbonProviderError(CarbonError):
         super(CarbonProviderError, self).__init__(message)
 
 
-class CarbonControllerError(CarbonError):
-    """Carbon's controller base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        super(CarbonControllerError, self).__init__(message)
-
-
 class LoggerMixinError(CarbonError):
     """Carbon's logger mixin base exception class."""
 
@@ -458,7 +447,7 @@ class CarbonProvisioner(LoggerMixin, TimeMixin):
 
     @property
     def name(self):
-        """Return the name for the container."""
+        """Return the name for the provisioner."""
         return self.__provisioner_name__
 
     @name.setter
@@ -826,31 +815,52 @@ class CarbonProvider(LoggerMixin, TimeMixin):
         return profile
 
 
-class CarbonController(LoggerMixin, TimeMixin):
-    """This is the base class for all controllers.
+class CarbonOrchestrator(LoggerMixin, TimeMixin):
 
-    Every controller will need to inherit the carbon controller. Controllers
-    handle actions between carbon and its resources aka hosts.
-    """
+    __orchestrator_name__ = None
 
-    __controller_name__ = None
-
-    def __init__(self):
+    def __init__(self, action=None, hosts=None, **kwargs):
         """Constructor."""
-        pass
+        self._action = action
+        self._hosts = hosts
+
+        # set all other attributes
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    def validate(self):
+        raise NotImplementedError
+
+    def run(self):
+        raise NotImplementedError
 
     @property
     def name(self):
-        """Return the name of the controller."""
-        return self.__controller_name__
+        """Return the name of the orchestrator."""
+        return self.__orchestrator_name__
 
     @name.setter
     def name(self, value):
-        """Raises an exception when trying to set controller name property.
+        raise AttributeError('You cannot set name for the orchestrator.')
 
-        :param value: Name of controller to set.
-        """
-        raise AttributeError('You cannot set the controller name property.')
+    @property
+    def action(self):
+        return self._action
+
+    @action.setter
+    def action(self, value):
+        raise AttributeError('You cannot set the action the orchestrator will'
+                             ' perform.')
+
+    @property
+    def hosts(self):
+        return self._hosts
+
+    @hosts.setter
+    def hosts(self, value):
+        # TODO: reword
+        raise AttributeError('You cannot set the hosts for the action after'
+                             'object is created.')
 
 
 class PipelineBuilder(object):
@@ -901,6 +911,17 @@ class PipelineBuilder(object):
                 return cls
         raise CarbonError('Unable to lookup task %s class.' % self.name)
 
+    def _fetch_hosts(self, hosts, task):
+        """Set the hosts for a task requiring hosts.
+
+        This method is helpful to the action/execute tasks.
+
+        :param hosts: scenario hosts
+        :param task: task requiring hosts
+        :return: hosts objects for the given task
+        """
+        return [host for host in hosts if host.name in task['package'].hosts]
+
     def build(self, scenario):
         """Build carbon pipeline.
 
@@ -934,6 +955,10 @@ class PipelineBuilder(object):
         for action in scenario.actions:
             for task in action.get_tasks():
                 if task['task'].__task_name__ == self.name:
+                    # fetch & set hosts for the given action task
+                    task['package'].hosts = self._fetch_hosts(
+                        scenario.hosts, task
+                    )
                     pipeline.tasks.append(task)
 
         # resource = execute

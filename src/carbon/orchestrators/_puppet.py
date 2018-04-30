@@ -15,34 +15,35 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-"""
-    carbon.tasks.install
 
-    Here you add brief description of what this module is about
+"""
+    carbon.orchestrators._puppet
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import CarbonTask
-from ..signals import task_orchestrate_started, task_orchestrate_finished
+
+from ..core import CarbonOrchestrator
 
 
-class OrchestrateTask(CarbonTask):
-    """Orchestrate task."""
-    __task_name__ = 'orchestrate'
+class PuppetOrchestrator(CarbonOrchestrator):
+    """Puppet orchestrator."""
 
-    def __init__(self, msg, package, **kwargs):
-        super(OrchestrateTask, self).__init__(**kwargs)
-        self.msg = msg
-        # create the orchestrator object
-        self.orchestrator = package.orchestrator_cls(
-            package.name,
-            package.hosts,
-            vars=package.vars
-        )
+    __orchestrator_name__ = 'puppet'
+
+    def __init__(self, action, hosts, **kwargs):
+        """Constructor.
+
+        :param action: action to be executed
+        :param hosts: action runs against these hosts
+        :param kwargs: action parameters
+        """
+        super(PuppetOrchestrator, self).__init__(action, hosts, **kwargs)
+
+    def validate(self):
+        """Validate."""
+        raise NotImplementedError
 
     def run(self):
-        task_orchestrate_started.send(self)
-        self.logger.info(self.msg)
-        self.orchestrator.run()
-        task_orchestrate_finished.send(self)
+        """Run."""
+        raise NotImplementedError

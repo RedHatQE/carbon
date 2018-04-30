@@ -84,10 +84,13 @@ class ResultsMixin(object):
         self._task_results[task_name]['status'] = status
 
         for item in blaster_data:
-            try:
+            if 'resource' in item:
                 _res = item['resource']
-            except KeyError:
+            elif 'host' in item:
                 _res = item['host']
+            elif 'package' in item:
+                _res = item['package']
+                setattr(_res, 'methods', item['methods'])
 
             self._task_results[task_name]['resources'].append(
                 {

@@ -201,6 +201,51 @@ def get_providers_list():
     return [provider.__provider_name__ for provider in get_providers_classes()]
 
 
+def get_orchestrators_classes():
+    """Go through all available orchestrator modules and return all the
+    classes.
+
+    :return: orchestrator classes
+    :rtype: list
+    """
+    from .core import CarbonOrchestrator
+    from . import orchestrators
+
+    prefix = orchestrators.__name__ + '.'
+
+    orchestrators_list = []
+
+    for importer, modname, ispkg in pkgutil.iter_modules(orchestrators.__path__, prefix):
+        if str(modname).endswith('.ext'):
+            continue
+        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
+        for clsname, clsmember in clsmembers:
+            if (clsmember is not CarbonOrchestrator) and issubclass(clsmember, CarbonOrchestrator):
+                orchestrators_list.append(clsmember)
+    return orchestrators_list
+
+
+def get_orchestrator_class(name):
+    """Return the orchestrator class based on the __orchestrator_name__ set
+    within the class. See ~carbon.core.CarbonOrchestrator for more information.
+
+    :param name: the name of the orchestrator
+    :return: the orchestrator class
+    """
+    for orchestrator in get_orchestrators_classes():
+        if orchestrator.__orchestrator_name__ == name:
+            return orchestrator
+
+
+def get_orchestrators_list():
+    """Return a list of available orchestrators.
+
+    :return: orchestrators
+    """
+    return [orchestrator.__orchestrator_name__ for orchestrator in
+            get_orchestrators_classes()]
+
+
 def gen_random_str(char_num=8):
     """
     Generate a string with a specific number of characters, defined

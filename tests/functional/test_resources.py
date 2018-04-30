@@ -156,7 +156,8 @@ class TestScenario(TestCase):
     def test_add_valid_action(self):
         """Test adding a valid action for the carbon scenario."""
         self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
-        self.cbn.scenario.add_actions(Action())
+        self.cbn.scenario.add_actions(Action(
+            name='foo', parameters=dict(hosts=[])))
         assert_equal(len(self.cbn.scenario.actions), 1)
 
     def test_get_executes(self):
