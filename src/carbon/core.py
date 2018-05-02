@@ -94,6 +94,17 @@ class CarbonProviderError(CarbonError):
         super(CarbonProviderError, self).__init__(message)
 
 
+class CarbonOrchestratorError(CarbonError):
+    """Carbon's orchestrator base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: Details about the error.
+        """
+        super(CarbonOrchestratorError, self).__init__(message)
+
+
 class LoggerMixinError(CarbonError):
     """Carbon's logger mixin base exception class."""
 

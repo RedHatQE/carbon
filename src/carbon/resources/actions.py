@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
+from .._compat import string_types
 from ..constants import DEFAULT_ORCHESTRATOR
 from ..core import CarbonResource, CarbonResourceError
 from ..helpers import get_orchestrator_class, get_orchestrators_list
@@ -85,10 +86,15 @@ class Action(CarbonResource):
         # carbon goes to build the pipeline it does a lookup and gets the
         # actual host object from the scenario including all the required
         # information. i.e. IP address, SSH keys, etc..
-        self.hosts = [parameters.pop('hosts')]
+        self.hosts = parameters.pop('hosts')
         if self.hosts is None:
             raise CarbonActionError('An action must have hosts associated '
                                     'to it.')
+
+        # Hosts can be in the form of either string or list defined by the
+        # user. lets convert the hosts into a list if in string format
+        if isinstance(self.hosts, string_types):
+            self.hosts = self.hosts.replace(' ', '').split(',')
 
         # We must have an orchestrator set for each action, default=ansible
         orchestrator_param = parameters.pop(
