@@ -279,7 +279,7 @@ class Scenario(CarbonResource):
             description=self.description,
             credentials=self.credentials,
             provision=[host.profile() for host in self.hosts],
-            orchestrate=[],
+            orchestrate=[action.profile() for action in self.actions],
             execute=[],
             report=[]
         )

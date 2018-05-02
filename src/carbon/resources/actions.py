@@ -124,6 +124,25 @@ class Action(CarbonResource):
     def orchestrator_cls(self, value):
         raise AttributeError('Orchestrator class property cannot be set.')
 
+    def profile(self):
+        """Builds a profile for the action.
+
+        :return: the action profile
+        """
+        profile = dict(
+            name=self.name,
+            orchestrator=self.orchestrator_cls.__orchestrator_name__,
+            vars=getattr(self, 'vars')
+        )
+
+        # build the hosts key
+        if all(isinstance(item, string_types) for item in self.hosts):
+            profile.update(hosts=[host for host in self.hosts])
+        else:
+            profile.update(dict(hosts=[host.name for host in self.hosts]))
+
+        return profile
+
     def _construct_validate_task(self):
         task = {
             'task': self._validate_task_cls,
