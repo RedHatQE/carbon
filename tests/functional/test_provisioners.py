@@ -159,6 +159,13 @@ class TestOpenstackProvisioner(TestCase):
 class TestBeakerProvisioner(TestCase):
     """Unit tests to test carbon provisioner ~ beaker."""
 
+    @staticmethod
+    def remove_beaker_config():
+        """Remove beaker config."""
+        conf = os.path.join(os.path.expanduser('~'), '.beaker_client/config')
+        if os.path.isfile(conf):
+            os.remove(conf)
+
     def setUp(self):
         """Test fixture setup."""
         if 'functional' in os.getcwd():
@@ -221,9 +228,12 @@ class TestBeakerProvisioner(TestCase):
         # instantiate beaker provider class
         self.provider = BeakerProvisioner(self.host)
 
+        # remove beaker config before test execution
+        self.remove_beaker_config()
+
     def tearDown(self):
         """Test fixture teardown."""
-        pass
+        self.remove_beaker_config()
 
     def test_create_object(self):
         assert_is_instance(self.provider, BeakerProvisioner)

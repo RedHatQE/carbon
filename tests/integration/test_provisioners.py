@@ -153,6 +153,13 @@ class TestOpenshiftProvisioner(unittest.TestCase):
 
 class TestBeakerProvisioner(unittest.TestCase):
 
+    @staticmethod
+    def remove_beaker_config():
+        """Remove beaker config."""
+        conf = os.path.join(os.path.expanduser('~'), '.beaker_client/config')
+        if os.path.isfile(conf):
+            os.remove(conf)
+
     def setUp(self):
         """Test fixture setup."""
         if 'integration' in os.getcwd():
@@ -205,11 +212,12 @@ class TestBeakerProvisioner(unittest.TestCase):
         # add host to carbon object
         self.cbn.scenario.add_hosts(self.host)
 
+        # remove beaker config before test execution
+        self.remove_beaker_config()
+
     def tearDown(self):
         """Test fixture teardown."""
-        conf = os.path.join(os.path.expanduser('~'), '.beaker_client/config')
-        if os.path.isfile(conf):
-            os.remove(conf)
+        self.remove_beaker_config()
 
     @SkipTest
     def test_valid_password_authentication(self):
