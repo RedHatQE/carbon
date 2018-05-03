@@ -27,6 +27,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
+import os
 from collections import namedtuple
 from os import remove
 from os.path import isfile
@@ -288,12 +289,14 @@ class Inventory(object):
     ansible inventory for the carbon ansible action.
     """
 
-    def __init__(self, hosts):
+    def __init__(self, hosts, asset_params):
         """Constructor.
 
         :param hosts: list of hosts to create the inventory file
+        :param asset_params: tuple of orchestrator assets
         """
         self.hosts = hosts
+        self.asset_params = asset_params
 
         # create a unique inventory filename for the given action
         # default this file will be deleted, maybe in future it can be saved
@@ -347,6 +350,8 @@ class Inventory(object):
 
             # add host vars
             for k, v in host.ansible_params.items():
+                if k in self.asset_params:
+                    v = os.path.join(host.data_folder(), 'assets', v)
                 config.set(section_vars, k, v)
 
             # add host to group
@@ -370,6 +375,11 @@ class AnsibleOrchestrator(CarbonOrchestrator):
     playbook or module call.
     """
     __orchestrator_name__ = 'ansible'
+    _action_abs = None
+
+    _assets_parameters = (
+        'ansible_ssh_private_key',
+    )
 
     def __init__(self, action, hosts, **kwargs):
         """Constructor.
@@ -381,7 +391,17 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         super(AnsibleOrchestrator, self).__init__(action, hosts, **kwargs)
 
         # create inventory object for create/delete inventory file
-        self.inv = Inventory(hosts)
+        self.inv = Inventory(hosts, self._assets_parameters)
+
+    @property
+    def action_abs(self):
+        """Return the action absolute path."""
+        return self._action_abs
+
+    @action_abs.setter
+    def action_abs(self, value):
+        """Set the action absolute path."""
+        self._action_abs = value
 
     def validate(self):
         """Validate.
@@ -390,6 +410,67 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         """
         raise NotImplementedError
 
+    def _find_playbook(self, path, name):
+        for item in os.listdir(path):
+            filename, extension = os.path.splitext(item)
+            if filename == self.action and extension in ['.yml', '.yaml']:
+                self.action_abs = os.path.join(path, item)
+                self.logger.info(
+                    'Playbook found within %s defined directory for action: %s'
+                    ' @ %s' % (name, self.action, self.action_abs)
+                )
+                return
+        self.logger.warning(
+            'Playbook not found within %s defined directory for action: %s @ '
+            '%s' % (name, self.action, path)
+        )
+
+    def _locate_action(self, name='common'):
+        """Locate the action's playbook. (child)
+
+        This method will attempt to find the action playbook at two
+        directories: 1. common directory (current working directory)
+        2. user defined directory.
+
+        :param name: type of location for orchestrator files
+        """
+        # placeholder
+        path = str
+
+        # determine the file path
+        if name == 'common':
+            path = os.path.join(os.getcwd(), 'orchestrate', self.name)
+        elif name == 'user':
+            path = os.path.join(getattr(self, 'config')['DATA_FOLDER'],
+                                'assets', self.name)
+
+        # return if the directory does not exist
+        if not os.path.isdir(path):
+            self.logger.warn('Unable to locate a %s ansible orchestrator '
+                             'scripts directory.' % name)
+            return
+
+        # find the playbook for the action under the given path
+        self._find_playbook(path, name)
+
+    def locate_action(self):
+        """Locate the action's playbook. (parent).
+
+        See _locate_action doc string for more details.
+        """
+        # locate the action playbook in common directory
+        self._locate_action('common')
+
+        # locate the action playbook in the user defined directory
+        self._locate_action('user')
+
+        # quit if no playbook was found for the given action
+        if self.action_abs is None:
+            raise CarbonOrchestratorError(
+                'Unable to locate action %s for ansible orchestrator. '
+                'Cannot continue!'
+            )
+
     def run(self):
         """Run.
 
@@ -397,11 +478,11 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         Here you will see every required step for processing a carbon ansible
         action. Please see the comments below for step by step details.
         """
-        # TODO: ..
         # For the first implementation or ansible orchestrator, we are focused
         # solely on playbooks. Since each action's name key defines the
         # item to run. We need to determine if the item is a common one
         # supplied by carbon or custom to the scenario run by carbon.
+        self.locate_action()
 
         # lets create the ansible inventory file to run the given action on
         # its associated hosts
@@ -413,11 +494,6 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         # create an ansible controller object
         obj = AnsibleController(self.inv.inventory)
 
-        # TODO: ..
-        # Determine if the action given is a module or playbook execution. Once
-        # this is decided we can build the correct data structure and call the
-        # correct method. Initially will be playbooks
-
         # setup variables
         extra_vars = dict(hosts=self.inv.group)
         extra_vars.update(getattr(self, 'vars'))
@@ -425,7 +501,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.logger.info('Executing action: %s.' % self.action)
 
         results = obj.run_playbook(
-            '/path/to/playbook/%s.yml' % self.action,
+            self.action_abs,
             extra_vars=extra_vars,
             default_callback=True
         )

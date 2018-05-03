@@ -27,7 +27,8 @@
 from .._compat import string_types
 from ..constants import DEFAULT_ORCHESTRATOR
 from ..core import CarbonResource, CarbonResourceError
-from ..helpers import get_orchestrator_class, get_orchestrators_list
+from ..helpers import fetch_hosts, get_orchestrator_class,\
+    get_orchestrators_list
 from ..tasks import OrchestrateTask, ValidateTask
 
 
@@ -142,6 +143,47 @@ class Action(CarbonResource):
             profile.update(dict(hosts=[host.name for host in self.hosts]))
 
         return profile
+
+    def get_assets_list(self, hosts):
+        """Get the assets for the action.
+
+        Every action has an associated orchestrator. Each orchestrator will
+        have a directory with the name of the orchestrator where all its
+        files will be stored. These files will be copied to carbon's data
+        folder at run time which then the orchestrator will read from that
+        location.
+
+        This method will build the assets for the action
+        This method will build the assets for the action including the
+        following:
+            - orchestrator files directory
+            - any orchestrator parameter assets defined in each host
+                - i.e.
+                    - hosts:
+                        ansible_params:
+                            ansible_ssh_private_key: private_key
+
+        :param hosts: list of host objects associated to the action
+            reference: carbon.resources.scenario.get_assets_list()
+        :return: list of the actions assets
+        """
+        # initialize empty assets list
+        assets = list()
+
+        # append the orchestrator files directory
+        assets.append(self.orchestrator_cls.__orchestrator_name__)
+
+        # append host orchestrator parameters for the action
+        hosts = fetch_hosts(hosts, dict(package=self))
+        for host in hosts['package'].hosts:
+            field = '%s_params' % self.orchestrator_cls.__orchestrator_name__
+            if not hasattr(host, field):
+                continue
+            for asset in getattr(self.orchestrator_cls, '_assets_parameters'):
+                params = getattr(host, field)
+                if asset in params and params[asset]:
+                    assets.append(getattr(host, field)[asset])
+        return assets
 
     def _construct_validate_task(self):
         task = {

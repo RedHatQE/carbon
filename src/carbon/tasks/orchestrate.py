@@ -39,7 +39,8 @@ class OrchestrateTask(CarbonTask):
         self.orchestrator = package.orchestrator_cls(
             package.name,
             package.hosts,
-            vars=package.vars
+            vars=package.vars,
+            config=package.config
         )
 
     def run(self):

@@ -59,7 +59,7 @@ PROVISION:
     role: test_pilot
 
 
-orchestrate:
+ORCHESTRATE:
 
   - name: rhn
     hosts: machine_1, machine_2

@@ -297,7 +297,12 @@ class Scenario(CarbonResource):
         assets = []
         for host in self.hosts:
             assets += host.get_assets_list()
-        return assets
+
+        for action in self.actions:
+            assets += action.get_assets_list(self.hosts)
+
+        # remove duplicate elements and return
+        return list(set(assets))
 
     def _construct_validate_task(self):
         task = {

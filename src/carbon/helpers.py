@@ -25,20 +25,21 @@
 """
 import inspect
 import json
+import os
 import pkgutil
 import random
+import stat
 import string
 import subprocess
 import sys
 from logging import getLogger
 
 import jinja2
-import os
 import requests
-import stat
 import yaml
 from flask.helpers import get_root_path
 
+from ._compat import string_types
 from .constants import PROVISIONERS
 
 LOG = getLogger(__name__)
@@ -418,3 +419,42 @@ class CustomDict(dict):
 
     def __setattr__(self, key, value):
         self.__setitem__(key, value)
+
+
+def fetch_hosts(hosts, task):
+    """Set the hosts for a task requiring hosts.
+
+    This method is helpful for action/execute resources. These resources
+    need the actual host objects instead of the referenced string name for
+    the host in the given scenario descriptor file.
+
+    It will fetch the correct hosts if the hosts for the given task are
+    either string or host class type.
+
+    :param hosts: scenario hosts
+    :param task: task requiring hosts
+    :return: updated task object including host objects
+    """
+
+    # placeholders
+    _hosts = list()
+    _type = None
+
+    # determine the task attribute where hosts are stored
+    if 'resource' in task:
+        _type = 'resource'
+    elif 'package' in task:
+        _type = 'package'
+
+    # determine the task host data types
+    if all(isinstance(item, string_types) for item in task[_type].hosts):
+        for host in hosts:
+            if host.name in task[_type].hosts:
+                _hosts.append(host)
+    else:
+        for host in hosts:
+            for task_host in task[_type].hosts:
+                if host.name == task_host.name:
+                    _hosts.append(host)
+    task[_type].hosts = _hosts
+    return task

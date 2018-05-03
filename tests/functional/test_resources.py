@@ -86,7 +86,7 @@ class TestScenario(TestCase):
 
     def test_copy_assets_no_assets(self):
         """Test assets defined, but not set in the assets path."""
-        scenario_data = open("assets/scenario.yaml")
+        scenario_data = open("assets/invalid_scenario.yaml")
         self.cbn.load_from_yaml(scenario_data)
         assert_equal(len(self.cbn.scenario.get_assets_list()), 0)
         self.cbn._copy_assets()
