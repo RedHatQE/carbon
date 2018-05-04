@@ -28,6 +28,7 @@
 """
 
 import os
+import time
 from collections import namedtuple
 from os import remove
 from os.path import isfile
@@ -499,6 +500,12 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         extra_vars.update(getattr(self, 'vars'))
 
         self.logger.info('Executing action: %s.' % self.action)
+
+        # delay for 5 seconds before processing the action
+        # it is observed that hosts are unreachable proceeding right from
+        # provision task.
+        # RFE: remove this and maybe add a retry?
+        time.sleep(5)
 
         results = obj.run_playbook(
             self.action_abs,
