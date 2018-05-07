@@ -281,6 +281,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
                              ' framework setting for the running directory.'
                              ' You may have problems if your scenario needs'
                              ' to use assets such file, keys, etc.')
+        self.config['ASSETS_PATH'] = self.assets_path
 
         self.scenario = Scenario(config=self.config)
 

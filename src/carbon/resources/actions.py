@@ -24,10 +24,12 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
+import os
+
 from .._compat import string_types
 from ..constants import DEFAULT_ORCHESTRATOR
 from ..core import CarbonResource, CarbonResourceError
-from ..helpers import fetch_hosts, get_orchestrator_class,\
+from ..helpers import fetch_hosts, get_orchestrator_class, \
     get_orchestrators_list
 from ..tasks import OrchestrateTask, ValidateTask
 
@@ -171,7 +173,13 @@ class Action(CarbonResource):
         assets = list()
 
         # append the orchestrator files directory
-        assets.append(self.orchestrator_cls.__orchestrator_name__)
+        path = os.path.join(
+            self.config['ASSETS_PATH'],
+            self.orchestrator_cls.__orchestrator_name__
+        )
+
+        if os.path.exists(path):
+            assets.append(self.orchestrator_cls.__orchestrator_name__)
 
         # append host orchestrator parameters for the action
         hosts = fetch_hosts(hosts, dict(package=self))
