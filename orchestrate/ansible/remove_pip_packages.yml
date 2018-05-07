@@ -1,0 +1,11 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Remove pip packages
+      pip:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        "{{ packages }}"
