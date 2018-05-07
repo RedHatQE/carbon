@@ -111,6 +111,11 @@ class Action(CarbonResource):
         # We need to get the orchestrator class
         self._orchestrator_cls = get_orchestrator_class(orchestrator_param)
 
+        # Lets update the parameters to include a vars key if none exists.
+        # It is possible that some actions may not require variables.
+        if 'vars' not in parameters:
+            parameters['vars'] = dict()
+
         self._validate_task_cls = validate_task_cls
         self._orchestrate_task_cls = orchestrate_task_cls
 
