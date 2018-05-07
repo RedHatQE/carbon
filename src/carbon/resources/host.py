@@ -25,11 +25,10 @@
 """
 from copy import copy
 
-from ..constants import RULE_HOST_NAMING
 from ..core import CarbonResource, CarbonResourceError
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
 from ..helpers import get_provisioner_class, get_default_provisioner
-from ..helpers import get_provisioners_list
+from ..helpers import get_provisioners_list, filter_host_name
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 
 
@@ -73,14 +72,14 @@ class Host(CarbonResource):
         # name set in the parameters (usually done via YAML descriptor).
         # If no name is set in the parameters, then it generates a 20
         # characters name. Any way it is set, it will pass through the
-        # filter. See `self._filter_host_name` for more info.
+        # filter. See `filter_host_name` for more info.
         if name is None:
             self._name = parameters.pop('name', None)
             if self._name is None:
                 self._name = 'hst{0}'.format(gen_random_str(10))
         else:
             self._name = name
-        self._name = self._filter_host_name(self._name)
+        self._name = filter_host_name(self._name)
 
         # TODO: we must define what role means for a host and document it.
         self._role = parameters.pop('role', None)
@@ -299,19 +298,6 @@ class Host(CarbonResource):
         :param value: uid
         """
         raise AttributeError('You cannot set uid.')
-
-    @staticmethod
-    def _filter_host_name(given_name):
-        """
-        A host name is limited to max 20 characters and ruled
-        by the RULE_HOST_NAMING regex pattern defined in
-        constants.
-
-        :param given_name: the name to be filtered
-        :return: 20 characters filtered name
-        """
-        result = RULE_HOST_NAMING.sub('', given_name)
-        return str(result[:20]).lower()
 
     def profile(self):
         """Builds a profile for the host.

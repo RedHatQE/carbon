@@ -40,7 +40,7 @@ import yaml
 from flask.helpers import get_root_path
 
 from ._compat import string_types
-from .constants import PROVISIONERS
+from .constants import PROVISIONERS, RULE_HOST_NAMING
 
 LOG = getLogger(__name__)
 
@@ -438,6 +438,7 @@ def fetch_hosts(hosts, task):
 
     # placeholders
     _hosts = list()
+    _filtered_hosts = list()
     _type = None
 
     # determine the task attribute where hosts are stored
@@ -448,8 +449,12 @@ def fetch_hosts(hosts, task):
 
     # determine the task host data types
     if all(isinstance(item, string_types) for item in task[_type].hosts):
+        # filter hosts
+        for host in task[_type].hosts:
+            _filtered_hosts.append(filter_host_name(host))
+
         for host in hosts:
-            if host.name in task[_type].hosts:
+            if host.name in _filtered_hosts:
                 _hosts.append(host)
     else:
         for host in hosts:
@@ -458,3 +463,16 @@ def fetch_hosts(hosts, task):
                     _hosts.append(host)
     task[_type].hosts = _hosts
     return task
+
+
+def filter_host_name(name):
+    """
+    A host name is limited to max 20 characters and ruled
+    by the RULE_HOST_NAMING regex pattern defined in
+    constants.
+
+    :param name: the name to be filtered
+    :return: 20 characters filtered name
+    """
+    result = RULE_HOST_NAMING.sub('', name)
+    return str(result[:20]).lower()
