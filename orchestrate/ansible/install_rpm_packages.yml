@@ -1,0 +1,11 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Install RPM based packages
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        "{{ packages }}"

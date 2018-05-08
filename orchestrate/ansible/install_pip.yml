@@ -1,0 +1,48 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Locate pip
+      stat:
+        path: /usr/bin/pip
+      register: locate_pip
+
+    - name: Locate easy_install
+      stat:
+        path: /usr/bin/easy_install
+      register: locate_easy_install
+
+    - name: Download easy_install
+      get_url:
+        url: https://bootstrap.pypa.io/ez_setup.py
+        dest: /tmp
+        mode: 0644
+        validate_certs: no
+      when: locate_easy_install.stat.exists == false
+
+    - name: Install easy_install
+      command:
+        /usr/bin/python /tmp/ez_setup.py
+      when: locate_easy_install.stat.exists == false
+
+    - name: Download pip for python <= 2.7
+      get_url:
+        url: https://bootstrap.pypa.io/2.6/get-pip.py
+        dest: /tmp
+        mode: 0644
+        validate_certs: no
+      when: locate_pip.stat.exists == false and ansible_python_version[:-2]|float < 2.7
+
+    - name: Download pip for python >= 2.7
+      get_url:
+        url: https://bootstrap.pypa.io/get-pip.py
+        dest: /tmp
+        mode: 0644
+        validate_certs: no
+      when: locate_pip.stat.exists == false and ansible_python_version[:-2]|float >= 2.7
+
+    - name: Install pip
+      command:
+        /usr/bin/python /tmp/get-pip.py
+      when: locate_pip.stat.exists == false

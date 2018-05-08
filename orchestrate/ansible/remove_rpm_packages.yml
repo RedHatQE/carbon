@@ -1,0 +1,11 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Remove RPM based packages
+      package:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        "{{ packages }}"
