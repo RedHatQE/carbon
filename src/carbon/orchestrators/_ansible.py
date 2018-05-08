@@ -379,7 +379,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
     _action_abs = None
 
     _assets_parameters = (
-        'ansible_ssh_private_key',
+        'ansible_ssh_private_key_file',
     )
 
     def __init__(self, action, hosts, **kwargs):
