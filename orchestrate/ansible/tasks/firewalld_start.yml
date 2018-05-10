@@ -1,0 +1,27 @@
+# Start firewall (firewalld)
+#   Input: fw_cmds - settings for firewall
+
+# Start firewall deamon
+- name: firewalld start
+  shell: systemctl start firewalld
+
+# Configure firewall deamon
+- name: configure firewall
+  shell: firewall-cmd --permanent --direct --add-passthrough ipv4 {{ item }}
+  with_items: fw_cmds
+  register: result
+  notify:
+    - wait start
+    - restart firewalld
+
+# Flush when no configuration
+- name: flush on no configure
+  shell: firewall-cmd --permanent --direct --add-passthrough ipv4 --flush
+  when: result|skipped
+
+# Enable to start on boot
+- name: firewalld enable
+  shell: systemctl enable firewalld
+  notify:
+    - wait start
+    - restart firewalld

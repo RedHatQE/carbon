@@ -1,0 +1,11 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Disable yum repos
+      yum_repository:
+        name: "{{ repo_list }}"
+        state: absent
+      notify: yum-clean-metadata
+

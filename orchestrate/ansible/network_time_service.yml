@@ -1,0 +1,64 @@
+---
+
+- hosts: '{{ hosts }}'
+
+  vars:
+    ntp_list: '{{ ntplist | default(["clock.corp.redhat.com", "clock2.corp.redhat.com", "clock.redhat.com", "clock1.redhat.com"]) }}'
+
+  tasks:
+    - name: network_time_service
+      include_vars: "{{ item }}"
+      with_first_found:
+        - "vars/nts-{{ ansible_distribution }}-{{ ansible_distribution_version|int }}.yml"
+        - "vars/nts-default.yml"
+
+    - name: remove alternate nts process (if installed)
+      yum: name={{ nts_alt_prc }} state=absent
+
+    - name: install default nts process with latest
+      yum: name={{ nts_dft_prc }} state=latest
+      register: results
+      until: results.rc == 0
+      retries: 3
+      delay: 5
+
+
+    - name: system-config-date install (Rhel-7 only)
+      yum: name=system-config-date state=latest
+      register: results
+      until: results.rc == 0
+      retries: 3
+      delay: 5
+      when: ansible_distribution_version|int >= 7
+
+    - name: comment out old servers in config
+      shell: sed -i 's/^server /#server /g' /etc/{{ nts_dft_prc }}.conf
+      args:
+        warn: false
+
+    - name: update config - add servers
+      shell: d=`grep -n ^#server /etc/{{ nts_dft_prc }}.conf | tail -n 1 | cut -d ":" -f 1`;
+             let "d=d + 1";
+             sed -i "$d i\server {{ item }} iburst" /etc/{{ nts_dft_prc }}.conf
+      args:
+        warn: false
+      with_items: ntp_list
+      notify:
+        - restart nts deamon
+
+    - name: update conf - remove commented out servers
+      shell: d=`grep -n '^#server {{ item }}' /etc/{{ nts_dft_prc }}.conf | tail -n 1 | cut -d ":" -f 1`;test -z $d || sed -i "$d d" /etc/{{ nts_dft_prc }}.conf
+      with_items: ntp_list
+      notify:
+        - restart nts deamon 
+
+    - name: ensure nts deamon is running
+      service: name={{ nts_dft_deamon }} state=started
+
+    - name: config nts deamon to start on boot up
+      shell: chkconfig {{ nts_dft_deamon }} on
+
+  handlers:
+    - name: restart nts deamon
+      service: name={{ nts_dft_deamon }} state=restarted
+

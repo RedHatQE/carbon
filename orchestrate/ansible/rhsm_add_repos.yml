@@ -1,0 +1,10 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Add subscription manager channels
+      rhsm_repository:
+        name: "{{ channel_list }}"
+        state: enabled
+

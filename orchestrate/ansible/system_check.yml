@@ -1,0 +1,11 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Chech systems reachable (ping)
+      ping:
+      retries: 15
+      delay: 20
+
+

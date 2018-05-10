@@ -1,0 +1,28 @@
+---
+
+  hosts: '{{ hosts }}'
+
+  vars:
+    fw_cmds: '{{ firewall_config | default([]) }}'
+
+  tasks:
+    - name: enable firewall 
+
+    # Enable firewalld
+    - include: tasks/firewalld_start.yml
+      when: ansible_distribution_version|int >= 7
+
+    # Enable iptables
+    - include: tasks/iptables_start.yml
+      when: ansible_distribution_version|int < 7
+
+  handlers:
+    - name: wait start
+      local_action: wait_for host={{ inventory_hostname }} port=22
+
+    - name: restart firewalld
+      service:
+        name: firewalld
+        state: restarted
+      when: ansible_distribution_version|int >= 7
+

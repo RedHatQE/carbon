@@ -1,0 +1,35 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Update RPM based packages
+      package:
+        name: "{{ packages }}"
+        state: latest
+      register: yumAllResults
+      until: yumAllResults.rc == 0
+      retries: 3
+      delay: 5
+
+    - name: check kernel changed
+      shell: LAST_KERNEL=$(rpm -q --last kernel | grep '^kernel-\S*' | head -1 | awk '{ print substr($1, 8) }');
+             CURRENT_KERNEL=$(uname -r);
+             test $LAST_KERNEL = $CURRENT_KERNEL || echo REBOOT
+      register: kernel_need_reboot
+
+    - name: reboot host if needed
+      shell: nohup bash -c "sleep 20s && reboot" &
+      register: reboot
+      when: kernel_need_reboot.stdout.find('REBOOT') != -1
+
+    - name: wait for host boot
+      local_action:
+        module: wait_for
+        host: "{{ inventory_hostname }}"
+        port: 22
+        delay: "{{ boot_wait | default(60) }}"
+        timeout: 900
+        state: started
+      when: reboot.changed
+

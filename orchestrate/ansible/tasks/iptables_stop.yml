@@ -1,0 +1,35 @@
+# Stop firewall (iptables)
+
+# Get iptables status
+- name: Get iptables status
+  shell: |
+    output=`service iptables status`
+    if [[ $output =~ "stopped" || $output =~ "not running" ]]
+    then
+      echo "disabled"
+    else
+      echo "enabled"
+    fi
+  register: result
+
+# Set iptables status
+- name: Set iptables status
+  set_fact: iptables_status="{{ result.stdout }}"
+  when: result.stdout == "disabled" or result.stdout == "enabled"
+
+- debug: var=iptables_status
+
+# Save iptables
+- name: iptables save
+  shell: service iptables save
+  when: '"{{ iptables_status }}" == "enabled"'
+
+# Stop iptables
+- name: iptables stop
+  service: name=iptables state=stopped
+  when: '"{{ iptables_status }}" == "enabled"'
+
+# Set off. So not to start on boot
+- name: iptables off
+  shell: chkconfig iptables off
+

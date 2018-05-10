@@ -1,0 +1,27 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Subscribe to RHN network using subscription_manager Auto
+      redhat_subscription:
+        state: present
+        server_hostname: "{{ rhn_hostname | default('subscription.rhsm.redhat.com') }}"
+        username: "{{ rhn_user }}"
+        password: "{{ rhn_password }}"
+        auto_attach: "{{ auto }}"
+      when: auto is defined
+      retries: 3
+      delay: 20
+
+    - name: Subscribe to RHN network using subscription_manager and pool ids
+      redhat_subscription:
+        state: present
+        server_hostname: "{{ rhn_hostname | default('subscription.rhsm.redhat.com') }}"
+        username: "{{ rhn_user }}"
+        password: "{{ rhn_password }}"
+        pool_ids: "{{ pool_ids }}"
+      when: pool_ids is defined
+      retries: 3
+      delay: 20
+
