@@ -515,5 +515,24 @@ Carbon scenario descriptor examples.
           vars:
             ntp_list: < list of time server hosts >
 
+install_restraint.yml
+---------------------
 
+Description
++++++++++++
 
+Install restraint framework on test clients.
+
+Examples
+++++++++
+
+Carbon scenario descriptor examples.
+
+.. code-block::
+
+    ---
+    orchestrate:
+      # install restraint on clients
+      - name: install_restraint
+        orchestrator: ansible
+        hosts: <hosts>
