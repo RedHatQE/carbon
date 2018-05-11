@@ -515,6 +515,52 @@ Carbon scenario descriptor examples.
           vars:
             ntp_list: < list of time server hosts >
 
+add_yum_repositories.yml
+------------------------
+
+Description
++++++++++++
+
+Add yum repositories to remote systems
+
+Examples
+++++++++
+
+Carbon scenario descriptor examples
+
+.. code-block::
+
+    ---
+    orchestrate:
+      # add a yum repository
+      - name: add_yum_repositories
+        orchestrator: ansible
+        hosts: <hosts>
+        vars:
+          repositories:
+            - name: repo01
+              description: repo01
+              baseurl: https://hostname
+              gpgcheck: no
+              enabled: yes
+
+      # add multiple yum repositories
+      - name: add_yum_repositories
+        orchestrator: ansible
+        hosts: <hosts>
+        vars:
+          repositories:
+            - name: repo01
+              description: repo01
+              baseurl: https://hostname
+              gpgcheck: no
+              enabled: yes
+            - name: repo02
+              description: repo02
+              baseurl: https://hostname
+              gpgcheck: no
+              enabled: yes
+
 install_restraint.yml
 ---------------------
 
