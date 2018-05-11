@@ -49,6 +49,11 @@ try:
 except ImportError:
     import __builtin__ as builtins
 
+try:
+    from ConfigParser import RawConfigParser
+except ImportError:
+    from configparser import RawConfigParser
+
 if is_py2:
     string_types = (str, unicode)
 else:

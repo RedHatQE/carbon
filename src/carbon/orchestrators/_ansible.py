@@ -41,8 +41,8 @@ from ansible.parsing.dataloader import DataLoader
 from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
-from configparser import RawConfigParser
 
+from .._compat import RawConfigParser
 from ..core import CarbonOrchestrator, CarbonOrchestratorError
 
 
