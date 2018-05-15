@@ -25,7 +25,21 @@ mapping:
           required: True
   orchestrate:
     required: False
+    matching: "any"
     sequence:
+    - type: map
+      allowempty: True
+      mapping:
+        name:
+          required: True
+        hosts:
+          required: True
+          type: seq
+          sequence:
+            - type: str
+        vars:
+          allowempty: True
+          type: map
     - type: map
       allowempty: True
       mapping:
