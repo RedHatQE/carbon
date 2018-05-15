@@ -36,8 +36,8 @@ release:
 	python scripts/make-release.py
 
 clean:
-	rm -rf src/*.egg
-	rm -rf src/*.egg-info
+	rm -rf *.egg
+	rm -rf *.egg-info
 	rm -rf docs/_build
 	rm -rf .cache
 	rm -rf .tox

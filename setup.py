@@ -35,7 +35,7 @@ requires = [
 
 
 def get_version():
-    init = open(os.path.join(ROOT, 'src', 'carbon', '__init__.py')).read()
+    init = open(os.path.join(ROOT, 'carbon', '__init__.py')).read()
     return VERSION_RE.search(init).group(1)
 
 
@@ -48,8 +48,7 @@ setup(
     author_email='pit@redhat.com',
     description='A framework to test product interoperability',
     long_description=__doc__,
-    package_dir={'': 'src'},
-    packages=find_packages('src', exclude=['tests*']),
+    packages=find_packages(exclude=['tests*']),
     include_package_data=True,
     zip_safe=False,
     install_requires=requires,

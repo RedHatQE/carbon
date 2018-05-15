@@ -25,4 +25,4 @@ if platform == "darwin":
     os.environ["LC_TIME"]="UTF-8"
 
 
-run('flake8 ./src/carbon')
+run('flake8 ./carbon')

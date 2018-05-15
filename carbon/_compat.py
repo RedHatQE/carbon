@@ -54,7 +54,7 @@ try:
 except ImportError:
     from configparser import RawConfigParser
 
-if is_py2:
+try:
     string_types = (str, unicode)
-else:
+except NameError:
     string_types = (str, )
