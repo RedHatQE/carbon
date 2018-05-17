@@ -40,7 +40,8 @@ class OrchestrateTask(CarbonTask):
             package.name,
             package.hosts,
             vars=package.vars,
-            config=package.config
+            config=package.config,
+            all_hosts=package.all_hosts
         )
 
     def run(self):

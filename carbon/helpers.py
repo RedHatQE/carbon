@@ -438,6 +438,7 @@ def fetch_hosts(hosts, task):
 
     # placeholders
     _hosts = list()
+    _all_hosts = list()
     _filtered_hosts = list()
     _type = None
 
@@ -456,12 +457,15 @@ def fetch_hosts(hosts, task):
         for host in hosts:
             if host.name in _filtered_hosts:
                 _hosts.append(host)
+            _all_hosts.append(host)
     else:
         for host in hosts:
             for task_host in task[_type].hosts:
                 if host.name == task_host.name:
                     _hosts.append(host)
+                _all_hosts.append(host)
     task[_type].hosts = _hosts
+    task[_type].all_hosts = _all_hosts
     return task
 
 
