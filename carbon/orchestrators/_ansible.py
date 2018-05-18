@@ -290,18 +290,28 @@ class Inventory(object):
     ansible inventory for the carbon ansible action.
     """
 
-    def __init__(self, hosts, asset_params):
+    def __init__(self, hosts, all_hosts, asset_params, data_dir):
         """Constructor.
 
         :param hosts: list of hosts to create the inventory file
+        :param all_host: list of all hosts in the given scenario
         :param asset_params: tuple of orchestrator assets
+        :param data_dir: data directory where the inventory directory resides
         """
         self.hosts = hosts
+        self.all_hosts = all_hosts
         self.asset_params = asset_params
 
-        # create a unique inventory filename for the given action
-        # default this file will be deleted, maybe in future it can be saved
-        self._inventory = 'inv-%s' % uuid4()
+        # create the inventory directory where all inventory files are stored
+        self._inventory_dir = os.path.join(data_dir, 'inventory')
+
+        # create a master inventory for all hosts within the scenario.
+        self._master_inventory = os.path.join(
+            self._inventory_dir, 'master-%s' % uuid4())
+
+        # create a unique inventory for the actions hosts
+        self._unique_inventory = os.path.join(
+            self._inventory_dir, 'unique-%s' % uuid4())
 
         # Each action inventory will have a default group. This group will be
         # the one given to ansible controller object. Within this group is all
@@ -311,38 +321,48 @@ class Inventory(object):
         self._group = 'hosts:children'
 
     @property
-    def inventory(self):
-        """Return the ansible inventory file."""
-        return self._inventory
+    def master_inventory(self):
+        """Return the master inventory."""
+        return self._master_inventory
+
+    @property
+    def unique_inventory(self):
+        """Return the unique inventory."""
+        return self._unique_inventory
+
+    @property
+    def inventory_dir(self):
+        """Return the ansible inventory directory."""
+        return self._inventory_dir
 
     @property
     def group(self):
         """Return the ansible base group name."""
         return self._group
 
-    def create(self):
-        """Create the ansible inventory file.
+    def _create_inventory_dir(self):
+        """Create the ansible inventory directory."""
+        if not os.path.isdir(self.inventory_dir):
+            os.makedirs(self.inventory_dir)
 
-        This will create a section/section:vars for each host associated to
-        the carbon ansible action. Once all hosts have a created section, the
-        host sections will be added to the default group.
+    def _create_master(self):
+        """Create the master ansible inventory.
+
+        This method will create a master inventory which contains all the
+        hosts in the given scenario. Each host will have a group/group:vars.
         """
         # create parser object, raw config parser allows keys with no values
         config = RawConfigParser(allow_no_value=True)
 
-        # create a base group for all hosts
-        config.add_section(self.group)
-
-        # now lets create individual host sections
-        for host in self.hosts:
+        for host in self.all_hosts:
             section = host.name
             section_vars = '%s:vars' % section
 
             # create section(s)
-            config.add_section(section)
-            config.add_section(section_vars)
+            for item in [section, section_vars]:
+                config.add_section(item)
 
-            # add host
+            # add host ip address
             if isinstance(host.ip_address, list):
                 for item in host.ip_address:
                     config.set(section, item)
@@ -355,17 +375,44 @@ class Inventory(object):
                     v = os.path.join(host.data_folder(), 'assets', v)
                 config.set(section_vars, k, v)
 
-            # add host to group
-            config.set(self.group, section)
+        # write the inventory
+        with open(self.master_inventory, 'w') as f:
+            config.write(f)
+
+    def _create_unique(self):
+        """Create the unique ansible inventory.
+
+        This method will create a unique inventory which contains placeholders
+        for all hosts in the scenario. Along with a child group containing
+        all the hosts for the action to run on.
+        """
+        # create parser object, raw config parser allows keys with no values
+        config = RawConfigParser(allow_no_value=True)
+        config.add_section(self.group)
+
+        # add place holders for all hosts
+        for host in self.all_hosts:
+            config.add_section(host.name)
+
+        # add specific hosts to the group to run the action against
+        for host in self.hosts:
+            config.set(self.group, host.name)
 
         # write the inventory
-        with open(self.inventory, 'w') as f:
+        with open(self.unique_inventory, 'w') as f:
             config.write(f)
+
+    def create(self):
+        """Create the inventory."""
+        self._create_inventory_dir()
+        self._create_master()
+        self._create_unique()
 
     def delete(self):
         """Delete the ansible inventory file if it exists."""
-        if isfile(self.inventory):
-            remove(self.inventory)
+        for item in [self.master_inventory, self.unique_inventory]:
+            if isfile(item):
+                remove(item)
 
 
 class AnsibleOrchestrator(CarbonOrchestrator):
@@ -392,7 +439,12 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         super(AnsibleOrchestrator, self).__init__(action, hosts, **kwargs)
 
         # create inventory object for create/delete inventory file
-        self.inv = Inventory(hosts, self._assets_parameters)
+        self.inv = Inventory(
+            hosts,
+            getattr(self, 'all_hosts'),
+            self._assets_parameters,
+            data_dir=getattr(self, 'config')['DATA_FOLDER']
+        )
 
     @property
     def action_abs(self):
@@ -493,7 +545,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         # action to execute, lets go ahead and begin..
 
         # create an ansible controller object
-        obj = AnsibleController(self.inv.inventory)
+        obj = AnsibleController(self.inv.inventory_dir)
 
         # setup variables
         extra_vars = dict(hosts=self.inv.group)

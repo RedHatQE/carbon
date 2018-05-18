@@ -1,0 +1,36 @@
+# sample ansible.cfg
+# [defaults]
+# inventory = inventory
+# ansible-playbook access_multiple_hosts.yml -e "hosts=driver machine=client"
+---
+
+# play 1: gather facts for all inventory hosts
+- hosts: all
+
+# play 2: get information regarding another inventory host over the one
+# specified to run this play on
+- hosts: "{{ hosts }}"
+  vars:
+    # override this variable with the host you wish to fetch information for
+    machine: changeme
+
+  tasks:
+    - name: Fetching {{ machine }} host
+      set_fact:
+        sut: "{{ groups[item][0] }}"
+      when: item == machine
+      with_items: "{{ groups }}"
+
+    - name: "{{ machine }} public IPv4 address"
+      debug:
+        msg: "{{ machine }} public ipv4 address is {{ sut }}"
+
+    - name: "{{ machine }} private IPv4 address"
+      debug:
+        msg: >
+          {{ machine }} private IPv4 address is {{ hostvars[sut]
+          ['ansible_default_ipv4']['address'] }}
+
+    - name: "{{ machine }} hostname"
+      debug:
+        msg: "{{ machine }} hostname is {{ hostvars[sut]['ansible_hostname'] }}"
