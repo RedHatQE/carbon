@@ -187,7 +187,7 @@ class Action(CarbonResource):
             assets.append(self.orchestrator_cls.__orchestrator_name__)
 
         # append host orchestrator parameters for the action
-        hosts = fetch_hosts(hosts, dict(package=self), all_hosts=False)
+        hosts = fetch_hosts(hosts, dict(package=self), all_hosts=True)
         for host in hosts['package'].hosts:
             field = '%s_params' % self.orchestrator_cls.__orchestrator_name__
             if not hasattr(host, field):
