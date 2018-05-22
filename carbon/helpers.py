@@ -421,7 +421,7 @@ class CustomDict(dict):
         self.__setitem__(key, value)
 
 
-def fetch_hosts(hosts, task):
+def fetch_hosts(hosts, task, all_hosts=True):
     """Set the hosts for a task requiring hosts.
 
     This method is helpful for action/execute resources. These resources
@@ -433,6 +433,7 @@ def fetch_hosts(hosts, task):
 
     :param hosts: scenario hosts
     :param task: task requiring hosts
+    :param all_hosts: determine to set all hosts
     :return: updated task object including host objects
     """
 
@@ -457,13 +458,15 @@ def fetch_hosts(hosts, task):
         for host in hosts:
             if host.name in _filtered_hosts:
                 _hosts.append(host)
-            _all_hosts.append(host)
+                if all_hosts:
+                    _all_hosts.append(host)
     else:
         for host in hosts:
             for task_host in task[_type].hosts:
                 if host.name == task_host.name:
                     _hosts.append(host)
-                _all_hosts.append(host)
+                    if all_hosts:
+                        _all_hosts.append(host)
     task[_type].hosts = _hosts
     task[_type].all_hosts = _all_hosts
     return task

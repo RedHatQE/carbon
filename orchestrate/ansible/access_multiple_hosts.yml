@@ -1,6 +1,12 @@
 # sample ansible.cfg
 # [defaults]
 # inventory = inventory
+# driver and client should be the names of the host group
+# i.e.
+# [driver]
+# driver
+# [client]
+# client
 # ansible-playbook access_multiple_hosts.yml -e "hosts=driver machine=client"
 ---
 
@@ -15,22 +21,27 @@
     machine: changeme
 
   tasks:
-    - name: Fetching {{ machine }} host
-      set_fact:
-        sut: "{{ groups[item][0] }}"
-      when: item == machine
-      with_items: "{{ groups }}"
-
-    - name: "{{ machine }} public IPv4 address"
-      debug:
-        msg: "{{ machine }} public ipv4 address is {{ sut }}"
-
-    - name: "{{ machine }} private IPv4 address"
+    - name: System {{ hosts }} IPv4 address
       debug:
         msg: >
-          {{ machine }} private IPv4 address is {{ hostvars[sut]
-          ['ansible_default_ipv4']['address'] }}
+          {{ hostvars[inventory_hostname]['ansible_default_ipv4']
+          ['address'] }}
 
-    - name: "{{ machine }} hostname"
+    - name: System {{ machine }} IPv4 address
       debug:
-        msg: "{{ machine }} hostname is {{ hostvars[sut]['ansible_hostname'] }}"
+        msg: "{{ hostvars[machine]['ansible_default_ipv4']['address'] }}"
+
+    - name: System {{ hosts }} uname information
+      command: uname -a
+      register: uname_results_1
+
+    - debug:
+        var: uname_results_1
+
+    - name: System {{ machine }} uname information
+      command: uname -a
+      delegate_to: "{{ machine }}"
+      register: uname_results_2
+
+    - debug:
+        var: uname_results_2

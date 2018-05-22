@@ -362,18 +362,21 @@ class Inventory(object):
             for item in [section, section_vars]:
                 config.add_section(item)
 
-            # add host ip address
-            if isinstance(host.ip_address, list):
-                for item in host.ip_address:
-                    config.set(section, item)
-            elif isinstance(host.ip_address, str):
-                config.set(section, host.ip_address)
+            # add alias to resolve lack of dns
+            config.set(section, host.name)
 
             # add host vars
             for k, v in host.ansible_params.items():
                 if k in self.asset_params:
                     v = os.path.join(host.data_folder(), 'assets', v)
                 config.set(section_vars, k, v)
+
+            # add host ip address reference for the alias defined above
+            if isinstance(host.ip_address, list):
+                for item in host.ip_address:
+                    config.set(section_vars, 'ansible_host', item)
+            elif isinstance(host.ip_address, str):
+                config.set(section_vars, 'ansible_host', host.ip_address)
 
         # write the inventory
         with open(self.master_inventory, 'w') as f:
