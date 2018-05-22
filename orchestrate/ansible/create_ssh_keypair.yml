@@ -1,0 +1,17 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: User variable set?
+      fail:
+        msg: "User variable is undefined!"
+      when: user is undefined
+
+    - name: Create SSH key for {{ user }} user
+      user:
+        name: "{{ user }}"
+        generate_ssh_key: true
+        ssh_key_file: ~/.ssh/id_rsa
+        ssh_key_type: rsa
+        ssh_key_passphrase: null

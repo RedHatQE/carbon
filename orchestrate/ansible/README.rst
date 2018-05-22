@@ -582,3 +582,52 @@ Carbon scenario descriptor examples.
       - name: install_restraint
         orchestrator: ansible
         hosts: <hosts>
+
+create_ssh_keypair.yml
+----------------------
+
+Description
++++++++++++
+
+Create SSH keys on test clients for testing purposes.
+
+Examples
+++++++++
+
+Carbon scenario descriptor examples.
+
+.. code-block::
+
+    ---
+    orchestrate:
+      # create ssh key on clients
+      - name: create_ssh_keypair
+        orchestrator: ansible
+        hosts: <hosts>
+        vars:
+          user: centos
+
+inject_pub_key
+--------------
+
+Description
++++++++++++
+
+Inject SSH public key between machines for ssh communication.
+
+Examples
+++++++++
+
+Carbon scenario descriptor examples.
+
+.. code-block::
+
+    ---
+    orchestrate:
+      # inject public ssh key between machines for ssh communication
+      - name: inject_pub_key
+        orchestrator: ansible
+        hosts: <hosts>
+        vars:
+          user: centos
+          machine: test_client_01
