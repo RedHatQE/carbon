@@ -198,6 +198,33 @@ Carbon scenario descriptor examples.
           orchestrator: ansible
           hosts: <hosts>
 
+install_nvr.yml
+------------------------
+
+Description
++++++++++++
+
+Given an name-value-release value of a package on a brew system, this playbook
+will install the correct arch version of the package on your specified host.
+
+Examples
+++++++++
+
+Carbon scenario descriptor examples.
+
+.. code-block::
+
+    ---
+    orchestrate:
+        # install a package from a brew system
+        - name: install_nvr
+          orchestrator: ansible
+          hosts: <hosts>
+          vars:
+            brew_root: <brew_url>/brewroot
+            nvr: <package>
+            dest: /home/test/aut
+
 rhn_subscribe.yml
 ------------------------
 
