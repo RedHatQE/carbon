@@ -30,7 +30,7 @@ requires = [
     'apache-libcloud==2.2.0',
     'ansible>=2.5.0',
     'blinker==1.4',
-    'blaster>=0.1.4'
+    'blaster>=0.1.8'
 ]
 
 
