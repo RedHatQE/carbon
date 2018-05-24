@@ -1,0 +1,16 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Copy rpm file
+      copy:
+        src: "{{ rpms }}"
+        dest: /root
+     
+    - name: Run tests
+      shell: /usr/bin/python {{ item.0 }} /root/{{ rpms }} {{ results }} {{ item.1 }}
+      with_together:
+        - "{{ tests }}"
+        - "{{ base_names }}"
+
