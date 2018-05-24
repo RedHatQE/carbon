@@ -18,7 +18,7 @@
 
   handlers:
     - name: wait start
-      local_action: wait_for host={{ inventory_hostname }} port=22
+      local_action: wait_for host={{ hostvars[inventory_hostname]['ansible_host'] }} port=22
 
     - name: restart firewalld
       service:

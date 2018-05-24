@@ -10,9 +10,11 @@
         username: "{{ rhn_user }}"
         password: "{{ rhn_password }}"
         auto_attach: "{{ auto }}"
-      when: auto is defined
+      register: result
+      until: result.changed or result.msg is defined and result.msg.find('System already registered.') != -1
       retries: 3
       delay: 20
+      when: auto is defined
 
     - name: Subscribe to RHN network using subscription_manager and pool ids
       redhat_subscription:
@@ -21,7 +23,9 @@
         username: "{{ rhn_user }}"
         password: "{{ rhn_password }}"
         pool_ids: "{{ pool_ids }}"
-      when: pool_ids is defined
+      register: result
+      until: result.changed or result.msg is defined and result.msg.find('System already registered.') != -1
       retries: 3
       delay: 20
+      when: pool_ids is defined
 

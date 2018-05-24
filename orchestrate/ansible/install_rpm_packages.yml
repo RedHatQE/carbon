@@ -7,5 +7,10 @@
       package:
         name: "{{ item }}"
         state: present
+      register: result
       loop:
         "{{ packages }}"
+      until: result.rc == 0
+      retries: 3
+      delay: 15
+

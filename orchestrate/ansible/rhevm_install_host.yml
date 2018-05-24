@@ -1,0 +1,22 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Preparing SSHD Server
+      package:
+        name: openssh-server
+        state: present
+      register: result
+      until: result.rc == 0
+      retries: 3
+      delay: 15
+
+    - name: Setup SSHD Server
+      shell: chkconfig --level 345 sshd on
+
+    - name: Restart sshd Service
+      service:
+        name: sshd
+        state: restarted
+

@@ -3,8 +3,10 @@
 - hosts: "{{ hosts }}"
 
   tasks:
-    - name: Chech systems reachable (ping)
+    - name: Check systems reachable (ping)
       ping:
+      register: result
+      until: result.ping is defined and result.ping == "pong"
       retries: 15
       delay: 20
 

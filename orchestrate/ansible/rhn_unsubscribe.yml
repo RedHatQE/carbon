@@ -6,5 +6,7 @@
     - name: Unsubscribe from RHN network
       redhat_subscription:
         state: absent
+      register: result
+      until: result.changed or result.msg is defined and result.msg.find('System already unregistered.') != -1
       retries: 3
       delay: 20

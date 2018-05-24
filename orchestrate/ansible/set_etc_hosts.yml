@@ -1,0 +1,14 @@
+---
+
+- hosts: "{{ hosts }}"
+
+  tasks:
+    - name: Set test resource entries within /etc/hosts 
+      lineinfile:
+        dest: /etc/hosts
+        line: "{{ hostvars[item]['ansible_host'] }} {{ hostvars[item].ansible_fqdn }} {{ hostvars[item].ansible_hostname }}"
+      loop:
+        "{{ groups['hosts'] }}"
+
+    - debug: var=hostvars[inventory_hostname].ansible_fqdn,hostvars[inventory_hostname].ansible_hostname
+

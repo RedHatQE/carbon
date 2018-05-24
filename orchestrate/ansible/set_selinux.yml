@@ -17,7 +17,7 @@
     - name: wait for host boot
       local_action:
         module: wait_for
-        host: "{{ inventory_hostname }}"
+        host: "{{ hostvars[inventory_hostname]['ansible_host'] }}"
         port: 22
         delay: "{{ boot_wait | default(60) }}"
         timeout: 900
