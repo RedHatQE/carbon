@@ -1,0 +1,37 @@
+- job:
+    name: Carbon-Gerrit
+    project-type: pipeline
+    description: "Run validation on new code changes for carbon project."
+    concurrent: true
+    logrotate:
+      numToKeep: 25
+    triggers:
+      - gerrit:
+          trigger-on:
+            - patchset-created-event
+          override-votes: True
+          gerrit-build-started-verified-value: 0
+          gerrit-build-successful-verified-value: 1
+          gerrit-build-failed-verified-value: -1
+          gerrit-build-unstable-verified-value: 0
+          gerrit-build-notbuilt-verified-value: 0
+          gerrit-build-started-codereview-value: 0
+          gerrit-build-successful-codereview-value: 0
+          gerrit-build-failed-codereview-value: 0
+          gerrit-build-unstable-codereview-value: 0
+          gerrit-build-notbuilt-codereview-value: 0
+          projects:
+            - project-compare-type: 'PLAIN'
+              project-pattern: 'carbon'
+              branches:
+                - branch-compare-type: 'PLAIN'
+                  branch-pattern: 'develop'
+          server-name: code.engineering.redhat.com
+    pipeline-scm:
+      scm:
+        - git:
+            url: https://code.engineering.redhat.com/gerrit/carbon.git
+            branches:
+              - develop
+      script-path: jenkins/JenkinsfileGerrit.groovy
+      lightweight-checkout: true
