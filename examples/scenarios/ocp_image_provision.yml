@@ -1,4 +1,4 @@
-# $ carbon run --scenario examples/provision/openshift/image.yaml
+ # $ carbon run --scenario examples/ocp_image_provision.yml
 ---
 name: Openshift example
 description: Provision application in Openshift based on a image

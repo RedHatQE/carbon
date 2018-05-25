@@ -1,4 +1,4 @@
-# $ carbon run --scenario examples/provision/openshift/custom_template.yaml
+# $ carbon run --scenario examples/ocp_custom_template_provision.yml
 ---
 name: Openshift example
 description: Provision applications in Openshift based on a custom template
@@ -17,7 +17,7 @@ provision:
     provisioner: openshift
     credential: openshift
     role: application4
-    oc_custom_template: mytemplate.yaml
+    oc_custom_template: mytemplate.yml
     oc_env_vars:
       var1: var1
       var2: var2
