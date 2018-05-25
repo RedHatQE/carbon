@@ -42,6 +42,7 @@ from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
 
+from ..constants import ORCHESTRATE_PATH
 from .._compat import RawConfigParser
 from ..core import CarbonOrchestrator, CarbonOrchestratorError
 
@@ -495,7 +496,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
         # determine the file path
         if name == 'common':
-            path = os.path.join(os.getcwd(), 'orchestrate', self.name)
+            path = os.path.join(ORCHESTRATE_PATH, self.name)
         elif name == 'user':
             path = os.path.join(getattr(self, 'config')['DATA_FOLDER'],
                                 'assets', self.name)
