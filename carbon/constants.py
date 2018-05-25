@@ -29,27 +29,30 @@ CARBON_ROOT = os.path.join("/".join(os.path.dirname(__file__).split('/')[0:-2]))
 SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "files", "schema.yaml")
 ORCHESTRATE_PATH = os.path.join(os.path.dirname(__file__), "files", "orchestrate")
 
-TASKLIST = ["validate",
-            "provision",
-            "orchestrate",
-            "execute",
-            "report",
-            "cleanup"]
+TASKLIST = [
+    "validate",
+    "provision",
+    "orchestrate",
+    "execute",
+    "report",
+    "cleanup"
+]
 
-TASK_LOGLEVEL_CHOICES = ["debug",
-                         "info",
-                         "warning",
-                         "error",
-                         "critical"]
+TASK_LOGLEVEL_CHOICES = [
+    "debug",
+    "info",
+    "warning",
+    "error",
+    "critical"
+]
 
 PROVISIONERS = {
-    "openstack": "openstack",
     "beaker": "beaker",
-    "openshift": "openshift"
+    "openshift": "openshift",
+    "openstack": "openstack"
 }
 
-LOGTYPE_CHOICES = ["file",
-                   "stream"]
+LOGTYPE_CHOICES = ["file", "stream"]
 
 HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]
 
@@ -61,7 +64,6 @@ RESULTS_FILE = "results.yaml"
 RULE_HOST_NAMING = re.compile('[\W_]+')
 
 # Beaker url's
-BEAKER_BASE_URL = "https://beaker.engineering.redhat.com/"
-BEAKER_JOBS_URL = "https://beaker.engineering.redhat.com/jobs/"
+BEAKER_URL = "https://beaker.engineering.redhat.com"
 
 DEFAULT_ORCHESTRATOR = 'ansible'

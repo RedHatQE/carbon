@@ -32,7 +32,7 @@ import os
 import paramiko
 import stat
 
-from ..constants import BEAKER_JOBS_URL
+from ..constants import BEAKER_URL
 from ..core import CarbonProvisioner, CarbonProvisionerError
 from ..helpers import exec_local_cmd
 from ..signals import (
@@ -82,6 +82,7 @@ class BeakerProvisioner(CarbonProvisioner):
         self.bkr_xml = BeakerXML()
         self.conf_dir = '%s/.beaker_client' % os.path.expanduser('~')
         self.conf = '%s/config' % self.conf_dir
+        self.url = ''
 
         # configure beaker conf
         self._build_config()
@@ -107,7 +108,12 @@ class BeakerProvisioner(CarbonProvisioner):
         # open conf file for writing
         conf_obj = open(self.conf, 'w')
 
-        conf_obj.write('HUB_URL = "https://beaker.engineering.redhat.com"\n')
+        if 'auth_url' in credentials and credentials['auth_url']:
+            self.url = credentials['auth_url']
+        else:
+            self.url = BEAKER_URL
+
+        conf_obj.write('HUB_URL = "%s"\n' % self.url)
 
         if 'username' in credentials and credentials['username'] \
                 and 'password' in credentials and credentials['password']:
@@ -212,7 +218,8 @@ class BeakerProvisioner(CarbonProvisioner):
             # set the result as ascii instead of unicode
             self.host.bkr_job_id = mod_output[mod_output.find(
                 "[") + 2:mod_output.find("]") - 1].encode('ascii', 'ignore')
-            self.host.bkr_job_url = BEAKER_JOBS_URL + self.host.bkr_job_id[2:]
+            self.host.bkr_job_url = os.path.join(self.url, 'jobs',
+                                                 self.host.bkr_job_id[2:])
 
             self.logger.info('Beaker job ID: %s.' % self.host.bkr_job_id)
             self.logger.info('Beaker job URL: %s.' % self.host.bkr_job_url)

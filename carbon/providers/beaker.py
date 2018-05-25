@@ -79,6 +79,7 @@ class BeakerProvider(CarbonProvider):
         'keytab',
         'username',
         'password',
+        'auth_url'
     )
 
     _assets_parameters = (

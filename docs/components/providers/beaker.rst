@@ -26,6 +26,7 @@ either keytab and keytab_principal or username and password.
     ---
     credentials:
       - name: beaker
+        auth_url: <Beaker server url>
         keytab: <your keytab file, must be in your assets directory>
         keytab_principal: <The principal value for your keytab>
         username: <username>
@@ -44,6 +45,11 @@ either keytab and keytab_principal or username and password.
         - The name of the Beaker credentials section.
         - String
         - True
+
+    *   - auth_url
+        - The beaker server url.
+        - String
+        - False
 
     *   - keytab
         - name of the keytab file, which must be placed in the assets directory.

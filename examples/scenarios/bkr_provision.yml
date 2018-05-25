@@ -6,6 +6,7 @@ description: Get a machine from Beaker
 credentials:
 
   - name: beaker
+    auth_url: auth_url
     keytab: group_keytab
     keytab_principal: myprincipal
     username:
