@@ -1,4 +1,4 @@
-# $ carbon run --scenario examples/provision/openshift/git.yaml
+# $ carbon run --scenario examples/ocp_git_provision.yml
 ---
 name: Openshift example
 description: Provision application in Openshift based on a git

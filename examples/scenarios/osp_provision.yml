@@ -1,4 +1,4 @@
-# $ carbon run --scenario examples/provision/openstack/resource.yaml
+# $ carbon run --scenario examples/osp_provision.yml
 ---
 name: Openstack example
 description: Provision one resource in an Openstack tenant

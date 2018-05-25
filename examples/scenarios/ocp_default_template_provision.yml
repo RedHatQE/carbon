@@ -1,4 +1,4 @@
-# $ carbon run --scenario examples/provision/openshift/default_template.yaml
+# $ carbon run --scenario examples/ocp_default_template_provision.yml
 ---
 name: Openshift example
 description: Provision applications in Openshift based on a default template

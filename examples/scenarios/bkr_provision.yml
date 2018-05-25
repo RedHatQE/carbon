@@ -1,4 +1,4 @@
-# $ carbon run --scenario examples/provision/beaker/beaker.yaml
+# $ carbon run --scenario examples/bkr_provision.yml
 ---
 name: Beaker example
 description: Get a machine from Beaker

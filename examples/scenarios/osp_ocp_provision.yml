@@ -1,4 +1,4 @@
-# $ carbon run --scenario examples/provision/mixed/openstack_openshift.yaml
+# $ carbon run --scenario examples/osp_ocp_provision.yml
 ---
 name: Scenario Example with Openstack and Openshift
 description: Description of the scenario example.
