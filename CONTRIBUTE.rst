@@ -25,7 +25,7 @@ building documentation, etc.
 .. code-block:: bash
     :linenos:
 
-    (carbon) $ pip install -r carbon/requirements/dev.txt
+    (carbon) $ pip install -r carbon/test-requirements.txt
 
 3. Install carbon using editable mode. This allows your local changes to take
 effect right away. Setuptools calls this "develop mode".

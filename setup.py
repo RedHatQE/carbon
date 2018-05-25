@@ -16,27 +16,18 @@ import re
 
 from setuptools import setup, find_packages
 
-
 ROOT = os.path.dirname(__file__)
 VERSION_RE = re.compile(r'''__version__ = ['"]([a-zA-Z0-9.]+)['"]''')
-
-requires = [
-    'pbr>=3.1.1',
-    'Flask>=0.12.2',
-    'Werkzeug>=0.11.15',
-    'Click>=6.7',
-    'PyYAML>=3.12',
-    'pykwalify>=1.6.0',
-    'apache-libcloud==2.2.0',
-    'ansible>=2.5.0',
-    'blinker==1.4',
-    'blaster>=0.1.8'
-]
 
 
 def get_version():
     init = open(os.path.join(ROOT, 'carbon', '__init__.py')).read()
     return VERSION_RE.search(init).group(1)
+
+
+def get_requirements():
+    with open(os.path.join(ROOT, 'requirements.txt')) as f:
+        return f.read()
 
 
 setup(
@@ -45,13 +36,12 @@ setup(
     url='https://mojo.redhat.com/groups/qe-product-interop-testing',
     license='GPLv3',
     author='PIT Team Red Hat',
-    author_email='pit@redhat.com',
     description='A framework to test product interoperability',
     long_description=__doc__,
     packages=find_packages(exclude=['tests*']),
     include_package_data=True,
     zip_safe=False,
-    install_requires=requires,
+    install_requires=get_requirements(),
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -65,8 +55,7 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
-    entry_points="""
-        [console_scripts]
-        carbon=carbon.cli:cli
-    """
+    entry_points={
+        'console_scripts': ['carbon=carbon.cli:cli']
+    }
 )
