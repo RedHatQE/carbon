@@ -1,0 +1,184 @@
+---
+
+# template used to demonstrate the layout of a multi product (interop)
+# scenario definition consumable by the interop framework in this case
+# carbon.
+
+# generic section
+# defines common information about the scenario
+
+name: demo
+description: >
+    Scenario to demonstration the carbon framework.
+
+# credentials section
+# defines infrastructure credentials where scenario hosts will be created
+
+credentials:
+  # openstack private cloud provider
+  - name: openstack
+    auth_url: <auth_url>
+    tenant_name: <tenant_name>
+    username: <username>
+    password: <password>
+
+# provision section
+# defines all systems required for the scenario
+
+# note:
+# ----
+# the defined definition below is active and supported by carbon framework
+
+provision:
+  # test driver
+  - name: testdriver                            # machine name when created
+    provider: openstack                         # provider to create host in
+    provisioner: openstack                      # provisioner (internal supported)
+    credential: openstack                       # ref above ^^: credentials.openstack
+    os_image: rhel-7.5-server-x86_64-released   # qcow image to boot instance based on
+    os_flavor: m1.small                         # instance size
+    os_networks:                                # instance internal network
+      - <internal-network>
+    os_floating_ip_pool: "10.8.240.0"           # instance external network
+    os_keypair: <keypair>                       # instance ssh key pair
+    role: testdriver                            # host role
+    ansible_params:                             # defines ansible parameters for connection
+      ansible_user: root
+      ansible_ssh_private_key_file: <private-key-filename>
+
+  # test client 1
+  - name: testclient01                          # machine name when created
+    provider: openstack                         # provider to create host in
+    provisioner: openstack                      # provisioner (internal supported)
+    credential: openstack                       # ref above ^^: credentials.openstack
+    os_image: rhel-7.5-server-x86_64-released   # qcow image to boot instance based on
+    os_flavor: m1.small                         # instance size
+    os_networks:                                # instance internal network
+      - <internal-network>
+    os_floating_ip_pool: "10.8.240.0"           # instance external network
+    os_keypair: <keypair>                       # instance ssh key pair
+    role: testclient                            # host role
+    ansible_params:                             # defines ansible parameters for connection
+      ansible_user: root
+      ansible_ssh_private_key_file: <private-key-filename>
+
+  # test client 2
+  - name: testclient02                          # machine name when created
+    provider: openstack                         # provider to create host in
+    provisioner: openstack                      # provisioner (internal supported)
+    credential: openstack                       # ref above ^^: credentials.openstack
+    os_image: rhel-7.5-server-x86_64-released   # qcow image to boot instance based on
+    os_flavor: m1.small                         # instance size
+    os_networks:                                # instance internal network
+      - <internal-network>
+    os_floating_ip_pool: "10.8.240.0"           # instance external network
+    os_keypair: <keypair>                       # instance ssh key pair
+    role: testclient                            # host role
+    ansible_params:                             # defines ansible parameters for connection
+      ansible_user: root
+      ansible_ssh_private_key_file: <private-key-filename>
+
+
+# orchestrate section
+# defines all actions to be performed for the scenario. these actions will be
+# executed against the systems defined in the provision section. Each action
+# will define which system to run against.
+
+# note:
+# ----
+# the defined definition below is active and supported by carbon framework
+
+orchestrate:
+  # user defined playbook to execute
+  - name: custom                                # action name (playbook name) (filename only, exclude file extension)
+    orchestrator: ansible                       # orchestrator module to use in this case ansible
+    hosts:                                      # hosts which the action is executed on
+      - testclient01                            # ref above ^^: provision.testclient01
+      - testclient02                            # ref above ^^: provision.testclient02
+    vars:                                       # variables the action (playbook) requires
+      var01: "Hello World!"
+
+  # create ssh key pair for ssh connection between driver/client(s)
+  - name: create_ssh_keypair                    # action name (playbook name) (filename only, exclude file extension)
+    orchestrator: ansible                       # orchestrator module to use in this case ansible
+    hosts:                                      # hosts which the action is executed on
+      - testdriver                              # ref above ^^: provision.testdriver
+    vars:                                       # variables the action (playbook requires)
+      user: root
+
+  # inject driver ssh public key pair to client(s)
+  - name: inject_pub_key                        # action name (playbook name) (filename only, exclude file extension)
+    orchestrator: ansible                       # orchestrator module to use in this case ansible
+    hosts:                                      # hosts which the action is executed on
+      - testdriver                              # ref above ^^: provision.testdriver
+    vars:                                       # variables the action (playbook requires)
+      user: root
+      machine:
+        - testclient01
+        - testclient02
+
+  # common playbook to execute
+  - name: rhn_subscribe                         # action name (playbook name) (filename only, exclude file extension)
+    orchestrator: ansible                       # orchestrator module to use in this case ansible
+    hosts:                                      # hosts which the action is executed on
+      - testdriver                              # ref above ^^: provision.testdriver
+      - testclient01                            # ref above ^^: provision.testclient01
+      - testclient02                            # ref above ^^: provision.testclient02
+    vars:                                       # variables the action (playbook requires)
+      rhn_hostname: subscription.rhsm.stage.redhat.com
+      rhn_user: rhel_server_01
+      rhn_password: password
+      auto: True
+
+# execute section
+
+# note:
+# ----
+# the defined definition below is in planning and to be developed by carbon framework
+# it is a proposed outline for the definition
+
+execute:
+  # execute tests using the framework defined
+  - name: client_tests
+    framework: restraint
+    vars:
+      xml: http://server/xmls/test.xml
+      role:
+        - testclient
+
+  # execute tests using the framework defined
+  - name: client_tests
+    framework: pytest
+    vars:
+      scripts: scripts_dir/
+
+# report section
+
+# note:
+# ----
+# the defined definition below is in planning and to be developed by carbon framework
+# it is a proposed outline for the definition
+
+report:
+  # notify test results via email
+  - type: notification
+    name: email
+    vars:
+      emails:
+        - user01@xyz.com
+        - user02@xyz.com
+
+  # upload test results to polarion
+  - type: test
+    name: polarion
+    vars:
+      host: <host>
+      username: <username>
+      password: <password>
+
+  # notify test results via irc
+  - type: playbook
+    name: irc
+    vars:
+      channels:
+        - '#<channel>'
