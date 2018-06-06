@@ -13,7 +13,8 @@
       delay: 15
 
     - name: Find rhevm41-cleanup.j2
-      find:
+      local_action:
+        module: find
         paths: /
         patterns: 'rhevm41*.j2'
         recurse: yes
