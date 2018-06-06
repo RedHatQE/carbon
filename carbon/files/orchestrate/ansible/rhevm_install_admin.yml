@@ -13,13 +13,13 @@
       delay: 15
 
     - name: Set Rhevm Cleanup File
-      template: src=rhevm41-cleanup.j2
+      template: src=./templates/rhevm41-cleanup.j2
                 dest=./rhevm-cleanup
       register: cleanup_file
     - debug: var=cleanup_file
 
     - name: Set Rhevm Answer File
-      template: src=rhevm41-answer-default.j2
+      template: src=./templates/rhevm41-answer-default.j2
                 dest=./rhevm-answer
       with_items:
         - { admin_fqdn: "{{ ansible_nodename }}", admin_domain: "{{ ansible_domain}}" }
