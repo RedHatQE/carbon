@@ -12,13 +12,22 @@
       retries: 3
       delay: 15
 
+    - name: Find rhevm41_install_admin.yml
+      local_action:
+        module: find
+        paths: /
+        patterns: 'rhevm*.yml'
+        recurse: yes
+        register: find_results
+    - debug: var=find_results
+
     - name: Find rhevm41-cleanup.j2
       local_action:
         module: find
         paths: /
         patterns: 'rhevm41*.j2'
         recurse: yes
-      register: find_results
+        register: find_results
     - debug: var=find_results
 
     - name: Set Rhevm Cleanup File
