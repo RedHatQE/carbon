@@ -18,7 +18,7 @@
         paths: /
         patterns: 'rhevm*.yml'
         recurse: yes
-        register: find_results
+      register: find_results
     - debug: var=find_results
 
     - name: Find rhevm41-cleanup.j2
@@ -27,7 +27,7 @@
         paths: /
         patterns: 'rhevm41*.j2'
         recurse: yes
-        register: find_results
+      register: find_results
     - debug: var=find_results
 
     - name: Set Rhevm Cleanup File
