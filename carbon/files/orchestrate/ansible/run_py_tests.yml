@@ -5,7 +5,7 @@
   tasks:
     - name: Copy rpm file
       copy:
-        src: "{{ rpms }}"
+        src: "./assets/{{ rpms }}"
         dest: /root
      
     - name: Run tests
