@@ -14,7 +14,7 @@
 
     - name: Copy rpm file
       copy:
-        src: "{{ lookup('env','ASSETS_PATH') }}/{{ rpms }}"
+        src: "{{ assets_path }}/{{ rpms }}"
         dest: /root
      
     - name: Run tests
