@@ -66,10 +66,6 @@ def create():
 @click.option("-s", "--scenario",
               default=None,
               help="Scenario definition file to be executed.")
-@click.option("--log-type",
-              default="file",
-              type=click.Choice(LOGTYPE_CHOICES),
-              help="log type")
 @click.option("-d", "--data-folder",
               default=None,
               help="Scenario workspace path.")
@@ -78,7 +74,7 @@ def create():
               default='info',
               help="Select logging level. Default is 'INFO'")
 @click.pass_context
-def validate(ctx, scenario, log_type, data_folder, log_level):
+def validate(ctx, scenario, data_folder, log_level):
     """Validate a scenario configuration."""
     # Make sure the file exists and gets its absolute path
     if os.path.isfile(scenario):
@@ -91,8 +87,7 @@ def validate(ctx, scenario, log_type, data_folder, log_level):
     scenario_data = template_render(scenario, os.environ)
 
     # Create a new carbon compound
-    cbn = Carbon(__name__, log_level=log_level, data_folder=data_folder,
-                 log_type=log_type)
+    cbn = Carbon(__name__, log_level=log_level, data_folder=data_folder)
 
     # This is the easiest way to configure a full scenario.
     cbn.load_from_yaml(scenario_data)
@@ -117,16 +112,12 @@ def validate(ctx, scenario, log_type, data_folder, log_level):
 @click.option("-a", "--assets-path",
               default=None,
               help="Scenario workspace path.")
-@click.option("--log-type",
-              default="file",
-              type=click.Choice(LOGTYPE_CHOICES),
-              help="log type")
 @click.option("--log-level",
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default='info',
               help="Select logging level. Default is 'INFO'")
 @click.pass_context
-def run(ctx, task, scenario, log_level, data_folder, log_type, assets_path):
+def run(ctx, task, scenario, log_level, data_folder, assets_path):
     """
     Run a carbon scenario, given the scenario YAML file configuration.
     """
@@ -159,7 +150,6 @@ def run(ctx, task, scenario, log_level, data_folder, log_type, assets_path):
         __name__,
         log_level=log_level,
         data_folder=data_folder,
-        log_type=log_type,
         assets_path=assets_path
     )
 

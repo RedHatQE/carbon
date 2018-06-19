@@ -175,37 +175,36 @@ class LoggerMixin(object):
         if len(logger.handlers) > 0:
             return
 
-        # configure handler type
-        if config['LOGGER_TYPE'] == 'stream':
-            handler = StreamHandler()
-        elif config['LOGGER_TYPE'] == 'file':
-            log_dir = os.path.join(config['DATA_FOLDER'], 'logs')
-            log_file = os.path.join(log_dir, 'carbon_scenario.log')
+        # construct stream handler
+        stream_handler = StreamHandler()
 
-            # create log directory
-            try:
-                if not os.path.exists(log_dir):
-                    os.makedirs(log_dir)
-            except OSError as ex:
-                msg = 'Unable to create %s directory' % log_dir
-                if ex.errno == errno.EACCES:
-                    msg += ', permission defined.'
-                else:
-                    msg += ', %s.' % ex
-                raise LoggerMixinError(msg)
-            handler = FileHandler(log_file)
-        else:
-            raise LoggerMixinError(
-                'Invalid logger type. Supported types: (file or stream).'
-            )
+        # create log directory
+        log_dir = os.path.join(config['DATA_FOLDER'], 'logs')
 
-        # configure handler
-        handler.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
-        handler.setFormatter(Formatter(cls._LOG_FORMAT))
+        try:
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
+        except OSError as ex:
+            msg = 'Unable to create %s directory' % log_dir
+            if ex.errno == errno.EACCES:
+                msg += ', permission defined.'
+            else:
+                msg += ', %s.' % ex
+            raise LoggerMixinError(msg)
+
+        # construct file handler
+        file_handler = FileHandler(os.path.join(
+            log_dir, 'carbon_scenario.log'))
+
+        # configure handlers
+        for handler in [stream_handler, file_handler]:
+            handler.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
+            handler.setFormatter(Formatter(cls._LOG_FORMAT))
 
         # configure logger
         logger.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
-        logger.addHandler(handler)
+        logger.addHandler(stream_handler)
+        logger.addHandler(file_handler)
 
     @property
     def logger(self):
