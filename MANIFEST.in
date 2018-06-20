@@ -1,6 +1,6 @@
 include CHANGES LICENSE AUTHORS README.md
 include carbon/files/schema.yaml
-recursive-include carbon/files/orchestrate/ansible/ *.yml *.py
+recursive-include carbon/files/orchestrate/ansible/ *.yml *.py *.j2
 exclude setup.cfg
 prune docs/_build
 prune docs/.ropeproject
