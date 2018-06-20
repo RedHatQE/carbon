@@ -201,22 +201,17 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
     # set a workspace folder, for where files will be updated
     data_folder = ConfigAttribute('DATA_FOLDER')
 
-    # set the log type
-    logger_type = ConfigAttribute('LOGGER_TYPE')
-
     # Default configuration parameters.
     default_config = {
         'DEBUG': False,
         'DATA_FOLDER': tempfile.gettempdir(),
-        # set to stream or file
-        'LOGGER_TYPE': 'file',
         'LOGGER_NAME': __carbon_name__,
         'LOG_LEVEL': 'info',
         'SECRET_KEY': 'secret-key'
     }
 
     def __init__(self, import_name, root_path=None, log_level=None,
-                 data_folder=None, log_type=None, assets_path=None):
+                 data_folder=None, assets_path=None):
 
         # The name of the package or module.  Do not change this once
         # it was set by the constructor.
@@ -232,9 +227,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         self.root_path = root_path
 
         self.config = self.make_config()
-
-        if log_type:
-            self.logger_type = log_type
 
         if log_level:
             self.log_level = log_level

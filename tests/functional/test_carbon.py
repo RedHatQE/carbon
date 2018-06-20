@@ -92,12 +92,6 @@ class TestCarbon(TestCase):
         obj.load_from_yaml(scenario_data)
 
     @staticmethod
-    def test_set_carbon_log_type():
-        """Test creating a carbon object with declaring the log type."""
-        cbn = Carbon(__name__, log_type='stream')
-        assert_equal(cbn.logger_type, 'stream')
-
-    @staticmethod
     def test_set_carbon_log_level():
         """Test creating a carbon object with declaring the log level."""
         cbn = Carbon(__name__, log_level='debug')
