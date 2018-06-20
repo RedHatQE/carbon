@@ -24,7 +24,6 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonProvisioner
-from ..signals import prov_openstack_initiated
 
 
 class OpenstackProvisioner(CarbonProvisioner):
@@ -42,7 +41,6 @@ class OpenstackProvisioner(CarbonProvisioner):
         """
         super(OpenstackProvisioner, self).__init__()
         self.host = host
-        prov_openstack_initiated.send(self)
 
     def _create(self):
         """Create a node in openstack.
