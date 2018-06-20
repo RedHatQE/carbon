@@ -40,7 +40,6 @@ from nose.tools import assert_not_equal, assert_is_not, assert_is_none
 from nose.tools import nottest, assert_true, assert_false
 
 from carbon import Carbon
-from carbon._compat import string_types
 from carbon.helpers import file_mgmt, gen_random_str, is_url_valid
 from carbon.helpers import get_ansible_inventory_script
 from carbon.helpers import get_provisioner_class, get_provisioners_classes

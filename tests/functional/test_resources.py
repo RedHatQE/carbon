@@ -33,13 +33,13 @@ try:
 except ImportError:
     from test.support import EnvironmentVarGuard
 
-from carbon import Carbon, Scenario, Host
+from carbon import Carbon
 from carbon._compat import string_types
 from carbon.constants import PROVISIONERS
 from carbon.core import CarbonError, CarbonResource
 from carbon.helpers import file_mgmt, template_render
 from carbon.providers import OpenstackProvider
-from carbon.resources import Action, Execute, Report
+from carbon.resources import Scenario, Host, Action, Execute, Report
 from carbon.resources.scenario import ScenarioError
 
 scenario_description = file_mgmt('r', 'assets/scenario.yaml')
