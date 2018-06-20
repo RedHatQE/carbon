@@ -28,4 +28,4 @@ from .helpers import CustomDict
 from .resources import Scenario, Host, Action, Execute, Report
 
 __version__ = '0.5.0'
-__author__ = 'PIT Team Red Hat'
+__author__ = 'Red Hat Inc.'

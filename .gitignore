@@ -1,35 +1,29 @@
-.DS_Store
-*.pyc
+# compiled files
 __pycache__
+*.py[cod]
+
+# packaging
 dist
 build
+*.egg-info
+
+# docs
 docs/build
-docs/source/reference/services
+
+# unit tests
+.tox
+.coverage
+.cache
 tests/cover
 tests/.coverage
 tests/.workspace
-*.egg-info
-.cache
-_mailinglist
-node_modules
 
-# Test state / virtualenvs
-.tox
-.coverage
-
-# Common virtualenv names
-venv
-venv2
-venv3
-
-# IDEs
+# pycharm project settings
 .idea/
-.ropeproject
+
+# visual studio code project settings
+.vscode/
+
+# eclipse project settings
 .project
 .pydevproject
-.settings/
-.vscode
-
-# Local running events
-.datafolder/
-config.cfg
