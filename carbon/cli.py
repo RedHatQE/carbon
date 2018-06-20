@@ -29,7 +29,7 @@ import yaml
 
 from . import __version__
 from .carbon import Carbon
-from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES, LOGTYPE_CHOICES
+from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES
 from .helpers import template_render
 
 _VERBOSITY = 0
