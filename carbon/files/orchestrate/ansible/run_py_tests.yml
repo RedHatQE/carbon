@@ -3,11 +3,11 @@
 - hosts: "{{ hosts }}"
 
   tasks:
-    - name: Find rhevm41-cleanup.j2
+    - name: Find tests
       local_action:
         module: find
         paths: /
-        patterns: 'rpm_data-host_rheltest_rpms_73_x86_64_Server*'
+        patterns: 'rpm_data-host_rheltest_rpms_*._x86_64_Server*'
         recurse: yes
       register: find_results
     - debug: var=find_results
