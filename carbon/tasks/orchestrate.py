@@ -24,7 +24,6 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
-from ..signals import task_orchestrate_started, task_orchestrate_finished
 
 
 class OrchestrateTask(CarbonTask):
@@ -45,7 +44,5 @@ class OrchestrateTask(CarbonTask):
         )
 
     def run(self):
-        task_orchestrate_started.send(self)
         self.logger.info(self.msg)
         self.orchestrator.run()
-        task_orchestrate_finished.send(self)

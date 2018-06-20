@@ -32,10 +32,6 @@ import os
 
 from .constants import TASKLIST
 from .helpers import fetch_hosts, get_core_tasks_classes
-from .signals import (
-    provision_create_started, provision_create_finished,
-    provision_delete_started, provision_delete_finished
-)
 
 
 class CarbonError(Exception):
@@ -444,17 +440,13 @@ class CarbonProvisioner(LoggerMixin, TimeMixin):
         raise NotImplementedError
 
     def create(self):
-        provision_create_started.send(self, host=self.host)
         self._create()
-        provision_create_finished.send(self, host=self.host)
 
     def _delete(self):
         raise NotImplementedError
 
     def delete(self):
-        provision_delete_started.send(self, host=self.host)
         self._delete()
-        provision_delete_finished.send(self, host=self.host)
 
     @property
     def name(self):

@@ -31,9 +31,6 @@ import yaml
 
 from ..helpers import exec_local_cmd
 from ..core import CarbonProvisioner, CarbonProvisionerError
-from ..signals import (
-    prov_openshift_newapp_started, prov_openshift_newapp_finished,
-    prov_openshift_app_updated, prov_openshift_initiated)
 
 
 class OpenshiftProvisionerError(CarbonProvisionerError):
@@ -87,8 +84,6 @@ class OpenshiftProvisioner(CarbonProvisioner):
         self._finallabels = list()
         self._app_name = ""
         self._env_opts = ""
-
-        prov_openshift_initiated.send(self)
 
     @property
     def labels(self):
@@ -386,9 +381,6 @@ class OpenshiftProvisioner(CarbonProvisioner):
 
         self.logger.info('Creating application from %s..' % oc_type)
 
-        # send start signal
-        prov_openshift_newapp_started.send(self, command=_cmd)
-
         # create application
         results = exec_local_cmd(_cmd)
         if results[0] != 0:
@@ -396,9 +388,6 @@ class OpenshiftProvisioner(CarbonProvisioner):
             raise OpenshiftProvisionerError(
                 'Error creating application from %s.' % oc_type)
         self.logger.info('Successfully created application from %s!' % oc_type)
-
-        # send finished signal
-        prov_openshift_newapp_finished.send(self, command=_cmd, results=results)
 
     def create_env_vars(self):
         """Create the environment variables to be applied to the application.
@@ -600,4 +589,3 @@ class OpenshiftProvisioner(CarbonProvisioner):
         # update output values for the user
         self.host.oc_app_name = self._app_name
         self.host.oc_routes = self._routes
-        prov_openshift_app_updated.send(self, host=self.host)
