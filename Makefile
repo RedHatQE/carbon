@@ -35,3 +35,12 @@ clean-pyc:
 
 docs:
 	tox -e docs
+
+bump-major:
+	bumpversion major --commit
+
+bump-minor:
+	bumpversion minor --commit
+
+bump-patch:
+	bumpversion patch --commit
