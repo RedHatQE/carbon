@@ -46,7 +46,6 @@ setup(
         'ansible>=2.5.0',
         'apache-libcloud==2.2.0',
         'blaster>=0.1.8',
-        'blinker==1.4',
         'Click>=6.7',
         'Flask>=0.12.2',
         'Jinja2>=2.10',
