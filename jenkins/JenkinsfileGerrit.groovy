@@ -33,14 +33,14 @@ pipeline {
                 stage('Tox Python 2') {
                     steps {
                         dir('carbon') {
-                            sh 'tox -e py27-functional'
+                            sh 'tox -e py27'
                         }
                     }
                 }
                 stage('Tox Python 3') {
                     steps {
                         dir('carbon') {
-                            sh 'tox -e py36-functional'
+                            sh 'tox -e py36'
                         }
                     }
                 }
