@@ -18,21 +18,22 @@
 """
     carbon.cli
 
-    Here you add brief description of what this module is about
+    This module contains the code which creates carbon's command line
+    interface structure.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import click
+
 import os
+
+import click
 import yaml
 
 from . import __version__
 from .carbon import Carbon
 from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES
 from .helpers import template_render
-
-_VERBOSITY = 0
 
 
 def print_header():
@@ -47,12 +48,8 @@ def print_header():
               help="Add verbosity to the commands.")
 @click.version_option()
 def cli(verbose):
-    """
-    This is Carbon command line utility.
-    """
-    global _VERBOSITY
+    """Carbon - Interoperability Testing Framework"""
     if verbose:
-        _VERBOSITY = verbose
         click.echo('\n--- Verbose mode ON (verbosity %s)---\n' % verbose)
 
 
@@ -65,14 +62,16 @@ def create():
 @cli.command()
 @click.option("-s", "--scenario",
               default=None,
+              metavar="",
               help="Scenario definition file to be executed.")
 @click.option("-d", "--data-folder",
               default=None,
+              metavar="",
               help="Scenario workspace path.")
 @click.option("--log-level",
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default='info',
-              help="Select logging level. Default is 'INFO'")
+              help="Select logging level. (default=info)")
 @click.pass_context
 def validate(ctx, scenario, data_folder, log_level):
     """Validate a scenario configuration."""
@@ -92,8 +91,8 @@ def validate(ctx, scenario, data_folder, log_level):
     # This is the easiest way to configure a full scenario.
     cbn.load_from_yaml(scenario_data)
 
-    # The scenario will start the main pipeline and run through the ordered list
-    # of pipelines. See :function:`~carbon.Carbon.run` for more details.
+    # The scenario will start the main pipeline and run through the ordered
+    # list of pipelines. See :function:`~carbon.Carbon.run` for more details.
     cbn.run(tasklist=["validate"])
 
 
@@ -102,25 +101,26 @@ def validate(ctx, scenario, data_folder, log_level):
               default=None,
               type=click.Choice(TASKLIST),
               multiple=True,
-              help="Select a specific task to run. Default all tasks run.")
+              help="Select task to run. (default=all)")
 @click.option("-s", "--scenario",
               default=None,
+              metavar="",
               help="Scenario definition file to be executed.")
 @click.option("-d", "--data-folder",
               default=None,
+              metavar="",
               help="Scenario workspace path.")
 @click.option("-a", "--assets-path",
               default=None,
+              metavar="",
               help="Scenario workspace path.")
 @click.option("--log-level",
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default='info',
-              help="Select logging level. Default is 'INFO'")
+              help="Select logging level. (default=info)")
 @click.pass_context
 def run(ctx, task, scenario, log_level, data_folder, assets_path):
-    """
-    Run a carbon scenario, given the scenario YAML file configuration.
-    """
+    """Run a scenario configuration."""
     print_header()
 
     # Make sure the file exists and gets its absolute path
@@ -165,16 +165,3 @@ def run(ctx, task, scenario, log_level, data_folder, assets_path):
     # The scenario will start the main pipeline and run through the task
     # pipelines declared. See :function:`~carbon.Carbon.run` for more details.
     cbn.run(tasklist=task)
-
-
-@cli.command('help')
-@click.option("--task",
-              type=click.Choice(['create', 'config', 'install', 'test',
-                                 'report', 'teardown']),
-              help="Display helpful information about a task.")
-def carbon_help():
-    """
-    Display helpful information about Carbon
-    internals.
-    """
-    raise NotImplementedError
