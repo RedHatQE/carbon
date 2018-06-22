@@ -28,7 +28,7 @@ import inspect
 import shutil
 import sys
 import tempfile
-from cached_property import thread_cached_property
+from cached_property import threaded_cached_property
 from threading import Lock
 
 import blaster
@@ -313,7 +313,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
         self.scenario = Scenario(config=self.config)
 
-    @thread_cached_property
+    @threaded_cached_property
     def name(self):
         """The name of the application.  This is usually the import name
         with the difference that it's guessed from the run file if the
@@ -328,19 +328,19 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
             return os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
 
-    @thread_cached_property
+    @threaded_cached_property
     def uid(self):
         return self._uid
 
-    @thread_cached_property
+    @threaded_cached_property
     def data_folder(self):
         return self.config['DATA_FOLDER']
 
-    @thread_cached_property
+    @threaded_cached_property
     def status_file(self):
         return os.path.join(self.data_folder, STATUS_FILE)
 
-    @thread_cached_property
+    @threaded_cached_property
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
 
