@@ -24,11 +24,9 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import errno
-import inspect
 import shutil
 import sys
 import tempfile
-from cached_property import threaded_cached_property
 from threading import Lock
 
 import blaster
@@ -39,7 +37,7 @@ from flask.config import Config, ConfigAttribute
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, PipelineBuilder, TimeMixin
-from .helpers import file_mgmt, gen_random_str, get_root_path
+from .helpers import file_mgmt, gen_random_str, get_root_path, locked_cached_property
 from .resources import Scenario, Host, Action, Report, Execute
 
 # a lock used for logger initialization
@@ -312,7 +310,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
         self.scenario = Scenario(config=self.config)
 
-    @threaded_cached_property
+    @locked_cached_property
     def name(self):
         """The name of the application.  This is usually the import name
         with the difference that it's guessed from the run file if the
@@ -327,19 +325,19 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
             return os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
 
-    @threaded_cached_property
+    @locked_cached_property
     def uid(self):
         return self._uid
 
-    @threaded_cached_property
+    @locked_cached_property
     def data_folder(self):
         return self.config['DATA_FOLDER']
 
-    @threaded_cached_property
+    @locked_cached_property
     def status_file(self):
         return os.path.join(self.data_folder, STATUS_FILE)
 
-    @threaded_cached_property
+    @locked_cached_property
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
 
