@@ -1,5 +1,5 @@
-include CHANGES LICENSE AUTHORS README.md
-include carbon/files/schema.yaml
+include CHANGES LICENSE AUTHORS README.rst
+include carbon/files/schema.yml
 recursive-include carbon/files/orchestrate/ansible/ *.yml *.py *.j2
 exclude setup.cfg
 prune docs/_build

@@ -31,9 +31,6 @@ from libcloud.compute.types import InvalidCredsError, Provider
 
 from .._compat import string_types
 from ..core import CarbonProvider, CarbonProviderError
-from ..signals import (
-    prov_openstack_bootnode_started,
-    prov_openstack_bootnode_finished, prov_openstack_overlimit)
 
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
@@ -636,8 +633,6 @@ class OpenstackProvider(CarbonProvider):
         # network object
         _network = self.network_lookup(network)
 
-        prov_openstack_bootnode_started.send(self)
-
         # create node
         while attempt <= MAX_ATTEMPTS:
             try:
@@ -649,10 +644,8 @@ class OpenstackProvider(CarbonProvider):
                     ex_keyname=key_pair
                 )
                 self.logger.info('Successfully booted node %s.' % name)
-                prov_openstack_bootnode_finished.send(self)
                 return node
             except Exception as ex:
-                prov_openstack_overlimit.send(self)
                 self.logger.error(ex.message)
                 wait_time = random.randint(10, MAX_WAIT_TIME)
                 self.logger.info('Attempt %s of %s: retrying in %s seconds' %

@@ -35,11 +35,6 @@ import stat
 from ..constants import BEAKER_URL
 from ..core import CarbonProvisioner, CarbonProvisionerError
 from ..helpers import exec_local_cmd
-from ..signals import (
-    prov_beaker_initiated, prov_beaker_xml_submit_started,
-    prov_beaker_xml_submit_finished, prov_beaker_wait_job_started,
-    prov_beaker_wait_job_finished
-)
 
 
 class BeakerProvisionerError(CarbonProvisionerError):
@@ -86,8 +81,6 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # configure beaker conf
         self._build_config()
-
-        prov_beaker_initiated.send(self)
 
     def _build_config(self):
         """Build beaker configuration for authentication.
@@ -314,14 +307,10 @@ class BeakerProvisioner(CarbonProvisioner):
         self.gen_bkr_xml()
 
         # submit beaker job xml and get beaker job id
-        prov_beaker_xml_submit_started.send(self)
         self.submit_bkr_xml()
-        prov_beaker_xml_submit_finished.send(self)
 
         # wait for the bkr job to be complete and return pass or failed
-        prov_beaker_wait_job_started.send(self)
         self.wait_for_bkr_job()
-        prov_beaker_wait_job_finished.send(self)
 
         # copy ssh key to remote system
         if self.host.bkr_ssh_key:

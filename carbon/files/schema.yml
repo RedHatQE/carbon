@@ -1,4 +1,4 @@
-# Schema file (schema.yaml)
+# Schema file (schema.yml)
 type: map
 mapping:
   name:

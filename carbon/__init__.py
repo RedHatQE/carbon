@@ -24,8 +24,6 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from .carbon import Carbon
-from .helpers import CustomDict
-from .resources import Scenario, Host, Action, Execute, Report
 
-__version__ = '0.5.0'
-__author__ = 'PIT Team Red Hat'
+__version__ = '0.6.0'
+__author__ = 'Red Hat Inc.'

@@ -26,7 +26,7 @@ import os
 import re
 
 CARBON_ROOT = os.path.join("/".join(os.path.dirname(__file__).split('/')[0:-2]))
-SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "files", "schema.yaml")
+SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "files", "schema.yml")
 ORCHESTRATE_PATH = os.path.join(os.path.dirname(__file__), "files", "orchestrate")
 
 TASKLIST = [
@@ -52,13 +52,11 @@ PROVISIONERS = {
     "openstack": "openstack"
 }
 
-LOGTYPE_CHOICES = ["file", "stream"]
-
 HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]
 
-STATUS_FILE = "status.yaml"
+STATUS_FILE = "status.yml"
 
-RESULTS_FILE = "results.yaml"
+RESULTS_FILE = "results.yml"
 
 # Rule for Carbon hosts naming convention
 RULE_HOST_NAMING = re.compile('[\W_]+')

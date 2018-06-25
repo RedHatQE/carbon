@@ -1,170 +1,115 @@
-Contributing
-============
+Welcome!
 
-This page provides you with helpful information regarding carbon development.
+The carbon development team welcomes your contributions to the project. Please
+use this document as a guide to working on proposed changes to carbon. We ask
+that you read through this document to ensure you understand our development
+model and best practices before submitting changes.
 
-Environment Setup
------------------
+Branch Model
+------------
 
-Carbon is written 100% in Python. We highly recommend that you use virtual
-environments so you can isolate system site packages from carbons required
-packages. Please follow the steps below to get carbon up and running in your
-local environment:
+The master branch is a protected branch. We do not allow commits directly to
+it. Master branch contains the latest stable release. The develop branch is
+where all active development takes place for the next upcoming release. All
+contributions are made to the develop branch.
 
-1. Create a virtual environment
+Most contributors create a new branch based off of develop to create their
+changes.
+
+How to setup your dev environment
+---------------------------------
+
+Lets first clone the source code. We will clone from the develop branch.
 
 .. code-block:: bash
-    :linenos:
 
-    $ virtualenv carbon
-    $ source carbon/bin/activate
+    $ git clone https://code.engineering.redhat.com/gerrit/p/carbon.git -b develop
 
-2. Install development packages. These packages are needed for running tests,
-building documentation, etc.
+Next lets create a Python virtual environment for carbon. This assumes you
+have virtualenv package installed.
 
 .. code-block:: bash
-    :linenos:
+
+    $ mkdir ~/.virtualenvs
+    $ virtualenv ~/.virtualenvs/carbon
+    $ source ~/.virtualenvs/carbon/bin/activate
+
+Now that we have our virtual environment created. Lets go ahead and install
+the Python packages used for development.
+
+.. code-block:: bash
 
     (carbon) $ pip install -r carbon/test-requirements.txt
 
-3. Install carbon using editable mode. This allows your local changes to take
-effect right away. Setuptools calls this "develop mode".
+Finally install the carbon package itself using editable mode.
 
 .. code-block:: bash
-    :linenos:
 
-    (carbon) $ pip install --editable .
+    (carbon) $ pip install -e carbon/.
 
-4. You now have carbon installed. You can run carbon from command line or a
-Python module.
+You can verify carbon is installed by running the following commands.
 
 .. code-block:: bash
-    :linenos:
 
     (carbon) $ carbon
     (carbon) $ carbon --version
 
-How to run Carbon
------------------
+How to run unit tests
+---------------------
 
-It is assumed that you have your environment setup and carbon installed. To
-run a scenario descriptor file, you can issue the following command below.
+Before any change is proposed to carbon. We ask that you run the unit tests
+and verify your change meets the pep8 standards set. If you forget to run
+these, we have a job that runs through these on any changes. This allows us to
+make sure each patch meets the standards.
 
-.. code-block:: bash
-    :linenos:
-
-    (carbon) $ carbon -v run -s /path/to/scenario/descriptor
-
-The command above will run through all tasks. If you wish to run a certain
-task you can declare that in your carbon command. Use the --help option to
-view the available tasks.
+You can run the unit tests and verify pep8 by the following command:
 
 .. code-block:: bash
-    :linenos:
 
-    (carbon) $ carbon -v run -s /path/to/scenario/descriptor --task validate
-
-How to run Carbon Functional Tests
-----------------------------------
-
-Carbon provides a Makefile which has targets for easily executing tests. To
-run the functional tests, issue the following command:
-
-.. code-block:: bash
-    :linenos:
-
-    (carbon) $ make
-    # -- or --
     (carbon) $ make test-functional
 
-Underneath the make target, it is actually executing a tox command. You could
-run the following if you only want to test a certain version of Python:
+This make target is actually executing the following tox environments:
 
 .. code-block:: bash
-    :linenos:
 
-    (carbon) $ tox -e py27-functional
-    # -- or --
-    (carbon) $ tox -e py36-functional
+    (carbon) $ tox -e py27
+    (carbon) $ tox -e py36
 
-How to run Carbon Integration Tests
------------------------------------
+How to build documentation
+--------------------------
 
-Carbon provides a Makefile which has targets for easily executing tests. To
-run the integration tests, issue the following command:
-
-.. code-block:: bash
-    :linenos:
-
-    (carbon) $ make test-integration
-
-Underneath the make target, it is actually executing a tox command. You could
-run the following if you only want to test a certain version of Python:
+If you are working on documentation changes, you probably will want to build
+the documentation locally. This way you can verify your change looks good. You
+can build the docs locally by running the following command:
 
 .. code-block:: bash
-    :linenos:
 
-    (carbon) $ tox -e py27-integration
-    # -- or --
-    (carbon) $ tox -e py36-integration
+    (carbon) $ make docs
 
-How to build Carbon Devel Container Image
------------------------------------------
+This make target is actually executing the following tox environments:
 
-Sometimes it may be useful to run carbon within a container. Carbon provides
-a dockerfile which defines all packages required for running carbon. The
-Makefile contains a target for building the image. To build a new image
-based on the source code cloned locally with devel tag. Run the following
+.. code-block:: bash
+
+    (carbon) $ tox -e docs
+
+How to propose a new change
+---------------------------
+
+The carbon project currently resides in Red Hat's internal gerrit server. We
+use this to handle our code reviews. When installing the test requirements, it
+will install the **git-review** package. This package is needed for proposing
+a new review.
+
+At the root of the project is a **.gitreview** file. You can see the file
+content below. It just defines the details where to push your review too.
+
+.. literalinclude:: ../.gitreview
+
+At this point you have your local development environment setup. You made some
+code changes, ran through the unit tests and pep8 validation. Your good to go!
+All that is left is to submit your change. You can do that by the following
 command:
 
 .. code-block:: bash
-    :linenos:
 
-    (carbon) $ make build-image-devel
-
-How to build Carbon Latest Container Image
-------------------------------------------
-
-Sometimes it may be useful to run carbon within a container. Carbon provides
-a dockerfile which defines all packages required for running carbon. The
-Makefile contains a target for building the image. To build a new image
-based on the source code cloned locally with latest tag. Run the following
-command:
-
-.. code-block:: bash
-    :linenos:
-
-    (carbon) $ make build-image-latest
-
-How to deploy Carbon Devel Container Image
-------------------------------------------
-
-To deploy your newly created carbon container image, you can run the
-following command to deploy to a remote registry.
-
-.. code-block:: bash
-    :linenos:
-
-    (carbon) $ make deploy-image-devel
-
-.. note::
-    You will be asked to provide username/password for authenticating to the
-    registry.
-
-How to deploy Carbon Latest Container Image
--------------------------------------------
-
-To deploy your newly created carbon container image, you can run the
-following command to deploy to a remote registry.
-
-.. code-block:: bash
-    :linenos:
-
-    (carbon) $ make deploy-image-latest
-
-.. note::
-    You will be asked to provide username/password for authenticating to the
-    registry.
-
-For any other questions regarding development of carbon, please feel free to
-reach out to any maintainers of the project.
+    (carbon) $ git review

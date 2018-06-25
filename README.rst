@@ -23,5 +23,4 @@ following:
 5. Run your tests (execute)
 6. Report the results (reports)
 
-To find out more about carbon and carbon's sub projects, please visit the
-documentation.
+To find out more about carbon please visit the sphinx documentation.

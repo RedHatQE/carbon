@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright (C) 2017 Red Hat, Inc.
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 """
-Carbon
-------
-
-Carbon is a framework that cares about product interoperability quality.
-
-Links
-`````
-
-* `website <https://mojo.redhat.com/groups/qe-product-interop-testing>`_
-
+Interoperability framework (codename 'carbon').
 """
 import os
 import re
@@ -25,23 +32,26 @@ def get_version():
     return VERSION_RE.search(init).group(1)
 
 
-def get_requirements():
-    with open(os.path.join(ROOT, 'requirements.txt')) as f:
-        return f.read()
-
-
 setup(
     name='carbon',
     version=get_version(),
-    url='https://mojo.redhat.com/groups/qe-product-interop-testing',
     license='GPLv3',
-    author='PIT Team Red Hat',
+    author='Red Hat Inc.',
     description='A framework to test product interoperability',
     long_description=__doc__,
     packages=find_packages(exclude=['tests*']),
     include_package_data=True,
     zip_safe=False,
-    install_requires=get_requirements(),
+    install_requires=[
+        'ansible>=2.5.0',
+        'apache-libcloud==2.2.0',
+        'blaster>=0.1.8',
+        'Click>=6.7',
+        'Flask>=0.12.2',
+        'Jinja2>=2.10',
+        'PyYAML>=3.12',
+        'pykwalify>=1.6.0'
+    ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -49,10 +59,6 @@ setup(
         'License :: OSI Approved :: GPLv3 License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
     entry_points={
