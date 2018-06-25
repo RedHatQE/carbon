@@ -40,6 +40,7 @@ tasks.
     architecture
     scenario_descriptor
     configuration
+    scenario_structure
     examples
     output
     development
