@@ -35,12 +35,11 @@ import blaster
 import os
 import yaml
 from flask.config import Config, ConfigAttribute
-##from flask.helpers import locked_cached_property, get_root_path
 
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, PipelineBuilder, TimeMixin
-from .helpers import file_mgmt, gen_random_str
+from .helpers import file_mgmt, gen_random_str, get_root_path
 from .resources import Scenario, Host, Action, Report, Execute
 
 # a lock used for logger initialization
@@ -222,7 +221,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         self._uid = gen_random_str(10)
 
         if root_path is None:
-            root_path = os.path.dirname(inspect.getfile(self.import_name))
+            root_path = get_root_path(self.import_name)
 
         # Where is the app root located? Calling the client will
         # always be the place where carbon is installed (site-packages)
