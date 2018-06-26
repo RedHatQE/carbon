@@ -275,8 +275,7 @@ def get_ansible_inventory_script(provider):
     from . import utils
 
     _script = '%s_inventory.py' % provider
-    #inventory = os.path.join(get_root_path(utils.__name__), _script)
-    inventory = os.path.join(os.path.dirname(inspect.getfile(utils.__name__)), _script)
+    inventory = os.path.join(get_root_path(utils.__name__), _script)
 
     # ensure the invetory file exists
     if not os.path.isfile(inventory):
