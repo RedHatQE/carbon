@@ -18,7 +18,8 @@
 """
     carbon.providers.digitalocean
 
-    Here you add brief description of what this module is about
+    Carbon's digitalocean provider module which contains all the necessary
+    classes and functions to process provider validation and requests.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.

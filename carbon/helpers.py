@@ -18,7 +18,8 @@
 """
     carbon.helpers
 
-    Here you add brief description of what this module is about
+    Module containing classes and functions which are generic and used
+    throughout the code base.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.

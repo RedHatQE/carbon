@@ -27,16 +27,28 @@ from ..core import CarbonTask
 
 
 class ProvisionTask(CarbonTask):
-    """The provision task object will call a provisioner to provision
-    resources in their declared provider.
-    """
+    """Provision task."""
     __task_name__ = 'provision'
 
     def __init__(self, msg, host, **kwargs):
+        """Constructor.
+
+        :param msg: Task message
+        :param host: Host reference
+        :param kwargs: Additional keyword arguments
+        """
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
-        self.provisioner = host.provisioner(host)
+
+        # create the provisioner object to create hosts
+        self.provisioner = getattr(host, 'provisioner')(host)
 
     def run(self):
+        """Run.
+
+        This method is the main entry point to the task.
+        """
         self.logger.info(self.msg)
+
+        # provision the host given in their declared provider
         self.provisioner.create()

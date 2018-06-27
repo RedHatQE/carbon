@@ -19,6 +19,10 @@
 """
     carbon.orchestrators._puppet
 
+    Carbon's puppet orchestrator module which contains all the necessary
+    classes to process puppet actions defined within the scenario descriptor
+    file.
+
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
