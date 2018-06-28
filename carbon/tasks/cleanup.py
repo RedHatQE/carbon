@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.tasks.teardown
+    carbon.tasks.cleanup
 
     Here you add brief description of what this module is about
 
@@ -31,10 +31,24 @@ class CleanupTask(CarbonTask):
     __task_name__ = 'cleanup'
 
     def __init__(self, msg, host, **kwargs):
+        """Constructor.
+
+        :param msg: Task message
+        :param host: Host reference
+        :param kwargs: Additional keyword arguments
+        """
         super(CleanupTask, self).__init__(**kwargs)
         self.msg = msg
-        self.provisioner = host.provisioner(host)
+
+        # create the provisioner object to delete hosts
+        self.provisioner = getattr(host, 'provisioner')(host)
 
     def run(self):
+        """Run.
+
+        This method is the main entry point to the task.
+        """
         self.logger.info(self.msg)
+
+        # delete the host given to the clean up task
         self.provisioner.delete()

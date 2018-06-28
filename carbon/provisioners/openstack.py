@@ -18,7 +18,8 @@
 """
     carbon.provisioners.openstack
 
-    Here you add brief description of what this module is about
+    Carbon's own OpenStack provisioner. This module handles everything from
+    authentication to creating/deleting resources in OpenStack.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.

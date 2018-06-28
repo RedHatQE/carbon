@@ -15,6 +15,16 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+"""
+    carbon.provisioners
+
+    Package containing carbon provisioner modules.
+
+    :copyright: (c) 2017 Red Hat, Inc.
+    :license: GPLv3, see LICENSE for more details.
+"""
+
 from .beaker import BeakerProvisioner
 from .openshift import OpenshiftProvisioner
 from .openstack import OpenstackProvisioner

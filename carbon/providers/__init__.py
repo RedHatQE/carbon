@@ -15,6 +15,16 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+"""
+    carbon.providers
+
+    Package containing carbon provider modules.
+
+    :copyright: (c) 2017 Red Hat, Inc.
+    :license: GPLv3, see LICENSE for more details.
+"""
+
 from .aws import AwsProvider
 from .beaker import BeakerProvider
 from .digitalocean import DigitalOceanProvider

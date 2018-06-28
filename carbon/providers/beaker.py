@@ -18,6 +18,9 @@
 """
     carbon.providers.beaker
 
+    Carbon's beaker provider module which contains all the necessary
+    classes and functions to process provider validation and requests.
+
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """

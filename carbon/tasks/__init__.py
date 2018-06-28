@@ -18,9 +18,12 @@
 """
     carbon.tasks
 
+    Package containing carbon task modules.
+
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+
 from .cleanup import CleanupTask
 from .execute import ExecuteTask
 from .orchestrate import OrchestrateTask

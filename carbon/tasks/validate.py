@@ -31,11 +31,22 @@ class ValidateTask(CarbonTask):
     __task_name__ = 'validate'
 
     def __init__(self, resource, **kwargs):
+        """Constructor.
+
+        :param resource: Resource reference
+        :param kwargs: Additional keyword arguments
+        """
         super(ValidateTask, self).__init__(**kwargs)
         self.resource = resource
 
     def run(self):
+        """Run.
+
+        This method is the main entry point to the task.
+        """
         self.logger.info(
             'Validating %s (%s)', self.resource.__class__, self.resource.name
         )
+
+        # validate the given resource
         self.resource.validate()

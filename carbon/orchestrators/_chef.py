@@ -19,6 +19,9 @@
 """
     carbon.orchestrators._chef
 
+    Carbon's chef orchestrator module which contains all the necessary classes
+    to process chef actions defined within the scenario descriptor file.
+
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """

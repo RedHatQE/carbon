@@ -18,9 +18,12 @@
 """
     carbon.resources
 
+    Package containing carbon resource modules.
+
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+
 from .actions import Action
 from .executes import Execute
 from .host import Host
