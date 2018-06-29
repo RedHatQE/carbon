@@ -33,12 +33,11 @@ import yaml
 
 from cached_property import threaded_cached_property
 from threading import Lock
-from flask.config import Config, ConfigAttribute
 
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, PipelineBuilder, TimeMixin
-from .helpers import file_mgmt, gen_random_str, get_root_path, locked_cached_property
+from .helpers import file_mgmt, gen_random_str, get_root_path, Config, ConfigAttribute
 from .resources import Scenario, Host, Action, Report, Execute
 
 # a lock used for logger initialization
