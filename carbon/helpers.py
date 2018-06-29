@@ -487,6 +487,7 @@ def filter_host_name(name):
     result = RULE_HOST_NAMING.sub('', name)
     return str(result[:20]).lower()
 
+
 def get_root_path(import_name):
     """Returns the path to a package or cwd if that cannot be found.  This
     returns the path of a package or the folder that contains a module.
@@ -531,30 +532,6 @@ def get_root_path(import_name):
     # filepath is import_name.py for a module, or __init__.py for a package.
     return os.path.dirname(os.path.abspath(filepath))
 
-class locked_cached_property(object):
-    """A decorator that converts a function into a lazy property.  The
-    function wrapped is called the first time to retrieve the result
-    and then that calculated result is used the next time you access
-    the value.  Works like the one in Werkzeug but has a lock for
-    thread safety.
-    """
-
-    def __init__(self, func, name=None, doc=None):
-        self.__name__ = name or func.__name__
-        self.__module__ = func.__module__
-        self.__doc__ = doc or func.__doc__
-        self.func = func
-        self.lock = RLock()
-
-    def __get__(self, obj, type=None):
-        if obj is None:
-            return self
-        with self.lock:
-            value = obj.__dict__.get(self.__name__, _missing)
-            if value is _missing:
-                value = self.func(obj)
-                obj.__dict__[self.__name__] = value
-            return value
 
 class ConfigAttribute(object):
     """Makes an attribute forward to the config"""
@@ -688,50 +665,3 @@ class Config(dict):
             if key.isupper():
                 self[key] = getattr(obj, key)
 
-    def from_json(self, filename, silent=False):
-        """Updates the values in the config from a JSON file. This function
-        behaves as if the JSON object was a dictionary and passed to the
-        :meth:`from_mapping` function.
-        :param filename: the filename of the JSON file.  This can either be an
-                         absolute filename or a filename relative to the
-                         root path.
-        :param silent: set to ``True`` if you want silent failure for missing
-                       files.
-        .. versionadded:: 0.11
-        """
-        filename = os.path.join(self.root_path, filename)
-
-        try:
-            with open(filename) as json_file:
-                obj = json.loads(json_file.read())
-        except IOError as e:
-            if silent and e.errno in (errno.ENOENT, errno.EISDIR):
-                return False
-            e.strerror = 'Unable to load configuration file (%s)' % e.strerror
-            raise
-        return self.from_mapping(obj)
-
-    def from_mapping(self, *mapping, **kwargs):
-        """Updates the config like :meth:`update` ignoring items with non-upper
-        keys.
-        .. versionadded:: 0.11
-        """
-        mappings = []
-        if len(mapping) == 1:
-            if hasattr(mapping[0], 'items'):
-                mappings.append(mapping[0].items())
-            else:
-                mappings.append(mapping[0])
-        elif len(mapping) > 1:
-            raise TypeError(
-                'expected at most 1 positional argument, got %d' % len(mapping)
-            )
-        mappings.append(kwargs.items())
-        for mapping in mappings:
-            for (key, value) in mapping:
-                if key.isupper():
-                    self[key] = value
-        return True
-
-    def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name__, dict.__repr__(self))
