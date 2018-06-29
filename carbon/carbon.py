@@ -234,10 +234,10 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         #    /etc/carbon/carbon.cfg
         #    ./carbon.cfg (location where carbon is run)
         #    export CARBON_SETTINGS = {} (environment variable)
-        self.config.from_pyfile('/etc/carbon/carbon.cfg', silent=True)
-        self.config.from_pyfile(os.path.join(os.getcwd(), 'carbon.cfg'),
+        self.config.from_file('/etc/carbon/carbon.cfg', silent=True)
+        self.config.from_file(os.path.join(os.getcwd(), 'carbon.cfg'),
                                 silent=True)
-        self.config.from_envvar('CARBON_SETTINGS', silent=True)
+        self.config.from_env_var('CARBON_SETTINGS', silent=True)
 
         # Set custom data folder, if data_folder is pass as parameter to Carbon
         if data_folder:
