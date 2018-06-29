@@ -23,15 +23,16 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import blaster
 import errno
+import os
 import shutil
 import sys
 import tempfile
-from threading import Lock
-
-import blaster
-import os
 import yaml
+
+from cached_property import thread_cached_property
+from threading import Lock
 from flask.config import Config, ConfigAttribute
 
 from . import __name__ as __carbon_name__
@@ -310,7 +311,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
         self.scenario = Scenario(config=self.config)
 
-    @locked_cached_property
+    @thread_cached_property
     def name(self):
         """The name of the application.  This is usually the import name
         with the difference that it's guessed from the run file if the
@@ -325,19 +326,19 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
             return os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
 
-    @locked_cached_property
+    @thread_cached_property
     def uid(self):
         return self._uid
 
-    @locked_cached_property
+    @thread_cached_property
     def data_folder(self):
         return self.config['DATA_FOLDER']
 
-    @locked_cached_property
+    @thread_cached_property
     def status_file(self):
         return os.path.join(self.data_folder, STATUS_FILE)
 
-    @locked_cached_property
+    @thread_cached_property
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
 
