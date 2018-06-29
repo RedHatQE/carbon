@@ -275,7 +275,7 @@ def get_ansible_inventory_script(provider):
     from . import utils
 
     _script = '%s_inventory.py' % provider
-    inventory = os.path.join(get_root_path(utils.__name__), _script)
+    inventory = os.path.join(get_module_path(utils.__name__), _script)
 
     # ensure the invetory file exists
     if not os.path.isfile(inventory):
@@ -488,7 +488,7 @@ def filter_host_name(name):
     return str(result[:20]).lower()
 
 
-def get_root_path(import_name):
+def get_module_path(import_name):
     """Returns the path to a package or cwd if that cannot be found.  This
     returns the path of a package or the folder that contains a module.
     Not to be confused with the package path returned by :func:`find_package`.
@@ -497,59 +497,59 @@ def get_root_path(import_name):
     mod = sys.modules.get(import_name)
     if mod is not None and hasattr(mod, '__file__'):
         return os.path.dirname(os.path.abspath(mod.__file__))
-
-    # Next attempt: check the loader.
-    loader = pkgutil.get_loader(import_name)
-
-    # Loader does not exist or we're referring to an unloaded main module
-    # or a main module without path (interactive sessions), go with the
-    # current working directory.
-    if loader is None or import_name == '__main__':
-        return os.getcwd()
-
-    # For .egg, zipimporter does not have get_filename until Python 2.7.
-    # Some other loaders might exhibit the same behavior.
-    if hasattr(loader, 'get_filename'):
-        filepath = loader.get_filename(import_name)
     else:
-        # Fall back to imports.
-        __import__(import_name)
-        mod = sys.modules[import_name]
-        filepath = getattr(mod, '__file__', None)
+        return os.getcwd()
+        
+    
+    ## Next attempt: check the loader.
+    #loader = pkgutil.get_loader(import_name)
 
-        # If we don't have a filepath it might be because we are a
-        # namespace package.  In this case we pick the root path from the
-        # first module that is contained in our package.
-        if filepath is None:
-            raise RuntimeError('No root path can be found for the provided '
-                               'module "%s".  This can happen because the '
-                               'module came from an import hook that does '
-                               'not provide file name information or because '
-                               'it\'s a namespace package.  In this case '
-                               'the root path needs to be explicitly '
-                               'provided.' % import_name)
+    ## Loader does not exist or we're referring to an unloaded main module
+    ## or a main module without path (interactive sessions), go with the
+    ## current working directory.
+    #if loader is None or import_name == '__main__':
+    #    return os.getcwd()
 
-    # filepath is import_name.py for a module, or __init__.py for a package.
-    return os.path.dirname(os.path.abspath(filepath))
+    ## For .egg, zipimporter does not have get_filename until Python 2.7.
+    ## Some other loaders might exhibit the same behavior.
+    #if hasattr(loader, 'get_filename'):
+    #    filepath = loader.get_filename(import_name)
+    #else:
+    #    # Fall back to imports.
+    #    __import__(import_name)
+    #    mod = sys.modules[import_name]
+    #    filepath = getattr(mod, '__file__', None)
+
+    #    # If we don't have a filepath it might be because we are a
+    #    # namespace package.  In this case we pick the root path from the
+    #    # first module that is contained in our package.
+    #    if filepath is None:
+    #        raise RuntimeError('No root path can be found for the provided '
+    #                           'module "%s".  This can happen because the '
+    #                           'module came from an import hook that does '
+    #                           'not provide file name information or because '
+    #                           'it\'s a namespace package.  In this case '
+    #                           'the root path needs to be explicitly '
+    #                           'provided.' % import_name)
+
+    ## filepath is import_name.py for a module, or __init__.py for a package.
+    #return os.path.dirname(os.path.abspath(filepath))
 
 
 class ConfigAttribute(object):
-    """Makes an attribute forward to the config"""
+    """Connect attribute to the config"""
 
-    def __init__(self, name, get_converter=None):
+    def __init__(self, name):
         self.__name__ = name
-        self.get_converter = get_converter
 
-    def __get__(self, obj, type=None):
-        if obj is None:
+    def __get__(self, att, type=None):
+        if att is None:
             return self
-        rv = obj.config[self.__name__]
-        if self.get_converter is not None:
-            rv = self.get_converter(rv)
-        return rv
+        val = att.config[self.__name__]
+        return val
 
-    def __set__(self, obj, value):
-        obj.config[self.__name__] = value
+    def __set__(self, att, value):
+        att.config[self.__name__] = value
 
 
 class Config(dict):
