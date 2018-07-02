@@ -489,11 +489,8 @@ def filter_host_name(name):
 
 
 def get_module_path(import_name):
-    """Returns the path to a package or cwd if that cannot be found.  This
-    returns the path of a package or the folder that contains a module.
-    Not to be confused with the package path returned by :func:`find_package`.
-    """
-    # Module already imported and has a file attribute.  Use that first.
+    """Returns path to module or cwd if module cannot be found."""
+    # Module exists and has a file attribute.
     mod = sys.modules.get(import_name)
     if mod is not None and hasattr(mod, '__file__'):
         return os.path.dirname(os.path.abspath(mod.__file__))
@@ -502,7 +499,7 @@ def get_module_path(import_name):
 
         
 class ConfigAttribute(object):
-    """Connect attribute to the config"""
+    """Connect attribute to the configuration in config"""
 
     def __init__(self, name):
         self.__name__ = name
@@ -520,7 +517,7 @@ class ConfigAttribute(object):
 class Config(dict):
     """Config dict that is loaded from file or environment variable
     pointing to a file.
-    :param root_path: path files are read relative from.
+    :param root_path: path files are read relative from
     :param defaults: optional dictionary of default values
     """
 
@@ -528,28 +525,28 @@ class Config(dict):
         dict.__init__(self, defaults or {})
         self.root_path = root_path
 
-    def from_env_var(self, variable_name, quiet=False):
+    def from_env_var(self, env_var_name, quiet=False):
         """Loads configuration from an environment variable
-        that is pointing to a configuration file.
-        :param variable_name: environment variable name
+        Environment variable specifies a configuration file.
+        :param env_var_name: environment variable name
         :param quiet: bool. ``True``  quiet failure for missing files.
                             ``False`` error thrown on issues
         :return: bool. ``True``  successful load of config
                        ``False`` unable to load config
         """
-        rv = os.environ.get(variable_name)
-        if not rv:
+        val = os.environ.get(env_var_name)
+        if not val:
             if quiet:
                 return False
             raise RuntimeError('The environment variable %r is not set ' %
-                               variable_name)
-        return self.from_file(rv, quiet=quiet)
+                               env_var_name)
+        return self.from_file(val, quiet=quiet)
 
     def from_file(self, filename, quiet=False):
         """Loads/Updates the values in config from a file.
-        :param filename: filename of the config.  This can either be an
-                         absolute filename or a filename relative to the
-                         root path.
+        :param filename: filename of the config.  Either an
+                         absolute filename or a filename
+                         relative to the root path.
         :param quiet: bool. ``True``  quiet failure for missing files
                             ``False`` error thrown on issues                       
         """
@@ -572,9 +569,9 @@ class Config(dict):
     def from_object(self, obj):
         """Updates the values of config from the given object.
         Object can be of one of the following two types:
-        -   a string: in this case the object with that name will be imported
-        -   an actual object reference: that object is used directly
-        loads only the uppercase attributes of the module/class. 
+        -   a string: the object with that name will be imported
+        -   an object reference: object is used directly
+        loads only uppercase attributes of the module/class. 
         :param obj: an import name or object
         """
         if isinstance(obj, string_types):
