@@ -1,9 +1,0 @@
----
-
-- hosts: "{{ hosts }}"
-
-  tasks:
-    - name: Clone tests to target systems 
-      git:
-        repo: "{{ test_repo }}"
-        dest: "{{ dest }}"

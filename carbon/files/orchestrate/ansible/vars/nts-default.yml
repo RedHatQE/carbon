@@ -1,6 +1,0 @@
-# Default variable Settings
-nts_dft_prc: ntp
-nts_dft_deamon: ntpd
-nts_alt_prc: chrony
-nts_alt_deamon: chronyd
-

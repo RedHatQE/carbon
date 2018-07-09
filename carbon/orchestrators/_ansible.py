@@ -42,7 +42,6 @@ from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
 
-from ..constants import ORCHESTRATE_PATH
 from .._compat import RawConfigParser
 from ..core import CarbonOrchestrator, CarbonOrchestratorError
 
@@ -467,59 +466,34 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         """
         raise NotImplementedError
 
-    def _find_playbook(self, path, name):
+    def _find_playbook(self, path):
+        """fn to see if a playbook exists and to set the path of it
+        :param path: path to search for playbooks
+        """
         for item in os.listdir(path):
             filename, extension = os.path.splitext(item)
             if filename == self.action and extension in ['.yml', '.yaml']:
                 self.action_abs = os.path.join(path, item)
                 self.logger.info(
-                    'Playbook found within %s defined directory for action: %s'
-                    ' @ %s' % (name, self.action, self.action_abs)
+                    'Playbook found for action: %s @ %s' %
+                    (self.action, self.action_abs)
                 )
                 return
         self.logger.warning(
-            'Playbook not found within %s defined directory for action: %s @ '
-            '%s' % (name, self.action, path)
+            'Playbook not found for action: %s @ '
+            '%s' % (self.action, path)
         )
 
-    def _locate_action(self, name='common'):
-        """Locate the action's playbook. (child)
+    def find_playbook(self):
+        """Find the action's playbook (parent).
 
-        This method will attempt to find the action playbook at two
-        directories: 1. common directory (current working directory)
-        2. user defined directory.
-
-        :param name: type of location for orchestrator files
+        See _find_playbook doc string for more details.
         """
-        # placeholder
-        path = str
 
-        # determine the file path
-        if name == 'common':
-            path = os.path.join(ORCHESTRATE_PATH, self.name)
-        elif name == 'user':
-            path = os.path.join(getattr(self, 'config')['DATA_FOLDER'],
-                                'assets', self.name)
-
-        # return if the directory does not exist
-        if not os.path.isdir(path):
-            self.logger.warn('Unable to locate a %s ansible orchestrator '
-                             'scripts directory.' % name)
-            return
-
-        # find the playbook for the action under the given path
-        self._find_playbook(path, name)
-
-    def locate_action(self):
-        """Locate the action's playbook. (parent).
-
-        See _locate_action doc string for more details.
-        """
-        # locate the action playbook in common directory
-        self._locate_action('common')
-
-        # locate the action playbook in the user defined directory
-        self._locate_action('user')
+        # set the path of the playbook
+        path = os.path.join(getattr(self, 'config')['DATA_FOLDER'],
+                            'assets', self.name)
+        self._find_playbook(path)
 
         # quit if no playbook was found for the given action
         if self.action_abs is None:
@@ -537,9 +511,8 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         """
         # For the first implementation or ansible orchestrator, we are focused
         # solely on playbooks. Since each action's name key defines the
-        # item to run. We need to determine if the item is a common one
-        # supplied by carbon or custom to the scenario run by carbon.
-        self.locate_action()
+        # item to run, we need to verify it is available.
+        self.find_playbook()
 
         # lets create the ansible inventory file to run the given action on
         # its associated hosts

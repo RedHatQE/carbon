@@ -29,7 +29,6 @@ import re
 
 CARBON_ROOT = os.path.join("/".join(os.path.dirname(__file__).split('/')[0:-2]))
 SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "files", "schema.yml")
-ORCHESTRATE_PATH = os.path.join(os.path.dirname(__file__), "files", "orchestrate")
 
 TASKLIST = [
     "validate",

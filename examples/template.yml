@@ -117,7 +117,6 @@ orchestrate:
         - testclient01
         - testclient02
 
-  # common playbook to execute
   - name: rhn_subscribe                         # action name (playbook name) (filename only, exclude file extension)
     orchestrator: ansible                       # orchestrator module to use in this case ansible
     hosts:                                      # hosts which the action is executed on
