@@ -24,7 +24,6 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import errno
 import inspect
 import json
 import os
@@ -34,14 +33,13 @@ import stat
 import string
 import subprocess
 import sys
-import types
 from logging import getLogger
-from threading import RLock
+
 import jinja2
 import requests
 import yaml
+from flask.helpers import get_root_path
 
-from werkzeug.utils import import_string
 from ._compat import string_types
 from .constants import PROVISIONERS, RULE_HOST_NAMING
 
@@ -276,7 +274,7 @@ def get_ansible_inventory_script(provider):
     from . import utils
 
     _script = '%s_inventory.py' % provider
-    inventory = os.path.join(get_module_path(utils.__name__), _script)
+    inventory = os.path.join(get_root_path(utils.__name__), _script)
 
     # ensure the invetory file exists
     if not os.path.isfile(inventory):
@@ -487,97 +485,3 @@ def filter_host_name(name):
     """
     result = RULE_HOST_NAMING.sub('', name)
     return str(result[:20]).lower()
-
-
-def get_module_path(import_name):
-    """Returns path to module or cwd if module cannot be found."""
-    # Module exists and has a file attribute.
-    mod = sys.modules.get(import_name)
-    if mod is not None and hasattr(mod, '__file__'):
-        return os.path.dirname(os.path.abspath(mod.__file__))
-    else:
-        return os.getcwd()
-
-        
-class ConfigAttribute(object):
-    """Connect attribute to the configuration in config"""
-
-    def __init__(self, name):
-        self.__name__ = name
-
-    def __get__(self, att, type=None):
-        if att is None:
-            return self
-        val = att.config[self.__name__]
-        return val
-
-    def __set__(self, att, value):
-        att.config[self.__name__] = value
-
-
-class Config(dict):
-    """Config dict that is loaded from file or environment variable
-    pointing to a file.
-    :param root_path: path files are read relative from
-    :param defaults: optional dictionary of default values
-    """
-
-    def __init__(self, root_path, defaults=None):
-        dict.__init__(self, defaults or {})
-        self.root_path = root_path
-
-    def from_env_var(self, env_var_name, quiet=False):
-        """Loads configuration from an environment variable
-        Environment variable specifies a configuration file.
-        :param env_var_name: environment variable name
-        :param quiet: bool. ``True``  quiet failure for missing files.
-                            ``False`` error thrown on issues
-        :return: bool. ``True``  successful load of config
-                       ``False`` unable to load config
-        """
-        val = os.environ.get(env_var_name)
-        if not val:
-            if quiet:
-                return False
-            raise RuntimeError('The environment variable %r is not set ' %
-                               env_var_name)
-        return self.from_file(val, quiet=quiet)
-
-    def from_file(self, filename, quiet=False):
-        """Loads/Updates the values in config from a file.
-        :param filename: filename of the config.  Either an
-                         absolute filename or a filename
-                         relative to the root path.
-        :param quiet: bool. ``True``  quiet failure for missing files
-                            ``False`` error thrown on issues                       
-        """
-        filename = os.path.join(self.root_path, filename)
-        d = types.ModuleType('config')
-        d.__file__ = filename
-        try:
-            with open(filename, mode='rb') as config_file:
-                exec(compile(config_file.read(), filename, 'exec'), d.__dict__)
-        except IOError as e:
-            if quiet and e.errno in (
-                errno.ENOENT, errno.EISDIR, errno.ENOTDIR
-            ):
-                return False
-            e.strerror = 'Unable to load configuration file (%s)' % e.strerror
-            raise
-        self.from_object(d)
-        return True
-
-    def from_object(self, obj):
-        """Updates the values of config from the given object.
-        Object can be of one of the following two types:
-        -   a string: the object with that name will be imported
-        -   an object reference: object is used directly
-        loads only uppercase attributes of the module/class. 
-        :param obj: an import name or object
-        """
-        if isinstance(obj, string_types):
-            obj = import_string(obj)
-        for key in dir(obj):
-            if key.isupper():
-                self[key] = getattr(obj, key)
-

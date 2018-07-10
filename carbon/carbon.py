@@ -23,21 +23,22 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import blaster
 import errno
-import os
 import shutil
 import sys
 import tempfile
-import yaml
-
-from cached_property import threaded_cached_property
 from threading import Lock
+
+import blaster
+import os
+import yaml
+from flask.config import Config, ConfigAttribute
+from flask.helpers import locked_cached_property, get_root_path
 
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, PipelineBuilder, TimeMixin
-from .helpers import file_mgmt, gen_random_str, get_module_path, Config, ConfigAttribute
+from .helpers import file_mgmt, gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
 
 # a lock used for logger initialization
@@ -204,7 +205,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         self._uid = gen_random_str(10)
 
         if root_path is None:
-            root_path = get_module_path(self.import_name)
+            root_path = get_root_path(self.import_name)
 
         # Where is the app root located? Calling the client will
         # always be the place where carbon is installed (site-packages)
@@ -219,10 +220,10 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         #    /etc/carbon/carbon.cfg
         #    ./carbon.cfg (location where carbon is run)
         #    export CARBON_SETTINGS = {} (environment variable)
-        self.config.from_file('/etc/carbon/carbon.cfg', quiet=True)
-        self.config.from_file(os.path.join(os.getcwd(), 'carbon.cfg'),
-                                quiet=True)
-        self.config.from_env_var('CARBON_SETTINGS', quiet=True)
+        self.config.from_pyfile('/etc/carbon/carbon.cfg', silent=True)
+        self.config.from_pyfile(os.path.join(os.getcwd(), 'carbon.cfg'),
+                                silent=True)
+        self.config.from_envvar('CARBON_SETTINGS', silent=True)
 
         # Set custom data folder, if data_folder is pass as parameter to Carbon
         if data_folder:
@@ -295,7 +296,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
         self.scenario = Scenario(config=self.config)
 
-    @threaded_cached_property
+    @locked_cached_property
     def name(self):
         """The name of the application.  This is usually the import name
         with the difference that it's guessed from the run file if the
@@ -310,19 +311,19 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
             return os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
 
-    @threaded_cached_property
+    @locked_cached_property
     def uid(self):
         return self._uid
 
-    @threaded_cached_property
+    @locked_cached_property
     def data_folder(self):
         return self.config['DATA_FOLDER']
 
-    @threaded_cached_property
+    @locked_cached_property
     def status_file(self):
         return os.path.join(self.data_folder, STATUS_FILE)
 
-    @threaded_cached_property
+    @locked_cached_property
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
 
