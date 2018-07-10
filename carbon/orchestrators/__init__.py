@@ -16,6 +16,15 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+    carbon.orchestrators
+
+    Package containing carbon orchestrator modules.
+
+    :copyright: (c) 2017 Red Hat, Inc.
+    :license: GPLv3, see LICENSE for more details.
+"""
+
 from ._ansible import AnsibleOrchestrator
 from ._chef import ChefOrchestrator
 from ._puppet import PuppetOrchestrator

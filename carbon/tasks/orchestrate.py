@@ -32,10 +32,17 @@ class OrchestrateTask(CarbonTask):
     __concurrent__ = False
 
     def __init__(self, msg, package, **kwargs):
+        """Constructor.
+
+        :param msg: Task message
+        :param package: Package reference
+        :param kwargs: Additional keyword arguments
+        """
         super(OrchestrateTask, self).__init__(**kwargs)
         self.msg = msg
+
         # create the orchestrator object
-        self.orchestrator = package.orchestrator_cls(
+        self.orchestrator = getattr(package, 'orchestrator_cls')(
             package.name,
             package.hosts,
             vars=package.vars,
@@ -44,5 +51,11 @@ class OrchestrateTask(CarbonTask):
         )
 
     def run(self):
+        """Run.
+
+        This method is the main entry point to the task.
+        """
         self.logger.info(self.msg)
+
+        # run the configuration with the given orchestrator
         self.orchestrator.run()

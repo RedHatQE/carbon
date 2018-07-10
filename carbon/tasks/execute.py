@@ -32,8 +32,17 @@ class ExecuteTask(CarbonTask):
     __concurrent__ = False
 
     def __init__(self, msg, **kwargs):
+        """Constructor.
+
+        :param msg: Task message
+        :param kwargs: Additional keyword arguments
+        """
         super(ExecuteTask, self).__init__(**kwargs)
         self.msg = msg
 
     def run(self):
+        """Run.
+
+        This method is the main entry point to the task.
+        """
         self.logger.info(self.msg)

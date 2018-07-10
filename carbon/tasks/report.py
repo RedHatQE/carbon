@@ -31,8 +31,17 @@ class ReportTask(CarbonTask):
     __task_name__ = 'report'
 
     def __init__(self, msg, **kwargs):
+        """Constructor.
+
+        :param msg: Task message
+        :param kwargs: Additional keyword arguments
+        """
         super(ReportTask, self).__init__(**kwargs)
         self.msg = msg
 
     def run(self):
+        """Run.
+
+        This method is the main entry point to the task.
+        """
         self.logger.debug(self.msg)

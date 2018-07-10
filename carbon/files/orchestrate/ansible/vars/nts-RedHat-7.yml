@@ -1,6 +1,0 @@
-# Rhel 7 variable settings
-nts_dft_prc: chrony
-nts_dft_deamon: chronyd
-nts_alt_prc: ntp
-nts_alt_deamon: ntpd
-

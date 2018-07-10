@@ -9,9 +9,6 @@ test-all: test-functional
 test-functional:
 	tox -e py27,py36
 
-release:
-	python scripts/make-release.py
-
 clean:
 	rm -rf *.egg
 	rm -rf *.egg-info

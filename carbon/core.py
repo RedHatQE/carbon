@@ -18,6 +18,9 @@
 """
     carbon.core
 
+    Module containing the core classes which carbon resources, tasks,
+    providers, provisioners, etc inherit.
+
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """

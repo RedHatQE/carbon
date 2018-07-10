@@ -44,6 +44,13 @@ pipeline {
                         }
                     }
                 }
+                stage('Tox Docs') {
+                    steps {
+                        dir('carbon') {
+                            sh 'tox -e docs'
+                        }
+                    }
+                }
             }
         }
     }

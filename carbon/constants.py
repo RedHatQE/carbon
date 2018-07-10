@@ -18,6 +18,8 @@
 """
     carbon.constants
 
+    A module containing all constants used throughout the carbon code base.
+
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 
@@ -27,7 +29,6 @@ import re
 
 CARBON_ROOT = os.path.join("/".join(os.path.dirname(__file__).split('/')[0:-2]))
 SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "files", "schema.yml")
-ORCHESTRATE_PATH = os.path.join(os.path.dirname(__file__), "files", "orchestrate")
 
 TASKLIST = [
     "validate",

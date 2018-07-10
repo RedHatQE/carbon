@@ -1,8 +1,0 @@
-    # Stop firewall (firewalld)
-    - name: firewalld stop
-      shell: systemctl stop firewalld
-
-    # Disable so not to start on boot
-    - name: firewalld disable
-      shell: systemctl disable firewalld
-

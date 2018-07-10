@@ -18,7 +18,7 @@
 """
     carbon
 
-    Here you add brief description of what this module is about
+    Carbon a framework to test product interoperability.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
@@ -172,15 +172,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
     # 2. Access to config values through attributes in addition to keys.
     config_class = Config
 
-    # The debug flag.  Set this to ``True`` to enable debugging of the
-    # application.  In debug mode the debugger will kick in when an unhandled
-    # exception occurs and the integrated server will automatically reload
-    # the application if changes in the code are detected.
-    #
-    # This attribute can also be configured from the config with the ``DEBUG``
-    # configuration key.  Defaults to ``False``.
-    debug = ConfigAttribute('DEBUG')
-
     # The name of the logger to use.  By default the logger name is the
     # package name passed to the constructor.
     logger_name = ConfigAttribute('LOGGER_NAME')
@@ -193,20 +184,14 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
     # ``info``.
     log_level = ConfigAttribute('LOG_LEVEL')
 
-    # If a secret key is set, cryptographic components can use this to
-    # sign messages and other things.
-    secret_key = ConfigAttribute('SECRET_KEY')
-
     # set a workspace folder, for where files will be updated
     data_folder = ConfigAttribute('DATA_FOLDER')
 
     # Default configuration parameters.
     default_config = {
-        'DEBUG': False,
         'DATA_FOLDER': tempfile.gettempdir(),
         'LOGGER_NAME': __carbon_name__,
         'LOG_LEVEL': 'info',
-        'SECRET_KEY': 'secret-key'
     }
 
     def __init__(self, import_name, root_path=None, log_level=None,

@@ -138,13 +138,12 @@ Create
 ------
 
 The create command provides a helper for dynamically creating your scenario
-descriptor.
+descriptor.  This command is currently not implemented.
 
 Validate
 --------
 
-The validate command validates the scenario descriptor. This command is
-currently not implemented.
+The validate command validates the scenario descriptor.
 
 .. code-block:: bash
 
@@ -158,4 +157,5 @@ currently not implemented.
       -d, --data-folder               Scenario workspace path.
       --log-level [debug|info|warning|error|critical]
                                       Select logging level. (default=info)
+      -a, --assets-path               Scenario workspace path.
       --help                          Show this message and exit.
