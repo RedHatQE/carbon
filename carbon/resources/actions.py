@@ -18,7 +18,8 @@
 """
     carbon.resources.actions
 
-    Here you add brief description of what this module is about
+    Module used for building carbon action compounds. An action's main goal
+    is to perform some sort of work.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
@@ -27,7 +28,7 @@
 import os
 
 from .._compat import string_types
-from ..constants import DEFAULT_ORCHESTRATOR
+from ..constants import ORCHESTRATOR
 from ..core import CarbonResource, CarbonResourceError
 from ..helpers import fetch_hosts, get_orchestrator_class, \
     get_orchestrators_list
@@ -41,109 +42,132 @@ class CarbonActionError(CarbonResourceError):
         """Constructor.
 
         :param message: Details about the error.
+        :type message: str
         """
         self.message = message
         super(CarbonActionError, self).__init__(message)
 
 
 class Action(CarbonResource):
+    """
+    The action resource class. The carbon compound can contain x amount of
+    actions. Their primary responsibility is to do some sort of work. Actions
+    can handle any sort of task to be processed. Most of the time you will
+    see actions consisting of the following:
+        - System configuration
+        - Product installation/configuration
+        - Test setup (test framework installation/configuration)
+
+    Each action has an associated orchestrator. The orchestrator is what
+    processes (completes) the given action.
+    """
 
     _valid_tasks_types = ['validate', 'orchestrate']
-    _fields = [
-        'name',
-        'hosts',
-        'vars',
-    ]
+    _fields = ['name', 'hosts']
 
     def __init__(self,
                  config=None,
                  name=None,
-                 parameters={},
+                 parameters=dict,
                  validate_task_cls=ValidateTask,
                  orchestrate_task_cls=OrchestrateTask,
                  **kwargs):
+        """Constructor.
 
+        The primary focus of the constructor is to build the action object
+        containing all necessary parts to process the action.
+
+        :param config: carbon configuration
+        :type config: dict
+        :param name: action resource name
+        :type name: str
+        :param parameters: content which makes up the action resource
+        :type parameters: dict
+        :param validate_task_cls: carbons validate task class
+        :type validate_task_cls: object
+        :param orchestrate_task_cls: carbons orchestrate task class
+        :type orchestrate_task_cls: object
+        :param kwargs: additional key:value(s)
+        :type kwargs: dict
+        """
         super(Action, self).__init__(config=config, name=name, **kwargs)
 
-        # Every action is REQUIRED to have a name. The name for each action
-        # is the actual action to be executed. i.e. an ansible action's name
-        # is the name of the module or playbook to be executed. This cannot
-        # be null, user needs to set this.
+        # set the action resource name
         if name is None:
             self._name = parameters.pop('name', None)
             if self._name is None:
-                raise CarbonActionError('All actions require a name!')
+                raise CarbonActionError('Unable to build action object. Name'
+                                        ' field missing!')
         else:
             self._name = name
 
-        # Every action object will have 'x' number of hosts associated with
-        # it. Every action is also going to have an orchestrator associated
-        # to it. Each orchestrator will require different configuration for
-        # connecting to the remote host(s). Once defined the orchestrator can
-        # execute the given action against the remote host(s). Most
-        # orchestrator's are going to require an IP address and authentication
-        # details (SSH) to connect to host(s).
-
-        # Lets associate the list of hosts for the action to the action
-        # object itself. Don't worry these hosts are currently strings. When
-        # carbon goes to build the pipeline it does a lookup and gets the
-        # actual host object from the scenario including all the required
-        # information. i.e. IP address, SSH keys, etc..
+        # each action will have x number of hosts associated to it. lets
+        # associate the list of hosts to the action object itself. currently
+        # the hosts are strings, when carbon builds the pipeline, they will
+        # be updated with their corresponding host object.
         self.hosts = parameters.pop('hosts')
         if self.hosts is None:
-            raise CarbonActionError('An action must have hosts associated '
-                                    'to it.')
+            raise CarbonActionError('Unable to associate hosts to action: %s.'
+                                    'No hosts defined!' % self._name)
 
-        # Hosts can be in the form of either string or list defined by the
-        # user. lets convert the hosts into a list if in string format
+        # convert the hosts into list format if hosts defined as str format
         if isinstance(self.hosts, string_types):
             self.hosts = self.hosts.replace(' ', '').split(',')
 
-        # We must have an orchestrator set for each action, default=ansible
-        orchestrator_param = parameters.pop(
-            'orchestrator',
-            DEFAULT_ORCHESTRATOR
-        )
-        if orchestrator_param not in get_orchestrators_list():
-            raise CarbonActionError('Invalid orchestrator: %s for action %s.'
-                                    % (orchestrator_param, str(self.name)))
+        # every action has a mandatory orchestrator, lets set it
+        orchestrator = parameters.pop('orchestrator', ORCHESTRATOR)
+        if orchestrator not in get_orchestrators_list():
+            raise CarbonActionError('Orchestrator: %s is not supported!' %
+                                    orchestrator)
 
-        # We need to get the orchestrator class
-        self._orchestrator_cls = get_orchestrator_class(orchestrator_param)
+        # now that we know the orchestrator, lets get the class
+        self._orchestrator = get_orchestrator_class(orchestrator)
 
-        # Lets update the parameters to include a vars key if none exists.
-        # It is possible that some actions may not require variables.
-        if 'vars' not in parameters:
-            parameters['vars'] = dict()
+        # create the orchestrator attributes in the action object
+        for p in getattr(self.orchestrator, 'get_all_parameters')():
+            setattr(self, p, parameters.get(p, None))
 
+        # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
         self._orchestrate_task_cls = orchestrate_task_cls
 
+        # reload construct task methods
         self.reload_tasks()
 
+        # load the parameters set into the object itself
         if parameters:
             self.load(parameters)
 
     @property
-    def orchestrator_cls(self):
-        return self._orchestrator_cls
+    def orchestrator(self):
+        """Orchestrator property.
 
-    @orchestrator_cls.setter
-    def orchestrator_cls(self, value):
+        :return: orchestrator class object
+        :rtype: object
+        """
+        return self._orchestrator
+
+    @orchestrator.setter
+    def orchestrator(self, value):
+        """Set orchestrator property."""
         raise AttributeError('Orchestrator class property cannot be set.')
 
     def profile(self):
-        """Builds a profile for the action.
+        """Builds a profile for the action resource.
 
         :return: the action profile
+        :rtype: dict
         """
-        profile = dict(
-            name=self.name,
-            orchestrator=self.orchestrator_cls.__orchestrator_name__,
-            vars=getattr(self, 'vars')
-        )
+        # initialize the profile with orchestrator properties
+        profile = getattr(self.orchestrator, 'build_profile')(self)
 
-        # build the hosts key
+        # set additional action properties
+        profile.update({
+            'name': self.name,
+            'orchestrator': getattr(self.orchestrator, '__orchestrator_name__')
+        })
+
+        # set the action's hosts
         if all(isinstance(item, string_types) for item in self.hosts):
             profile.update(hosts=[host for host in self.hosts])
         else:
@@ -152,53 +176,57 @@ class Action(CarbonResource):
         return profile
 
     def get_assets_list(self, hosts):
-        """Get the assets for the action.
+        """Return all assets for the action resource.
 
-        Every action has an associated orchestrator. Each orchestrator will
-        have a directory with the name of the orchestrator where all its
-        files will be stored. These files will be copied to carbon's data
-        folder at run time which then the orchestrator will read from that
-        location.
-
-        This method will build the assets for the action
-        This method will build the assets for the action including the
-        following:
-            - orchestrator files directory
-            - any orchestrator parameter assets defined in each host
-                - i.e.
-                    - hosts:
-                        ansible_params:
-                            ansible_ssh_private_key: private_key
+        Action assets may consist of the following:
+            - orchestrator files (directory)
+            - orchestrator parameters assets defined in each host
 
         :param hosts: list of host objects associated to the action
             reference: carbon.resources.scenario.get_assets_list()
-        :return: list of the actions assets
+        :return: action assets
+        :rtype: list
         """
+        orchestrator = getattr(self.orchestrator, '__orchestrator_name__')
+
         # initialize empty assets list
         assets = list()
 
         # append the orchestrator files directory
         path = os.path.join(
             self.config['ASSETS_PATH'],
-            self.orchestrator_cls.__orchestrator_name__
+            getattr(self.orchestrator, '__orchestrator_name__')
         )
 
         if os.path.exists(path):
-            assets.append(self.orchestrator_cls.__orchestrator_name__)
+            assets.append(orchestrator)
 
         # append host orchestrator parameters for the action
         hosts = fetch_hosts(hosts, dict(package=self), all_hosts=True)
         for host in hosts['package'].hosts:
-            field = '%s_params' % self.orchestrator_cls.__orchestrator_name__
+            field = '%s_params' % orchestrator
             if not hasattr(host, field):
                 continue
-            for asset in getattr(self.orchestrator_cls, '_assets_parameters'):
+            for asset in getattr(self.orchestrator, '_assets_parameters'):
                 params = getattr(host, field)
                 if asset in params and params[asset]:
                     assets.append(getattr(host, field)[asset])
+
+        # append role_file (if set)
+        galaxy_options = getattr(self, '%s_galaxy_options' % orchestrator)
+        if galaxy_options is not None:
+            for element in galaxy_options:
+                if 'role_file' in element:
+                    assets.append(galaxy_options[element])
+
         return assets
 
     def _construct_validate_task(self):
+        """Constructs the validate task associated to the action resource.
+
+        :returns: validate task definition
+        :rtype: dict
+        """
         task = {
             'task': self._validate_task_cls,
             'name': str(self.name),
@@ -208,8 +236,10 @@ class Action(CarbonResource):
         return task
 
     def _construct_orchestrate_task(self):
-        """
-        Used to create the create attribute by the Host constructor.
+        """Constructs the orchestrate task associated to the action.
+
+        :return: orchestrate task definition
+        :rtype: dict
         """
         task = {
             'task': self._orchestrate_task_cls,

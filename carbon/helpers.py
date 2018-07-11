@@ -304,7 +304,6 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
         processed is a configuration file parser language)
     :type cfg_parser: bool
     :return: Data that was read from a file
-    :rtype: object
     """
 
     # Determine file extension

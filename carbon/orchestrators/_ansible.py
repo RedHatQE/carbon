@@ -34,6 +34,8 @@ from os import remove
 from os.path import isfile
 from uuid import uuid4
 
+from ansible.cli.galaxy import GalaxyCLI
+from ansible.errors import AnsibleError
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.inventory.manager import InventoryManager
@@ -42,8 +44,9 @@ from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
 
-from .._compat import RawConfigParser
-from ..core import CarbonOrchestrator, CarbonOrchestratorError
+from .._compat import RawConfigParser, urlparse
+from ..core import CarbonOrchestrator, CarbonOrchestratorError, LoggerMixin
+from ..helpers import file_mgmt
 
 
 class CarbonCallback(CallbackBase):
@@ -418,6 +421,133 @@ class Inventory(object):
                 remove(item)
 
 
+class Role(LoggerMixin):
+    """
+    This class handles requests given to carbon to make use of ansible roles
+    defined by its input.
+    """
+
+    def __init__(self, action):
+        """Constructor.
+
+        Creates galaxy cli object and sets its default optons.
+
+        :param action: galaxy action to process
+        :type action: str
+        """
+        self.cli = GalaxyCLI(args=[action])
+        self.cli.parse()
+
+    @staticmethod
+    def _update_options(default_options, user_options):
+        """Combine the command options.
+
+        :param default_options: default options
+        :type default_options: dict
+        :param user_options: user supplied options
+        :type user_options: dict
+        :return: command options
+        :rtype: dict
+        """
+        if user_options:
+            default_options.update(user_options)
+        return default_options
+
+    def _set_galaxy_cli_options(self, options):
+        """Set galaxy cli options.
+
+        :param options: command options to set
+        :type options: dict
+        """
+        for key, value in options.items():
+            setattr(self.cli.options, key, value)
+
+    def install(self, role=None, role_file=None, options=None):
+        """Install ansible roles either by role name or role file.
+
+        :param role: role name
+        :type role: str
+        :param role_file: role requirements file
+        :type role_file: str
+        :param options: galaxy install command options
+        :type options: dict
+        :return: 0 - pass | 1 - fail
+        :rtype: int
+        """
+        # default options
+        _options = dict(force=False)
+
+        # set galaxy cli command options
+        self._set_galaxy_cli_options(self._update_options(_options, options))
+
+        # set role type options
+        if role_file:
+            self._set_galaxy_cli_options(dict(role_file=role_file))
+        elif role:
+            self.cli.args = [role]
+        else:
+            self.logger.error('No input given. Unable to install role.')
+            return 1
+
+        # install ansible role
+        try:
+            self.cli.run()
+        except AnsibleError as ex:
+            self.logger.error(ex)
+            return 1
+
+        return 0
+
+    def remove(self, role=None, role_file=None, options=None):
+        """Remove installed ansible roles by role name or role file.
+
+        :param role: role name
+        :type role: str
+        :param role_file: role requirements file
+        :type role_file: str
+        :param options: galaxy install command options
+        :type options: dict
+        :return: 0 - pass | 1 - fail
+        :rtype: int
+        """
+        # default options
+        _options = dict()
+
+        # set galaxy cli command options
+        self._set_galaxy_cli_options(self._update_options(_options, options))
+
+        if role_file:
+            # locate the role file
+            if not os.path.isfile(role_file):
+                self.logger.error('Unable to locate role file: %s' % role_file)
+                return 1
+
+            # load role file
+            for item in file_mgmt('r', role_file):
+                if 'name' in item:
+                    self.cli.args.append(item['name'])
+                    continue
+
+                # determine src type (galaxy role vs external site)
+                parsed = urlparse(item['src'])
+                if parsed.scheme:
+                    # non galaxy role
+                    self.cli.args.append(os.path.split(parsed.path)[-1])
+                else:
+                    # galaxy role
+                    self.cli.args.append(parsed.path)
+        elif role:
+            self.cli.args = [role]
+        else:
+            self.logger.error('No input given. Unable to remove role.')
+            return 1
+
+        # remove installed ansible roles
+        self.cli.run()
+
+        return 0
+
+
 class AnsibleOrchestrator(CarbonOrchestrator):
     """Ansible orchestrator.
 
@@ -428,25 +558,40 @@ class AnsibleOrchestrator(CarbonOrchestrator):
     __orchestrator_name__ = 'ansible'
     _action_abs = None
 
+    _optional_parameters = (
+        'options',
+        'galaxy_options'
+    )
+
     _assets_parameters = (
         'ansible_ssh_private_key_file',
     )
 
-    def __init__(self, action, hosts, **kwargs):
+    def __init__(self, package):
         """Constructor.
 
-        :param action: action to be executed (module/playbook)
-        :param hosts: action runs against these hosts
-        :param kwargs: action parameters
+        :param package: action resource
+        :type package: object
         """
-        super(AnsibleOrchestrator, self).__init__(action, hosts, **kwargs)
+        super(AnsibleOrchestrator, self).__init__()
+
+        # set attributes
+        self._action = getattr(package, 'name')
+        self._hosts = getattr(package, 'hosts')
+        self.options = getattr(package, '%s_options' % self.name)
+        self.galaxy_options = getattr(package, '%s_galaxy_options' % self.name)
+        self.config = getattr(package, 'config')
+        self.all_hosts = getattr(package, 'all_hosts')
+
+        if self.options is None:
+            self.options = {'extra_vars': {}}
 
         # create inventory object for create/delete inventory file
         self.inv = Inventory(
-            hosts,
-            getattr(self, 'all_hosts'),
+            self.hosts,
+            self.all_hosts,
             self._assets_parameters,
-            data_dir=getattr(self, 'config')['DATA_FOLDER']
+            data_dir=self.config['DATA_FOLDER']
         )
 
     @property
@@ -491,8 +636,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         """
 
         # set the path of the playbook
-        path = os.path.join(getattr(self, 'config')['DATA_FOLDER'],
-                            'assets', self.name)
+        path = os.path.join(self.config['DATA_FOLDER'], 'assets', self.name)
         self._find_playbook(path)
 
         # quit if no playbook was found for the given action
@@ -501,6 +645,44 @@ class AnsibleOrchestrator(CarbonOrchestrator):
                 'Unable to locate action %s for ansible orchestrator. '
                 'Cannot continue!'
             )
+
+    def download_roles(self):
+        """Download ansible roles defined for the given action."""
+        flag = 0
+
+        if self.galaxy_options is None:
+            return
+
+        if 'role_file' in self.galaxy_options:
+            flag += 1
+
+            f = os.path.join(self.config['DATA_FOLDER'], 'assets',
+                             self.galaxy_options['role_file'])
+            self.logger.info('Installing roles using req. file: %s' % f)
+
+            role = Role('install')
+            rc = role.install(role_file=f)
+
+            if rc != 0:
+                raise CarbonOrchestratorError(
+                    'A problem occurred while installing roles using req. file'
+                    ' %s' % f)
+            self.logger.info('Roles installed successfully from: %s!' % f)
+
+        if 'roles' in self.galaxy_options:
+            if flag >= 1:
+                self.logger.warning('FYI roles were already installed using a'
+                                    ' requirements file. Problems may occur.')
+
+            for item in self.galaxy_options['roles']:
+                role = Role('install')
+                rc = role.install(role=item)
+
+                if rc != 0:
+                    raise CarbonOrchestratorError(
+                        'A problem occurred while installing role: %s' % item
+                    )
+                self.logger.info('Role: %s successfully installed!' % item)
 
     def run(self):
         """Run.
@@ -518,15 +700,15 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         # its associated hosts
         self.inv.create()
 
-        # now that we have the absolute path and all information regarding the
-        # action to execute, lets go ahead and begin..
+        # download ansible roles (if applicable)
+        self.download_roles()
 
         # create an ansible controller object
         obj = AnsibleController(self.inv.inventory_dir)
 
-        # setup variables
+        # configure playbook variables
         extra_vars = dict(hosts=self.inv.group)
-        extra_vars.update(getattr(self, 'vars'))
+        extra_vars.update(self.options['extra_vars'])
 
         self.logger.info('Executing action: %s.' % self.action)
 

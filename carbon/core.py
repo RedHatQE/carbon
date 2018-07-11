@@ -825,18 +825,20 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
 
     __orchestrator_name__ = None
 
+    # all parameters that MUST be set for the orchestrator
+    _mandatory_parameters = ()
+
+    # additional parameters that can be set for the orchestrator
+    _optional_parameters = ()
+
     # orchestrator assets may be files that are needed for remote connections
     # such as SSH keys, etc
     _assets_parameters = ()
 
-    def __init__(self, action=None, hosts=None, **kwargs):
+    def __init__(self):
         """Constructor."""
-        self._action = action
-        self._hosts = hosts
-
-        # set all other attributes
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        self._action = None
+        self._hosts = None
 
     def validate(self):
         raise NotImplementedError
@@ -868,9 +870,70 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
 
     @hosts.setter
     def hosts(self, value):
-        # TODO: reword
-        raise AttributeError('You cannot set the hosts for the action after'
-                             'object is created.')
+        raise AttributeError('Hosts cannot be set once the object is created.')
+
+    @classmethod
+    def _mandatory_parameters_set(cls):
+        """
+        Build a set of mandatory parameters
+        :return: a set
+        """
+        return {'{}_{}'.format(cls.__orchestrator_name__, k) for k in cls._mandatory_parameters}
+
+    @classmethod
+    def get_mandatory_parameters(cls):
+        """
+        Get the list of the mandatory parameters
+        :return: a tuple of the mandatory parameters.
+        """
+        return (param for param in cls._mandatory_parameters_set())
+
+    @classmethod
+    def _optional_parameters_set(cls):
+        """
+        Build a set of optional parameters
+        :return: a set
+        """
+        return {'{}_{}'.format(cls.__orchestrator_name__, k) for k in cls._optional_parameters}
+
+    @classmethod
+    def get_optional_parameters(cls):
+        """
+        Get the list of the optional parameters
+        :return: a tuple of the optional parameters.
+        """
+        return (param for param in cls._optional_parameters_set())
+
+    @classmethod
+    def _all_parameters_set(cls):
+        """
+        Build a set of all parameters
+        :return: a set
+        """
+        return cls._mandatory_parameters_set()\
+            .union(cls._optional_parameters_set())
+
+    @classmethod
+    def get_all_parameters(cls):
+        """
+        Return the list of all possible parameters for the provider.
+        :return: a tuple with all parameters
+        """
+        return (param for param in cls._all_parameters_set())
+
+    @classmethod
+    def build_profile(cls, action):
+        """Builds a dictionary with all the parameters for the orchestrator.
+
+        :param action: action object
+        :type action: object
+        :return: dictionary with all orchestrator parameters
+        :rtype: dict
+        """
+        profile = {}
+        for param in cls.get_all_parameters():
+            profile.update({param: getattr(action, param, None)})
+        return profile
 
 
 class PipelineBuilder(object):

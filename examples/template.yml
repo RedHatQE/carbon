@@ -95,27 +95,32 @@ orchestrate:
     hosts:                                      # hosts which the action is executed on
       - testclient01                            # ref above ^^: provision.testclient01
       - testclient02                            # ref above ^^: provision.testclient02
-    vars:                                       # variables the action (playbook) requires
-      var01: "Hello World!"
+    ansible_options:                            # options used by ansible orchestrator
+      extra_vars:
+        var01: value01
+    ansible_galaxy_options:                     # options used by ansible galaxy
+      role_file: role.yml
 
   # create ssh key pair for ssh connection between driver/client(s)
   - name: create_ssh_keypair                    # action name (playbook name) (filename only, exclude file extension)
     orchestrator: ansible                       # orchestrator module to use in this case ansible
     hosts:                                      # hosts which the action is executed on
       - testdriver                              # ref above ^^: provision.testdriver
-    vars:                                       # variables the action (playbook requires)
-      user: root
+    ansible_options:                            # options used by ansible orchestrator
+      extra_vars:
+        user: root
 
   # inject driver ssh public key pair to client(s)
   - name: inject_pub_key                        # action name (playbook name) (filename only, exclude file extension)
     orchestrator: ansible                       # orchestrator module to use in this case ansible
     hosts:                                      # hosts which the action is executed on
       - testdriver                              # ref above ^^: provision.testdriver
-    vars:                                       # variables the action (playbook requires)
-      user: root
-      machine:
-        - testclient01
-        - testclient02
+    ansible_options:                            # options used by ansible orchestrator
+      extra_vars:
+        user: root
+        machine:
+          - testclient01
+          - testclient02
 
   - name: rhn_subscribe                         # action name (playbook name) (filename only, exclude file extension)
     orchestrator: ansible                       # orchestrator module to use in this case ansible
@@ -123,11 +128,12 @@ orchestrate:
       - testdriver                              # ref above ^^: provision.testdriver
       - testclient01                            # ref above ^^: provision.testclient01
       - testclient02                            # ref above ^^: provision.testclient02
-    vars:                                       # variables the action (playbook requires)
-      rhn_hostname: subscription.rhsm.stage.redhat.com
-      rhn_user: rhel_server_01
-      rhn_password: password
-      auto: True
+    ansible_options:                            # options used by ansible orchestrator
+      extra_vars:
+        rhn_hostname: subscription.rhsm.stage.redhat.com
+        rhn_user: rhel_server_01
+        rhn_password: password
+        auto: True
 
 # execute section
 

@@ -80,7 +80,7 @@ class TestCarbon(TestCase):
             obj.load_from_yaml(scenario_data)
         raised_exception = cm.exception
         self.assertEqual(raised_exception.message,
-                         ('The os_name parameter for machine1 should not be set'
+                         ('The os_name parameter for machine_1 should not be set'
                           ' as it is under the framework\'s control'))
 
     def test_load_yaml_with_missing_section(self):

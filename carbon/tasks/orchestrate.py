@@ -42,13 +42,7 @@ class OrchestrateTask(CarbonTask):
         self.msg = msg
 
         # create the orchestrator object
-        self.orchestrator = getattr(package, 'orchestrator_cls')(
-            package.name,
-            package.hosts,
-            vars=package.vars,
-            config=package.config,
-            all_hosts=package.all_hosts
-        )
+        self.orchestrator = getattr(package, 'orchestrator')(package)
 
     def run(self):
         """Run.
