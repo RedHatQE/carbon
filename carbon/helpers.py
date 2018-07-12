@@ -496,4 +496,3 @@ def ssh_retry(obj):
         return result
     return check_access
    
-    if statement with os.system("ping -c 1 " + target_host[i]) is 0
