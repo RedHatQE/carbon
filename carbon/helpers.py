@@ -491,7 +491,8 @@ def ssh_retry(obj):
     """
     """
     def check_access(*args, **kwargs):
-        print args
+        print *args
+        print **kwargs
         result = obj(*args, **kwargs)
         return result
     return check_access
