@@ -45,6 +45,7 @@ from ansible.vars.manager import VariableManager
 from .._compat import RawConfigParser
 from ..core import CarbonOrchestrator, CarbonOrchestratorError
 
+from ..helpers import ssh_retry
 
 class CarbonCallback(CallbackBase):
     """Carbon callback.
@@ -219,6 +220,7 @@ class AnsibleController(object):
 
         return dict(status=result, callback=self.callback)
 
+    @ssh_retry
     def run_playbook(self, playbook, extra_vars=None, become=False,
                      become_method="sudo", become_user="root",
                      remote_user="root", private_key_file=None,

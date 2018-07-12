@@ -485,3 +485,15 @@ def filter_host_name(name):
     """
     result = RULE_HOST_NAMING.sub('', name)
     return str(result[:20]).lower()
+
+
+def ssh_retry(obj):
+    """
+    """
+    def check_access(*args, **kwargs):
+        print args
+        result = obj(*args, **kwargs)
+        return result
+    return check_access
+   
+    if statement with os.system("ping -c 1 " + target_host[i]) is 0
