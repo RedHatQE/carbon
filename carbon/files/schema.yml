@@ -37,7 +37,10 @@ mapping:
           type: seq
           sequence:
             - type: str
-        vars:
+        ansible_options:
+          allowempty: True
+          type: map
+        ansible_galaxy_options:
           allowempty: True
           type: map
     - type: map
@@ -47,7 +50,10 @@ mapping:
           required: True
         hosts:
           required: True
-        vars:
+        ansible_options:
+          allowempty: True
+          type: map
+        ansible_galaxy_options:
           allowempty: True
           type: map
   execute:
