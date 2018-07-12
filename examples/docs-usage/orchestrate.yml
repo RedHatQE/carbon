@@ -1,0 +1,64 @@
+---
+orchestrate:
+  - name:
+    orchestrator:
+    hosts:
+
+---
+orchestrate:
+  - name: rhsm_register
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+
+---
+orchestrate:
+  - name: rhsm_register
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+    ansible_options:
+      extra_vars:
+        username: kingbob
+        password: minions
+        server_hostname: server01.example.com
+        auto_attach: true
+
+---
+orchestrate:
+  - name: rhsm_register
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+    ansible_galaxy_options:
+      role_file: roles.yml
+
+---
+orchestrate:
+  - name: rhsm_register
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+    ansible_galaxy_options:
+      roles:
+        - oasis-roles.rhsm
+
+---
+orchestrate:
+  - name: rhsm_register
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+    ansible_options:
+      extra_vars:
+        username: kingbob
+        password: minions
+        server_hostname: server01.example.com
+        auto_attach: true
+    ansible_galaxy_options:
+      role_file: roles.yml

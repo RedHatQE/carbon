@@ -37,8 +37,8 @@ tasks.
     :hidden:
 
     install
-    scenario_descriptor
     architecture
+    scenario_descriptor
     configuration
     scenario_structure
     examples
