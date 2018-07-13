@@ -18,7 +18,9 @@
 """
     carbon.resources.host
 
-    Here you add brief description of what this module is about
+    Module used for building carbon host compounds. Hosts are the base to a
+    scenario object. The remaining compounds that make up a scenario are
+    processed against the hosts defined.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
@@ -38,13 +40,20 @@ class CarbonHostError(CarbonResourceError):
     def __init__(self, message):
         """Constructor.
 
-        :param message: Details about the error.
+        :param message: details about the error
+        :type message: str
         """
-        self.message = message
         super(CarbonHostError, self).__init__(message)
 
 
 class Host(CarbonResource):
+    """
+    The host resource class. The carbon compound can contain x amount of hosts.
+    Their primary responsibility is to define details about the system resource
+    to be created in their declared provider. Along with saving information
+    such as (ip addresses, etc) for use by the action or execute compounds of
+    carbon.
+    """
 
     _valid_tasks_types = ['validate', 'provision', 'cleanup']
     _fields = [
@@ -64,7 +73,28 @@ class Host(CarbonResource):
                  provision_task_cls=ProvisionTask,
                  cleanup_task_cls=CleanupTask,
                  **kwargs):
+        """Constructor.
 
+        :param config: carbon configuration
+        :type config: dict
+        :param name: host resource name
+        :type name: str
+        :param provider: provider name where host lives
+        :type provider: str
+        :param provisioner: provisioner name used to create the host in the
+            defined provider
+        :type provisioner: str
+        :param parameters: content which makes up the host resource
+        :type parameters: dict
+        :param validate_task_cls: carbons validate task class
+        :type validate_task_cls: object
+        :param provision_task_cls: carbons provision task class
+        :type provision_task_cls: object
+        :param cleanup_task_cls: carbons cleanup task class
+        :type cleanup_task_cls: object
+        :param kwargs: additional key:value(s)
+        :type kwargs: dict
+        """
         super(Host, self).__init__(config=config, name=name, **kwargs)
 
         # The name set in the constructor has precedence over other names.
@@ -79,35 +109,40 @@ class Host(CarbonResource):
                 self._name = 'hst{0}'.format(gen_random_str(10))
         else:
             self._name = name
+
+        # apply filter to the hosts name
         self._name = filter_host_name(self._name)
 
+        # set the hosts role
         # TODO: we must define what role means for a host and document it.
         self._role = parameters.pop('role', None)
         if self._role is None:
             raise CarbonHostError('A role must be set for host %s.' %
                                   str(self.name))
 
-        # metadata will be defined via yaml file
+        # set host metadata attribute (data pass-through)
         self._metadata = parameters.pop('metadata', {})
 
-        # Ansible parameters will be defined via yaml file
+        # set host ansible parameters for later use by carbon actions
         self._ansible_params = parameters.pop('ansible_params', {})
 
-        # IP address
+        # set host ip address attribute (updated with ip after provisioning)
         self._ip_address = parameters.pop('ip_address', None)
 
-        # we must have a provider set
+        # (mandatory) set host provider
         provider_param = parameters.pop('provider', provider)
         if provider_param is None:
             raise CarbonHostError('A provider must be set for the host '
-                                      '%s.' % str(self.name))
+                                  '%s.' % str(self.name))
+
+        # verify provider is supported by carbon
         if provider_param not in get_providers_list():
             raise CarbonHostError('Invalid provider for host '
                                   '%s.' % str(self.name))
         else:
             self._provider = get_provider_class(provider_param)()
 
-        # We must set the provisioner and validate it
+        # (mandatory) set the provisioner and validate
         provisioner_param = parameters.pop('provisioner', provisioner)
         if provisioner_param is None:
             self._provisioner = get_default_provisioner(self.provider)
@@ -117,23 +152,27 @@ class Host(CarbonResource):
         else:
             self._provisioner = get_provisioner_class(provisioner_param)
 
-        # We must set the providers credentials initially
+        # (mandatory) get the host provider credential name
         self._credential = parameters.pop('credential', None)
         if self._credential is None:
             raise CarbonHostError('A credential must be set for the hosts '
                                   'provider %s.' % provider)
+
+        # (mandatory) set host provider credentials
         provider_creds = parameters.pop('provider_creds', None)
         if provider_creds is None:
             raise CarbonHostError('Provider credentials must be set for '
                                   'host %s.' % str(self.name))
-        # Get the credentials for the host provider
+
+        # get the credentials for the host provider
         cdata = next(i for i in provider_creds if i['name'] == self._credential)
 
         # every provider has a name as mandatory field.
         # first check if name exist (probably because of reusing machine).
         # otherwise generate random bits to be added to provider instance name
         # and create the provider name
-        p_name_param = '{}{}'.format(self.provider.__provider_prefix__, 'name')
+        p_name_param = '{}{}'.format(getattr(self.provider,
+                                             '__provider_prefix__'), 'name')
         p_name_set = parameters.get(p_name_param, None)
         if not p_name_set:
             parameters.update(
@@ -145,219 +184,237 @@ class Host(CarbonResource):
 
         # check if we have all the mandatory fields set
         missing_mandatory_fields = \
-            self.provider.check_mandatory_parameters(parameters)
+            getattr(self.provider, 'check_mandatory_parameters')(parameters)
         if len(missing_mandatory_fields) > 0:
             raise CarbonHostError('Missing mandatory fields for node %s,'
                                   ' based on the %s provider:\n\n%s'
-                                  % (self.name, self.provider.name,
+                                  % (self.name, getattr(self.provider, 'name'),
                                      missing_mandatory_fields))
 
         # create the provider attributes in the host object
-        for p in self.provider.get_all_parameters():
+        for p in getattr(self.provider, 'get_all_parameters')():
             setattr(self, p, parameters.get(p, None))
 
-        # Every provider must have credentials.
-        # Check if provider credentials have all the mandatory fields set
+        # every provider must have credentials
+        # check if provider credentials have all the mandatory fields set
         missing_mandatory_creds_fields = \
-            self.provider.check_mandatory_creds_parameters(cdata)
+            getattr(self.provider, 'check_mandatory_creds_parameters')(cdata)
         if len(missing_mandatory_creds_fields) > 0:
             raise CarbonHostError('Missing mandatory credentials fields '
                                   'for credentials section %s, for node '
                                   '%s, based on the %s provider:\n\n%s' %
                                   (self._credential, self._name,
-                                   self.provider.name,
+                                   getattr(self.provider, 'name'),
                                    missing_mandatory_creds_fields))
 
         # create the provider credentials in provider object
-        self.provider.set_credentials(cdata)
+        getattr(self.provider, 'set_credentials')(cdata)
 
+        # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
         self._provision_task_cls = provision_task_cls
         self._cleanup_task_cls = cleanup_task_cls
 
+        # reload construct task methods
         self.reload_tasks()
 
+        # load the parameters set into the object itself
         if parameters:
             self.load(parameters)
 
     @property
-    def name(self):
-        """Return the name for the host."""
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        """Raises an exception when trying to set the name for the host after
-        the class has been instanciated.
-        :param value: The name for host
-        """
-        raise AttributeError('You cannot set name after class is instanciated.')
-
-    @property
     def ip_address(self):
-        """Return the IP address for the host (if applicable)."""
+        """IP address property.
+
+        :return: host ip address
+        :rtype: str
+        """
         return self._ip_address
 
     @ip_address.setter
     def ip_address(self, value):
-        """Raise an exception when setting IP address directly. Use the
-        following method ~Host.set_ip_address().
-
-        :param value: The IP address of the host.
-        """
-        raise AttributeError('You cannot set ip address directly! Please use'
-                             ' ~Host.set_ip_address().')
+        """Set ip address property."""
+        raise AttributeError('You cannot set ip address directly. '
+                             'Use function ~Host.set_ip_address')
 
     def set_ip_address(self, value):
-        """Set the IP address for the host. Following attributes will be set:
+        """Set the ip address for the host.
+
+        Following attributes will be set:
             1. _ip_address
             2. <provider_prefix>_ip_address
 
         :param value: The IP address of the host.
+        :type value: str
         """
         attr = 'ip_address'
         setattr(self, '_' + attr, value)
-        setattr(self, self.provider.prefix + attr, copy(value))
+        setattr(self, getattr(self.provider, 'prefix') + attr, copy(value))
 
     @property
     def metadata(self):
-        """Return the name for the host."""
+        """Metadata property.
+
+        :return: host metadata
+        :rtype: dict
+        """
         return self._metadata
 
     @metadata.setter
     def metadata(self, value):
-        """Raises an exception when trying to set the name for the host after
-        the class has been instanciated.
-        :param value: The name for host
+        """Set metadata property."""
+        raise AttributeError('You cannot set metadata directly. '
+                             'Use function ~Host.set_metadata')
+
+    def set_metadata(self):
+        """Set host metadata.
+
+        This method probably will be helpful when passing data between
+        action executions.
         """
-        raise AttributeError('You cannot set metadata. This is set via descriptor YAML file.')
+        raise NotImplementedError
 
     @property
     def ansible_params(self):
-        """Return the Ansible parameters for the host."""
+        """Ansible parameters property.
+
+        :return: ansible parameters for the host resource
+        :rtype: dict
+        """
         return self._ansible_params
 
     @ansible_params.setter
     def ansible_params(self, value):
-        """Raises an exception when trying to set the ansible parameters for
-        the host after the class has been instanciated.
-        :param value: The ansible parameters for the host.
-        """
-        raise AttributeError(
-            'You cannot set ansible_params. This is set via the descriptor '
-            'YAML file.'
-        )
+        """Set ansible parameters property."""
+        raise AttributeError('You cannot set the ansible parameters directly.'
+                             ' This is set one time within the YAML input.')
 
     @property
     def provider(self):
-        """Return the provider object for the host."""
+        """Provider property.
+
+        :return: provider class
+        :rtype: object
+        """
         return self._provider
 
     @provider.setter
     def provider(self, value):
-        """Raises an exception when trying to set the provider for the host
-        after the class has been instanciated.
-        :param value: The provider name for the host
-        """
-        raise AttributeError('You cannot set provider after class is instanciated.')
+        """Set provider property."""
+        raise AttributeError('You cannot set the host provider after host '
+                             'class is instantiated.')
 
     @property
     def provisioner(self):
-        """Return the provisioner object for the host."""
+        """Provisioner property.
+
+        :return: provisioner class
+        :rtype: object
+        """
         return self._provisioner
 
     @provisioner.setter
     def provisioner(self, value):
-        """Raises an exception when trying to set the provisioner for the host
-        after the class has been instantiated .
-        :param value: The provisioner name for the host
-        """
-        raise AttributeError('You cannot set provider after class is instanciated.')
+        """Set provisioner property."""
+        raise AttributeError('You cannot set the host provisioner after host '
+                             'class is instantiated.')
 
     @property
     def role(self):
-        """Return the role for the host."""
+        """Role property.
+
+        :return: role of the host
+        :rtype: str
+        """
         return self._role
 
     @role.setter
     def role(self, value):
-        """Raises an exception when trying to set the role for the host after
-        the class has been instanciated.
-        :param value: The role for the host
-        """
-        raise AttributeError('You cant set role after class is instanciated.')
+        """Set role property."""
+        raise AttributeError('You cannot set the role after host class is '
+                             'instantiated.')
 
     @property
     def uid(self):
-        """Return the unique ID for the host"""
-        return getattr(self, '{}name'.format(self.provider.prefix))
+        """UID property.
+
+        :return: the unique ID for the host
+        :rtype: str
+        """
+        return getattr(self, '{}name'.format(getattr(self.provider, 'prefix')))
 
     @uid.setter
     def uid(self, value):
-        """Raises an exception when trying to set the uid
-        :param value: uid
-        """
-        raise AttributeError('You cannot set uid.')
+        """Set UID property."""
+        raise AttributeError('You cannot set the uid for the host.')
 
     def profile(self):
-        """Builds a profile for the host.
-        :return: The profile for the host
+        """Builds a profile for the host resource.
+
+        :return: the host profile
+        :rtype: dict
         """
-        d = self.provider.build_profile(self)
-        d.update({
+        # initialize the profile with the provider properties
+        profile = getattr(self.provider, 'build_profile')(self)
+
+        # set additional host properties
+        profile.update({
             'name': self.name,
             'metadata': self.metadata,
             'ansible_params': self.ansible_params,
-            'provider': self.provider.name,
+            'provider': getattr(self.provider, 'name'),
             'credential': self._credential,
-            'provisioner': self.provisioner.__provisioner_name__,
+            'provisioner': getattr(self.provisioner, '__provisioner_name__'),
             'role': self._role,
-            'data_folder': self.data_folder()
+            'data_folder': self.data_folder
         })
 
-        # Set ip address attribute (if applicable)
+        # set ip address attribute (if applicable)
         if self.ip_address:
-            d.update({'ip_address': self.ip_address})
-        return d
+            profile.update({'ip_address': self.ip_address})
+
+        return profile
 
     def validate(self):
         """Validate the host."""
         status = 0
-        for item in self.provider.validate(self):
+        for item in getattr(self.provider, 'validate')(self):
             status = 1
-            self.logger.error('Error with parameter "%s": %s', item[0], item[1])
+            self.logger.error('Parameter error: "%s": %s' % (item[0], item[1]))
 
         if status > 0:
             raise CarbonHostError('Host %s validation failed!' % self.name)
-
-    def data_folder(self):
-        return str(self.config['DATA_FOLDER'])
 
     def get_assets_list(self):
         """
         Run through each asset parameter and add its value
         in the list if the parameter was set
-        :return: list of assets
+
+        :return: host assets
+        :rtype: list
         """
+        host_assets, creds_assets = [], []
+
         # first, get the list of assets from the provider parameters
-        host_assets = [getattr(self, param) for param in
-                       self.provider.get_assets_parameters()
-                       if (hasattr(self, param) and
-                           getattr(self, param) is not None)]
+        for param in getattr(self.provider, 'get_assets_parameters')():
+            if hasattr(self, param) and getattr(self, param) is not None:
+                host_assets.append(getattr(self, param))
 
         # second, get the list of assets from the provider's credential
         # settings
-        creds_assets = [self.provider.credentials[param] for param in
-                        self.provider.get_assets_parameters()
-                        if param in self.provider.credentials.keys() and
-                        self.provider.credentials[param] is not None]
+        for param in getattr(self.provider, 'get_assets_parameters')():
+            if param in getattr(self.provider, 'credentials').keys() and \
+                    getattr(self.provider, 'credentials')[param] is not None:
+                creds_assets.append(getattr(self.provider, 'credentials')[param])
 
         # return a single list from the merge of both list
         return host_assets + creds_assets
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.
-        :return: The validate task dict
+
+        :return: validate task definition
+        :rtype: dict
         """
         task = {
             'task': self._validate_task_cls,
@@ -369,7 +426,9 @@ class Host(CarbonResource):
 
     def _construct_provision_task(self):
         """Setup the provision task data structure.
-        :param: The provision task dict
+
+        :return: provision task definition
+        :rtype: dict
         """
         task = {
             'task': self._provision_task_cls,
@@ -382,7 +441,9 @@ class Host(CarbonResource):
 
     def _construct_cleanup_task(self):
         """Setup the cleanup task data structure.
-        :return: The cleanup task dict
+
+        :return: cleanup task definition
+        :rtype: dict
         """
         task = {
             'task': self._cleanup_task_cls,
