@@ -33,8 +33,10 @@ class ValidateTask(CarbonTask):
     def __init__(self, resource, **kwargs):
         """Constructor.
 
-        :param resource: Resource reference
-        :param kwargs: Additional keyword arguments
+        :param resource: resource reference
+        :type resource: object
+        :param kwargs: additional keyword arguments
+        :type kwargs: dict
         """
         super(ValidateTask, self).__init__(**kwargs)
         self.resource = resource

@@ -33,9 +33,12 @@ class CleanupTask(CarbonTask):
     def __init__(self, msg, host, **kwargs):
         """Constructor.
 
-        :param msg: Task message
-        :param host: Host reference
-        :param kwargs: Additional keyword arguments
+        :param msg: task message
+        :type msg: str
+        :param host: host reference
+        :type host: object
+        :param kwargs: additional keyword arguments
+        :type kwargs: dict
         """
         super(CleanupTask, self).__init__(**kwargs)
         self.msg = msg
