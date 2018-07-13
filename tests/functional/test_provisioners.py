@@ -409,7 +409,7 @@ class TestBeakerProvisioner(TestCase):
         self.provider.bkr_xml.tasklist = ['marvel']
 
     def test_create_xml(self):
-        xml_file = os.path.join(self.provider.host.data_folder(),
+        xml_file = os.path.join(self.provider.host.data_folder,
                                 self.provider.job_xml)
         self.provider.bkr_xml.generate_beaker_xml(xml_file, savefile=True)
         assert_equal(
@@ -421,13 +421,13 @@ class TestBeakerProvisioner(TestCase):
 
     @raises(AttributeError)
     def test_create_xml_with_invalid_task_param(self):
-        xml_file = os.path.join(self.provider.host.data_folder(),
+        xml_file = os.path.join(self.provider.host.data_folder,
                                 self.provider.job_xml)
         self.provider.bkr_xml.taskparam = ['time=0600']
         self.provider.bkr_xml.generate_beaker_xml(xml_file, savefile=True)
 
     def test_create_xml_family_and_virt(self):
-        xml_file = os.path.join(self.provider.host.data_folder(),
+        xml_file = os.path.join(self.provider.host.data_folder,
                                 self.provider.job_xml)
         self.provider.bkr_xml.family = 'RedHatEnterpriseLinux7'
         self.provider.bkr_xml.distro = ''

@@ -371,7 +371,7 @@ class Inventory(object):
             # add host vars
             for k, v in host.ansible_params.items():
                 if k in self.asset_params:
-                    v = os.path.join(host.data_folder(), 'assets', v)
+                    v = os.path.join(host.data_folder, 'assets', v)
                 config.set(section_vars, k, v)
 
             # add host ip address reference for the alias defined above

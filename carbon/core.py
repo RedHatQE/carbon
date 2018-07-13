@@ -368,6 +368,21 @@ class CarbonResource(LoggerMixin, TimeMixin):
     def config(self, value):
         raise AttributeError('You can set config after resource is created.')
 
+    @property
+    def data_folder(self):
+        """Data folder property.
+
+        :return: resource data folder
+        :rtype: str
+        """
+        return self.config['DATA_FOLDER']
+
+    @data_folder.setter
+    def data_folder(self, value):
+        """Set data folder."""
+        raise AttributeError('You cannot set the data folder directly. Only '
+                             'the carbon object can.')
+
     def _add_task(self, t):
         """
         Add a task to the list of tasks for the resource

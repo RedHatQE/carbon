@@ -78,7 +78,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         """
         super(OpenshiftProvisioner, self).__init__()
         self.host = host
-        self._data_folder = host.data_folder()
+        self._data_folder = host.data_folder
         self._routes = list()
         self._labels = list()
         self._finallabels = list()
@@ -334,7 +334,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
         _template_file = None
         _template_filename = None
 
-        filepath = os.path.join(self.host.data_folder(), "assets", _template)
+        filepath = os.path.join(self.host.data_folder, "assets", _template)
 
         if os.path.isfile(filepath):
             _template_file = filepath

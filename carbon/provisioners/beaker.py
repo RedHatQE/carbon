@@ -72,7 +72,7 @@ class BeakerProvisioner(CarbonProvisioner):
         """
         super(BeakerProvisioner, self).__init__()
         self.host = host
-        self.data_folder = getattr(host, 'data_folder')()
+        self.data_folder = getattr(host, 'data_folder')
         self.job_xml = 'bkrjob_%s.xml' % getattr(host, 'bkr_name')
         self.bkr_xml = BeakerXML()
         self.conf_dir = '%s/.beaker_client' % os.path.expanduser('~')
