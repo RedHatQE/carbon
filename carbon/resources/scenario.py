@@ -105,17 +105,14 @@ class Scenario(CarbonResource):
         self._reports = list()
         self._yaml_data = dict()
 
-        # set the data folder attribute
-        self._data_folder = self.config['DATA_FOLDER']
-
         # set the carbon task classes for the scenario
         self._validate_task_cls = validate_task_cls
 
         # create the runtime data folder for the scenario life cycle
         # TODO: cleanup task should remove this directory after report task
         try:
-            if not os.path.exists(self._data_folder):
-                os.makedirs(self._data_folder)
+            if not os.path.exists(self.data_folder):
+                os.makedirs(self.data_folder)
         except OSError as ex:
             if ex.errno == errno.EACCES:
                 raise ScenarioError('You do not have permission to create'
@@ -191,20 +188,6 @@ class Scenario(CarbonResource):
                     count += 1
                 elif isinstance(value, Host) and count >= 1:
                     self.add_resource(value)
-
-    @property
-    def data_folder(self):
-        """Data folder property.
-
-        :return: data folder
-        :rtype: str
-        """
-        return self._data_folder
-
-    @data_folder.setter
-    def data_folder(self, value):
-        """Set data folder property."""
-        raise ValueError('Data folder is set automatically.')
 
     @property
     def yaml_data(self):

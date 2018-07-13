@@ -96,7 +96,7 @@ class TestScenario(TestCase):
         self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
         assert_is_instance(self.cbn.scenario.data_folder, string_types)
 
-    @raises(ValueError)
+    @raises(AttributeError)
     def test_set_data_folder(self):
         """Test setting data folder for carbon scenario."""
         self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
