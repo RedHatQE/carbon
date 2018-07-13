@@ -34,9 +34,12 @@ class OrchestrateTask(CarbonTask):
     def __init__(self, msg, package, **kwargs):
         """Constructor.
 
-        :param msg: Task message
-        :param package: Package reference
-        :param kwargs: Additional keyword arguments
+        :param msg: task message
+        :type msg: str
+        :param package: package reference
+        :type package: object
+        :param kwargs: additional keyword arguments
+        :type kwargs: dict
         """
         super(OrchestrateTask, self).__init__(**kwargs)
         self.msg = msg
