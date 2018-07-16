@@ -29,16 +29,20 @@ import json
 import os
 import pkgutil
 import random
+import socket
 import stat
 import string
 import subprocess
 import sys
+import time
 from logging import getLogger
 
 import jinja2
 import requests
 import yaml
 from flask.helpers import get_root_path
+from paramiko import AutoAddPolicy, SSHClient
+from paramiko.ssh_exception import SSHException, BadHostKeyException, AuthenticationException
 
 from ._compat import string_types
 from .constants import PROVISIONERS, RULE_HOST_NAMING
@@ -490,10 +494,60 @@ def filter_host_name(name):
 def ssh_retry(obj):
     """
     """
+    MAX_ATTEMPTS = 30
+    MAX_WAIT_TIME = 100
+
     def check_access(*args, **kwargs):
-        print *args
-        print **kwargs
+        ssh_errs = False
+        args[0].set_inventory()
+        for igrp, isys in args[0].inventory._inventory.hosts.items():
+            sys_grp = args[0].variable_manager._inventory.groups[igrp]
+            sys_vars = sys_grp.vars
+            server_ip = sys_vars['ansible_host']
+            server_user = sys_vars['ansible_user']
+            server_key_file = sys_vars['ansible_ssh_private_key_file']
+
+            attempt = 1
+            while attempt <= MAX_ATTEMPTS:
+                try:
+                    ssh = SSHClient()
+                    ssh.load_system_host_keys()
+                    ssh.set_missing_host_key_policy(AutoAddPolicy())
+                    # Test ssh connection
+                    ssh.connect(server_ip,
+                                username=server_user,
+                                key_filename=server_key_file)
+                    LOG.info("Server %s - IP: %s is reachable." % (igrp,
+                                                                   server_ip))
+                    ssh.close()
+                    break
+                except (BadHostKeyException, AuthenticationException,
+                        SSHException, socket.error) as ex:
+                    attempt = attempt + 1
+                    LOG.error(ex.message)
+                    LOG.error("Server %s - IP: %s is unreachable." % (igrp,
+                                                                      server_ip))
+                    if attempt <= MAX_ATTEMPTS:
+                        wait_time = random.randint(10, MAX_WAIT_TIME)
+                        LOG.info('Attempt %s of %s: retrying in %s seconds' %
+                                 (attempt, MAX_ATTEMPTS, wait_time))
+                        time.sleep(wait_time)
+
+            # Check Max SSH Retries
+            if attempt > MAX_ATTEMPTS:
+                LOG.error(
+                    'Max Retries exceeded. SSH ERROR - Resource unreachable - Server %s - IP: %s!' % (
+                    igrp, server_ip )
+                    )
+                ssh_errs = True
+
+        if ssh_errs:
+           raise HelpersError(
+               'ERROR: Unable to establish ssh connection with resources!'
+           )
+        # Run Playbook/Module
         result = obj(*args, **kwargs)
         return result
+
     return check_access
    
