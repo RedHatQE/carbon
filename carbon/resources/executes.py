@@ -48,6 +48,7 @@ class Execute(CarbonResource):
     _valid_tasks_types = ['validate', 'execute']
     _fields = [
         'name',
+        'description',
         'framework',
         'vars',
     ]

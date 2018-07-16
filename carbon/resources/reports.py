@@ -46,7 +46,7 @@ class Report(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'report']
-    _fields = ['name', 'type']
+    _fields = ['name', 'description', 'type']
 
     def __init__(self,
                  config=None,

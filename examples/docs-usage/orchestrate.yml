@@ -1,12 +1,14 @@
 ---
 orchestrate:
   - name:
+    description:
     orchestrator:
     hosts:
 
 ---
 orchestrate:
   - name: rhsm_register
+    description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
       - host01
@@ -15,6 +17,7 @@ orchestrate:
 ---
 orchestrate:
   - name: rhsm_register
+    description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
       - host01
@@ -29,6 +32,7 @@ orchestrate:
 ---
 orchestrate:
   - name: rhsm_register
+    description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
       - host01
@@ -39,6 +43,7 @@ orchestrate:
 ---
 orchestrate:
   - name: rhsm_register
+    description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
       - host01
@@ -50,6 +55,7 @@ orchestrate:
 ---
 orchestrate:
   - name: rhsm_register
+    description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
       - host01

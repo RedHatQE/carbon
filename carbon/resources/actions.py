@@ -63,7 +63,7 @@ class Action(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'orchestrate']
-    _fields = ['name', 'hosts']
+    _fields = ['name', 'description', 'hosts']
 
     def __init__(self,
                  config=None,
@@ -100,6 +100,9 @@ class Action(CarbonResource):
                                         ' field missing!')
         else:
             self._name = name
+
+        # set the action description
+        self._description = parameters.pop('description', None)
 
         # each action will have x number of hosts associated to it. lets
         # associate the list of hosts to the action object itself. currently
@@ -164,6 +167,7 @@ class Action(CarbonResource):
         # set additional action properties
         profile.update({
             'name': self.name,
+            'description': self.description,
             'orchestrator': getattr(self.orchestrator, '__orchestrator_name__')
         })
 

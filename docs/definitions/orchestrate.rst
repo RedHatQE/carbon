@@ -31,7 +31,13 @@ understand the key/values defined.
         - Yes
         - n/a
 
-    *   - orchestrator:
+    *   - description
+        - A description of what the resource is trying to accomplish
+        - String
+        - No
+        - n/a
+
+    *   - orchestrator
         - The orchestrator to use to execute the action (name) you defined
           above
         - String

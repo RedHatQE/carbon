@@ -352,13 +352,16 @@ class CarbonResource(LoggerMixin, TimeMixin):
         # Carbon configuration
         self._config = config
 
+        # every resource can have a optional description
+        self._description = None
+
     @property
     def name(self):
         return self._name
 
     @name.setter
     def name(self, value):
-        raise AttributeError('You can set name after class is instanciated.')
+        raise AttributeError('You can set name after class is instantiated.')
 
     @property
     def config(self):
@@ -367,6 +370,15 @@ class CarbonResource(LoggerMixin, TimeMixin):
     @config.setter
     def config(self, value):
         raise AttributeError('You can set config after resource is created.')
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, value):
+        raise AttributeError('You cannot set the resource description after '
+                             'its class is instantiated.')
 
     @property
     def data_folder(self):
@@ -420,6 +432,8 @@ class CarbonResource(LoggerMixin, TimeMixin):
             # by the YAML file properties.
             if key == 'name':
                 self._name = value
+            elif key == 'description':
+                self._description = value
             elif key in self._fields:
                 setattr(self, key, value)
         if data:

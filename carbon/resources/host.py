@@ -58,6 +58,7 @@ class Host(CarbonResource):
     _valid_tasks_types = ['validate', 'provision', 'cleanup']
     _fields = [
         'name',
+        'description',
         'ip_address',
         'metadata',
         'ansible_params'
@@ -112,6 +113,9 @@ class Host(CarbonResource):
 
         # apply filter to the hosts name
         self._name = filter_host_name(self._name)
+
+        # set host description
+        self._description = parameters.pop('description', None)
 
         # set the hosts role
         # TODO: we must define what role means for a host and document it.
@@ -360,6 +364,7 @@ class Host(CarbonResource):
         # set additional host properties
         profile.update({
             'name': self.name,
+            'description': self.description,
             'metadata': self.metadata,
             'ansible_params': self.ansible_params,
             'provider': getattr(self.provider, 'name'),

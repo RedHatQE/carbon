@@ -94,7 +94,7 @@ class Scenario(CarbonResource):
             self._name = gen_random_str(15)
 
         # set the scenario description attribute
-        self.description = parameters.pop('description', None)
+        self._description = parameters.pop('description', None)
 
         self._credentials = list()
 
