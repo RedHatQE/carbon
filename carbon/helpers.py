@@ -501,12 +501,28 @@ def ssh_retry(obj):
         ssh_errs = False
         args[0].set_inventory()
         for igrp, isys in args[0].inventory._inventory.hosts.items():
-            sys_grp = args[0].variable_manager._inventory.groups[igrp]
-            sys_vars = sys_grp.vars
-            server_ip = sys_vars['ansible_host']
-            server_user = sys_vars['ansible_user']
-            server_key_file = sys_vars['ansible_ssh_private_key_file']
+            if kwargs['extra_vars']['hosts'] in args[0].inventory.groups:
+                hgrp = args[0].inventory.groups[kwargs['extra_vars']['hosts']]
+                if len(hgrp.child_groups) > 0:
+                    host_list = hgrp.child_groups.hosts
+                else:
+                    host_list = hgrp.hosts
 
+                found = False
+                for hsys in host_list:
+                    if hsys.name is isys.name:
+                        sys_grp = args[0].variable_manager._inventory.groups[igrp]
+                        sys_vars = sys_grp.vars
+                        server_ip = sys_vars['ansible_host']
+                        server_user = sys_vars['ansible_user']
+                        server_key_file = sys_vars['ansible_ssh_private_key_file']
+                        found = True
+                if not found:
+                    continue
+            else:
+                raise HelpersError(
+                    'ERROR: Unexpected error - Group %s not found in inventory file!' % kwargs['extra_vars']['hosts']
+                )
             attempt = 1
             while attempt <= MAX_ATTEMPTS:
                 try:
@@ -516,8 +532,9 @@ def ssh_retry(obj):
                     # Test ssh connection
                     ssh.connect(server_ip,
                                 username=server_user,
-                                key_filename=server_key_file)
-                    LOG.info("Server %s - IP: %s is reachable." % (igrp,
+                                key_filename=server_key_file,
+                                timeout=5)
+                    LOG.debug("Server %s - IP: %s is reachable." % (igrp,
                                                                    server_ip))
                     ssh.close()
                     break
