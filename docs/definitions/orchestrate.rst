@@ -140,6 +140,26 @@ Example 3
 ~~~~~~~~~
 
 You have a playbook which needs to run against x number of hosts and requires
+only tasks with a tag set to prod.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 95-104
+
+Example 4
+~~~~~~~~~
+
+You have a playbook which needs to run against x number of hosts and requires
+only tasks with a tag set to prod and requires connection settings that conflicts with your ansible.cfg.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 106-121
+
+
+
+Example 5
+~~~~~~~~~
+
+You have a playbook which needs to run against x number of hosts and requires
 an ansible role to be downloaded.
 
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml

@@ -43,6 +43,7 @@ from ansible.parsing.dataloader import DataLoader
 from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
+from ansible.config.manager import ConfigManager
 
 from .._compat import RawConfigParser, urlparse
 from ..core import CarbonOrchestrator, CarbonOrchestratorError, LoggerMixin
@@ -142,8 +143,8 @@ class AnsibleController(object):
                         'listhosts',
                         'syntax',
                         'remote_user',
-                        'private_key_file',
-                        'diff']
+                        'diff',
+                        'tags']
         )
 
     def set_inventory(self):
@@ -222,20 +223,32 @@ class AnsibleController(object):
 
         return dict(status=result, callback=self.callback)
 
-    def run_playbook(self, playbook, extra_vars=None, become=False,
-                     become_method="sudo", become_user="root",
-                     remote_user="root", private_key_file=None,
+    def run_playbook(self, playbook, extra_vars=None, become=None,
+                     become_method=None, become_user=None,
+                     remote_user=None, connection=None, forks=None, tags=[],
                      default_callback=False):
         """Run an Ansible playbook.
 
         :param playbook: Playbook to call
+        :type playbook: str
         :param extra_vars: Additional variables for playbook
+        :type extra_vars: list
         :param become: Whether to run as sudoer
+        :type become: bool
         :param become_method: Method to use for become
+        :type become_method: str
         :param become_user: User to become to run playbook call
+        :type become_user: str
         :param remote_user: Connect as this user
-        :param private_key_file: SSH private key for authentication
+        :type remote_user: str
+        :param connection: Connection type
+        :type: connection: str
+        :param forks: number of forks allowed
+        :type: forks: int
+        :param tags: list of tags to execute
+        :type: tags: list
         :param default_callback: enable default callback
+        :type: bool
         :return: A dict of Ansible return code and callback object
         """
         # instantiate callback class
@@ -246,9 +259,9 @@ class AnsibleController(object):
 
         # define ansible options
         options = self.playbook_options(
-            connection='smart',
+            connection=connection,
             module_path='',
-            forks=100,
+            forks=forks,
             become=become,
             become_method=become_method,
             become_user=become_user,
@@ -258,8 +271,8 @@ class AnsibleController(object):
             listhosts=False,
             syntax=False,
             remote_user=remote_user,
-            private_key_file=private_key_file,
-            diff=False
+            diff=False,
+            tags=tags
         )
 
         # set additional variables for use by playbook
@@ -567,6 +580,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         'ansible_ssh_private_key_file',
     )
 
+    user_run_vals = ["become", "become_method", "become_user", "remote_user",
+                     "connection", "forks"]
+
     def __init__(self, package):
         """Constructor.
 
@@ -684,6 +700,33 @@ class AnsibleOrchestrator(CarbonOrchestrator):
                     )
                 self.logger.info('Role: %s successfully installed!' % item)
 
+    def get_default_config(self):
+        """getting the default configuration defined by ansible.cfg
+        (Uses default values if there is no ansible.cfg).
+
+        :return: key/values of the default ansible configuration
+        :rtype: dict
+        """
+        returndict = {}
+        acm = ConfigManager()
+        a_settings = acm.data.get_settings()
+        for setting in a_settings:
+            if setting.name == "CONFIG_FILE":
+                self.logger.debug("Using %s for default configuration" % setting.value)
+            elif setting.name == "DEFAULT_BECOME":
+                returndict["become"] = setting.value
+            elif setting.name == "DEFAULT_BECOME_METHOD":
+                returndict["become_method"] = setting.value
+            elif setting.name == "DEFAULT_BECOME_USER":
+                returndict["become_user"] = setting.value
+            elif setting.name == "DEFAULT_REMOTE_USER":
+                returndict["remote_user"] = setting.value
+            elif setting.name == "DEFAULT_FORKS":
+                returndict["forks"] = setting.value
+            elif setting.name == 'DEFAULT_TRANSPORT':
+                returndict["connection"] = setting.value
+        return returndict
+
     def run(self):
         """Run.
 
@@ -718,10 +761,31 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         # RFE: remove this and maybe add a retry?
         time.sleep(5)
 
+        run_options = self.get_default_config()
+        self.logger.debug("Default options: " + str(run_options))
+
+        tags = []
+        if "tags" in self.options and self.options["tags"]:
+            tags = self.options["tags"]
+
+        # override ansible options (user passed in vals for specific action)
+        for val in self.user_run_vals:
+            if val in self.options and self.options[val]:
+                run_options[val] = self.options[val]
+
+        self.logger.debug("Ansible options used: " + str(run_options))
+
         results = obj.run_playbook(
             self.action_abs,
             extra_vars=extra_vars,
-            default_callback=True
+            become=run_options["become"],
+            become_method=run_options["become_method"],
+            become_user=run_options["become_user"],
+            remote_user=run_options["remote_user"],
+            connection=run_options["connection"],
+            forks=run_options["forks"],
+            tags=tags,
+            default_callback=True,
         )
 
         self.logger.info('Finished action: %s execution.' % self.action)
