@@ -8,6 +8,29 @@ orchestrate:
 ---
 orchestrate:
   - name: rhsm_register
+    hosts: host01, host02
+
+---
+orchestrate:
+  - name: rhsm_register
+    hosts:
+      - host01
+      - host02
+
+---
+orchestrate:
+  - name: rhsm_register
+    hosts: all
+
+---
+orchestrate:
+  - name: rhsm_register
+    hosts:
+      - all
+
+---
+orchestrate:
+  - name: rhsm_register
     description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:

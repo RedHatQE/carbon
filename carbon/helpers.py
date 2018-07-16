@@ -432,9 +432,13 @@ def fetch_hosts(hosts, task, all_hosts=True):
     either string or host class type.
 
     :param hosts: scenario hosts
+    :type hosts: list
     :param task: task requiring hosts
+    :type task: dict
     :param all_hosts: determine to set all hosts
+    :type all_hosts: bool
     :return: updated task object including host objects
+    :rtype: dict
     """
 
     # placeholders
@@ -458,6 +462,9 @@ def fetch_hosts(hosts, task, all_hosts=True):
         for host in hosts:
             if all_hosts:
                 _all_hosts.append(host)
+            if 'all' in _filtered_hosts:
+                _hosts.append(host)
+                continue
             if host.name in _filtered_hosts:
                 _hosts.append(host)
     else:

@@ -132,9 +132,7 @@ orchestrate:
     description: "subscribe to rhsm"            # describes what is being performed on the hosts
     orchestrator: ansible                       # orchestrator module to use in this case ansible
     hosts:                                      # hosts which the action is executed on
-      - testdriver                              # ref above ^^: provision.testdriver
-      - testclient01                            # ref above ^^: provision.testclient01
-      - testclient02                            # ref above ^^: provision.testclient02
+      - all                                     # ref above ^^ to all hosts : provision.*
     ansible_options:                            # options used by ansible orchestrator
       extra_vars:
         rhn_hostname: subscription.rhsm.stage.redhat.com

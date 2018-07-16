@@ -7,7 +7,7 @@ order to test the systems properly.
 First lets go over the basic structure that defines a configuration task.
 
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml
-    :lines: 1-5
+    :lines: 1-6
 
 The above code snippet is the minimal structure that is required to create a
 orchestrate task within carbon. This task is translated into a carbon action
@@ -49,6 +49,32 @@ understand the key/values defined.
         - List
         - Yes
         - n/a
+
+**Hosts**
+
+You can associate hosts to a given orchestrate task a couple of different ways.
+First is to define your hosts in a comma separated string.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 8-11
+
+You can also define your hosts as a list.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 13-18
+
+It can become tedious if a orchestrate task needs to be performed on all hosts
+within the scenario and you have many hosts declared. Carbon provides you with
+the ability to say all hosts. This eliminates the need to define every host per
+multiple tasks. It can be either in string or list format.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 20-23
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 25-29
+
+-----
 
 Since carbons development model is plug and play. This means different
 orchestrator's could be used to execute configuration tasks declared. For the
@@ -99,7 +125,7 @@ You have a playbook which needs to run against x number of hosts and does not
 require any additional extra variables.
 
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml
-    :lines: 7-13
+    :lines: 31-38
 
 Example 2
 ~~~~~~~~~
@@ -108,7 +134,7 @@ You have a playbook which needs to run against x number of hosts and requires
 additional extra variables.
 
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml
-    :lines: 15-27
+    :lines: 40-53
 
 Example 3
 ~~~~~~~~~
@@ -117,7 +143,7 @@ You have a playbook which needs to run against x number of hosts and requires
 an ansible role to be downloaded.
 
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml
-    :lines: 29-37
+    :lines: 55-64
 
 Content of roles.yml:
 
@@ -134,7 +160,7 @@ An alternative to using the role file is you can directly define them using
 the roles key.
 
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml
-    :lines: 39-48
+    :lines: 66-76
 
 It is possible to define both role_file and roles. Carbon will install the
 roles first from the role file and then the roles defined. It is up to the
@@ -153,7 +179,7 @@ You have a playbook which needs to run against x number of hosts, requires
 ansible roles to be downloaded and requires additional extra variables.
 
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml
-    :lines: 50-64
+    :lines: 78-93
 
 .. attention::
 
@@ -175,6 +201,8 @@ ansible roles to be downloaded and requires additional extra variables.
         host_key_checking = False
         retry_files_enabled = False
         roles_path = ./assets/ansible/roles
+
+----
 
 Resources
 ~~~~~~~~~
