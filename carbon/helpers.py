@@ -493,13 +493,22 @@ def filter_host_name(name):
 
 def ssh_retry(obj):
     """
+    Decorator to check SSH Connection before method execution.
+    Will perform 10 retries with random sleep of 10 to 100 seconds
+    between attempts
     """
-    MAX_ATTEMPTS = 30
+    MAX_ATTEMPTS = 10
     MAX_WAIT_TIME = 100
 
     def check_access(*args, **kwargs):
+        """
+        SSH Connection check and retries
+        """
+        # Set flag and Inventory
         ssh_errs = False
         args[0].set_inventory()
+
+        # Obtain ip, user and key file for systems in hosts
         for igrp, isys in args[0].inventory._inventory.hosts.items():
             if kwargs['extra_vars']['hosts'] in args[0].inventory.groups:
                 hgrp = args[0].inventory.groups[kwargs['extra_vars']['hosts']]
@@ -517,18 +526,22 @@ def ssh_retry(obj):
                         server_user = sys_vars['ansible_user']
                         server_key_file = sys_vars['ansible_ssh_private_key_file']
                         found = True
+                        break
                 if not found:
                     continue
             else:
                 raise HelpersError(
                     'ERROR: Unexpected error - Group %s not found in inventory file!' % kwargs['extra_vars']['hosts']
                 )
+
+            # Perform SSH checks
             attempt = 1
             while attempt <= MAX_ATTEMPTS:
                 try:
                     ssh = SSHClient()
                     ssh.load_system_host_keys()
                     ssh.set_missing_host_key_policy(AutoAddPolicy())
+
                     # Test ssh connection
                     ssh.connect(server_ip,
                                 username=server_user,
@@ -550,7 +563,7 @@ def ssh_retry(obj):
                                  (attempt, MAX_ATTEMPTS, wait_time))
                         time.sleep(wait_time)
 
-            # Check Max SSH Retries
+            # Check Max SSH Retries performed
             if attempt > MAX_ATTEMPTS:
                 LOG.error(
                     'Max Retries exceeded. SSH ERROR - Resource unreachable - Server %s - IP: %s!' % (
@@ -558,10 +571,12 @@ def ssh_retry(obj):
                     )
                 ssh_errs = True
 
+        # Check for SSH Errors
         if ssh_errs:
            raise HelpersError(
                'ERROR: Unable to establish ssh connection with resources!'
            )
+
         # Run Playbook/Module
         result = obj(*args, **kwargs)
         return result
