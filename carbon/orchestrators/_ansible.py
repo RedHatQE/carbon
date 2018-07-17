@@ -336,7 +336,7 @@ class Inventory(object):
         # the hosts to have the given action run against. Nice feature is with
         # the group having potentially multiple hosts. Ansible will run that
         # action against all the hosts in the group concurrently.
-        self._group = 'hosts:children'
+        self._group = 'hosts'
 
     @property
     def master_inventory(self):
