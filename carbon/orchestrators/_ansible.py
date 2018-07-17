@@ -47,7 +47,7 @@ from ansible.config.manager import ConfigManager
 
 from .._compat import RawConfigParser, urlparse
 from ..core import CarbonOrchestrator, CarbonOrchestratorError, LoggerMixin
-from ..helpers import file_mgmt
+from ..helpers import file_mgmt, ssh_retry
 
 
 class CarbonCallback(CallbackBase):
@@ -156,6 +156,7 @@ class AnsibleController(object):
         )
         self.variable_manager.set_inventory(self.inventory)
 
+    @ssh_retry
     def run_module(self, play_source, remote_user="root", become=False,
                    become_method="sudo", become_user="root",
                    private_key_file=None):
@@ -223,6 +224,7 @@ class AnsibleController(object):
 
         return dict(status=result, callback=self.callback)
 
+    @ssh_retry
     def run_playbook(self, playbook, extra_vars=None, become=None,
                      become_method=None, become_user=None,
                      remote_user=None, connection=None, forks=None, tags=[],
