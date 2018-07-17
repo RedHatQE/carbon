@@ -387,7 +387,7 @@ class CarbonResource(LoggerMixin, TimeMixin):
         :return: resource data folder
         :rtype: str
         """
-        return self.config['DATA_FOLDER']
+        return str(self.config['DATA_FOLDER'])
 
     @data_folder.setter
     def data_folder(self, value):
