@@ -1,0 +1,121 @@
+---
+orchestrate:
+  - name:
+    description:
+    orchestrator:
+    hosts:
+
+---
+orchestrate:
+  - name: rhsm_register
+    hosts: host01, host02
+
+---
+orchestrate:
+  - name: rhsm_register
+    hosts:
+      - host01
+      - host02
+
+---
+orchestrate:
+  - name: rhsm_register
+    hosts: all
+
+---
+orchestrate:
+  - name: rhsm_register
+    hosts:
+      - all
+
+---
+orchestrate:
+  - name: rhsm_register
+    description: "register systems under test against rhsm"
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+
+---
+orchestrate:
+  - name: rhsm_register
+    description: "register systems under test against rhsm"
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+    ansible_options:
+      extra_vars:
+        username: kingbob
+        password: minions
+        server_hostname: server01.example.com
+        auto_attach: true
+
+---
+orchestrate:
+  - name: rhsm_register
+    description: "register systems under test against rhsm"
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+    ansible_galaxy_options:
+      role_file: roles.yml
+
+---
+orchestrate:
+  - name: rhsm_register
+    description: "register systems under test against rhsm"
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+    ansible_galaxy_options:
+      roles:
+        - oasis-roles.rhsm
+
+---
+orchestrate:
+  - name: rhsm_register
+    description: "register systems under test against rhsm"
+    orchestrator: ansible
+    hosts:
+      - host01
+      - host02
+    ansible_options:
+      extra_vars:
+        username: kingbob
+        password: minions
+        server_hostname: server01.example.com
+        auto_attach: true
+    ansible_galaxy_options:
+      role_file: roles.yml
+
+---
+orchestrate:
+  - name: custom
+    description: "running a custom playbook, only running tasks when tag=prod"
+    orchestrator: ansible
+    hosts:
+      - host01
+    ansible_options:
+      tags:
+        - prod
+
+---
+orchestrate:
+  - name: custom2
+    description: "custom playbook, w/ different connection options"
+    orchestrator: ansible
+    hosts:
+      - host07
+    ansible_options:
+      forks: 2
+      become: True
+      become_method: sudo
+      become_user: test_user2
+      remote_user: test_user
+      connection: paramiko
+      tags:
+        - prod

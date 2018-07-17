@@ -21,6 +21,9 @@ mapping:
       mapping:
         name:
           required: True
+        description:
+          required: False
+          type: str
         provider:
           required: True
   orchestrate:
@@ -32,12 +35,18 @@ mapping:
       mapping:
         name:
           required: True
+        description:
+          required: False
+          type: str
         hosts:
           required: True
           type: seq
           sequence:
             - type: str
-        vars:
+        ansible_options:
+          allowempty: True
+          type: map
+        ansible_galaxy_options:
           allowempty: True
           type: map
     - type: map
@@ -45,9 +54,15 @@ mapping:
       mapping:
         name:
           required: True
+        description:
+          required: False
+          type: str
         hosts:
           required: True
-        vars:
+        ansible_options:
+          allowempty: True
+          type: map
+        ansible_galaxy_options:
           allowempty: True
           type: map
   execute:
@@ -58,6 +73,9 @@ mapping:
       mapping:
         name:
           required: True
+        description:
+          required: False
+          type: str
         vars:
           allowempty: True
           type: map
@@ -71,6 +89,9 @@ mapping:
           required: True
         name:
           required: True
+        description:
+          required: False
+          type: str
         vars:
           allowempty: True
           type: map

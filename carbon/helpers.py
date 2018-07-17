@@ -308,7 +308,6 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
         processed is a configuration file parser language)
     :type cfg_parser: bool
     :return: Data that was read from a file
-    :rtype: object
     """
 
     # Determine file extension
@@ -437,9 +436,13 @@ def fetch_hosts(hosts, task, all_hosts=True):
     either string or host class type.
 
     :param hosts: scenario hosts
+    :type hosts: list
     :param task: task requiring hosts
+    :type task: dict
     :param all_hosts: determine to set all hosts
+    :type all_hosts: bool
     :return: updated task object including host objects
+    :rtype: dict
     """
 
     # placeholders
@@ -463,6 +466,9 @@ def fetch_hosts(hosts, task, all_hosts=True):
         for host in hosts:
             if all_hosts:
                 _all_hosts.append(host)
+            if 'all' in _filtered_hosts:
+                _hosts.append(host)
+                continue
             if host.name in _filtered_hosts:
                 _hosts.append(host)
     else:
@@ -582,4 +588,4 @@ def ssh_retry(obj):
         return result
 
     return check_access
-   
+

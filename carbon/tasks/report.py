@@ -33,8 +33,10 @@ class ReportTask(CarbonTask):
     def __init__(self, msg, **kwargs):
         """Constructor.
 
-        :param msg: Task message
-        :param kwargs: Additional keyword arguments
+        :param msg: task message
+        :type msg: str
+        :param kwargs: additional keyword arguments
+        :type kwargs: dict
         """
         super(ReportTask, self).__init__(**kwargs)
         self.msg = msg

@@ -58,3 +58,8 @@ try:
     string_types = (str, unicode)
 except NameError:
     string_types = (str, )
+
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse

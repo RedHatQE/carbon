@@ -18,14 +18,15 @@
 """
     carbon.resources.scenario
 
-    Here you add brief description of what this module is about
+    Module used for building carbon scenario compound. Every carbon object
+    has one scenario which has additional compounds associated to it.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 import errno
-
 import os
+
 import yaml
 from pykwalify.core import Core
 from pykwalify.errors import CoreError, SchemaError
@@ -46,12 +47,19 @@ class ScenarioError(CarbonResourceError):
     def __init__(self, message):
         """Constructor.
 
-        :param message: Details about the error.
+        :param message: details about the error
+        :type message: str
         """
         super(ScenarioError, self).__init__(message)
 
 
 class Scenario(CarbonResource):
+    """
+    The scenario resource class. It is the core resource which makes up the
+    carbon compound. A scenario consists of multiple compounds of 'resources'.
+    Those compounds make up the scenario which derive tasks for the scenario
+    to be processed.
+    """
 
     _valid_tasks_types = ['validate']
 
@@ -66,33 +74,45 @@ class Scenario(CarbonResource):
                  parameters={},
                  validate_task_cls=ValidateTask,
                  **kwargs):
+        """Constructor.
 
+        :param config: carbon configuration
+        :type config: dict
+        :param name: scenario name
+        :type name: str
+        :param parameters: content which makes up the scenario
+        :type parameters: dict
+        :param validate_task_cls: carbons validate task class
+        :type validate_task_cls: object
+        :param kwargs: additional key:value(s)
+        :type kwargs: dict
+        """
         super(Scenario, self).__init__(config=config, name=name, **kwargs)
 
+        # set the scenario name attribute
         if not name:
             self._name = gen_random_str(15)
 
+        # set the scenario description attribute
+        self._description = parameters.pop('description', None)
+
         self._credentials = list()
 
+        # set resource attributes
         self._hosts = list()
         self._actions = list()
         self._executes = list()
         self._reports = list()
-        self._yaml_data = None
+        self._yaml_data = dict()
+
+        # set the carbon task classes for the scenario
         self._validate_task_cls = validate_task_cls
 
-        self.reload_tasks()
-
-        if parameters:
-            self.load(parameters)
-
-        # create a scenario data folder where all hosts, actions, executes, reports
-        # will live during the scenario life cycle
-        # TODO: cleanup task should clean this directory after report collects it
-        self._data_folder = self.config['DATA_FOLDER']
+        # create the runtime data folder for the scenario life cycle
+        # TODO: cleanup task should remove this directory after report task
         try:
-            if not os.path.exists(self._data_folder):
-                os.makedirs(self._data_folder)
+            if not os.path.exists(self.data_folder):
+                os.makedirs(self.data_folder)
         except OSError as ex:
             if ex.errno == errno.EACCES:
                 raise ScenarioError('You do not have permission to create'
@@ -101,10 +121,17 @@ class Scenario(CarbonResource):
                 raise ScenarioError('Error creating scenario workspace: '
                                     '%s' % ex.message)
 
+        # reload construct task methods
+        self.reload_tasks()
+
+        # load the parameters set into the object itself
+        if parameters:
+            self.load(parameters)
+
     def add_resource(self, item):
         """Add a scenario resource to its corresponding list.
 
-        :param item: Resource.
+        :param item: resource data
         :type item: object
         """
         if isinstance(item, Host):
@@ -127,10 +154,10 @@ class Scenario(CarbonResource):
         blaster run is finished to update the scenarios resources objects.
         The reason to update them is because blaster uses multiprocessing which
         spawns new processes which may alter a scenario resource object given
-        to it. Carbon then has no corelation with that updated resource object.
+        to it. Carbon then has no correlation with that updated resource.
         Which is why we need to refresh the scenario resources after run time.
 
-        :param item: Resource.
+        :param item: resource data
         :type item: object
         """
         if isinstance(item, Host):
@@ -146,7 +173,11 @@ class Scenario(CarbonResource):
                              'Check the type of the given item: %s' % item)
 
     def reload_resources(self, tasks):
-        """Reload scenario resources."""
+        """Reload scenario resources.
+
+        :param tasks: task data returned by blaster
+        :type tasks: list
+        """
         count = 0
 
         for task in tasks:
@@ -159,120 +190,170 @@ class Scenario(CarbonResource):
                     self.add_resource(value)
 
     @property
-    def data_folder(self):
-        return self._data_folder
-
-    @data_folder.setter
-    def data_folder(self, value):
-        raise ValueError('Data folder is set automatically.')
-
-    @property
-    def hosts(self):
-        return self._hosts
-
-    @hosts.setter
-    def hosts(self, value):
-        raise ValueError('You can not set hosts directly.'
-                         'Use function ~Scenario.add_hosts')
-
-    @property
     def yaml_data(self):
+        """Scenario file content property.
+
+        :return: scenario file content
+        :rtype: list
+        """
         return self._yaml_data
 
     @yaml_data.setter
     def yaml_data(self, value):
+        """Set scenario file content property."""
         self._yaml_data = value
 
-    def add_hosts(self, h):
-        if not isinstance(h, Host):
+    @property
+    def hosts(self):
+        """Hosts property
+
+        :return: host resources associated to the scenario
+        :rtype: list
+        """
+        return self._hosts
+
+    @hosts.setter
+    def hosts(self, value):
+        """Set hosts property."""
+        raise ValueError('You can not set hosts directly.'
+                         'Use function ~Scenario.add_hosts')
+
+    def add_hosts(self, host):
+        """Add host resources to the scenario.
+
+        :param host: host resource
+        :type host: object
+        """
+        if not isinstance(host, Host):
             raise ValueError('Host must be of type %s ' % type(Host))
-        self._hosts.append(h)
+        self._hosts.append(host)
 
     @property
     def actions(self):
+        """Actions property.
+
+        :return: action resources associated to the scenario
+        :rtype: list
+        """
         return self._actions
 
     @actions.setter
     def actions(self, value):
+        """Set actions property."""
         raise ValueError('You can not set actions directly.'
                          'Use function ~Scenario.add_actions')
 
-    def add_actions(self, h):
-        if not isinstance(h, Action):
+    def add_actions(self, action):
+        """Add action resources to the scenario.
+
+        :param action: action resource
+        :type action: object
+        """
+        if not isinstance(action, Action):
             raise ValueError('Action must be of type %s ' % type(Action))
-        self._actions.append(h)
+        self._actions.append(action)
 
     @property
     def executes(self):
+        """Executes property.
+
+        :return: execute resources associated to the scenario
+        :rtype: list
+        """
         return self._executes
 
     @executes.setter
     def executes(self, value):
+        """Set executes property."""
         raise ValueError('You can not set executes directly.'
                          'Use function ~Scenario.add_executes')
 
-    def add_executes(self, h):
-        if not isinstance(h, Execute):
+    def add_executes(self, execute):
+        """Add execute resources to the scenario.
+
+        :param execute: execute resource
+        :type execute: object
+        """
+        if not isinstance(execute, Execute):
             raise ValueError('Execute must be of type %s ' % type(Execute))
-        self._executes.append(h)
+        self._executes.append(execute)
 
     @property
     def reports(self):
+        """Reports property.
+
+        :return: report resources associated to the scenario
+        :rtype: list
+        """
         return self._reports
 
     @reports.setter
     def reports(self, value):
+        """Set report property."""
         raise ValueError('You can not set reports directly.'
                          'Use function ~Scenario.add_reports')
 
-    def add_reports(self, h):
-        if not isinstance(h, Report):
+    def add_reports(self, report):
+        """Add report resources to the scenario.
+
+        :param report: report resource
+        :type report: object
+        """
+        if not isinstance(report, Report):
             raise ValueError('Execute must be of type %s ' % type(Execute))
-        self._reports.append(h)
+        self._reports.append(report)
 
     @property
     def credentials(self):
+        """Credentials property.
+
+        :return: credentials associated to the scenario.
+        :rtype: list
+        """
         return self._credentials
 
     @credentials.setter
     def credentials(self, value):
+        """Set credentials property."""
         raise ValueError('You cannot set credentials directly. '
                          'Use function ~Scenario.add_credentials')
 
     def add_credentials(self, data):
+        """Add credentials to the scenario.
+
+        :param data: credentials data
+        :type data: dict
+        """
         if self._credentials:
             for index, value in enumerate(self._credentials):
                 # overwrite if exists
                 if value["name"] == data["name"]:
-                    # self._credentials.remove(value)
                     self._credentials.pop(index)
             self._credentials.append(data)
         else:
             self._credentials.append(data)
 
-    def yaml_validate(self):
-        """Validate the carbon scenario yaml file."""
-        self.logger.debug('Validating the scenario yaml data')
+    def validate(self):
+        """Validate the scenario based on the default schema."""
+        self.logger.debug('Validating scenario YAML file')
+
+        msg = 'validated scenario YAML file against the schema!'
 
         try:
-            c = Core(source_data=yaml.load(self._yaml_data),
+            c = Core(source_data=yaml.load(self.yaml_data),
                      schema_files=[SCENARIO_SCHEMA])
             c.validate(raise_exception=True)
 
-            self.logger.debug(
-                'Successfully validated scenario yaml based on schema.'
-            )
+            self.logger.debug('Successfully %s' % msg)
         except (CoreError, SchemaError) as ex:
-            self.logger.error(
-                'Unsuccessfully validated scenario yaml based on schema.'
-            )
+            self.logger.error('Unsuccessfully %s' % msg)
             raise ScenarioError(ex.msg)
 
     def profile(self):
-        """
-        Builds a dictionary that represents the scenario with
-        all its properties.
+        """Builds a profile which represents the scenario and its properties.
+
         :return: a dictionary representing the scenario
+        :rtype: dict
         """
         profile = dict(
             name=self.name,
@@ -285,14 +366,12 @@ class Scenario(CarbonResource):
         )
         return profile
 
-    def validate(self):
-        # Perform scenario file validation based on carbon schema
-        self.yaml_validate()
-
     def get_assets_list(self):
         """
         Get a list of all assets needed by all hosts in the scenario
+
         :return: list of assets
+        :rtype: list
         """
         assets = []
         for host in self.hosts:
@@ -305,11 +384,15 @@ class Scenario(CarbonResource):
         return list(set(assets))
 
     def _construct_validate_task(self):
+        """Constructs the validate task associated to the scenario.
+
+        :return: validate task definition
+        :rtype: dict
+        """
         task = {
             'task': self._validate_task_cls,
             'name': str(self.name),
             'resource': self,
             'methods': self._req_tasks_methods
         }
-
         return task

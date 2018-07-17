@@ -352,13 +352,16 @@ class CarbonResource(LoggerMixin, TimeMixin):
         # Carbon configuration
         self._config = config
 
+        # every resource can have a optional description
+        self._description = None
+
     @property
     def name(self):
         return self._name
 
     @name.setter
     def name(self, value):
-        raise AttributeError('You can set name after class is instanciated.')
+        raise AttributeError('You can set name after class is instantiated.')
 
     @property
     def config(self):
@@ -367,6 +370,30 @@ class CarbonResource(LoggerMixin, TimeMixin):
     @config.setter
     def config(self, value):
         raise AttributeError('You can set config after resource is created.')
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, value):
+        raise AttributeError('You cannot set the resource description after '
+                             'its class is instantiated.')
+
+    @property
+    def data_folder(self):
+        """Data folder property.
+
+        :return: resource data folder
+        :rtype: str
+        """
+        return self.config['DATA_FOLDER']
+
+    @data_folder.setter
+    def data_folder(self, value):
+        """Set data folder."""
+        raise AttributeError('You cannot set the data folder directly. Only '
+                             'the carbon object can.')
 
     def _add_task(self, t):
         """
@@ -405,6 +432,8 @@ class CarbonResource(LoggerMixin, TimeMixin):
             # by the YAML file properties.
             if key == 'name':
                 self._name = value
+            elif key == 'description':
+                self._description = value
             elif key in self._fields:
                 setattr(self, key, value)
         if data:
@@ -825,18 +854,20 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
 
     __orchestrator_name__ = None
 
+    # all parameters that MUST be set for the orchestrator
+    _mandatory_parameters = ()
+
+    # additional parameters that can be set for the orchestrator
+    _optional_parameters = ()
+
     # orchestrator assets may be files that are needed for remote connections
     # such as SSH keys, etc
     _assets_parameters = ()
 
-    def __init__(self, action=None, hosts=None, **kwargs):
+    def __init__(self):
         """Constructor."""
-        self._action = action
-        self._hosts = hosts
-
-        # set all other attributes
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        self._action = None
+        self._hosts = None
 
     def validate(self):
         raise NotImplementedError
@@ -868,9 +899,70 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
 
     @hosts.setter
     def hosts(self, value):
-        # TODO: reword
-        raise AttributeError('You cannot set the hosts for the action after'
-                             'object is created.')
+        raise AttributeError('Hosts cannot be set once the object is created.')
+
+    @classmethod
+    def _mandatory_parameters_set(cls):
+        """
+        Build a set of mandatory parameters
+        :return: a set
+        """
+        return {'{}_{}'.format(cls.__orchestrator_name__, k) for k in cls._mandatory_parameters}
+
+    @classmethod
+    def get_mandatory_parameters(cls):
+        """
+        Get the list of the mandatory parameters
+        :return: a tuple of the mandatory parameters.
+        """
+        return (param for param in cls._mandatory_parameters_set())
+
+    @classmethod
+    def _optional_parameters_set(cls):
+        """
+        Build a set of optional parameters
+        :return: a set
+        """
+        return {'{}_{}'.format(cls.__orchestrator_name__, k) for k in cls._optional_parameters}
+
+    @classmethod
+    def get_optional_parameters(cls):
+        """
+        Get the list of the optional parameters
+        :return: a tuple of the optional parameters.
+        """
+        return (param for param in cls._optional_parameters_set())
+
+    @classmethod
+    def _all_parameters_set(cls):
+        """
+        Build a set of all parameters
+        :return: a set
+        """
+        return cls._mandatory_parameters_set()\
+            .union(cls._optional_parameters_set())
+
+    @classmethod
+    def get_all_parameters(cls):
+        """
+        Return the list of all possible parameters for the provider.
+        :return: a tuple with all parameters
+        """
+        return (param for param in cls._all_parameters_set())
+
+    @classmethod
+    def build_profile(cls, action):
+        """Builds a dictionary with all the parameters for the orchestrator.
+
+        :param action: action object
+        :type action: object
+        :return: dictionary with all orchestrator parameters
+        :rtype: dict
+        """
+        profile = {}
+        for param in cls.get_all_parameters():
+            profile.update({param: getattr(action, param, None)})
+        return profile
 
 
 class PipelineBuilder(object):

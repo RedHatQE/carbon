@@ -18,20 +18,35 @@
 """
     carbon.resources.actions
 
-    Here you add brief description of what this module is about
+    Module used for building carbon report compounds. A report's main goal is
+    to handle reporting results to external resources.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-
-from ..core import CarbonResource
+from ..core import CarbonResource, CarbonResourceError
 from ..tasks import ReportTask, ValidateTask
 
 
+class CarbonReportError(CarbonResourceError):
+    """Report base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: details about the error
+        :type message: str
+        """
+        super(CarbonReportError, self).__init__(message)
+
+
 class Report(CarbonResource):
+    """
+    The report resource class.
+    """
 
     _valid_tasks_types = ['validate', 'report']
-    _fields = ['name', 'type']
+    _fields = ['name', 'description', 'type']
 
     def __init__(self,
                  config=None,
@@ -40,18 +55,48 @@ class Report(CarbonResource):
                  validate_task_cls=ValidateTask,
                  report_task_cls=ReportTask,
                  **kwargs):
+        """Constructor.
 
+        :param config: carbon configuration
+        :type config: dict
+        :param name: report resource name
+        :type name: str
+        :param parameters: content which makes up the report resource
+        :type parameters: dict
+        :param validate_task_cls: carbons validate task class
+        :type validate_task_cls: object
+        :param report_task_cls: carbons report task class
+        :type report_task_cls: object
+        :param kwargs: additional key:value(s)
+        :type kwargs: dict
+        """
         super(Report, self).__init__(config=config, name=name, **kwargs)
 
+        # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
         self._report_task_cls = report_task_cls
 
+        # reload construct task methods
         self.reload_tasks()
 
+        # load the parameters into the object itself
         if parameters:
             self.load(parameters)
 
+    def profile(self):
+        """Builds a profile for the report resource.
+
+        :return: the report profile
+        :rtype: dict
+        """
+        raise NotImplementedError
+
     def _construct_validate_task(self):
+        """Constructs the validate task associated to the report resource.
+
+        :return: validate task definition
+        :rtype: dict
+        """
         task = {
             'task': self._validate_task_cls,
             'name': str(self.name),
@@ -61,6 +106,11 @@ class Report(CarbonResource):
         return task
 
     def _construct_report_task(self):
+        """Constructs the report task associated to the report resource.
+
+        :return: report task definition
+        :rtype: dict
+        """
         task = {
             'task': self._report_task_cls,
             'name': str(self.name),
