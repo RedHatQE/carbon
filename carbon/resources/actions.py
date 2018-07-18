@@ -128,7 +128,7 @@ class Action(CarbonResource):
 
         # create the orchestrator attributes in the action object
         for p in getattr(self.orchestrator, 'get_all_parameters')():
-            setattr(self, p, parameters.get(p, None))
+            setattr(self, p, parameters.get(p, {}))
 
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls

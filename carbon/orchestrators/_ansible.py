@@ -601,9 +601,6 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.config = getattr(package, 'config')
         self.all_hosts = getattr(package, 'all_hosts')
 
-        if self.options is None:
-            self.options = {'extra_vars': {}}
-
         # create inventory object for create/delete inventory file
         self.inv = Inventory(
             self.hosts,
@@ -753,7 +750,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
         # configure playbook variables
         extra_vars = dict(hosts=self.inv.group)
-        extra_vars.update(self.options['extra_vars'])
+
+        if 'extra_vars' in self.options and self.options['extra_vars']:
+            extra_vars.update(self.options['extra_vars'])
 
         self.logger.info('Executing action: %s.' % self.action)
 
