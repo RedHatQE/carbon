@@ -47,19 +47,19 @@ def print_header():
 @click.option("-v", "--verbose", count=True,
               help="Add verbosity to the commands.")
 @click.version_option()
-def cli(verbose):
+def carbon(verbose):
     """Carbon - Interoperability Testing Framework"""
     if verbose:
         click.echo('\n--- Verbose mode ON (verbosity %s)---\n' % verbose)
 
 
-@cli.command()
+@carbon.command()
 def create():
     """Create a scenario configuration."""
     raise NotImplementedError
 
 
-@cli.command()
+@carbon.command()
 @click.option("-s", "--scenario",
               default=None,
               metavar="",
@@ -101,7 +101,7 @@ def validate(ctx, scenario, data_folder, log_level, assets_path):
     cbn.run(tasklist=["validate"])
 
 
-@cli.command()
+@carbon.command()
 @click.option("-t", "--task",
               default=None,
               type=click.Choice(TASKLIST),

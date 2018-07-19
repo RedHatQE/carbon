@@ -62,6 +62,6 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     entry_points={
-        'console_scripts': ['carbon=carbon.cli:cli']
+        'console_scripts': ['carbon=carbon.cli:carbon']
     }
 )
