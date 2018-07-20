@@ -28,11 +28,11 @@
 """
 
 import os
-import time
 from collections import namedtuple
 from os import remove
 from os.path import isfile
 from uuid import uuid4
+from shutil import copyfile
 
 from ansible.cli.galaxy import GalaxyCLI
 from ansible.errors import AnsibleError
@@ -699,32 +699,62 @@ class AnsibleOrchestrator(CarbonOrchestrator):
                     )
                 self.logger.info('Role: %s successfully installed!' % item)
 
-    def get_default_config(self):
+    def get_default_config(self, key=None):
         """getting the default configuration defined by ansible.cfg
         (Uses default values if there is no ansible.cfg).
 
-        :return: key/values of the default ansible configuration
-        :rtype: dict
+        :param key: get a value of a specific key of the ansible.cfg file
+        :type key: str
+
+        :return: key/values of the default ansible configuration or
+                 a specifc value of the config
+        :rtype: dict if key not defined or string if defined
         """
         returndict = {}
         acm = ConfigManager()
         a_settings = acm.data.get_settings()
-        for setting in a_settings:
-            if setting.name == "CONFIG_FILE":
-                self.logger.debug("Using %s for default configuration" % setting.value)
-            elif setting.name == "DEFAULT_BECOME":
-                returndict["become"] = setting.value
-            elif setting.name == "DEFAULT_BECOME_METHOD":
-                returndict["become_method"] = setting.value
-            elif setting.name == "DEFAULT_BECOME_USER":
-                returndict["become_user"] = setting.value
-            elif setting.name == "DEFAULT_REMOTE_USER":
-                returndict["remote_user"] = setting.value
-            elif setting.name == "DEFAULT_FORKS":
-                returndict["forks"] = setting.value
-            elif setting.name == 'DEFAULT_TRANSPORT':
-                returndict["connection"] = setting.value
-        return returndict
+        if key:
+            for setting in a_settings:
+                if setting.name == key:
+                    return setting.value
+            return None
+        else:
+            for setting in a_settings:
+                if setting.name == "CONFIG_FILE":
+                    self.logger.debug("Using %s for default configuration" % setting.value)
+                elif setting.name == "DEFAULT_BECOME":
+                    returndict["become"] = setting.value
+                elif setting.name == "DEFAULT_BECOME_METHOD":
+                    returndict["become_method"] = setting.value
+                elif setting.name == "DEFAULT_BECOME_USER":
+                    returndict["become_user"] = setting.value
+                elif setting.name == "DEFAULT_REMOTE_USER":
+                    returndict["remote_user"] = setting.value
+                elif setting.name == "DEFAULT_FORKS":
+                    returndict["forks"] = setting.value
+                elif setting.name == 'DEFAULT_TRANSPORT':
+                    returndict["connection"] = setting.value
+            return returndict
+
+    def alog_update(self):
+        """move ansible logs to data folder as needed
+        """
+        ans_logfile = self.get_default_config(key="DEFAULT_LOG_PATH")
+        if ans_logfile:
+            dest = os.path.join(self.config['DATA_FOLDER'], 'logs', "ansible.log")
+            # if user wishes to keep the ansible log copy the log file
+            if os.path.isfile(dest) and not self.config["ANSIBLE_LOG_REMOVE"]:
+                copyfile(ans_logfile, dest)
+            # if user wants to delete the log file (default)
+            elif os.path.isfile(dest):
+                with open(dest, "a") as destfile:
+                    destfile.write(ans_logfile)
+            else:
+                copyfile(ans_logfile, dest)
+            # remove ansible log (default)
+            if os.path.isfile(ans_logfile) and self.config["ANSIBLE_LOG_REMOVE"]:
+                os.remove(ans_logfile)
+            self.logger.debug("ansible logging moved to: %s" % dest)
 
     def run(self):
         """Run.
@@ -785,6 +815,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
         self.logger.info('Finished action: %s execution.' % self.action)
         self.logger.info('Status => %s.' % results['status'])
+
+        # get ansible logs as needed
+        self.alog_update()
 
         # Since we reached here, we are done processing the action. Lets go
         # ahead and delete the inventory for this action run.

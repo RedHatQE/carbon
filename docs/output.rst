@@ -13,7 +13,7 @@ Carbon Output Files
 
 For each run, carbon will create a folder with a UUID in the data folder path.  The main output will be:
 
-#. logs of the run (under the logs directory of that run). (full logs)
+#. logs of the run (under the logs directory of that run). (carbon.log and ansible.log, if set)
 #. results.yml (updated descriptor that will be updated after each successful task)
 #. status.yml (states the statu of each task that was attempted to run (0 - successful or 1 - failure), and a traceback of an error if the run ended in an error.
 

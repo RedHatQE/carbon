@@ -115,8 +115,36 @@ selected orchestrator. Lets dive into them..
         - n/a
 
 The table above describes additional key:values you can set within your
-orchestrate task. Each of those keys can accept additional key:values. Lets
-dive into a couple different examples..
+orchestrate task. Each of those keys can accept additional key:values.
+
+Ansible Configuration
+~~~~~~~~~~~~~~~~~~~~~
+
+It is highly recommended that every scenario that uses Ansible provide their
+own ansible.cfg file. This can be used for specific connection requirements,
+logging, and other settings for the scenario.  The following is an example
+of a configuration file that can be used as a base.
+
+.. literalinclude:: ../../examples/ansible.cfg
+
+To see all of the settings that can be set see `Ansible Configuation Settings
+<https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-configuration-settings>`_.
+
+Ansible Logs
+~~~~~~~~~~~~
+
+To get ansible logs, you must set the **log_path** in the ansible.cfg, and it
+is recommended to set the **log_filter** in the ansible.cfg as described to
+filter out non ansible logs.  If you do not set the log path or don't provide
+an ansible.cfg, you will not get any ansible logs.  The ansible log will be
+added to the logs folder of carbon's output, please see `Carbon Output
+<../output.html>`_ for more details.
+
+
+Examples
+--------
+
+Lets dive into a couple different examples.
 
 Example 1
 ~~~~~~~~~

@@ -193,6 +193,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         'DATA_FOLDER': tempfile.gettempdir(),
         'LOGGER_NAME': __carbon_name__,
         'LOG_LEVEL': 'info',
+        'ANSIBLE_LOG_REMOVE': True
     }
 
     def __init__(self, import_name, root_path=None, log_level=None,
