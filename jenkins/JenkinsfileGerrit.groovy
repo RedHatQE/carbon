@@ -1,55 +1,41 @@
+def cloneRepo() {
+    checkout([
+        $class: 'GitSCM',
+        branches: [[name: "${GERRIT_PATCHSET_REVISION}"]],
+        doGenerateSubModuleConfigurations: false,
+        extensions: [[$class: 'CleanBeforeCheckout']],
+        submoduleCfg: [],
+        userRemoteConfigs: [[
+            credentialsId: '5ed678e3-0a20-46da-979a-4192e7523c33',
+            refspec: "${GERRIT_REFSPEC}",
+            url: 'ssh://qe-pit-jenkins@code.engineering.redhat.com:22/carbon'
+        ]]
+    ])
+}
+
 pipeline {
-    agent {
-        node {
-            label 'carbon'
-        }
-    }
+    agent { label '${AGENT}' }
+
     stages {
-        stage('Clone') {
+        stage('clone') {
             steps {
-                checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: "${GERRIT_PATCHSET_REVISION}"]],
-                        doGenerateSubmoduleConfigurations: false,
-                        extensions: [[$class: 'CleanBeforeCheckout']],
-                        submoduleCfg: [],
-                        userRemoteConfigs: [[
-                                                    credentialsId: '5ed678e3-0a20-46da-979a-4192e7523c33',
-                                                    refspec: "${GERRIT_REFSPEC}",
-                                                    url: 'ssh://qe-pit-jenkins@code.engineering.redhat.com:22/carbon'
-                                            ]]
-                ])
+                cleanWs()
+                cloneRepo()
             }
         }
-        stage('Env Setup') {
+        stage('env') {
             steps {
-                sh 'virtualenv venv'
-                sh 'source venv/bin/activate'
-                sh 'pip install -r test-requirements.txt'
+                sh """
+                virtualenv venv
+                source venv/bin/activate
+                pip install tox
+                """
             }
         }
-        stage('Validation') {
-            parallel {
-                stage('Tox Python 2') {
-                    steps {
-                        dir('carbon') {
-                            sh 'tox -e py27'
-                        }
-                    }
-                }
-                stage('Tox Python 3') {
-                    steps {
-                        dir('carbon') {
-                            sh 'tox -e py36'
-                        }
-                    }
-                }
-                stage('Tox Docs') {
-                    steps {
-                        dir('carbon') {
-                            sh 'tox -e docs'
-                        }
-                    }
+        stage('unit tests') {
+            steps {
+                dir('carbon') {
+                    sh "make"
                 }
             }
         }

@@ -1,6 +1,6 @@
 .PHONY: clean-pyc clean-tests clean docs
 
-all: clean-pyc clean-tests clean test-functional
+all: clean-pyc clean-tests clean test-functional docs
 
 clean-all: clean-pyc clean-tests clean
 

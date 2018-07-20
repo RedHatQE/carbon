@@ -5,6 +5,11 @@
     concurrent: true
     logrotate:
       numToKeep: 25
+    parameters:
+      - string:
+          name: AGENT
+          default: carbon-dev-01
+          description: "The agent where the job should run on."
     triggers:
       - gerrit:
           trigger-on:
