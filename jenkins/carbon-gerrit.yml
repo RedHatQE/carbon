@@ -2,7 +2,7 @@
     name: Carbon-Gerrit
     project-type: pipeline
     description: "Run validation on new code changes for carbon project."
-    concurrent: true
+    concurrent: false
     logrotate:
       numToKeep: 25
     parameters:

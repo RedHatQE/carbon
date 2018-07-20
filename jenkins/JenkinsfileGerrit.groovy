@@ -14,7 +14,7 @@ def cloneRepo() {
 }
 
 pipeline {
-    agent { label '${AGENT}' }
+    agent { label "${AGENT}" }
 
     stages {
         stage('clone') {
@@ -34,9 +34,10 @@ pipeline {
         }
         stage('unit tests') {
             steps {
-                dir('carbon') {
-                    sh "make"
-                }
+                sh """
+                source venv/bin/activate
+                make
+                """
             }
         }
     }
