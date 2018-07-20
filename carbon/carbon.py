@@ -421,7 +421,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
             return
 
         for item in res_list:
-            if res_type == Host:
+            if res_type == Host and item['provider'] != 'static':
                 # Set all available provider credentials into host object
                 item['provider_creds'] = self.scenario.credentials
             self.scenario.add_resource(

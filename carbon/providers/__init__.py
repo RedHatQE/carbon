@@ -31,3 +31,4 @@ from .digitalocean import DigitalOceanProvider
 from .openshift import OpenshiftProvider
 from .openstack import OpenstackProvider
 from .rackspace import RackspaceProvider
+from .static import StaticProvider

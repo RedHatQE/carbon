@@ -50,7 +50,8 @@ TASK_LOGLEVEL_CHOICES = [
 PROVISIONERS = {
     "beaker": "beaker",
     "openshift": "openshift",
-    "openstack": "openstack"
+    "openstack": "openstack",
+    "static": "static"
 }
 
 HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]
