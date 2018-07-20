@@ -67,18 +67,17 @@ def create():
 @click.option("-d", "--data-folder",
               default=None,
               metavar="",
-              help="Scenario workspace path.")
+              help="Directory for saving carbon runtime files.")
+@click.option("-w", "--workspace",
+              default=None,
+              metavar="",
+              help="Scenario workspace.")
 @click.option("--log-level",
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default='info',
               help="Select logging level. (default=info)")
-@click.option("-a", "--assets-path",
-              default=None,
-              metavar="",
-              help="Scenario workspace path.")
-
 @click.pass_context
-def validate(ctx, scenario, data_folder, log_level, assets_path):
+def validate(ctx, scenario, data_folder, log_level, workspace):
     """Validate a scenario configuration."""
     # Make sure the file exists and gets its absolute path
     if os.path.isfile(scenario):
@@ -91,7 +90,12 @@ def validate(ctx, scenario, data_folder, log_level, assets_path):
     scenario_data = template_render(scenario, os.environ)
 
     # Create a new carbon compound
-    cbn = Carbon(__name__, log_level=log_level, data_folder=data_folder, assets_path=assets_path)
+    cbn = Carbon(
+        __name__,
+        log_level=log_level,
+        data_folder=data_folder,
+        workspace=workspace
+    )
 
     # This is the easiest way to configure a full scenario.
     cbn.load_from_yaml(scenario_data)
@@ -114,17 +118,17 @@ def validate(ctx, scenario, data_folder, log_level, assets_path):
 @click.option("-d", "--data-folder",
               default=None,
               metavar="",
-              help="Scenario workspace path.")
-@click.option("-a", "--assets-path",
+              help="Directory for saving carbon runtime files.")
+@click.option("-w", "--workspace",
               default=None,
               metavar="",
-              help="Scenario workspace path.")
+              help="Scenario workspace.")
 @click.option("--log-level",
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default='info',
               help="Select logging level. (default=info)")
 @click.pass_context
-def run(ctx, task, scenario, log_level, data_folder, assets_path):
+def run(ctx, task, scenario, log_level, data_folder, workspace):
     """Run a scenario configuration."""
     print_header()
 
@@ -145,17 +149,16 @@ def run(ctx, task, scenario, log_level, data_folder, assets_path):
         click.echo('Error:\n%s\n%s' % (ex.problem, ex.problem_mark))
         ctx.exit()
 
-    # Ensure assets_path is set. If user does not set via client command
-    # line it will set the same path where the scenario is
-    if assets_path is None:
-        assets_path = os.path.dirname(scenario)
+    # set workspace to scenario directory if undefined
+    if workspace is None:
+        workspace = os.path.dirname(scenario)
 
     # Create a new carbon compound
     cbn = Carbon(
         __name__,
         log_level=log_level,
         data_folder=data_folder,
-        assets_path=assets_path
+        workspace=workspace
     )
 
     # This is the easiest way to configure a full scenario.

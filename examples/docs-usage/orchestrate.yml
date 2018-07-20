@@ -7,7 +7,7 @@ orchestrate:
 
 ---
 orchestrate:
-  - name: rhsm_register
+  - name: rhsm_register.yml
     hosts: host01, host02
 
 ---
@@ -19,18 +19,18 @@ orchestrate:
 
 ---
 orchestrate:
-  - name: rhsm_register
+  - name: rhsm_register.yml
     hosts: all
 
 ---
 orchestrate:
-  - name: rhsm_register
+  - name: rhsm_register.yml
     hosts:
       - all
 
 ---
 orchestrate:
-  - name: rhsm_register
+  - name: rhsm_register.yml
     description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
@@ -39,7 +39,7 @@ orchestrate:
 
 ---
 orchestrate:
-  - name: rhsm_register
+  - name: rhsm_register.yml
     description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
@@ -54,7 +54,7 @@ orchestrate:
 
 ---
 orchestrate:
-  - name: rhsm_register
+  - name: rhsm_register.yml
     description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
@@ -65,7 +65,7 @@ orchestrate:
 
 ---
 orchestrate:
-  - name: rhsm_register
+  - name: rhsm_register.yml
     description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
@@ -77,7 +77,7 @@ orchestrate:
 
 ---
 orchestrate:
-  - name: rhsm_register
+  - name: rhsm_register.yml
     description: "register systems under test against rhsm"
     orchestrator: ansible
     hosts:
@@ -94,7 +94,7 @@ orchestrate:
 
 ---
 orchestrate:
-  - name: custom
+  - name: custom.yml
     description: "running a custom playbook, only running tasks when tag=prod"
     orchestrator: ansible
     hosts:
@@ -105,7 +105,7 @@ orchestrate:
 
 ---
 orchestrate:
-  - name: custom2
+  - name: custom2.yml
     description: "custom playbook, w/ different connection options"
     orchestrator: ansible
     hosts:

@@ -93,7 +93,7 @@ provision:
 
 orchestrate:
   # user defined playbook to execute
-  - name: custom                                # action name (playbook name) (filename only, exclude file extension)
+  - name: custom.yml                            # action name (playbook name) (filename only, exclude file extension)
     description: "performs custom config"       # describes what is being performed on the hosts
     orchestrator: ansible                       # orchestrator module to use in this case ansible
     hosts:                                      # hosts which the action is executed on
@@ -106,7 +106,7 @@ orchestrate:
       role_file: role.yml
 
   # create ssh key pair for ssh connection between driver/client(s)
-  - name: create_ssh_keypair                     # action name (playbook name) (filename only, exclude file extension)
+  - name: create_ssh_keypair.yml                 # action name (playbook name) (filename only, exclude file extension)
     description: "creates ssh key pair for auth" # describes what is being performed on the hosts
     orchestrator: ansible                        # orchestrator module to use in this case ansible
     hosts:                                       # hosts which the action is executed on
@@ -116,7 +116,7 @@ orchestrate:
         user: root
 
   # inject driver ssh public key pair to client(s)
-  - name: inject_pub_key                        # action name (playbook name) (filename only, exclude file extension)
+  - name: inject_pub_key.yml                    # action name (playbook name) (filename only, exclude file extension)
     description: "injects ssh keys into sut"    # describes what is being performed on the hosts
     orchestrator: ansible                       # orchestrator module to use in this case ansible
     hosts:                                      # hosts which the action is executed on
@@ -128,7 +128,7 @@ orchestrate:
           - testclient01
           - testclient02
 
-  - name: rhn_subscribe                         # action name (playbook name) (filename only, exclude file extension)
+  - name: rhn_subscribe.yml                     # action name (playbook name) (filename only, exclude file extension)
     description: "subscribe to rhsm"            # describes what is being performed on the hosts
     orchestrator: ansible                       # orchestrator module to use in this case ansible
     hosts:                                      # hosts which the action is executed on

@@ -106,10 +106,6 @@ class OpenshiftProvider(CarbonProvider):
         'password',
     )
 
-    _assets_parameters = (
-        'custom_template',
-    )
-
     def __init__(self, **kwargs):
         super(OpenshiftProvider, self).__init__(**kwargs)
 

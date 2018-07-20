@@ -248,7 +248,7 @@ ansible roles to be downloaded and requires additional extra variables.
         [defaults]
         host_key_checking = False
         retry_files_enabled = False
-        roles_path = ./assets/ansible/roles
+        roles_path = ./roles
 
 ----
 

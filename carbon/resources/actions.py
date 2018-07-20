@@ -25,12 +25,10 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-import os
-
 from .._compat import string_types
 from ..constants import ORCHESTRATOR
 from ..core import CarbonResource, CarbonResourceError
-from ..helpers import fetch_hosts, get_orchestrator_class, \
+from ..helpers import get_orchestrator_class, \
     get_orchestrators_list
 from ..tasks import OrchestrateTask, ValidateTask
 
@@ -178,52 +176,6 @@ class Action(CarbonResource):
             profile.update(dict(hosts=[host.name for host in self.hosts]))
 
         return profile
-
-    def get_assets_list(self, hosts):
-        """Return all assets for the action resource.
-
-        Action assets may consist of the following:
-            - orchestrator files (directory)
-            - orchestrator parameters assets defined in each host
-
-        :param hosts: list of host objects associated to the action
-            reference: carbon.resources.scenario.get_assets_list()
-        :return: action assets
-        :rtype: list
-        """
-        orchestrator = getattr(self.orchestrator, '__orchestrator_name__')
-
-        # initialize empty assets list
-        assets = list()
-
-        # append the orchestrator files directory
-        path = os.path.join(
-            self.config['ASSETS_PATH'],
-            getattr(self.orchestrator, '__orchestrator_name__')
-        )
-
-        if os.path.exists(path):
-            assets.append(orchestrator)
-
-        # append host orchestrator parameters for the action
-        hosts = fetch_hosts(hosts, dict(package=self), all_hosts=True)
-        for host in hosts['package'].hosts:
-            field = '%s_params' % orchestrator
-            if not hasattr(host, field):
-                continue
-            for asset in getattr(self.orchestrator, '_assets_parameters'):
-                params = getattr(host, field)
-                if asset in params and params[asset]:
-                    assets.append(getattr(host, field)[asset])
-
-        # append role_file (if set)
-        galaxy_options = getattr(self, '%s_galaxy_options' % orchestrator)
-        if galaxy_options is not None:
-            for element in galaxy_options:
-                if 'role_file' in element:
-                    assets.append(galaxy_options[element])
-
-        return assets
 
     def _construct_validate_task(self):
         """Constructs the validate task associated to the action resource.

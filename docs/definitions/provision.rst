@@ -27,7 +27,7 @@ either keytab and keytab_principal or username and password.
     credentials:
       - name: beaker
         auth_url: <Beaker server url>
-        keytab: <your keytab file, must be in your assets directory>
+        keytab: <your keytab file, must be in your scenario workspace dir>
         keytab_principal: <The principal value for your keytab>
         username: <username>
         password: <password>
@@ -52,7 +52,8 @@ either keytab and keytab_principal or username and password.
         - False
 
     *   - keytab
-        - name of the keytab file, which must be placed in the assets directory.
+        - name of the keytab file, which must be placed in the scenario
+          workspace directory.
         - String
         - False
 
@@ -221,7 +222,7 @@ provisioning resource for Beaker:
 
     *   - bkr_ssh_key
         - Name of the ssh key to inject to the test system, file must be
-          placed in assets directory.
+          placed in your scenario workspace directory.
         - String
         - False
 
@@ -242,7 +243,7 @@ provisioning resource for Beaker:
 
     *   - bkr_kickstart
         - Name of the kickstart template for installation, the file must be
-          placed in assets directory.
+          placed in your scenario workspace directory.
         - String
         - False
 

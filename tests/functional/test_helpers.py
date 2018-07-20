@@ -53,7 +53,7 @@ class TestLogging(TestCase):
 
     def setUp(self):
         self.env = EnvironmentVarGuard()
-        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'workspace/carbon.cfg'))
 
     @staticmethod
     @nottest

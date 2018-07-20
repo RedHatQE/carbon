@@ -70,7 +70,10 @@ class TestRoleClass(unittest.TestCase):
 
     def test_install_role_file(self):
         role = Role('install')
-        rc = role.install(role_file='assets/role.yml', options=dict(force=True))
+        rc = role.install(
+            role_file='workspace/role.yml',
+            options=dict(force=True)
+        )
         self.assertEqual(rc, 0)
 
     def test_invalid_remove_null_role(self):
@@ -94,7 +97,7 @@ class TestRoleClass(unittest.TestCase):
         # TODO: this test fails when running python2 & 3 test env at once (fix)
         self.test_install_role_file()
         role = Role('remove')
-        rc = role.remove(role_file='assets/role.yml')
+        rc = role.remove(role_file='workspace/role.yml')
         self.assertEqual(rc, 0)
 
     def test_remove_mia_role_file(self):

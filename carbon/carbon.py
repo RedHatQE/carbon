@@ -196,9 +196,21 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         'ANSIBLE_LOG_REMOVE': True
     }
 
-    def __init__(self, import_name, root_path=None, log_level=None,
-                 data_folder=None, assets_path=None):
+    def __init__(self, import_name=__carbon_name__, root_path=None,
+                 log_level=None, data_folder=None, workspace=None):
+        """Constructor.
 
+        :param import_name: module name
+        :type import_name: str
+        :param root_path: path where carbon is located
+        :type root_path: str
+        :param log_level: logging level
+        :type log_level: str
+        :param data_folder: folder path for storing carbon runtime files
+        :type data_folder: str
+        :param workspace: scenario workspace for locating scenario files
+        :type workspace: str
+        """
         # The name of the package or module.  Do not change this once
         # it was set by the constructor.
         self.import_name = import_name
@@ -252,30 +264,18 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         #       - carbon run -s scenario.yml -t provision
         #       - carbon run -s /tmp/.results/results.yml -t orchestrate
 
-        try:
-            os.makedirs(self.config['DATA_FOLDER'])
-        except IOError as ex:
-            if ex.errno == errno.EACCES:
-                raise CarbonError("You don't have permission to create '"
-                                  "the data folder.")
-            else:
-                raise CarbonError('Error creating data folder - '
-                                  '{0}'.format(ex.message))
-
-        # create the results folder
-        try:
-            os.makedirs(self.config['RESULTS_FOLDER'])
-        except OSError:
-            # results folder exists, its okay to continue since we overwrite
-            # this folder's files after each execution
-            pass
-        except IOError as ex:
-            if ex.errno == errno.EACCES:
-                raise CarbonError("You don't have permission to create '"
-                                  "the results folder.")
-            else:
-                raise CarbonError('Error creating results folder - '
-                                  '{0}'.format(ex.message))
+        for f in [self.config['DATA_FOLDER'], self.config['RESULTS_FOLDER']]:
+            try:
+                os.makedirs(f)
+            except OSError:
+                pass
+            except IOError as ex:
+                if ex.errno == errno.EACCES:
+                    raise CarbonError("You don't have permission to create '"
+                                      "the data folder.")
+                else:
+                    raise CarbonError('Error creating data folder - '
+                                      '{0}'.format(ex.message))
 
         # configure loggers
         self.create_logger(__carbon_name__, self.config)
@@ -283,17 +283,19 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         # pykwalify logging disabled for too much logging
         # self.create_logger('pykwalify.core', self.config)
 
-        # the assets can be located wherever the user wants or it
-        # will look at the running folder (getcwd())
-        if assets_path:
-            self.assets_path = assets_path
+        # set the workspace attribute
+        if workspace:
+            self.workspace = workspace
         else:
-            self.assets_path = os.getcwd()
-            self.logger.warn('Assets path were not set, thefore the'
-                             ' framework setting for the running directory.'
-                             ' You may have problems if your scenario needs'
-                             ' to use assets such file, keys, etc.')
-        self.config['ASSETS_PATH'] = self.assets_path
+            self.workspace = os.getcwd()
+            self.logger.warning(
+                'Scenario workspace was not set, therefore the workspace is '
+                'automatically assigned to the current working directory. You '
+                'may experience problems if files needed by carbon do not '
+                'exists in the scenario workspace.'
+            )
+
+        self.config['WORKSPACE'] = self.workspace
 
         self.scenario = Scenario(config=self.config)
 
@@ -387,17 +389,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         self._load_resources(Execute, exe_items)
         self._load_resources(Report, rpt_items)
 
-        # Each resource has to be an instance of its own type.
-        # This loop goes through the list of hosts, then for each
-        # host it goes through the list of packages. Each instance
-        # of package is added back into a Host object, loaded as a
-        # Package object.
-        # for hst in self._extract_hosts(data):
-        #     host = Host(hst)
-        #     for pkg in self._extract_packages(hst):
-        #         host.packages.append(Action(pkg))
-        #     self.scenario.add_hosts(host)
-
     def _load_resources(self, res_type, res_list):
         """
         Load the resource in the scenario list of `res_type`.
@@ -429,39 +420,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
                 res_type(config=self.config,
                          parameters=item))
 
-    def _copy_assets(self):
-        """
-        Copy the assets from the `self.assets_path` to the assets
-        folder within the `self.data_folder`.
-        """
-        local_assets_folder = os.path.join(self.data_folder, 'assets')
-
-        # create assets folder
-        try:
-            os.makedirs(local_assets_folder)
-        except OSError as ex:
-            if ex.errno == errno.EEXIST:
-                pass
-            else:
-                raise CarbonError('Error creating assets folder - %s' %
-                                  ex.message)
-
-        for asset in self.scenario.get_assets_list():
-            src_file = os.path.join(self.assets_path, asset)
-            dst_file = os.path.join(local_assets_folder, asset)
-
-            # if asset is declared within a folder, the destination
-            # parent folder needs to be created to avoid `errno.ENOENT`.
-            dst_folder = os.path.dirname(dst_file)
-            if not os.path.isdir(dst_folder):
-                os.makedirs(dst_folder)
-            del dst_folder
-
-            if os.path.isdir(src_file):
-                shutil.copytree(src=src_file, dst=dst_file)
-            else:
-                shutil.copy2(src=src_file, dst=dst_file)
-
     def run(self, tasklist=TASKLIST):
         """
         This function assumes there are zero or more tasks to be
@@ -483,25 +441,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
             raise CarbonError(
                 'You must set a scenario before running the framework!'
             )
-
-        # check that all assets are copied to assets folder (if assets exist)
-        try:
-            self._copy_assets()
-        except shutil.Error as ex:
-            self.logger.error('Error while copying assets. %s' % ex.message)
-            raise CarbonError('Error while copying assets %s' % ex.message)
-        except IOError as ex:
-            if ex.errno == errno.ENOENT:
-                self.logger.error(
-                    'Error while copying the asset "%s"' % ex.filename
-                )
-                raise CarbonError('Asset "%s" does not exist. Check if '
-                                  'the asset folder was set correctly.' %
-                                  ex.filename)
-            else:
-                raise CarbonError(
-                    'Error while copying assets. Msg: %s' % ex.message
-                )
 
         try:
             # save start time

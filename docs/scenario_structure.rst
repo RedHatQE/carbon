@@ -1,6 +1,11 @@
 Scenario Structure
 ==================
 
+.. attention::
+
+    This document is out dated and will be updated soon! Some of this content
+    will be the same just revisions are needed.
+
 The intended focus of this page is to provide a standard structure for
 building multi product scenarios. This is just a standard that can be adopted
 but is not required for running carbon. Having a solid structure as a

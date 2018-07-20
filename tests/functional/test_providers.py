@@ -42,7 +42,7 @@ from carbon.providers import AwsProvider, BeakerProvider
 # - Ignores method names, unit tests setUp method needs this naming standard
 # pylint: disable=C0103
 
-scenario_description = file_mgmt('r', 'assets/scenario.yaml')
+scenario_description = file_mgmt('r', 'workspace/scenario.yaml')
 
 
 class TestRackspace(TestCase):
@@ -65,7 +65,7 @@ class TestOpenshift(TestCase):
 
     def setUp(self):
         self.env = EnvironmentVarGuard()
-        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'workspace/carbon.cfg'))
 
     def test_instantiate_class(self):
         """Test whether the instantiated provider class object is an actual
@@ -79,7 +79,7 @@ class TestOpenshift(TestCase):
             3. Name defined and is a invalid data type.
         """
         obj = Carbon(__name__)
-        scenario_data = open("assets/scenario_openshift.yaml")
+        scenario_data = open("workspace/scenario_openshift.yaml")
         obj.load_from_yaml(scenario_data)
 
         host = obj.scenario.hosts[0]

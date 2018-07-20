@@ -371,7 +371,8 @@ class Host(CarbonResource):
             'credential': self._credential,
             'provisioner': getattr(self.provisioner, '__provisioner_name__'),
             'role': self._role,
-            'data_folder': self.data_folder
+            'data_folder': self.data_folder,
+            'workspace': self.workspace
         })
 
         # set ip address attribute (if applicable)
@@ -389,31 +390,6 @@ class Host(CarbonResource):
 
         if status > 0:
             raise CarbonHostError('Host %s validation failed!' % self.name)
-
-    def get_assets_list(self):
-        """
-        Run through each asset parameter and add its value
-        in the list if the parameter was set
-
-        :return: host assets
-        :rtype: list
-        """
-        host_assets, creds_assets = [], []
-
-        # first, get the list of assets from the provider parameters
-        for param in getattr(self.provider, 'get_assets_parameters')():
-            if hasattr(self, param) and getattr(self, param) is not None:
-                host_assets.append(getattr(self, param))
-
-        # second, get the list of assets from the provider's credential
-        # settings
-        for param in getattr(self.provider, 'get_assets_parameters')():
-            if param in getattr(self.provider, 'credentials').keys() and \
-                    getattr(self.provider, 'credentials')[param] is not None:
-                creds_assets.append(getattr(self.provider, 'credentials')[param])
-
-        # return a single list from the merge of both list
-        return host_assets + creds_assets
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.

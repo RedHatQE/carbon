@@ -35,6 +35,7 @@ from uuid import uuid4
 from shutil import copyfile
 
 from ansible.cli.galaxy import GalaxyCLI
+from ansible.config.manager import ConfigManager
 from ansible.errors import AnsibleError
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.executor.task_queue_manager import TaskQueueManager
@@ -43,7 +44,6 @@ from ansible.parsing.dataloader import DataLoader
 from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
-from ansible.config.manager import ConfigManager
 
 from .._compat import RawConfigParser, urlparse
 from ..core import CarbonOrchestrator, CarbonOrchestratorError, LoggerMixin
@@ -234,7 +234,7 @@ class AnsibleController(object):
         :param playbook: Playbook to call
         :type playbook: str
         :param extra_vars: Additional variables for playbook
-        :type extra_vars: list
+        :type extra_vars: dict
         :param become: Whether to run as sudoer
         :type become: bool
         :param become_method: Method to use for become
@@ -308,17 +308,18 @@ class Inventory(object):
     ansible inventory for the carbon ansible action.
     """
 
-    def __init__(self, hosts, all_hosts, asset_params, data_dir):
+    def __init__(self, hosts, all_hosts, data_dir):
         """Constructor.
 
         :param hosts: list of hosts to create the inventory file
-        :param all_host: list of all hosts in the given scenario
-        :param asset_params: tuple of orchestrator assets
+        :type hosts: list
+        :param all_hosts: list of all hosts in the given scenario
+        :type all_hosts: list
         :param data_dir: data directory where the inventory directory resides
+        :type data_dir: str
         """
         self.hosts = hosts
         self.all_hosts = all_hosts
-        self.asset_params = asset_params
 
         # create the inventory directory where all inventory files are stored
         self._inventory_dir = os.path.join(data_dir, 'inventory')
@@ -385,8 +386,8 @@ class Inventory(object):
 
             # add host vars
             for k, v in host.ansible_params.items():
-                if k in self.asset_params:
-                    v = os.path.join(host.data_folder, 'assets', v)
+                if k in ['ansible_ssh_private_key_file']:
+                    v = os.path.join(getattr(host, 'workspace'), v)
                 config.set(section_vars, k, v)
 
             # add host ip address reference for the alias defined above
@@ -578,10 +579,6 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         'galaxy_options'
     )
 
-    _assets_parameters = (
-        'ansible_ssh_private_key_file',
-    )
-
     user_run_vals = ["become", "become_method", "become_user", "remote_user",
                      "connection", "forks"]
 
@@ -600,12 +597,12 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.galaxy_options = getattr(package, '%s_galaxy_options' % self.name)
         self.config = getattr(package, 'config')
         self.all_hosts = getattr(package, 'all_hosts')
+        self.workspace = self.config['WORKSPACE']
 
         # create inventory object for create/delete inventory file
         self.inv = Inventory(
             self.hosts,
             self.all_hosts,
-            self._assets_parameters,
             data_dir=self.config['DATA_FOLDER']
         )
 
@@ -626,13 +623,18 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         """
         raise NotImplementedError
 
-    def _find_playbook(self, path):
+    def find_playbook(self):
         """fn to see if a playbook exists and to set the path of it
-        :param path: path to search for playbooks
         """
+        # TODO: this should be moved to validate task
+        # determine the directory to traverse through
+        path = self.workspace
+        _path = os.path.dirname(self.action)
+        if not _path == "":
+            path = os.path.join(path, _path)
+
         for item in os.listdir(path):
-            filename, extension = os.path.splitext(item)
-            if filename == self.action and extension in ['.yml', '.yaml']:
+            if item in self.action:
                 self.action_abs = os.path.join(path, item)
                 self.logger.info(
                     'Playbook found for action: %s @ %s' %
@@ -644,17 +646,6 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             '%s' % (self.action, path)
         )
 
-    def find_playbook(self):
-        """Find the action's playbook (parent).
-
-        See _find_playbook doc string for more details.
-        """
-
-        # set the path of the playbook
-        path = os.path.join(self.config['DATA_FOLDER'], 'assets', self.name)
-        self._find_playbook(path)
-
-        # quit if no playbook was found for the given action
         if self.action_abs is None:
             raise CarbonOrchestratorError(
                 'Unable to locate action %s for ansible orchestrator. '
@@ -671,7 +662,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         if 'role_file' in self.galaxy_options:
             flag += 1
 
-            f = os.path.join(self.config['DATA_FOLDER'], 'assets',
+            f = os.path.join(self.config['WORKSPACE'],
                              self.galaxy_options['role_file'])
             self.logger.info('Installing roles using req. file: %s' % f)
 

@@ -42,8 +42,8 @@ from carbon.providers import OpenstackProvider
 from carbon.resources import Scenario, Host, Action, Execute, Report
 from carbon.resources.scenario import ScenarioError
 
-scenario_description = file_mgmt('r', 'assets/scenario.yaml')
-scenario_description_invalid = file_mgmt('r', 'assets/invalid_scenario.yaml')
+scenario_description = file_mgmt('r', 'workspace/scenario.yaml')
+scenario_description_invalid = file_mgmt('r', 'workspace/invalid_scenario.yaml')
 
 
 class TestScenario(TestCase):
@@ -51,8 +51,8 @@ class TestScenario(TestCase):
 
     def setUp(self):
         self.env = EnvironmentVarGuard()
-        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
-        self.cbn = Carbon(__name__, assets_path="assets")
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'workspace/carbon.cfg'))
+        self.cbn = Carbon(__name__, workspace="workspace")
 
     def test_new_scenario_from_yaml(self):
         """Test creating a new scenario object from a data structure read in
@@ -67,29 +67,6 @@ class TestScenario(TestCase):
         self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
         self.cbn.scenario.newattribute = 'value'
         assert_equal(self.cbn.scenario.newattribute, str('value'))
-
-    def test_copy_assets(self):
-        """Test copying an asset into the data folder."""
-        scenario_data = open("assets/openshift_assets.yaml")
-        self.cbn.load_from_yaml(scenario_data)
-        assert_equal(len(self.cbn.scenario.get_assets_list()), 1)
-        self.cbn._copy_assets()
-        assert_equal(os.path.exists(os.path.join(self.cbn.assets_path, "mytemplate.yaml")), 1)
-
-    @raises(IOError)
-    def test_copy_assets_invalid(self):
-        """Test assets defined, but not set in the assets path."""
-        scenario_data = open("assets/openshift_invalid_assets.yaml")
-        self.cbn.load_from_yaml(scenario_data)
-        assert_equal(len(self.cbn.scenario.get_assets_list()), 1)
-        self.cbn._copy_assets()
-
-    def test_copy_assets_no_assets(self):
-        """Test assets defined, but not set in the assets path."""
-        scenario_data = open("assets/invalid_scenario.yaml")
-        self.cbn.load_from_yaml(scenario_data)
-        assert_equal(len(self.cbn.scenario.get_assets_list()), 0)
-        self.cbn._copy_assets()
 
     def test_get_data_folder(self):
         """Test getting data folder for carbon scenario."""
@@ -214,14 +191,14 @@ class TestScenario(TestCase):
 
     def test_validate_valid_scenario_yaml(self):
         """Test validating a valid carbon scenario yaml."""
-        scenario_data = template_render("assets/scenario.yaml", os.environ)
+        scenario_data = template_render("workspace/scenario.yaml", os.environ)
         self.cbn.load_from_yaml(scenario_data)
         self.cbn.scenario.validate()
 
     @raises(CarbonError)
     def test_validate_invalid_scenario_yaml(self):
         """Test validating an invalid carbon scenario yaml."""
-        scenario_data = template_render("assets/invalid_scenario.yaml", os.environ)
+        scenario_data = template_render("workspace/invalid_scenario.yaml", os.environ)
         self.cbn.load_from_yaml(scenario_data)
         self.cbn.scenario.validate()
 
@@ -229,7 +206,7 @@ class TestScenario(TestCase):
         """Test loading an scenario that becomes valid only after substitution."""
         env = os.environ
         env["some_name"] = "mymachine"
-        scenario_data = template_render("assets/invalid_scenario_substitute.yaml", env)
+        scenario_data = template_render("workspace/invalid_scenario_substitute.yaml", env)
         self.cbn.load_from_yaml(scenario_data)
         self.cbn.scenario.validate()
 
@@ -238,13 +215,13 @@ class TestScenario(TestCase):
         """Test loading an scenario that stays invalid after substitution."""
         env = os.environ
         env["some_name"] = "mymachine"
-        scenario_data = template_render("assets/invalid_scenario_substitute_invalid.yaml", env)
+        scenario_data = template_render("workspace/invalid_scenario_substitute_invalid.yaml", env)
         self.cbn.load_from_yaml(scenario_data)
         self.cbn.scenario.validate()
 
     def test_build_profile(self):
         """Test building a scenario profile with all its properties."""
-        scenario_data = open("assets/scenario.yaml")
+        scenario_data = open("workspace/scenario.yaml")
         self.cbn.load_from_yaml(scenario_data)
         assert_is_instance(self.cbn.scenario.profile(), dict)
 
@@ -267,7 +244,7 @@ class TestHost(TestCase):
 
     def setUp(self):
         self.env = EnvironmentVarGuard()
-        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'workspace/carbon.cfg'))
         self.cbn = Carbon(__name__)
 
     def test_instantiate_host(self):
@@ -284,12 +261,6 @@ class TestHost(TestCase):
         cp_parameters.pop('name')
         host = Host(config=self.cbn.config, name='client1', parameters=cp_parameters)
         assert_equal(host.name, 'client1')
-
-    def test_host_asset(self):
-        cp_parameters = deepcopy(self._parameters)
-        cp_parameters.pop('name')
-        host = Host(config=self.cbn.config, name='client1', parameters=cp_parameters)
-        assert_equal(host.get_assets_list(), [])
 
     def test_set_random_name(self):
         """Test setting a random host name when no name declared for a host."""

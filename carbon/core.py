@@ -381,6 +381,21 @@ class CarbonResource(LoggerMixin, TimeMixin):
                              'its class is instantiated.')
 
     @property
+    def workspace(self):
+        """Scenario workspace property.
+
+        :return: scenario workspace folder
+        :rtype: str
+        """
+        return str(self.config['WORKSPACE'])
+
+    @workspace.setter
+    def workspace(self, value):
+        """Set workspace."""
+        raise AttributeError('You cannot set the workspace directly. Only '
+                             'the carbon object can.')
+
+    @property
     def data_folder(self):
         """Data folder property.
 
@@ -529,10 +544,6 @@ class CarbonProvider(LoggerMixin, TimeMixin):
 
     # additional parameters that can be set for the provider's credential
     _optional_creds_parameters = ()
-
-    # special parameters that contain file paths - assets parameters must
-    # be added to either mandatory or optional.
-    _assets_parameters = ()
 
     def __init__(self, **kwargs):
         # I care only about the parameters set on ~self._parameters
@@ -725,47 +736,10 @@ class CarbonProvider(LoggerMixin, TimeMixin):
         return (param for param in cls._all_creds_parameters_set())
 
     @classmethod
-    def _assets_parameters_set(cls):
-        """
-        Build a set of assets parameters from the
-        intersection between all parameters and what
-        it is in the `cls._assets_parameters`
-        :return: a set
-        """
-        return cls._all_parameters_set().intersection(
-            {'{}{}'.format(cls.__provider_prefix__, k)
-             for k in cls._assets_parameters}
-        )
-
-    @classmethod
-    def _assets_creds_parameters_set(cls):
-        """
-        Build a set of assets parameters from the
-        intersection between all parameters and what
-        it is in the `cls._assets_parameters`
-        :return: a set
-        """
-        return cls._all_creds_parameters_set().intersection(
-            {k for k in cls._assets_parameters}
-        )
-
-    @classmethod
-    def get_assets_parameters(cls):
-        """
-        Get the list of the assets parameters
-        :return: a tuple
-        """
-        all_assets = cls._assets_parameters_set()\
-            .union(cls._assets_creds_parameters_set())
-
-        return (param for param in all_assets)
-
-    @classmethod
     def _output_parameters_set(cls):
         """
         Build a set of output parameters from the
-        intersection between all parameters and what
-        it is in the `cls._assets_parameters`
+        intersection between all parameters.
         :return: a set
         """
         return cls._all_parameters_set().intersection(
@@ -788,14 +762,6 @@ class CarbonProvider(LoggerMixin, TimeMixin):
     @classmethod
     def is_mandatory(cls, value):
         return value in cls.get_mandatory_parameters()
-
-    @classmethod
-    def is_asset(cls, value):
-        return value in cls.get_assets_parameters()
-
-    @classmethod
-    def is_credential_asset(cls, value):
-        return value in cls.get_assets_creds_parameters()
 
     @classmethod
     def is_output(cls, value):
@@ -859,10 +825,6 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
 
     # additional parameters that can be set for the orchestrator
     _optional_parameters = ()
-
-    # orchestrator assets may be files that are needed for remote connections
-    # such as SSH keys, etc
-    _assets_parameters = ()
 
     def __init__(self):
         """Constructor."""

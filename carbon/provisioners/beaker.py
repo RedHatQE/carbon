@@ -73,6 +73,7 @@ class BeakerProvisioner(CarbonProvisioner):
         super(BeakerProvisioner, self).__init__()
         self.host = host
         self.data_folder = getattr(host, 'data_folder')
+        self.workspace = getattr(host, 'workspace')
         self.job_xml = 'bkrjob_%s.xml' % getattr(host, 'bkr_name')
         self.bkr_xml = BeakerXML()
         self.conf_dir = '%s/.beaker_client' % os.path.expanduser('~')
@@ -122,8 +123,8 @@ class BeakerProvisioner(CarbonProvisioner):
 
             conf_obj.write('AUTH_METHOD = "krbv"\n')
 
-            keytab = os.path.join(self.data_folder, "assets",
-                                  credentials['keytab'])
+            keytab = os.path.join(self.workspace, credentials['keytab'])
+
             conf_obj.write('KRB_KEYTAB = "%s"\n' % keytab)
             conf_obj.write('KRB_PRINCIPAL = "%s"\n' % credentials[
                 'keytab_principal'])
@@ -162,7 +163,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # generate beaker job xml (workflow-simple command)
         self.bkr_xml.generate_beaker_xml(
-            bkr_xml_file, kickstart_path=self.data_folder, savefile=True
+            bkr_xml_file, kickstart_path=self.workspace, savefile=True
         )
 
         # format beaker client command to run
@@ -433,7 +434,7 @@ class BeakerProvisioner(CarbonProvisioner):
         """
         # setup absolute path for private key
         private_key = os.path.join(
-            self.data_folder, "assets", self.host.bkr_ssh_key
+            self.workspace, self.host.bkr_ssh_key
         )
 
         # set permission of the private key
@@ -448,7 +449,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # generate public key from private
         public_key = os.path.join(
-            self.data_folder, "assets", self.host.bkr_ssh_key + ".pub"
+            self.workspace, self.host.bkr_ssh_key + ".pub"
         )
         rsa_key = paramiko.RSAKey(filename=private_key)
         with open(public_key, 'w') as f:

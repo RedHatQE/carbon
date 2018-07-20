@@ -43,13 +43,13 @@ from flask.config import Config
 
 CARBON_CFG = None
 CARBON_CFGS = [
-    os.path.join(os.getcwd(), 'assets/carbon.cfg'),
-    os.path.join(os.getcwd(), '../assets/carbon.cfg')
+    os.path.join(os.getcwd(), 'workspace/carbon.cfg'),
+    os.path.join(os.getcwd(), '../workspace/carbon.cfg')
 ]
 SCENARIO_CFG = None
 SCENARIO_CFGS = [
-    os.path.join(os.getcwd(), 'assets/scenario.yaml'),
-    os.path.join(os.getcwd(), '../assets/scenario.yaml')
+    os.path.join(os.getcwd(), 'workspace/scenario.yaml'),
+    os.path.join(os.getcwd(), '../workspace/scenario.yaml')
 ]
 
 
@@ -76,7 +76,7 @@ class TestOpenshiftProvisioner(TestCase):
         self.env.set('CARBON_SETTINGS', CARBON_CFG)
 
         # Create carbon object
-        self.cbn = Carbon(__name__, assets_path="assets")
+        self.cbn = Carbon(__name__, workspace="workspace")
 
         # Load scenario data
         self.data = file_mgmt('r', SCENARIO_CFG)
@@ -129,7 +129,7 @@ class TestOpenstackProvisioner(TestCase):
         self.env.set('CARBON_SETTINGS', CARBON_CFG)
 
         # Create carbon object
-        self.cbn = Carbon(__name__, assets_path="assets")
+        self.cbn = Carbon(__name__, workspace="workspace")
 
         # Load scenario data
         self.data = file_mgmt('r', SCENARIO_CFG)
@@ -169,9 +169,9 @@ class TestBeakerProvisioner(TestCase):
     def setUp(self):
         """Test fixture setup."""
         if 'functional' in os.getcwd():
-            _file = os.path.join(os.getcwd(), '../assets/scenario.yaml')
+            _file = os.path.join(os.getcwd(), '../workspace/scenario.yaml')
         else:
-            _file = os.path.join(os.getcwd(), 'assets/scenario.yaml')
+            _file = os.path.join(os.getcwd(), 'workspace/scenario.yaml')
         descriptor = file_mgmt('r', _file)
 
         # get resource under test
@@ -216,7 +216,7 @@ class TestBeakerProvisioner(TestCase):
         self.env.set('CARBON_SETTINGS', CARBON_CFG)
 
         # create carbon object for config attribute
-        self.cbn = Carbon(__name__, assets_path='assets')
+        self.cbn = Carbon(__name__, workspace='workspace')
 
         # create the host object
         self.host['provider_creds'] = [credentials]

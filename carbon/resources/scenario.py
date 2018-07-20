@@ -366,23 +366,6 @@ class Scenario(CarbonResource):
         )
         return profile
 
-    def get_assets_list(self):
-        """
-        Get a list of all assets needed by all hosts in the scenario
-
-        :return: list of assets
-        :rtype: list
-        """
-        assets = []
-        for host in self.hosts:
-            assets += host.get_assets_list()
-
-        for action in self.actions:
-            assets += action.get_assets_list(self.hosts)
-
-        # remove duplicate elements and return
-        return list(set(assets))
-
     def _construct_validate_task(self):
         """Constructs the validate task associated to the scenario.
 

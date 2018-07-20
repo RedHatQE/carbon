@@ -41,8 +41,8 @@ select. Below are the available run command options.
       -t, --task [validate|provision|orchestrate|execute|report|cleanup]
                                       Select task to run. (default=all)
       -s, --scenario                  Scenario definition file to be executed.
-      -d, --data-folder               Scenario workspace path.
-      -a, --assets-path               Scenario workspace path.
+      -d, --data-folder               Directory for saving carbon runtime files.
+      -w, --workspace                 Scenario workspace.
       --log-level [debug|info|warning|error|critical]
                                       Select logging level. (default=info)
       --help                          Show this message and exit.
@@ -75,9 +75,10 @@ select. Below are the available run command options.
         - No
         - /tmp
 
-    *   - assets-path
-        - The assets path is the directory path to where all assets are for
-          your scenario. Assets may include SSH private keys, etc.
+    *   - workspace
+        - The scenario workspace is the directory where your scenario exists.
+          Inside this directory is all the necessary files to run the
+          scenario.
         - No
         - ./ (current working directory)
 
@@ -154,8 +155,8 @@ The validate command validates the scenario descriptor.
 
     Options:
       -s, --scenario                  Scenario definition file to be executed.
-      -d, --data-folder               Scenario workspace path.
+      -d, --data-folder               Directory for saving carbon runtime files.
+      -w, --workspace                 Scenario workspace.
       --log-level [debug|info|warning|error|critical]
                                       Select logging level. (default=info)
-      -a, --assets-path               Scenario workspace path.
       --help                          Show this message and exit.

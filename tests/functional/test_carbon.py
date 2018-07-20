@@ -43,7 +43,7 @@ class TestCarbon(TestCase):
 
     def setUp(self):
         self.env = EnvironmentVarGuard()
-        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'workspace/carbon.cfg'))
 
     def test_create_carbon_object(self):
         """Test creating a new carbon object. It will verify the object
@@ -67,7 +67,7 @@ class TestCarbon(TestCase):
         """
         obj = Carbon(__name__)
         # apply templating before loading the data
-        scenario_data = open("assets/scenario.yaml")
+        scenario_data = open("workspace/scenario.yaml")
         obj.load_from_yaml(scenario_data)
 
     def test_load_scenario_with_host_name_set_wrongly(self):
@@ -76,7 +76,7 @@ class TestCarbon(TestCase):
         """
         obj = Carbon(__name__)
         with self.assertRaises(CarbonHostError) as cm:
-            scenario_data = open("assets/invalid_scenario_provider_name_error.yaml")
+            scenario_data = open("workspace/invalid_scenario_provider_name_error.yaml")
             obj.load_from_yaml(scenario_data)
         raised_exception = cm.exception
         self.assertEqual(raised_exception.message,
@@ -88,7 +88,7 @@ class TestCarbon(TestCase):
         a missing required section. An exception will be raised.
         """
         obj = Carbon(__name__)
-        scenario_data = open("assets/invalid_scenario.yaml")
+        scenario_data = open("workspace/invalid_scenario.yaml")
         obj.load_from_yaml(scenario_data)
 
     @staticmethod
@@ -105,11 +105,11 @@ class TestCarbon(TestCase):
         assert_equal(cbn.data_folder, os.path.join(data_folder, cbn.uid))
 
     @staticmethod
-    def test_set_carbon_assets():
-        """Test creating a carbon object with the assets path set."""
-        assets_path = "assets"
-        cbn = Carbon(__name__, assets_path=assets_path)
-        assert_equal(cbn.assets_path, assets_path)
+    def test_set_carbon_workspace():
+        """Test creating a carbon object with the workspace path set."""
+        workspace_path = "workspace"
+        cbn = Carbon(__name__, workspace=workspace_path)
+        assert_equal(cbn.workspace, workspace_path)
 
     @staticmethod
     def test_status_file_property():
@@ -131,7 +131,7 @@ class TestResultsMixin(TestCase):
 
     def setUp(self):
         self.env = EnvironmentVarGuard()
-        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'assets/carbon.cfg'))
+        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'workspace/carbon.cfg'))
 
     @staticmethod
     def test_get_results():
