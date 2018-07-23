@@ -25,12 +25,14 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
+from copy import copy
+
 from .._compat import string_types
 from ..constants import ORCHESTRATOR
 from ..core import CarbonResource, CarbonResourceError
 from ..helpers import get_orchestrator_class, \
     get_orchestrators_list
-from ..tasks import OrchestrateTask, ValidateTask
+from ..tasks import OrchestrateTask, ValidateTask, CleanupTask
 
 
 class CarbonActionError(CarbonResourceError):
@@ -60,7 +62,7 @@ class Action(CarbonResource):
     processes (completes) the given action.
     """
 
-    _valid_tasks_types = ['validate', 'orchestrate']
+    _valid_tasks_types = ['validate', 'orchestrate', 'cleanup']
     _fields = ['name', 'description', 'hosts']
 
     def __init__(self,
@@ -69,6 +71,7 @@ class Action(CarbonResource):
                  parameters=dict,
                  validate_task_cls=ValidateTask,
                  orchestrate_task_cls=OrchestrateTask,
+                 cleanup_task_cls=CleanupTask,
                  **kwargs):
         """Constructor.
 
@@ -85,6 +88,8 @@ class Action(CarbonResource):
         :type validate_task_cls: object
         :param orchestrate_task_cls: carbons orchestrate task class
         :type orchestrate_task_cls: object
+        :param cleanup_task_cls: carbons cleanup task class
+        :type cleanup_task_cls: object
         :param kwargs: additional key:value(s)
         :type kwargs: dict
         """
@@ -128,9 +133,23 @@ class Action(CarbonResource):
         for p in getattr(self.orchestrator, 'get_all_parameters')():
             setattr(self, p, parameters.get(p, {}))
 
+        # ******** CLEANUP ACTIONS ******** #
+        # check if the action requires any cleanup actions prior to host
+        # deletion
+        self.cleanup = None
+        self.cleanup_def = parameters.pop('cleanup', None)
+
+        if self.cleanup_def:
+            # create the cleanup sub-action for this parent action
+            self.cleanup = Action(
+                config=self.config,
+                parameters=copy(self.cleanup_def)
+            )
+
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
         self._orchestrate_task_cls = orchestrate_task_cls
+        self._cleanup_task_cls = cleanup_task_cls
 
         # reload construct task methods
         self.reload_tasks()
@@ -166,7 +185,9 @@ class Action(CarbonResource):
         profile.update({
             'name': self.name,
             'description': self.description,
-            'orchestrator': getattr(self.orchestrator, '__orchestrator_name__')
+            'orchestrator': getattr(
+                self.orchestrator, '__orchestrator_name__'),
+            'cleanup': self.cleanup_def
         })
 
         # set the action's hosts
@@ -202,6 +223,22 @@ class Action(CarbonResource):
             'name': str(self.name),
             'package': self,
             'msg': '   running orchestration %s for %s' % (
+                self.name, self.hosts),
+            'methods': self._req_tasks_methods
+        }
+        return task
+
+    def _construct_cleanup_task(self):
+        """Constructs the clean up task associated to the action.
+
+        :return: clean up task definition
+        :rtype: dict
+        """
+        task = {
+            'task': self._cleanup_task_cls,
+            'name': str(self.name),
+            'package': self,
+            'msg': '   running clean up %s for %s' % (
                 self.name, self.hosts),
             'methods': self._req_tasks_methods
         }

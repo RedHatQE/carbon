@@ -119,3 +119,25 @@ orchestrate:
       connection: paramiko
       tags:
         - prod
+
+---
+orchestrate:
+  - name: rhsm_register.yml
+    description: "register systems under test against rhsm"
+    orchestrator: ansible
+    hosts: all
+    ansible_options:
+      extra_vars:
+        username: kingbob
+        password: minions
+        server_hostname: server01.example.com
+        auto_attach: true
+    ansible_galaxy_options:
+      role_file: roles.yml
+    cleanup:
+      name: rhsm_unregister.yml
+      description: "unregister systems under tests from rhsm"
+      orchestrator: ansible
+      hosts: all
+      ansible_galaxy_options:
+        role_file: roles.yml

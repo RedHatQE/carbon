@@ -26,15 +26,12 @@
 """
 import errno
 import inspect
-from collections import namedtuple
+import os
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
 from time import time
 
-import os
-
-from .constants import TASKLIST
-from .helpers import fetch_hosts, get_core_tasks_classes
+from .helpers import get_core_tasks_classes
 
 
 class CarbonError(Exception):
@@ -925,103 +922,3 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
         for param in cls.get_all_parameters():
             profile.update({param: getattr(action, param, None)})
         return profile
-
-
-class PipelineBuilder(object):
-    """Carbon's pipeline builder.
-
-    The primary purpose of this class is to dynamically build pipelines at
-    carbon run time.
-    """
-    # A pipeline is a tuple with a name, type and a list of tasks.
-    # The Carbon object will have a list of pipelines that holds
-    # all types of pipelines and a list of tasks associated with the
-    # type of the pipeline.
-    pipeline_template = namedtuple('Pipeline', ('name', 'type', 'tasks'))
-
-    def __init__(self, name):
-        """Constructor.
-
-        :param name: Pipeline name.
-        :type name: str
-        """
-        self._name = name
-
-    @property
-    def name(self):
-        """Return the pipeline name"""
-        return self._name
-
-    def is_task_valid(self):
-        """Check if the pipeline task name is valid for carbon.
-
-        :return: Whether task is valid or not.
-        :rtype: bool
-        """
-        try:
-            TASKLIST.index(self.name)
-        except ValueError:
-            return False
-        return True
-
-    def task_cls_lookup(self):
-        """Lookup the pipeline task class type.
-
-        :return: The class associated for the pipeline task.
-        :rtype: class
-        """
-        for cls in get_core_tasks_classes():
-            if cls.__task_name__ == self.name:
-                return cls
-        raise CarbonError('Unable to lookup task %s class.' % self.name)
-
-    def build(self, scenario):
-        """Build carbon pipeline.
-
-        :param scenario: Carbon scenario object containing all scenario
-            data.
-        :type scenario: object
-        :return: Carbon pipeline to run for the given task.
-        :rtype: tuple
-        """
-        # initialize new pipeline
-        pipeline = self.pipeline_template(
-            self.name,
-            self.task_cls_lookup(),
-            list()
-        )
-
-        # RFE: consolidate configuring pipeline to reduce code duplication
-
-        # resource = scenario
-        for task in scenario.get_tasks():
-            if task['task'].__task_name__ == self.name:
-                pipeline.tasks.append(task)
-
-        # resource = host
-        for host in scenario.hosts:
-            for task in host.get_tasks():
-                if task['task'].__task_name__ == self.name:
-                    pipeline.tasks.append(task)
-
-        # resource = action
-        for action in scenario.actions:
-            for task in action.get_tasks():
-                if task['task'].__task_name__ == self.name:
-                    # fetch & set hosts for the given action task
-                    task = fetch_hosts(scenario.hosts, task)
-                    pipeline.tasks.append(task)
-
-        # resource = execute
-        for execute in scenario.executes:
-            for task in execute.get_tasks():
-                if task['task'].__task_name__ == self.name:
-                    pipeline.tasks.append(task)
-
-        # resource = report
-        for report in scenario.reports:
-            for task in report.get_tasks():
-                if task['task'].__task_name__ == self.name:
-                    pipeline.tasks.append(task)
-
-        return pipeline

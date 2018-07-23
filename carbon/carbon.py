@@ -37,9 +37,10 @@ from flask.helpers import locked_cached_property, get_root_path
 
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
-from .core import CarbonError, LoggerMixin, PipelineBuilder, TimeMixin
+from .core import CarbonError, LoggerMixin, TimeMixin
 from .helpers import file_mgmt, gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
+from .utils.pipeline import PipelineBuilder
 
 # a lock used for logger initialization
 _logger_lock = Lock()
@@ -442,12 +443,15 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
                 'You must set a scenario before running the framework!'
             )
 
+        # initialize pipeline
+        pipeline = None
+
+        # initialize overall status
+        status = 0
+
         try:
             # save start time
             self.start()
-
-            # overall status
-            status = 0
 
             for task in self.tasks:
 

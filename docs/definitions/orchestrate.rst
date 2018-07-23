@@ -220,7 +220,7 @@ scenario to ensure no problems may occur if both are defined.
     define them. This is only if you want carbon to download roles from sites
     such as ansible galaxy, external web servers, etc.
 
-Example 4
+Example 6
 ~~~~~~~~~
 
 You have a playbook which needs to run against x number of hosts, requires
@@ -249,6 +249,16 @@ ansible roles to be downloaded and requires additional extra variables.
         host_key_checking = False
         retry_files_enabled = False
         roles_path = ./roles
+
+Example 7
+~~~~~~~~~
+
+You have a playbook which needs to run against x number of hosts. Prior to
+deleting the configured hosts. You want to run a playbook to do some post
+tasks.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 123-143
 
 ----
 
