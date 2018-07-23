@@ -64,6 +64,4 @@ class StaticProvisioner(CarbonProvisioner):
         provider class handles all interactions with the provider.
         """
         self.logger.info('Tearing down static machines from %s', self.__class__)
-
-        self.host.provider._delete()
-
+        self.logger.info('Nothing to do. Machines user defined. Not tearing down static machine %s' % self.host.hostname)
