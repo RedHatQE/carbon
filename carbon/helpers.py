@@ -41,8 +41,9 @@ import jinja2
 import requests
 import yaml
 from flask.helpers import get_root_path
-from paramiko import AutoAddPolicy, SSHClient
-from paramiko.ssh_exception import SSHException, BadHostKeyException, AuthenticationException
+from paramiko import SSHClient, WarningPolicy
+from paramiko.ssh_exception import SSHException, BadHostKeyException, \
+    AuthenticationException
 
 from ._compat import string_types
 from .constants import PROVISIONERS, RULE_HOST_NAMING
@@ -545,8 +546,7 @@ def ssh_retry(obj):
             while attempt <= MAX_ATTEMPTS:
                 try:
                     ssh = SSHClient()
-                    ssh.load_system_host_keys()
-                    ssh.set_missing_host_key_policy(AutoAddPolicy())
+                    ssh.set_missing_host_key_policy(WarningPolicy())
 
                     # Test ssh connection
                     ssh.connect(server_ip,
