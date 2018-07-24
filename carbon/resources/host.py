@@ -156,20 +156,23 @@ class Host(CarbonResource):
         else:
             self._provisioner = get_provisioner_class(provisioner_param)
 
-        # (mandatory) get the host provider credential name
-        self._credential = parameters.pop('credential', None)
-        if self._credential is None:
-            raise CarbonHostError('A credential must be set for the hosts '
-                                  'provider %s.' % provider)
+        # Get required credentials for all providers other than Static
+        # Static is user defined
+        if provider_param != 'static':
+            # (mandatory if not static) get the host provider credential name
+            self._credential = parameters.pop('credential', None)
+            if self._credential is None:
+                raise CarbonHostError('A credential must be set for the hosts '
+                                      'provider %s.' % provider)
 
-        # (mandatory) set host provider credentials
-        provider_creds = parameters.pop('provider_creds', None)
-        if provider_creds is None:
-            raise CarbonHostError('Provider credentials must be set for '
-                                  'host %s.' % str(self.name))
+            # (mandatory) set host provider credentials
+            provider_creds = parameters.pop('provider_creds', None)
+            if provider_creds is None:
+                raise CarbonHostError('Provider credentials must be set for '
+                                      'host %s.' % str(self.name))
 
-        # get the credentials for the host provider
-        cdata = next(i for i in provider_creds if i['name'] == self._credential)
+            # get the credentials for the host provider
+            cdata = next(i for i in provider_creds if i['name'] == self._credential)
 
         # every provider has a name as mandatory field.
         # first check if name exist (probably because of reusing machine).
@@ -199,20 +202,23 @@ class Host(CarbonResource):
         for p in getattr(self.provider, 'get_all_parameters')():
             setattr(self, p, parameters.get(p, None))
 
-        # every provider must have credentials
-        # check if provider credentials have all the mandatory fields set
-        missing_mandatory_creds_fields = \
-            getattr(self.provider, 'check_mandatory_creds_parameters')(cdata)
-        if len(missing_mandatory_creds_fields) > 0:
-            raise CarbonHostError('Missing mandatory credentials fields '
-                                  'for credentials section %s, for node '
-                                  '%s, based on the %s provider:\n\n%s' %
-                                  (self._credential, self._name,
-                                   getattr(self.provider, 'name'),
-                                   missing_mandatory_creds_fields))
+        # every provider other than Static must have credentials
+        # check if non Static provider credentials have all the mandatory fields set
+        if provider_param != 'static':
+            missing_mandatory_creds_fields = \
+                getattr(self.provider, 'check_mandatory_creds_parameters')(cdata)
+            if len(missing_mandatory_creds_fields) > 0:
+                raise CarbonHostError('Missing mandatory credentials fields '
+                                      'for credentials section %s, for node '
+                                      '%s, based on the %s provider:\n\n%s' %
+                                      (self._credential, self._name,
+                                       getattr(self.provider, 'name'),
+                                      missing_mandatory_creds_fields))
 
-        # create the provider credentials in provider object
-        getattr(self.provider, 'set_credentials')(cdata)
+            # create the provider credentials in provider object
+            getattr(self.provider, 'set_credentials')(cdata)
+        else:
+            self._credential = None
 
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls

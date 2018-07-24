@@ -28,3 +28,4 @@
 from .beaker import BeakerProvisioner
 from .openshift import OpenshiftProvisioner
 from .openstack import OpenstackProvisioner
+from .static import StaticProvisioner
