@@ -501,11 +501,11 @@ def filter_host_name(name):
 def ssh_retry(obj):
     """
     Decorator to check SSH Connection before method execution.
-    Will perform 10 retries with random sleep of 10 to 100 seconds
+    Will perform 30 retries with sleep of 10 seconds
     between attempts
     """
-    MAX_ATTEMPTS = 10
-    MAX_WAIT_TIME = 100
+    MAX_ATTEMPTS = 30
+    MAX_WAIT_TIME = 10
 
     def check_access(*args, **kwargs):
         """
@@ -564,10 +564,9 @@ def ssh_retry(obj):
                     LOG.error("Server %s - IP: %s is unreachable." % (igrp,
                                                                       server_ip))
                     if attempt <= MAX_ATTEMPTS:
-                        wait_time = random.randint(10, MAX_WAIT_TIME)
                         LOG.info('Attempt %s of %s: retrying in %s seconds' %
-                                 (attempt, MAX_ATTEMPTS, wait_time))
-                        time.sleep(wait_time)
+                                 (attempt, MAX_ATTEMPTS, MAX_WAIT_TIME))
+                        time.sleep(MAX_WAIT_TIME)
 
             # Check Max SSH Retries performed
             if attempt > MAX_ATTEMPTS:
