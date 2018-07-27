@@ -117,6 +117,32 @@ selected orchestrator. Lets dive into them..
 The table above describes additional key:values you can set within your
 orchestrate task. Each of those keys can accept additional key:values.
 
+Carbon Ansible Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the carbon configuration file, you can set some options related to ansible.
+These values should be set in the **[orchestrator:ansible]** section of the
+config file.  The following are the settings.
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Key
+        - Description
+        - Default
+
+    *   - log_remove
+        - configuration option to delete the ansible log file after
+          configuration is complete.  Either way the ansible log
+          will be moved to the user's output directory.
+        - By default this is set to true to delete it.
+
+    *   - verbosity
+        - configuration option to set the verbosity of ansible.
+        - By default, verbosity is not set; however if the log level is
+          set to DEBUG, the verbosity will be set to vvvv.
+
 Ansible Configuration
 ~~~~~~~~~~~~~~~~~~~~~
 

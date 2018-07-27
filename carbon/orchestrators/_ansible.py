@@ -33,11 +33,11 @@ from os import remove
 from os.path import isfile
 from uuid import uuid4
 from shutil import copyfile
+import logging
 
 from ansible.cli.galaxy import GalaxyCLI
 from ansible.config.manager import ConfigManager
 from ansible.errors import AnsibleError
-from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.inventory.manager import InventoryManager
 from ansible.parsing.dataloader import DataLoader
@@ -45,9 +45,9 @@ from ansible.playbook.play import Play
 from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
 
-from .._compat import RawConfigParser, urlparse
+from .._compat import RawConfigParser, urlparse, string_types
 from ..core import CarbonOrchestrator, CarbonOrchestratorError, LoggerMixin
-from ..helpers import file_mgmt, ssh_retry
+from ..helpers import file_mgmt, ssh_retry, exec_local_cmd
 
 
 class CarbonCallback(CallbackBase):
@@ -129,24 +129,6 @@ class AnsibleController(object):
                         'diff']
         )
 
-        # playbook options
-        self.playbook_options = namedtuple(
-            'Options', ['connection',
-                        'module_path',
-                        'forks',
-                        'become',
-                        'become_method',
-                        'become_user',
-                        'check',
-                        'listtags',
-                        'listtasks',
-                        'listhosts',
-                        'syntax',
-                        'remote_user',
-                        'diff',
-                        'tags']
-        )
-
     def set_inventory(self):
         """Create the ansible inventory object with the supplied inventory."""
         self.variable_manager = VariableManager(loader=self.loader)
@@ -225,80 +207,50 @@ class AnsibleController(object):
         return dict(status=result, callback=self.callback)
 
     @ssh_retry
-    def run_playbook(self, playbook, extra_vars=None, become=None,
-                     become_method=None, become_user=None,
-                     remote_user=None, connection=None, forks=None, tags=[],
-                     default_callback=False):
+    def run_playbook(self, playbook, extra_vars=None, run_options=None,
+                     ans_verbosity=None):
         """Run an Ansible playbook.
 
         :param playbook: Playbook to call
         :type playbook: str
         :param extra_vars: Additional variables for playbook
         :type extra_vars: dict
-        :param become: Whether to run as sudoer
-        :type become: bool
-        :param become_method: Method to use for become
-        :type become_method: str
-        :param become_user: User to become to run playbook call
-        :type become_user: str
-        :param remote_user: Connect as this user
-        :type remote_user: str
-        :param connection: Connection type
-        :type: connection: str
-        :param forks: number of forks allowed
-        :type: forks: int
-        :param tags: list of tags to execute
-        :type: tags: list
-        :param default_callback: enable default callback
-        :type: bool
-        :return: A dict of Ansible return code and callback object
+        :param run_options: playbook run options
+        :type run_options: dict
+        :param ans_verbosity: ansible verbosity settings
+        :type ans_verbosity: str
+        :return: A tuple (rc, stdout, sterr)
         """
-        # instantiate callback class
-        self.callback = CarbonCallback()
 
-        # set inventory file
-        self.set_inventory()
-
-        # define ansible options
-        options = self.playbook_options(
-            connection=connection,
-            module_path='',
-            forks=forks,
-            become=become,
-            become_method=become_method,
-            become_user=become_user,
-            check=False,
-            listtags=False,
-            listtasks=False,
-            listhosts=False,
-            syntax=False,
-            remote_user=remote_user,
-            diff=False,
-            tags=tags
-        )
-
-        # set additional variables for use by playbook
+        playbook_call = "ansible-playbook -i %s %s" % \
+                        (self.ansible_inventory, playbook)
         if extra_vars is not None:
-            self.variable_manager.extra_vars = extra_vars
+            for key in extra_vars:
+                if not isinstance(extra_vars[key], string_types):
+                    extra_var_dict = {}
+                    extra_var_dict[key] = extra_vars[key]
+                    playbook_call += " -e '%s'" % (extra_var_dict)
+                else:
+                    playbook_call += " -e %s=%s" % (key, extra_vars[key])
 
-        # instantiate playbook executor object
-        runner = PlaybookExecutor(
-            playbooks=[playbook],
-            inventory=self.inventory,
-            variable_manager=self.variable_manager,
-            loader=self.loader,
-            options=options,
-            passwords={}
-        )
+        if run_options:
+            for key in run_options:
+                if key == "remote_user":
+                    playbook_call += " --user %s" % run_options[key]
+                elif key == "become":
+                    if run_options[key]:
+                        playbook_call += " --%s" % key
+                elif key == "tags":
+                    taglist = ','.join(run_options[key])
+                    playbook_call += " --tags %s" % taglist
+                else:
+                    playbook_call += " --%s %s" % (key.replace('_','-'), run_options[key])
 
-        # set ansible to use the custom callback class
-        if default_callback is False:
-            runner._tqm._stdout_callback = self.callback
+        if ans_verbosity:
+            playbook_call += " -v%s" % ans_verbosity
 
-        # run playbook
-        result = runner.run()
-
-        return dict(status=result, callback=self.callback)
+        output = exec_local_cmd(playbook_call)
+        return output
 
 
 class Inventory(object):
@@ -777,12 +729,10 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
         self.logger.info('Executing action: %s.' % self.action)
 
-        run_options = self.get_default_config()
-        self.logger.debug("Default options: " + str(run_options))
+        run_options = {}
 
-        tags = []
         if "tags" in self.options and self.options["tags"]:
-            tags = self.options["tags"]
+            run_options["tags"] = self.options["tags"]
 
         # override ansible options (user passed in vals for specific action)
         for val in self.user_run_vals:
@@ -791,21 +741,27 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
         self.logger.debug("Ansible options used: " + str(run_options))
 
+        ans_verbosity = None
+        if "ANSIBLE_VERBOSITY" in self.config and \
+                self.config["ANSIBLE_VERBOSITY"]:
+            ans_verbosity = self.config["ANSIBLE_VERBOSITY"]
+
+        log_level = self.logger.getEffectiveLevel()
+        if log_level == logging.DEBUG:
+            ans_verbosity = "vvvv"
+
         results = obj.run_playbook(
             self.action_abs,
             extra_vars=extra_vars,
-            become=run_options["become"],
-            become_method=run_options["become_method"],
-            become_user=run_options["become_user"],
-            remote_user=run_options["remote_user"],
-            connection=run_options["connection"],
-            forks=run_options["forks"],
-            tags=tags,
-            default_callback=True,
+            run_options=run_options,
+            ans_verbosity=ans_verbosity,
         )
 
+        # log the output of playbook
+        self.logger.info(results[1])
+        self.logger.info(results[2])
         self.logger.info('Finished action: %s execution.' % self.action)
-        self.logger.info('Status => %s.' % results['status'])
+        self.logger.info('Status => %s.' % results[0])
 
         # get ansible logs as needed
         self.alog_update()
@@ -815,7 +771,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.inv.delete()
 
         # raise an exception if the ansible action failed
-        if results['status'] != 0:
+        if results[0] != 0:
             raise CarbonOrchestratorError(
                 'Ansible action did not return a valid return code!'
             )
