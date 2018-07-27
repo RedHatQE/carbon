@@ -1,3 +1,7 @@
+Version 0.6.0 (2018-07-27)
+
+This release handles carbons ability to do system configuration by ansible.
+
 Version 0.5.0 (2018-06-19)
 --------------------------
 
