@@ -26,6 +26,7 @@
 """
 import os
 import re
+import tempfile
 
 CARBON_ROOT = os.path.join("/".join(os.path.dirname(__file__).split('/')[0:-2]))
 SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "files", "schema.yml")
@@ -66,4 +67,15 @@ RULE_HOST_NAMING = re.compile('[\W]+')
 # Beaker url's
 BEAKER_URL = "https://beaker.engineering.redhat.com"
 
+# Default orchestrator
 ORCHESTRATOR = 'ansible'
+
+# Default config
+DEFAULT_CONFIG = {
+    'ANSIBLE_LOG_REMOVE': True,
+    'DATA_FOLDER': tempfile.gettempdir(),
+    'LOG_LEVEL': 'info'
+}
+
+# Default config sections
+DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator']

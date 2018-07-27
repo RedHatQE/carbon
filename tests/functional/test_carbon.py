@@ -52,15 +52,6 @@ class TestCarbon(TestCase):
         obj = Carbon(__name__)
         assert_is_instance(obj, Carbon)
 
-    def test_change_carbon_name(self):
-        """Test changing the carbon name after the carbon object was created.
-        It will verify the name attribute has the same value that was set.
-        """
-        obj = Carbon(__name__)
-        assert_equal(obj.name, __name__)
-        obj.name = 'my_scenario'
-        assert_equal(obj.name, 'my_scenario')
-
     def test_load_yaml(self):
         """Test carbons function to load a scenario descriptor (yaml) file into
         the carbon object.
@@ -115,14 +106,14 @@ class TestCarbon(TestCase):
     def test_status_file_property():
         """Test carbons property for returning its scenario status file."""
         cbn = Carbon(__name__)
-        f = os.path.join(os.getcwd(), '.workspace', cbn.uid, STATUS_FILE)
+        f = os.path.join('.workspace', cbn.uid, STATUS_FILE)
         assert_equal(cbn.status_file, f)
 
     @staticmethod
     def test_results_file_property():
         """Test carbons property for returning its scenario results file."""
         cbn = Carbon(__name__)
-        f = os.path.join(os.getcwd(), '.workspace', cbn.uid, RESULTS_FILE)
+        f = os.path.join('.workspace', cbn.uid, RESULTS_FILE)
         assert_equal(cbn.results_file, f)
 
 

@@ -47,7 +47,6 @@ setup(
         'apache-libcloud==2.2.0',
         'blaster>=0.1.8',
         'Click>=6.7',
-        'Flask>=0.12.2',
         'Jinja2>=2.10',
         'PyYAML>=3.12',
         'pykwalify>=1.6.0'

@@ -24,22 +24,20 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import errno
+import os
 import shutil
 import sys
-import tempfile
 from threading import Lock
 
 import blaster
-import os
 import yaml
-from flask.config import Config, ConfigAttribute
-from flask.helpers import locked_cached_property, get_root_path
 
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, TimeMixin
 from .helpers import file_mgmt, gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
+from .utils.config import Config
 from .utils.pipeline import PipelineBuilder
 
 # a lock used for logger initialization
@@ -162,49 +160,16 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
     Each resource can have its own set of tasks. Theses tasks will be
     loaded within the central pipeline, the ~self.pipelines object.
-
     """
 
-    # The class that is used for the ``config`` attribute of this app.
-    # Defaults to :class:`~carbon.Config`.
-    #
-    # Example use cases for a custom class:
-    #
-    # 1. Default values for certain config options.
-    # 2. Access to config values through attributes in addition to keys.
-    config_class = Config
+    config = Config()
 
-    # The name of the logger to use.  By default the logger name is the
-    # package name passed to the constructor.
-    logger_name = ConfigAttribute('LOGGER_NAME')
-
-    # The log level. Set this to your log level of choice to display less or
-    # more log messages.
-    #
-    # This attribute can also be configured by carbon run --log-level info or
-    # from the config with the ``LOG_LEVEL`` configuration key. Defaults to
-    # ``info``.
-    log_level = ConfigAttribute('LOG_LEVEL')
-
-    # set a workspace folder, for where files will be updated
-    data_folder = ConfigAttribute('DATA_FOLDER')
-
-    # Default configuration parameters.
-    default_config = {
-        'DATA_FOLDER': tempfile.gettempdir(),
-        'LOGGER_NAME': __carbon_name__,
-        'LOG_LEVEL': 'info',
-        'ANSIBLE_LOG_REMOVE': True
-    }
-
-    def __init__(self, import_name=__carbon_name__, root_path=None,
-                 log_level=None, data_folder=None, workspace=None):
+    def __init__(self, import_name=__carbon_name__, log_level=None,
+                 data_folder=None, workspace=None):
         """Constructor.
 
         :param import_name: module name
         :type import_name: str
-        :param root_path: path where carbon is located
-        :type root_path: str
         :param log_level: logging level
         :type log_level: str
         :param data_folder: folder path for storing carbon runtime files
@@ -218,26 +183,11 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
         self._uid = gen_random_str(10)
 
-        if root_path is None:
-            root_path = get_root_path(self.import_name)
-
-        # Where is the app root located? Calling the client will
-        # always be the place where carbon is installed (site-packages)
-        self.root_path = root_path
-
-        self.config = self.make_config()
+        # load configuration settings
+        self.config.load()
 
         if log_level:
             self.log_level = log_level
-
-        # Load/process carbon configuration settings in the following order:
-        #    /etc/carbon/carbon.cfg
-        #    ./carbon.cfg (location where carbon is run)
-        #    export CARBON_SETTINGS = {} (environment variable)
-        self.config.from_pyfile('/etc/carbon/carbon.cfg', silent=True)
-        self.config.from_pyfile(os.path.join(os.getcwd(), 'carbon.cfg'),
-                                silent=True)
-        self.config.from_envvar('CARBON_SETTINGS', silent=True)
 
         # Set custom data folder, if data_folder is pass as parameter to Carbon
         if data_folder:
@@ -300,7 +250,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
         self.scenario = Scenario(config=self.config)
 
-    @locked_cached_property
+    @property
     def name(self):
         """The name of the application.  This is usually the import name
         with the difference that it's guessed from the run file if the
@@ -315,30 +265,21 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
             return os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
 
-    @locked_cached_property
+    @property
     def uid(self):
         return self._uid
 
-    @locked_cached_property
+    @property
     def data_folder(self):
         return self.config['DATA_FOLDER']
 
-    @locked_cached_property
+    @property
     def status_file(self):
         return os.path.join(self.data_folder, STATUS_FILE)
 
-    @locked_cached_property
+    @property
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
-
-    def make_config(self):
-        """
-        Used to create the config attribute by the Carbon constructor.
-
-        :copyright: (c) 2015 by Armin Ronacher.
-        """
-        root_path = self.root_path
-        return self.config_class(root_path, self.default_config)
 
     def load_from_yaml(self, filedata):
         """

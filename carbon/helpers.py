@@ -40,7 +40,6 @@ from logging import getLogger
 import jinja2
 import requests
 import yaml
-from flask.helpers import get_root_path
 from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
@@ -264,36 +263,6 @@ def gen_random_str(char_num=8):
     return ''.join(random.SystemRandom().
                    choice(string.ascii_lowercase + string.digits) for
                    _ in range(char_num))
-
-
-def get_ansible_inventory_script(provider):
-    """Return the absolute path to the ansible dynamic inventory script for
-    the provider given.
-
-    All inventory scripts are stored at ~ carbon.utils and use the following
-    naming standard ~ provider_inventory.py.
-
-    :param provider: Name of the provider.
-    :return: Absolute path to script.
-    """
-    from . import utils
-
-    _script = '%s_inventory.py' % provider
-    inventory = os.path.join(get_root_path(utils.__name__), _script)
-
-    # ensure the invetory file exists
-    if not os.path.isfile(inventory):
-        LOG.warn('Ansible inventory script not found for provider %s', provider)
-        return None
-
-    # ensure the inventory is marked executable for owners, group and others
-    # exactly like -rwxrwxr-x.
-    os.chmod(inventory,
-             stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH |
-             stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH |
-             stat.S_IWUSR | stat.S_IWGRP)
-
-    return inventory
 
 
 def file_mgmt(operation, file_path, content=None, cfg_parser=None):

@@ -21,9 +21,9 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import os
 from unittest import TestCase
 
-import os
 from nose.tools import assert_is_instance, assert_equal, assert_true, \
     raises
 
@@ -33,13 +33,12 @@ from carbon.provisioners.beaker import BeakerProvisioner
 from carbon.provisioners.openshift import OpenshiftProvisioner
 from carbon.provisioners.openstack import OpenstackProvisioner
 from carbon.resources import Host
+from carbon.utils.config import Config
 
 try:
     from test.test_support import EnvironmentVarGuard
 except ImportError:
     from test.support import EnvironmentVarGuard
-
-from flask.config import Config
 
 CARBON_CFG = None
 CARBON_CFGS = [
@@ -192,8 +191,8 @@ class TestBeakerProvisioner(TestCase):
         # get provider credentials
         if os.getenv('CARBON_SETTINGS'):
             # read from conf file
-            config = Config(os.getcwd())
-            config.from_pyfile(os.getenv('CARBON_SETTINGS'), silent=True)
+            config = Config()
+            config.load()
             _credentials = config['CREDENTIALS']
         else:
             # read from descriptor
