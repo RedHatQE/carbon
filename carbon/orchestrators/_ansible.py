@@ -742,13 +742,14 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.logger.debug("Ansible options used: " + str(run_options))
 
         ans_verbosity = None
-        if "ANSIBLE_VERBOSITY" in self.config and \
-                self.config["ANSIBLE_VERBOSITY"]:
-            ans_verbosity = self.config["ANSIBLE_VERBOSITY"]
 
         log_level = self.logger.getEffectiveLevel()
         if log_level == logging.DEBUG:
             ans_verbosity = "vvvv"
+
+        if "ANSIBLE_VERBOSITY" in self.config and \
+                self.config["ANSIBLE_VERBOSITY"]:
+            ans_verbosity = self.config["ANSIBLE_VERBOSITY"]
 
         results = obj.run_playbook(
             self.action_abs,
