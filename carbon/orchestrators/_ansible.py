@@ -47,7 +47,7 @@ from ansible.vars.manager import VariableManager
 
 from .._compat import RawConfigParser, urlparse, string_types
 from ..core import CarbonOrchestrator, CarbonOrchestratorError, LoggerMixin
-from ..helpers import file_mgmt, ssh_retry, exec_local_cmd
+from ..helpers import file_mgmt, ssh_retry, exec_local_cmd_pipe
 
 
 class CarbonCallback(CallbackBase):
@@ -207,7 +207,7 @@ class AnsibleController(object):
         return dict(status=result, callback=self.callback)
 
     @ssh_retry
-    def run_playbook(self, playbook, extra_vars=None, run_options=None,
+    def run_playbook(self, playbook, logger, extra_vars=None, run_options=None,
                      ans_verbosity=None):
         """Run an Ansible playbook.
 
@@ -229,7 +229,7 @@ class AnsibleController(object):
                 if not isinstance(extra_vars[key], string_types):
                     extra_var_dict = {}
                     extra_var_dict[key] = extra_vars[key]
-                    playbook_call += " -e '%s'" % (extra_var_dict)
+                    playbook_call += ' -e "%s" '% (extra_var_dict)
                 else:
                     playbook_call += " -e %s=%s" % (key, extra_vars[key])
 
@@ -249,7 +249,7 @@ class AnsibleController(object):
         if ans_verbosity:
             playbook_call += " -v%s" % ans_verbosity
 
-        output = exec_local_cmd(playbook_call)
+        output = exec_local_cmd_pipe(playbook_call, logger)
         return output
 
 
@@ -691,7 +691,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             # if user wants to delete the log file (default)
             elif os.path.isfile(dest):
                 with open(dest, "a") as destfile:
-                    destfile.write(ans_logfile)
+                    with open(ans_logfile) as logfile:
+                        for line in logfile:
+                            destfile.write(line)
             else:
                 copyfile(ans_logfile, dest)
             # remove ansible log (default)
@@ -756,11 +758,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             extra_vars=extra_vars,
             run_options=run_options,
             ans_verbosity=ans_verbosity,
+            logger=self.logger
         )
 
-        # log the output of playbook
-        self.logger.info(results[1])
-        self.logger.info(results[2])
         self.logger.info('Finished action: %s execution.' % self.action)
         self.logger.info('Status => %s.' % results[0])
 

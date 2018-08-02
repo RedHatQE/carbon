@@ -370,6 +370,36 @@ def exec_local_cmd(cmd):
     return proc.returncode, output[0], output[1]
 
 
+def exec_local_cmd_pipe(cmd, logger):
+    """Execute command locally, and pipe output in real time.
+
+    :param cmd: command to run
+    :type cmd: str
+    :param logger: logger object
+    :type logger: object
+    :return: tuple of rc and error (if there was an error)
+    """
+    proc = subprocess.Popen(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=2,
+        close_fds=True
+    )
+    while True:
+        output, error = ("", "")
+        if proc.poll is not None:
+            output = proc.stdout.readline()
+        if output == "" and error == "" and proc.poll() is not None:
+            break
+        if output:
+            logger.info(output.strip())
+    rc = proc.poll()
+    if rc != 0:
+        error = proc.stderr.readline()
+    return rc, error
+
 class CustomDict(dict):
     """Carbon dictionary to represent a resource from JSON or YAML.
 
