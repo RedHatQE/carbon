@@ -329,6 +329,14 @@ class Inventory(object):
             section = host.name
             section_vars = '%s:vars' % section
 
+            if host.role:
+                host_section = host.role + ":children"
+                if host_section in config.sections():
+                    config.set(host_section, host.name)
+                else:
+                    config.add_section(host_section)
+                    config.set(host_section, host.name)
+
             # create section(s)
             for item in [section, section_vars]:
                 config.add_section(item)

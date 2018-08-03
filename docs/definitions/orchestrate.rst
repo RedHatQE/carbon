@@ -63,10 +63,16 @@ You can also define your hosts as a list.
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml
     :lines: 13-18
 
-It can become tedious if a orchestrate task needs to be performed on all hosts
-within the scenario and you have many hosts declared. Carbon provides you with
-the ability to say all hosts. This eliminates the need to define every host per
-multiple tasks. It can be either in string or list format.
+It can become tedious if an orchestrate task needs to be performed on multiple
+or all hosts within the scenario and you have many hosts declared. Carbon
+provides you with the ability to run against a group of hosts or all hosts.
+To run against a multiple hosts use the name defined in the **role** key for
+your hosts or use **all** to run against all hosts.  This eliminates the need
+to define every host per multiple tasks. It can be either in string or list
+format.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 145-148
 
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml
     :lines: 20-23

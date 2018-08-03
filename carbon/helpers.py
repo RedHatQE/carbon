@@ -471,6 +471,8 @@ def fetch_hosts(hosts, task, all_hosts=True):
                 continue
             if host.name in _filtered_hosts:
                 _hosts.append(host)
+            if host.role in _filtered_hosts:
+                _hosts.append(host)
     else:
         for host in hosts:
             if all_hosts:

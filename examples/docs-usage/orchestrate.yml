@@ -141,3 +141,8 @@ orchestrate:
       hosts: all
       ansible_galaxy_options:
         role_file: roles.yml
+
+---
+orchestrate:
+  - name: rhsm_register.yml
+    hosts: clients
