@@ -301,7 +301,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         :param filedata: the full data object for the YAML file descriptor
         :return:
         """
-
         self.scenario.yaml_data = filedata
         data = dict(yaml.safe_load(filedata))
 
@@ -323,8 +322,11 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         if cred_items:
             for item in cred_items:
                 self.scenario.add_credentials(item)
+
         if not self.scenario.credentials:
-            raise CarbonError("Credentials are not being set!!")
+            self.logger.warning(
+                'Credentials are not set, problems may emerge in the future.'
+            )
 
         self._load_resources(Host, pro_items)
         self._load_resources(Action, orc_items)
