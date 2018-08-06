@@ -530,7 +530,7 @@ def ssh_retry(obj):
                     if hsys.name is isys.name:
                         sys_grp = args[0].variable_manager._inventory.groups[igrp]
                         sys_vars = sys_grp.vars
-                        server_ip = sys_vars['ansible_host']
+                        server_ip = sys_grp.hosts[0].address
                         server_user = sys_vars['ansible_user']
                         server_key_file = sys_vars['ansible_ssh_private_key_file']
                         found = True
