@@ -86,7 +86,7 @@ class TestCarbon(TestCase):
     def test_set_carbon_log_level():
         """Test creating a carbon object with declaring the log level."""
         cbn = Carbon(__name__, log_level='debug')
-        assert_equal(cbn.log_level, 'debug')
+        assert_equal(cbn.config["LOG_LEVEL"], 'debug')
 
     @staticmethod
     def test_set_carbon_data_folder():

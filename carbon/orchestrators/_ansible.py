@@ -249,6 +249,7 @@ class AnsibleController(object):
         if ans_verbosity:
             playbook_call += " -v%s" % ans_verbosity
 
+        logger.debug(playbook_call)
         output = exec_local_cmd_pipe(playbook_call, logger)
         return output
 

@@ -187,7 +187,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         self.config.load()
 
         if log_level:
-            self.log_level = log_level
+            self.config['LOG_LEVEL'] = log_level
 
         # Set custom data folder, if data_folder is pass as parameter to Carbon
         if data_folder:
