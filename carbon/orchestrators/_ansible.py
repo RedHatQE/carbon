@@ -366,7 +366,8 @@ class Inventory(object):
         """
         # create parser object, raw config parser allows keys with no values
         config = RawConfigParser(allow_no_value=True)
-        config.add_section(self.group)
+        main_section = self.group + ":children"
+        config.add_section(main_section)
 
         # add place holders for all hosts
         for host in self.all_hosts:
@@ -374,7 +375,7 @@ class Inventory(object):
 
         # add specific hosts to the group to run the action against
         for host in self.hosts:
-            config.set(self.group, host.name)
+            config.set(main_section, host.name)
 
         # write the inventory
         with open(self.unique_inventory, 'w') as f:
@@ -645,8 +646,10 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.alog_update()
 
         # Since we reached here, we are done processing the action. Lets go
-        # ahead and delete the inventory for this action run.
-        self.inv.delete()
+        # ahead and delete the inventory for this action run, unless log level
+        # is set to debug.
+        if log_level != logging.DEBUG:
+            self.inv.delete()
 
         # raise an exception if the ansible action failed
         if results[0] != 0:

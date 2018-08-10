@@ -516,31 +516,19 @@ def ssh_retry(obj):
         ssh_errs = False
         args[0].set_inventory()
 
-        # Obtain ip, user and key file for systems in hosts
-        for igrp, isys in args[0].inventory._inventory.hosts.items():
-            if kwargs['extra_vars']['hosts'] in args[0].inventory.groups:
-                hgrp = args[0].inventory.groups[kwargs['extra_vars']['hosts']]
-                if len(hgrp.child_groups) > 0:
-                    host_list = hgrp.child_groups.hosts
-                else:
-                    host_list = hgrp.hosts
 
-                found = False
-                for hsys in host_list:
-                    if hsys.name is isys.name:
-                        sys_grp = args[0].variable_manager._inventory.groups[igrp]
-                        sys_vars = sys_grp.vars
-                        server_ip = sys_grp.hosts[0].address
-                        server_user = sys_vars['ansible_user']
-                        server_key_file = sys_vars['ansible_ssh_private_key_file']
-                        found = True
-                        break
-                if not found:
-                    continue
-            else:
-                raise HelpersError(
-                    'ERROR: Unexpected error - Group %s not found in inventory file!' % kwargs['extra_vars']['hosts']
-                )
+        host_group = kwargs['extra_vars']['hosts']
+        inv_groups = args[0].inventory.groups
+        if host_group not in inv_groups:
+            raise HelpersError(
+                'ERROR: Unexpected error - Group %s not found in inventory file!' % kwargs['extra_vars']['hosts']
+            )
+
+        for group in inv_groups[host_group].child_groups:
+            sys_vars = group.vars
+            server_ip = group.hosts[0].address
+            server_user = sys_vars['ansible_user']
+            server_key_file = sys_vars['ansible_ssh_private_key_file']
 
             # Perform SSH checks
             attempt = 1
@@ -554,7 +542,7 @@ def ssh_retry(obj):
                                 username=server_user,
                                 key_filename=server_key_file,
                                 timeout=5)
-                    LOG.debug("Server %s - IP: %s is reachable." % (igrp,
+                    LOG.debug("Server %s - IP: %s is reachable." % (group,
                                                                    server_ip))
                     ssh.close()
                     break
@@ -562,7 +550,7 @@ def ssh_retry(obj):
                         SSHException, socket.error) as ex:
                     attempt = attempt + 1
                     LOG.error(ex.message)
-                    LOG.error("Server %s - IP: %s is unreachable." % (igrp,
+                    LOG.error("Server %s - IP: %s is unreachable." % (group,
                                                                       server_ip))
                     if attempt <= MAX_ATTEMPTS:
                         LOG.info('Attempt %s of %s: retrying in %s seconds' %
@@ -573,7 +561,7 @@ def ssh_retry(obj):
             if attempt > MAX_ATTEMPTS:
                 LOG.error(
                     'Max Retries exceeded. SSH ERROR - Resource unreachable - Server %s - IP: %s!' % (
-                    igrp, server_ip )
+                    group, server_ip )
                     )
                 ssh_errs = True
 
