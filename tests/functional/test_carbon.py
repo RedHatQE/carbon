@@ -34,7 +34,7 @@ from nose.tools import assert_equal, assert_is_instance, raises, assert_true,\
     nottest
 
 from carbon import Carbon
-from carbon.constants import STATUS_FILE, RESULTS_FILE
+from carbon.constants import RESULTS_FILE
 from carbon.resources.host import CarbonHostError
 
 
@@ -103,69 +103,8 @@ class TestCarbon(TestCase):
         assert_equal(cbn.workspace, workspace_path)
 
     @staticmethod
-    def test_status_file_property():
-        """Test carbons property for returning its scenario status file."""
-        cbn = Carbon(__name__)
-        f = os.path.join('.workspace', cbn.uid, STATUS_FILE)
-        assert_equal(cbn.status_file, f)
-
-    @staticmethod
     def test_results_file_property():
         """Test carbons property for returning its scenario results file."""
         cbn = Carbon(__name__)
         f = os.path.join('.workspace', cbn.uid, RESULTS_FILE)
         assert_equal(cbn.results_file, f)
-
-
-class TestResultsMixin(TestCase):
-    """Unit tests to test carbon results mixin class."""
-
-    def setUp(self):
-        self.env = EnvironmentVarGuard()
-        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'workspace/carbon.cfg'))
-
-    @staticmethod
-    def test_get_results():
-        """Test getting results for carbon scenario."""
-        cbn = Carbon(__name__)
-        assert_is_instance(cbn.results, dict)
-
-    @staticmethod
-    @raises(ValueError)
-    def test_set_results():
-        """Test setting results for carbon scenario."""
-        cbn = Carbon(__name__)
-        cbn.results = dict()
-
-    @staticmethod
-    def test_get_tasks():
-        """Test getting tasks for carbon scenario."""
-        cbn = Carbon(__name__)
-        assert_is_instance(cbn.tasks, list)
-
-    @staticmethod
-    def test_set_tasks():
-        """Test setting tasks for carbon scenario."""
-        cbn = Carbon(__name__)
-        cbn.tasks = ['provision']
-        assert_true('provision', cbn.tasks)
-
-    @staticmethod
-    def test_read_write_status_file():
-        """Test read/write status file for carbon scenario."""
-        cbn = Carbon(__name__)
-        status_file = 'status.yaml'
-        cbn.write_status_file(status_file)
-        assert_true(os.path.isfile(status_file))
-        cbn.read_status_file(status_file)
-        assert_is_instance(cbn.results, dict)
-        os.remove(status_file)
-
-    @staticmethod
-    @nottest
-    def test_update_results():
-        """Test method to update results for carbon scenario."""
-        cbn = Carbon(__name__)
-        # TODO: Update for support of blaster
-        cbn.update_results('provision', 0, dict)
-        cbn.update_results('provision', 0, dict)
