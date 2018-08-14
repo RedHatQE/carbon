@@ -44,7 +44,8 @@ from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
 
 from .._compat import RawConfigParser, string_types
-from ..core import CarbonOrchestrator, CarbonOrchestratorError
+from ..core import CarbonOrchestrator
+from ..exceptions import CarbonOrchestratorError
 from ..helpers import ssh_retry, exec_local_cmd_pipe
 
 

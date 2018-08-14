@@ -33,23 +33,11 @@ from libcloud.compute.providers import get_driver
 from libcloud.compute.types import InvalidCredsError, Provider
 
 from .._compat import string_types
-from ..core import CarbonProvider, CarbonProviderError
+from ..core import CarbonProvider
+from ..exceptions import OpenstackProviderError
 
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
-
-
-class OpenstackProviderError(CarbonProviderError):
-    """Base class for openstack provider exceptions."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        self.message = message
-        super(OpenstackProviderError, self).__init__(message)
-
 
 class OpenstackProvider(CarbonProvider):
     """

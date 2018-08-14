@@ -27,23 +27,12 @@
 """
 from copy import copy
 
-from ..core import CarbonResource, CarbonResourceError
+from ..core import CarbonResource
+from ..exceptions import CarbonHostError
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
 from ..helpers import get_provisioner_class, get_default_provisioner
 from ..helpers import get_provisioners_list, filter_host_name
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
-
-
-class CarbonHostError(CarbonResourceError):
-    """Host's base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: details about the error
-        :type message: str
-        """
-        super(CarbonHostError, self).__init__(message)
 
 
 class Host(CarbonResource):

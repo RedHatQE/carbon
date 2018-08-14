@@ -29,7 +29,7 @@
 from collections import namedtuple
 
 from ..constants import TASKLIST
-from ..core import CarbonError
+from ..exceptions import CarbonError
 from ..helpers import fetch_hosts, get_core_tasks_classes
 from ..tasks import CleanupTask
 

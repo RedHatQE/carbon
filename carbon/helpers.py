@@ -30,7 +30,6 @@ import os
 import pkgutil
 import random
 import socket
-import stat
 import string
 import subprocess
 import sys
@@ -46,22 +45,12 @@ from paramiko.ssh_exception import SSHException, BadHostKeyException, \
 
 from ._compat import string_types
 from .constants import PROVISIONERS, RULE_HOST_NAMING
+from .exceptions import HelpersError
 
 LOG = getLogger(__name__)
 
 # sentinel
 _missing = object()
-
-
-class HelpersError(Exception):
-    """Base class for carbon helpers exceptions."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        super(HelpersError, self).__init__(message)
 
 
 def get_core_tasks_classes():

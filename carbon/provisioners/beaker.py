@@ -33,21 +33,9 @@ import paramiko
 import stat
 
 from ..constants import BEAKER_URL
-from ..core import CarbonProvisioner, CarbonProvisionerError
+from ..core import CarbonProvisioner
+from ..exceptions import BeakerProvisionerError
 from ..helpers import exec_local_cmd
-
-
-class BeakerProvisionerError(CarbonProvisionerError):
-    """Base class for Beaker provisioner exceptions."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        :type message: str
-        """
-        self.message = message
-        super(BeakerProvisionerError, self).__init__(message)
 
 
 class BeakerProvisioner(CarbonProvisioner):

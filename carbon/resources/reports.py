@@ -24,20 +24,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import CarbonResource, CarbonResourceError
+from ..core import CarbonResource
 from ..tasks import ReportTask, ValidateTask
-
-
-class CarbonReportError(CarbonResourceError):
-    """Report base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: details about the error
-        :type message: str
-        """
-        super(CarbonReportError, self).__init__(message)
 
 
 class Report(CarbonResource):

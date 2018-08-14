@@ -30,19 +30,8 @@ import os
 import yaml
 
 from ..helpers import exec_local_cmd
-from ..core import CarbonProvisioner, CarbonProvisionerError
-
-
-class OpenshiftProvisionerError(CarbonProvisionerError):
-    """Base class for openshift provisioner exceptions."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        self.message = message
-        super(OpenshiftProvisionerError, self).__init__(message)
+from ..core import CarbonProvisioner
+from ..exceptions import OpenshiftProvisionerError
 
 
 class OpenshiftProvisioner(CarbonProvisioner):

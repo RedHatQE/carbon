@@ -36,21 +36,10 @@ from .executes import Execute
 from .host import Host
 from .reports import Report
 from ..constants import SCENARIO_SCHEMA
-from ..core import CarbonResource, CarbonResourceError
+from ..core import CarbonResource
+from ..exceptions import ScenarioError
 from ..helpers import gen_random_str
 from ..tasks import ValidateTask
-
-
-class ScenarioError(CarbonResourceError):
-    """Scenario's base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: details about the error
-        :type message: str
-        """
-        super(ScenarioError, self).__init__(message)
 
 
 class Scenario(CarbonResource):

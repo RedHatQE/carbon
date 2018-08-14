@@ -29,23 +29,11 @@ from copy import copy
 
 from .._compat import string_types
 from ..constants import ORCHESTRATOR
-from ..core import CarbonResource, CarbonResourceError
+from ..core import CarbonResource
 from ..helpers import get_orchestrator_class, \
     get_orchestrators_list
+from ..exceptions import CarbonActionError
 from ..tasks import OrchestrateTask, ValidateTask, CleanupTask
-
-
-class CarbonActionError(CarbonResourceError):
-    """Action's base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        :type message: str
-        """
-        self.message = message
-        super(CarbonActionError, self).__init__(message)
 
 
 class Action(CarbonResource):

@@ -23,7 +23,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import CarbonTask, CarbonOrchestratorError
+from ..core import CarbonTask
+from ..exceptions import CarbonOrchestratorError
 
 
 class CleanupTask(CarbonTask):

@@ -24,20 +24,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import CarbonResource, CarbonResourceError
+from ..core import CarbonResource
 from ..tasks import ExecuteTask, ValidateTask
-
-
-class CarbonExecuteError(CarbonResourceError):
-    """Execute's base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: details about the error
-        :type message: str
-        """
-        super(CarbonExecuteError, self).__init__(message)
 
 
 class Execute(CarbonResource):

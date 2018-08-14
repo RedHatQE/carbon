@@ -31,85 +31,9 @@ from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
 from time import time
 
+from .exceptions import CarbonError, CarbonResourceError, CarbonProviderError,\
+    LoggerMixinError
 from .helpers import get_core_tasks_classes
-
-
-class CarbonError(Exception):
-    """Carbon's base Exception class"""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        self.message = message
-        super(CarbonError, self).__init__(message)
-
-
-class CarbonTaskError(CarbonError):
-    """Carbon's task base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        super(CarbonTaskError, self).__init__(message)
-
-
-class CarbonResourceError(CarbonError):
-    """Carbon's resource base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        super(CarbonResourceError, self).__init__(message)
-
-
-class CarbonProvisionerError(CarbonError):
-    """Carbon's provisioner base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        super(CarbonProvisionerError, self).__init__(message)
-
-
-class CarbonProviderError(CarbonError):
-    """Carbon's provider base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        super(CarbonProviderError, self).__init__(message)
-
-
-class CarbonOrchestratorError(CarbonError):
-    """Carbon's orchestrator base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        super(CarbonOrchestratorError, self).__init__(message)
-
-
-class LoggerMixinError(CarbonError):
-    """Carbon's logger mixin base exception class."""
-
-    def __init__(self, message):
-        """Constructor.
-
-        :param message: Details about the error.
-        """
-        super(LoggerMixinError, self).__init__(message)
 
 
 class LoggerMixin(object):
