@@ -27,111 +27,20 @@ import errno
 import os
 import shutil
 import sys
-from threading import Lock
 
 import blaster
 import yaml
 
 from . import __name__ as __carbon_name__
-from .constants import TASKLIST, STATUS_FILE, RESULTS_FILE
+from .constants import TASKLIST, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, TimeMixin
 from .helpers import file_mgmt, gen_random_str
 from .resources import Scenario, Host, Action, Report, Execute
 from .utils.config import Config
 from .utils.pipeline import PipelineBuilder
 
-# a lock used for logger initialization
-_logger_lock = Lock()
 
-
-class ResultsMixin(object):
-    """Carbons results mixin class.
-
-    This class provides an easy interface for processing results from task
-    executions per resources.
-    """
-    _results = dict(tasks=[],
-                    last_executed=None,
-                    last_executed_status=None,
-                    executed_tasks=None)
-
-    _task_results = dict()
-
-    @property
-    def results(self):
-        """Return the results for the scenario."""
-        return self._results
-
-    @results.setter
-    def results(self, value):
-        """Raise exception when setting scenario results directly."""
-        raise ValueError('You cannot set scenario results directly.')
-
-    def update_results(self, task_name, status, blaster_data):
-        """Update scenario results.
-
-        :param task_name: Name of executed task.
-        :param status: Status of executed task.
-        :param blaster_data: Data returned by blaster.
-        """
-        self._results['last_executed'] = task_name
-        self._results['last_executed_status'] = status
-
-        if task_name not in self._task_results:
-            self._task_results[task_name] = dict(resources=[])
-
-        self._task_results[task_name]['status'] = status
-
-        for item in blaster_data:
-            if 'resource' in item:
-                _res = item['resource']
-            elif 'host' in item:
-                _res = item['host']
-            elif 'package' in item:
-                _res = item['package']
-                setattr(_res, 'methods', item['methods'])
-
-            self._task_results[task_name]['resources'].append(
-                {
-                    _res.__class__.__name__.lower(): {
-                        'name': _res.name,
-                        'methods_executed': item['methods']
-                    }
-                }
-            )
-
-        self._results['executed_tasks'] = self._task_results
-
-    @property
-    def tasks(self):
-        """Return the tasks to run for the scenario."""
-        return self._results['tasks']
-
-    @tasks.setter
-    def tasks(self, value):
-        """Set the tasks to run for the scenario.
-
-        :param value: List of tasks to run.
-        """
-        self._results['tasks'] = value
-
-    def read_status_file(self, status_file):
-        """Read an existing scenario status file.
-
-        :param status_file: Absolute path to the status file.
-        """
-        if os.path.isfile(status_file):
-            self._results = file_mgmt('r', status_file)
-
-    def write_status_file(self, status_file):
-        """Write a scenario status file.
-
-        :param status_file: Absolute path for the status file.
-        """
-        file_mgmt('w', status_file, self.results)
-
-
-class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
+class Carbon(LoggerMixin, TimeMixin):
     """
     The Carbon object acts as the central object. We call this object
     'the carbon compound'. Like in chemistry, a carbon molecule helps on the
@@ -274,10 +183,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         return self.config['DATA_FOLDER']
 
     @property
-    def status_file(self):
-        return os.path.join(self.data_folder, STATUS_FILE)
-
-    @property
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
 
@@ -378,16 +283,11 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
         pipeline and then each pipeline is sent to blaster blastoff.
         For every pipeline within ~self.pipelines,
         """
-        self.tasks = tasklist
-
         # check if scenario was set
         if self.scenario is None:
             raise CarbonError(
                 'You must set a scenario before running the framework!'
             )
-
-        # initialize pipeline
-        pipeline = None
 
         # initialize overall status
         status = 0
@@ -396,7 +296,7 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
             # save start time
             self.start()
 
-            for task in self.tasks:
+            for task in tasklist:
 
                 # create a pipeline builder object
                 pipe_builder = PipelineBuilder(task)
@@ -427,9 +327,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
                     raise_on_failure=True
                 )
 
-                # update results
-                self.update_results(pipeline.name, status, data)
-
                 # reload resource objects
                 self.scenario.reload_resources(data)
 
@@ -440,9 +337,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
             self.logger.error(ex)
 
-            # update results
-            self.update_results(pipeline.name, status, ex.results)
-
             # reload resource objects
             self.scenario.reload_resources(ex.results)
         finally:
@@ -451,11 +345,6 @@ class Carbon(LoggerMixin, ResultsMixin, TimeMixin):
 
             self.logger.info('Carbon run time duration: %dh:%dm:%ds' %
                              (self.hours, self.minutes, self.seconds))
-
-            # write carbon status file
-            self.write_status_file(self.status_file)
-            shutil.copy(self.status_file, self.config['RESULTS_FOLDER'])
-            self.logger.info('Scenario status file ~ %s' % self.status_file)
 
             file_mgmt('w', self.results_file, self.scenario.profile())
             shutil.copy(self.results_file, self.config['RESULTS_FOLDER'])

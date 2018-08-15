@@ -57,8 +57,6 @@ PROVISIONERS = {
 
 HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]
 
-STATUS_FILE = "status.yml"
-
 RESULTS_FILE = "results.yml"
 
 # Rule for Carbon hosts naming convention
