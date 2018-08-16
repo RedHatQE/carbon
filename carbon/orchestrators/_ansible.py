@@ -36,61 +36,14 @@ from shutil import copyfile
 from uuid import uuid4
 
 from ansible.config.manager import ConfigManager
-from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.inventory.manager import InventoryManager
 from ansible.parsing.dataloader import DataLoader
-from ansible.playbook.play import Play
-from ansible.plugins.callback import CallbackBase
 from ansible.vars.manager import VariableManager
 
 from .._compat import RawConfigParser, string_types
 from ..core import CarbonOrchestrator
 from ..exceptions import CarbonOrchestratorError
 from ..helpers import ssh_retry, exec_local_cmd_pipe
-
-
-class CarbonCallback(CallbackBase):
-    """Carbon callback.
-
-    This class primary responsibility is to handle building the callback data
-    from an ansible execution. This is a base callback class that can be
-    inherited from/expanded. Ansible controller objects can benefit from using
-    a custom callback class for easier parsing of the results after execution.
-    """
-
-    def __init__(self):
-        """Constructor."""
-        super(CarbonCallback, self).__init__()
-        self.contacted = []
-        self.unreachable = False
-
-    def v2_runner_on_ok(self, result):
-        """Store ok results."""
-        CallbackBase.v2_runner_on_ok(self, result)
-        self.contacted.append(
-            {
-                'host': result._host.get_name(),
-                'success': True,
-                'results': result._result
-            }
-        )
-
-    def v2_runner_on_failed(self, result, ignore_errors=False):
-        """Store failed results."""
-        CallbackBase.v2_runner_on_failed(
-            self, result, ignore_errors=ignore_errors)
-        self.contacted.append(
-            {
-                'host': result._host.get_name(),
-                'success': False,
-                'results': result._result
-            }
-        )
-
-    def v2_runner_on_unreachable(self, result):
-        """Store unreachable results."""
-        CallbackBase.v2_runner_on_unreachable(self, result)
-        self.unreachable = True
 
 
 class AnsibleController(object):
@@ -109,7 +62,6 @@ class AnsibleController(object):
         :param inventory: inventory file
         """
         self.loader = DataLoader()
-        self.callback = CarbonCallback()
         self.ansible_inventory = inventory
         self.inventory = None
         self.variable_manager = None
@@ -138,72 +90,65 @@ class AnsibleController(object):
         self.variable_manager.set_inventory(self.inventory)
 
     @ssh_retry
-    def run_module(self, play_source, remote_user="root", become=False,
-                   become_method="sudo", become_user="root",
-                   private_key_file=None):
-        """Run an Ansible module.
-
-        Example play source:
-        dict(
-            name="Ansible Play",
-            hosts=192.168.1.1,
-            gather_facts='no',
-            tasks=[
-                dict(action=dict(module='ping'), register='shell_out')
-            ]
-        )
-
-        :param play_source: Play to be run.
-        :param remote_user: Connect as this user.
-        :param become: Whether to run as sudoer.
-        :param become_method: Method to use for become.
-        :param become_user: User to become.
-        :param private_key_file: SSH private key for authentication.
-        :return: A dict of Ansible return code and callback object
+    def run_module(self, module, logger, script=None, run_options={},
+                   extra_args=None, extra_vars=None, ans_verbosity=None):
         """
-        # instantiate callback class
-        self.callback = CarbonCallback()
 
-        # set inventory file
-        self.set_inventory()
+        :param module: Name of the ansible module to run.
+        :type module: str
+        :param logger: Logger object.
+        :type logger: logger object
+        :param script: Absolute path a script, if using the script module.
+        :type script: str
+        :param run_options: additional ansible run options
+        :type run_options: dict
+        :param extra_args: module arguments
+        :type extra_args: str
+        :param extra_vars: used to determine where to run the module against
+        :type extra_vars: dict
+        :param ans_verbosity: verbosity to use for the ansible call.
+        :type ans_verbosity: str
+        :return: A tuple (rc, sterr)
+        """
 
-        # define ansible options
-        options = self.module_options(
-            connection='smart',
-            module_path='',
-            forks=100,
-            become=become,
-            become_method=become_method,
-            become_user=become_user,
-            check=False,
-            remote_user=remote_user,
-            private_key_file=private_key_file,
-            diff=False
-        )
+        if extra_vars["localhost"]:
+            module_call = "ansible localhost -m %s" % (module)
+        else:
+            module_call = "ansible -i %s %s -m %s" % \
+                          (self.ansible_inventory, extra_vars["hosts"], module)
 
-        # load the play
-        play = Play().load(
-            play_source,
-            variable_manager=self.variable_manager,
-            loader=self.loader
-        )
+        # add extra arguments
+        if module == "script":
+            if extra_args:
+                module_call += " -a '%s %s'" % (script, extra_args)
+            else:
+                module_call += " -a '%s'" % script
+        elif extra_args:
+            module_call += " -a %s" % extra_args
 
-        # run the tasks
-        tqm = None
-        try:
-            tqm = TaskQueueManager(
-                inventory=self.inventory,
-                variable_manager=self.variable_manager,
-                loader=self.loader,
-                options=options,
-                passwords={}
-            )
-            result = tqm.run(play)
-        finally:
-            if tqm is not None:
-                tqm.cleanup()
+        if run_options:
+            for key in run_options:
+                if key == "remote_user":
+                    module_call += " --user %s" % run_options[key]
+                elif key == "become":
+                    if run_options[key]:
+                        module_call += " --%s" % key
+                elif key == "tags":
+                    taglist = ','.join(run_options[key])
+                    module_call += " --tags %s" % taglist
+                else:
+                    module_call += " --%s %s" % (key.replace('_','-'), run_options[key])
 
-        return dict(status=result, callback=self.callback)
+        if ans_verbosity:
+            module_call += " -v%s" % ans_verbosity
+
+        # Set the connection if localhost
+        if extra_vars["localhost"]:
+            module_call += " -c local"
+
+        logger.debug(module_call)
+        output = exec_local_cmd_pipe(module_call, logger)
+        return output
 
     @ssh_retry
     def run_playbook(self, playbook, logger, extra_vars=None, run_options=None,
@@ -218,7 +163,7 @@ class AnsibleController(object):
         :type run_options: dict
         :param ans_verbosity: ansible verbosity settings
         :type ans_verbosity: str
-        :return: A tuple (rc, stdout, sterr)
+        :return: A tuple (rc, sterr)
         """
 
         playbook_call = "ansible-playbook -i %s %s" % \
@@ -407,7 +352,8 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
     _optional_parameters = (
         'options',
-        'galaxy_options'
+        'galaxy_options',
+        'script',
     )
 
     user_run_vals = ["become", "become_method", "become_user", "remote_user",
@@ -426,6 +372,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self._hosts = getattr(package, 'hosts')
         self.options = getattr(package, '%s_options' % self.name)
         self.galaxy_options = getattr(package, '%s_galaxy_options' % self.name)
+        self.script = getattr(package, '%s_script' % self.name)
         self.config = getattr(package, 'config')
         self.all_hosts = getattr(package, 'all_hosts')
         self.workspace = self.config['WORKSPACE']
@@ -587,17 +534,10 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         Here you will see every required step for processing a carbon ansible
         action. Please see the comments below for step by step details.
         """
-        # For the first implementation or ansible orchestrator, we are focused
-        # solely on playbooks. Since each action's name key defines the
-        # item to run, we need to verify it is available.
-        self.find_playbook()
 
         # lets create the ansible inventory file to run the given action on
         # its associated hosts
         self.inv.create()
-
-        # download ansible roles (if applicable)
-        self.download_roles()
 
         # create an ansible controller object
         obj = AnsibleController(self.inv.inventory_dir)
@@ -605,26 +545,10 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         # configure playbook variables
         extra_vars = dict(hosts=self.inv.group)
 
-        if 'extra_vars' in self.options and self.options['extra_vars']:
-            extra_vars.update(self.options['extra_vars'])
-
-        self.logger.info('Executing action: %s.' % self.action)
-
-        run_options = {}
-
-        if "tags" in self.options and self.options["tags"]:
-            run_options["tags"] = self.options["tags"]
-
-        # override ansible options (user passed in vals for specific action)
-        for val in self.user_run_vals:
-            if val in self.options and self.options[val]:
-                run_options[val] = self.options[val]
-
-        self.logger.debug("Ansible options used: " + str(run_options))
+        log_level = self.logger.getEffectiveLevel()
 
         ans_verbosity = None
 
-        log_level = self.logger.getEffectiveLevel()
         if log_level == logging.DEBUG:
             ans_verbosity = "vvvv"
 
@@ -632,13 +556,82 @@ class AnsibleOrchestrator(CarbonOrchestrator):
                 self.config["ANSIBLE_VERBOSITY"]:
             ans_verbosity = self.config["ANSIBLE_VERBOSITY"]
 
-        results = obj.run_playbook(
-            self.action_abs,
-            extra_vars=extra_vars,
-            run_options=run_options,
-            ans_verbosity=ans_verbosity,
-            logger=self.logger
-        )
+        if self.script:
+            # running a script, using the ansible script module
+            # get full path of the script
+            self._action_abs = os.path.join(self.workspace, self.action)
+            if os.path.exists(self._action_abs):
+                self.logger.info("found script to run: %s" % self._action_abs)
+            else:
+                raise CarbonOrchestratorError(
+                    "Unable to find script: %s" % self._action_abs
+                )
+
+            run_options = {}
+
+            # override ansible options (user passed in vals for specific action)
+            for val in self.user_run_vals:
+                if self.options and val in self.options and self.options[val]:
+                    run_options[val] = self.options[val]
+
+            extra_args = None
+
+            if self.options and 'extra_args' in self.options and self.options['extra_args']:
+                extra_args = self.options['extra_args']
+
+            if self._hosts:
+                extra_vars["localhost"] = False
+            else:
+                extra_vars["localhost"] = True
+
+            results = obj.run_module(
+                "script",
+                extra_vars=extra_vars,
+                script=self.action_abs,
+                run_options=run_options,
+                extra_args=extra_args,
+                logger=self.logger,
+                ans_verbosity=ans_verbosity
+            )
+
+            # self.logger.info("Ansible action finished with status: %s" % results[0])
+            # self.logger.info(results[1])
+
+        else:
+            # If not a script then it must be a playbook
+            # TODO: future we can add support for using Ansible modules also
+            self.find_playbook()
+
+            # download ansible roles (if applicable)
+            self.download_roles()
+
+            # configure playbook variables
+            extra_vars = dict(hosts=self.inv.group)
+
+            if self.options and 'extra_vars' in self.options and self.options['extra_vars']:
+                extra_vars.update(self.options['extra_vars'])
+
+            self.logger.info('Executing action: %s.' % self.action)
+
+            run_options = {}
+
+            if "tags" in self.options and self.options["tags"]:
+                run_options["tags"] = self.options["tags"]
+
+            # override ansible options (user passed in vals for specific action)
+            for val in self.user_run_vals:
+                if self.options and val in self.options and self.options[val]:
+                    run_options[val] = self.options[val]
+
+            self.logger.debug("Ansible options used: " + str(run_options))
+
+            results = obj.run_playbook(
+                self.action_abs,
+                extra_vars=extra_vars,
+                run_options=run_options,
+                ans_verbosity=ans_verbosity,
+                logger=self.logger
+            )
 
         self.logger.info('Finished action: %s execution.' % self.action)
         self.logger.info('Status => %s.' % results[0])
