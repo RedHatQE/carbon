@@ -35,10 +35,10 @@ from .actions import Action
 from .executes import Execute
 from .host import Host
 from .reports import Report
-from ..constants import SCENARIO_SCHEMA
+from ..constants import SCENARIO_SCHEMA, DEP_CHECK_LIST
 from ..core import CarbonResource
 from ..exceptions import ScenarioError
-from ..helpers import gen_random_str
+from ..helpers import gen_random_str, dep_check
 from ..tasks import ValidateTask
 
 
@@ -54,7 +54,8 @@ class Scenario(CarbonResource):
 
     _fields = [
         'name',         # the name of the scenario
-        'description',  # a brief description of what the scenario is
+        'description',  # a brief description of what the scenario is,
+        'dep_check',    # external dependency check resources
     ]
 
     def __init__(self,
@@ -84,6 +85,9 @@ class Scenario(CarbonResource):
 
         # set the scenario description attribute
         self._description = parameters.pop('description', None)
+
+        # External Dependency Component list of Scenario
+        self.dep_check = ""
 
         self._credentials = list()
 
@@ -338,6 +342,26 @@ class Scenario(CarbonResource):
             self.logger.error('Unsuccessfully %s' % msg)
             raise ScenarioError(ex.msg)
 
+        # Verify dependency check components are supported/valid then
+        # Check status (UP/DOWN)
+        # Only check if dependancy check endpoint set and components given
+        # Else it is ignored
+        if self.config['DEP_CHECK_ENDPOINT'] and self.dep_check:
+            self.dep_check, dep_check_val = [x.lower().split(':', 1)[-1] for x in self.dep_check], \
+                                            [x.lower().split(':', 1)[0] for x in self.dep_check]
+
+            if all(x in DEP_CHECK_LIST for x in dep_check_val) is not True:
+                self.logger.error('Invalid Dependency Check Component specified in descriptor of scenario '
+                                    "'%s' Valid: %s - Supplied: %s." % (str(self.name), DEP_CHECK_LIST,
+                                                                       dep_check_val))
+                raise ScenarioError('Invalid Dependency Check Component specified in descriptor of scenario '
+                                    "'%s' Valid: %s - Supplied: %s." % (str(self.name), DEP_CHECK_LIST,
+                                                                        dep_check_val))
+
+            # Check Status of components (UP/DOWN)
+            dep_check(self, self.config)
+
+
     def profile(self):
         """Builds a profile which represents the scenario and its properties.
 
@@ -347,6 +371,7 @@ class Scenario(CarbonResource):
         profile = dict(
             name=self.name,
             description=self.description,
+            dep_check=self.dep_check,
             credentials=self.credentials,
             provision=[host.profile() for host in self.hosts],
             orchestrate=[action.profile() for action in self.actions],

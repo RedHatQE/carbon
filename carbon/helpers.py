@@ -34,17 +34,22 @@ import string
 import subprocess
 import sys
 import time
+import urllib3
+import warnings
+
 from logging import getLogger
 
 import jinja2
 import requests
 import yaml
+import cachetclient.cachet as cachet
 from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
 
 from ._compat import string_types
-from .constants import PROVISIONERS, RULE_HOST_NAMING
+from .constants import PROVISIONERS, RULE_HOST_NAMING, DEP_CHECK_LIST
+from .core import CarbonError
 from .exceptions import HelpersError
 
 LOG = getLogger(__name__)
@@ -566,3 +571,49 @@ def ssh_retry(obj):
 
     return check_access
 
+
+def dep_check(scenario, config):
+    """
+    External Component Dependency Check
+    Throws exception if all components are not UP
+
+    :param scenario: carbon scenario object
+    :param config: carbon config object
+    """
+
+    # External Dependency Check
+    # Available components to check ci-rhos, zabbix-sysops, brew, covscan
+    #                             polarion, rpmdiff, umb, errata, rdo-cloud
+    #                             gerrit
+    if config['DEP_CHECK_ENDPOINT']:
+        endpoint=config['DEP_CHECK_ENDPOINT']
+        ext_resources_avail = True
+        component_names = scenario.dep_check
+        urllib3.disable_warnings()
+        components = cachet.Components(endpoint=endpoint, verify=False)
+        LOG.info(' DEPENDENCY CHECK '.center(60, '-'))
+        for comp in component_names:
+            for attempts in range(1, 6):
+                component_data = components.get(params={'name': comp})
+                comp_status = json.loads(component_data)['data'][0]['status']
+                if comp_status == 4:
+                    comp_resource_avail = False
+                    time.sleep(30)
+                    continue
+                else:
+                    comp_resource_avail = True
+                    break
+            if comp_resource_avail is not True:
+                ext_resources_avail = False
+            LOG.info('{:>40} {:<5} - Attempts {}'.format(comp.upper(),
+                             ': UP' if comp_resource_avail else ': DOWN',
+                             attempts))
+        warnings.resetwarnings()
+        LOG.info(''.center(60, '-'))
+
+        if ext_resources_avail is not True:
+            LOG.error("ERROR: Not all external resources are available. Not running scenario")
+            raise CarbonError(
+                'Scenario %s will not be run! Not all external resources are available' %
+                scenario.name
+            )

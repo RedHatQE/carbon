@@ -49,7 +49,8 @@ setup(
         'Click>=6.7',
         'Jinja2>=2.10',
         'PyYAML>=3.12',
-        'pykwalify>=1.6.0'
+        'pykwalify>=1.6.0',
+        'python-cachetclient'
     ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

@@ -7,6 +7,11 @@ mapping:
   description:
     type: str
     required: True
+  dep_check:
+    required: False
+    type: seq
+    sequence:
+      - type: str
   credentials:
     required: False
     # not fully defined
