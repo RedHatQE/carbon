@@ -26,7 +26,7 @@ either keytab and keytab_principal or username and password.
     ---
     credentials:
       - name: beaker
-        auth_url: <Beaker server url>
+        hub_url: <Beaker server url>
         keytab: <your keytab file, must be in your scenario workspace dir>
         keytab_principal: <The principal value for your keytab>
         username: <username>
@@ -46,7 +46,7 @@ either keytab and keytab_principal or username and password.
         - String
         - True
 
-    *   - auth_url
+    *   - hub_url
         - The beaker server url.
         - String
         - False

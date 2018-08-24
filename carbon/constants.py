@@ -62,9 +62,6 @@ RESULTS_FILE = "results.yml"
 # Rule for Carbon hosts naming convention
 RULE_HOST_NAMING = re.compile('[\W]+')
 
-# Beaker url's
-BEAKER_URL = "https://beaker.engineering.redhat.com"
-
 # Default orchestrator
 ORCHESTRATOR = 'ansible'
 

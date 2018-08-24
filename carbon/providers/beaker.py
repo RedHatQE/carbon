@@ -75,14 +75,15 @@ class BeakerProvider(CarbonProvider):
         'job_id',
     )
 
-    _mandatory_creds_parameters = ()
+    _mandatory_creds_parameters = (
+        'hub_url',
+    )
 
     _optional_creds_parameters = (
         'keytab_principal',
         'keytab',
         'username',
-        'password',
-        'auth_url'
+        'password'
     )
 
     def __init__(self, **kwargs):

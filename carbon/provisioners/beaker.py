@@ -32,7 +32,6 @@ import os
 import paramiko
 import stat
 
-from ..constants import BEAKER_URL
 from ..core import CarbonProvisioner
 from ..exceptions import BeakerProvisionerError
 from ..helpers import exec_local_cmd
@@ -90,10 +89,8 @@ class BeakerProvisioner(CarbonProvisioner):
         # open conf file for writing
         conf_obj = open(self.conf, 'w')
 
-        if 'auth_url' in credentials and credentials['auth_url']:
-            self.url = credentials['auth_url']
-        else:
-            self.url = BEAKER_URL
+        if 'hub_url' in credentials and credentials['hub_url']:
+            self.url = credentials['hub_url']
 
         conf_obj.write('HUB_URL = "%s"\n' % self.url)
 
