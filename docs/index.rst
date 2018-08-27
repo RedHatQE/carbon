@@ -41,8 +41,9 @@ tasks.
     scenario_descriptor
     configuration
     scenario_structure
-    examples
+    invoke
     output
+    examples
     development
     changelog
     contact

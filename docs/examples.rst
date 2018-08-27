@@ -1,162 +1,53 @@
-Running
-=======
+Examples
+========
 
-Once carbon is installed, you can run the carbon command to view its options:
+This page is intended to provide you with detailed examples on how you can use
+carbon to perform various actions. Some of the actions below may redirect you
+to a git repository where further detail is given.
 
-.. code-block:: bash
+----
 
-    # OUTPUT MAY VARY BETWEEN RELEASES
+Test Setup
+----------
 
-    $ carbon
-    Usage: carbon [OPTIONS] COMMAND [ARGS]...
+This section provides you with detailed examples on how carbon can perform
+various types of test setup. Below you will find sub-sections with examples
+for installing commonly used test frameworks. Each framework has an associated
+repository containing all necessary files to call carbon to setup that test
+framework. Each of the examples demonstrates how carbon consumes the external
+automated scripts (i.e, ansible roles/playbooks, bash scripts, etc) to install
+the test frameworks.
 
-      Carbon - Interoperability Testing Framework
+.. note::
 
-    Options:
-      -v, --verbose  Add verbosity to the commands.
-      --version      Show the version and exit.
-      --help         Show this message and exit.
+    These frameworks below are just examples on how you can use carbon to run
+    existing automation you may have to install/setup test frameworks. Since
+    carbons primary purpose is to conduct "orchestrate" the E2E flow of a
+    multi-product scenario, it has the flexibility to consume any sort of
+    automation to run against your scenarios test machines defined. This allows
+    you to focus on building the automation to setup test frameworks and then
+    just tell carbon how you wish to run it.
 
-    Commands:
-      create    Create a scenario configuration.
-      run       Run a scenario configuration.
-      validate  Validate a scenario configuration.
+Junit
+~~~~~
 
-Run
----
+Please reference the example `junit repository`_ for all details on how you
+can execute this example with carbon to install the junit framework.
 
-The run command will run your scenario descriptor executing all tasks you
-select. Below are the available run command options.
+Pytest
+~~~~~~
 
-.. code-block:: bash
+Please reference the example `pytest repository`_ for all details on how you
+can execute this example with carbon to install the pytest framework.
 
-    # OUTPUT MAY VARY BETWEEN RELEASES
+Restraint
+~~~~~~~~~
 
-    $ carbon run --help
-    Usage: carbon run [OPTIONS]
+Please reference the example `restraint repository`_ for all details on how you
+can execute this example with carbon to install the restraint framework.
 
-      Run a scenario configuration.
+----
 
-    Options:
-      -t, --task [validate|provision|orchestrate|execute|report|cleanup]
-                                      Select task to run. (default=all)
-      -s, --scenario                  Scenario definition file to be executed.
-      -d, --data-folder               Directory for saving carbon runtime files.
-      -w, --workspace                 Scenario workspace.
-      --log-level [debug|info|warning|error|critical]
-                                      Select logging level. (default=info)
-      --help                          Show this message and exit.
-
-.. list-table::
-    :widths: auto
-    :header-rows: 1
-
-    *   - Option
-        - Description
-        - Required
-        - Default
-
-    *   - task
-        - Defines which carbon task to execute the scenario against.
-        - No
-        - All tasks
-
-    *   - scenario
-        - This is the scenario descriptor filename. It can be either a relative
-          or absoluate path to the file.
-        - Yes
-        - N/A
-
-    *   - data-folder
-        - The data folder is where all carbon runs are stored. Every carbon
-          run will create a unique folder for that run to store its output. By
-          default carbon uses /tmp as the data folder to create sub folders for
-          each run. You can override this to define the base data folder.
-        - No
-        - /tmp
-
-    *   - workspace
-        - The scenario workspace is the directory where your scenario exists.
-          Inside this directory is all the necessary files to run the
-          scenario.
-        - No
-        - ./ (current working directory)
-
-    *   - log-level
-        - The log level defines the logging level for messages to be logged.
-        - No
-        - Info
-
-To run your scenario executing all given tasks, run the following command:
-
-.. code-block:: bash
-
-    $ carbon run --scenario <scenario>
-
-.. code-block:: python
-
-    from yaml import safe_load
-    from carbon import Carbon
-
-    cbn = Carbon('carbon')
-
-    with open('<scenario>, 'r') as f:
-        cbn.load_from_yaml(safe_load(f))
-
-    cbn.run()
-
-
-You have the ability to only run a selected task. You can do this by the
-following command:
-
-.. code-block:: bash
-
-    # individual task
-    $ carbon run --scenario <scenario> --task <task>
-
-    # multiple tasks
-    $ carbon run --scenario <scenario> --task <task> --task <task>
-
-.. code-block:: python
-
-    from yaml import safe_load
-    from carbon import Carbon
-
-    cbn = Carbon('carbon')
-
-    with open('<scenario>, 'r') as f:
-        cbn.load_from_yaml(safe_load(f))
-
-    # individual task
-    cbn.run(tasklist=['task'])
-
-    # multiple tasks
-    cbn.run(tasklist=['task', 'task'])
-
-.. Mention about how they can pick up at a certain task
-
-Create
-------
-
-The create command provides a helper for dynamically creating your scenario
-descriptor.  This command is currently not implemented.
-
-Validate
---------
-
-The validate command validates the scenario descriptor.
-
-.. code-block:: bash
-
-    $ carbon validate --help
-    Usage: carbon validate [OPTIONS]
-
-      Validate a scenario configuration.
-
-    Options:
-      -s, --scenario                  Scenario definition file to be executed.
-      -d, --data-folder               Directory for saving carbon runtime files.
-      -w, --workspace                 Scenario workspace.
-      --log-level [debug|info|warning|error|critical]
-                                      Select logging level. (default=info)
-      --help                          Show this message and exit.
+.. _junit repository: https://gitlab.cee.redhat.com/PIT/carbon/junit-install-example
+.. _pytest repository: https://gitlab.cee.redhat.com/PIT/carbon/pytest-install-example
+.. _restraint repository: https://gitlab.cee.redhat.com/PIT/carbon/restraint-install-example
