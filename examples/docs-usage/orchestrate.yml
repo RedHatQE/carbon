@@ -146,3 +146,32 @@ orchestrate:
 orchestrate:
   - name: rhsm_register.yml
     hosts: clients
+
+---
+orchestrate:
+  - name: scripts/create_dir.sh
+    description: create a local dir
+    ansible_script: True
+    hosts: localhost
+    orchestrator: ansible
+
+---
+orchestrate:
+  - name: scripts/create_dir.sh
+    description: creates a local dir
+    ansible_options:
+      extra_args: -c -e 12
+    ansible_script: True
+    hosts: localhost
+    orchestrator: ansible
+
+---
+orchestrate:
+  - name: scripts/create_dir.sh
+    description: creates a remote dir
+    ansible_options:
+      remote_user: cloud-user
+      extra_args: -c -e 12 chdir=/home
+    ansible_script: True
+    hosts: host01
+    orchestrator: ansible

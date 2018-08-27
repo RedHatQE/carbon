@@ -91,10 +91,11 @@ Ansible
 -------
 
 Ansible is carbons default orchestrator. As we mentioned above each task has
-a given name (action). This name is the ansible playbook name (excluding the
-file extension). Carbon has the ability to find the playbook. In addition to
-the required orchestrate base keys, there are more you can define based on your
-selected orchestrator. Lets dive into them..
+a given name (action). This name is the ansible playbook name (including the
+file extension) or a script name (including the file extension). Carbon has the
+ability to find the playbook or script. In addition to the required orchestrate
+base keys, there are more you can define based on your selected orchestrator.
+Lets dive into them..
 
 .. list-table::
     :widths: auto
@@ -117,6 +118,13 @@ selected orchestrator. Lets dive into them..
         - Additional options to provide to the ansible orchestrator regarding
           ansible roles
         - Dictionary
+        - No
+        - n/a
+
+    *   - ansible_script
+        - Boolean to define if you are executing a user defined script
+          (required to be set to True, if using a user defined script)
+        - Boolean
         - No
         - n/a
 
@@ -292,6 +300,41 @@ tasks.
 
 .. literalinclude:: ../../examples/docs-usage/orchestrate.yml
     :lines: 123-143
+
+
+Example 8
+~~~~~~~~~
+
+The following is an example of running a script.  The following is an
+example of a script running on the localhost.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 150-156
+
+Example 9
+~~~~~~~~~
+
+The following builds on the previous example, by showing how a user
+can add options to the script they are executing (In the example below,
+the script is run with options as **create_dir.sh -c -e 12**.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 158-166
+
+Example 10
+~~~~~~~~~
+
+Again building on the previous example, you can set more options to the
+script execution.  The script is executed using the script ansible
+module, so you can set options the script module has.  The example below
+uses the **chdir** option.  You can also set other ansible options, and the
+example below sets the **remote_user** option.
+
+To see all script options see ansible's documentation `here
+<https://docs.ansible.com/ansible/latest/modules/script_module.html>`_.
+
+.. literalinclude:: ../../examples/docs-usage/orchestrate.yml
+    :lines: 168-177
 
 ----
 
