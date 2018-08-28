@@ -18,5 +18,5 @@ Configuration example (with all options):
 
 .. note::
 
-    Configuration options can be overridden by passing cli options when running
+    Many of the configuration options can be overridden by passing cli options when running
     carbon. See the options in the running carbon `example. <examples.html#run>`__

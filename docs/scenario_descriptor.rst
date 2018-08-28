@@ -15,6 +15,7 @@ into further detail explaining the different mappings.
 .. toctree::
     :maxdepth: 1
 
+    definitions/dep_check
     definitions/credentials
     definitions/provision
     definitions/orchestrate
