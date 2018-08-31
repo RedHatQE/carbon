@@ -157,7 +157,9 @@ class TestScenario(TestCase):
     def test_add_valid_executes(self):
         """Test adding a valid executes for the carbon scenario."""
         self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
-        self.cbn.scenario.add_executes(Execute())
+        self.cbn.scenario.add_executes(Execute(
+            name="foo", parameters=dict(hosts=[])
+        ))
         assert_equal(len(self.cbn.scenario.executes), 1)
 
     def test_get_reports(self):

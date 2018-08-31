@@ -65,6 +65,9 @@ RULE_HOST_NAMING = re.compile('[\W]+')
 # Default orchestrator
 ORCHESTRATOR = 'ansible'
 
+# Default executor
+EXECUTOR = 'runner'
+
 # Default config
 DEFAULT_CONFIG = {
     'ANSIBLE_LOG_REMOVE': True,

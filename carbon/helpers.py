@@ -246,6 +246,50 @@ def get_orchestrators_list():
             get_orchestrators_classes()]
 
 
+def get_executors_classes():
+    """Go through all available executor modules and return all the
+    classes.
+
+    :return: executor classes
+    :rtype: list
+    """
+    from .core import CarbonExecutor
+    from . import executors
+
+    prefix = executors.__name__ + '.'
+
+    executors_list = []
+
+    for importer, modname, ispkg in pkgutil.iter_modules(executors.__path__, prefix):
+        if str(modname).endswith('.ext'):
+            continue
+        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
+        for clsname, clsmember in clsmembers:
+            if (clsmember is not CarbonExecutor) and issubclass(clsmember, CarbonExecutor):
+                executors_list.append(clsmember)
+    return executors_list
+
+
+def get_executor_class(name):
+    """Return the executor class based on the __executor_name__ set
+    within the class. See ~carbon.core.CarbonExecutor for more information.
+
+    :param name: the name of the executor
+    :return: the executor class
+    """
+    for executor in get_executors_classes():
+        if executor.__executor_name__ == name:
+            return executor
+
+
+def get_executors_list():
+    """Return a list of available executors.
+
+    :return: executors
+    """
+    return [executor.__executor_name__ for executor in
+            get_executors_classes()]
+
 def gen_random_str(char_num=8):
     """
     Generate a string with a specific number of characters, defined

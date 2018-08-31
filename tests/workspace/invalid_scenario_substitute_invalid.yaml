@@ -141,11 +141,24 @@ orchestrate:
 
 execute:
 
-  - framework: restraint
-    name: restraint
-    vars:
-      execute_xml: http://file.bos.redhat.com/~vipatel/FFinterop-rhel6.xml
-      role: ['w_client', 's390x_client']
+  - name: restraint tests
+    description: "execute tests against test clients"
+    executor: runner
+    hosts: driver
+    git:
+      repo: https://server.com/myproject.git
+      version: test-ver-0.1                    # default = master ??
+      dest: /tmp
+    playbook:
+      chdir: /tmp/project/ansible
+      name: master.yml
+    artifacts:
+      - restraint-*
+      - test.log
+    ansible_options:
+      extra_vars:
+        user: root
+        become: true
 
 report:
 

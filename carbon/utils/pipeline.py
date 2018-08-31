@@ -120,6 +120,8 @@ class PipelineBuilder(object):
         # execute resource
         for execute in getattr(scenario, 'executes'):
             for task in execute.get_tasks():
+                # fetch & set hosts for the given executes task
+                task = fetch_hosts(getattr(scenario, 'hosts'), task)
                 if task['task'].__task_name__ == self.name:
                     pipeline.tasks.append(task)
 

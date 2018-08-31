@@ -25,7 +25,11 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonResource
+from ..constants import EXECUTOR
+from ..helpers import get_executor_class, \
+    get_executors_list
 from ..tasks import ExecuteTask, ValidateTask
+from ..exceptions import CarbonExecuteError
 
 
 class Execute(CarbonResource):
@@ -34,11 +38,23 @@ class Execute(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'execute']
+
+    # The fields (ansible_options, git, shell, and script) could have been
+    # optional parameters for the runner executor; however, since this is
+    # planned to be the main executor, it made sense to define them here
+    # and not appending runner to those keys.  This can be changed if
+    # there are more executors added.
     _fields = [
         'name',
         'description',
-        'framework',
-        'vars',
+        'executor',
+        'hosts',
+        'artifacts',
+        'ansible_options',
+        'git',
+        'shell',
+        'script',
+        'playbook'
     ]
 
     def __init__(self,
@@ -65,6 +81,40 @@ class Execute(CarbonResource):
         """
         super(Execute, self).__init__(config=config, name=name, **kwargs)
 
+        # set the execute resource name
+        if name is None:
+            self._name = parameters.pop('name', None)
+            if self._name is None:
+                raise CarbonExecuteError('Unable to build execute object. Name'
+                                        ' field missing!')
+        else:
+            self._name = name
+
+        # set the execute description
+        self._description = parameters.pop('description', EXECUTOR)
+
+        # every execute has a mandatory executor, lets set it
+        executor = parameters.pop('executor', 'runner')
+
+        if executor not in get_executors_list():
+            raise CarbonExecuteError('Executor: %s is not supported!' %
+                                    executor)
+
+        self._executor = get_executor_class(executor)
+
+        # each executor will have x number of hosts associated to it. lets
+        # associate the list of hosts to the execute object itself. currently
+        # the hosts are strings, when carbon builds the pipeline, they will
+        # be updated with their corresponding host object.
+        self.hosts = parameters.pop('hosts')
+        if self.hosts is None:
+            raise CarbonExecuteError('Unable to associate hosts to executor:'
+                                     '%s. No hosts defined!' % self._name)
+
+        # create the executor attributes in the execute object
+        for p in getattr(self.executor, 'get_all_parameters')():
+            setattr(self, p, parameters.get(p, {}))
+
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
         self._execute_task_cls = execute_task_cls
@@ -75,6 +125,20 @@ class Execute(CarbonResource):
         # load the parameters into the object itself
         if parameters:
             self.load(parameters)
+
+    @property
+    def executor(self):
+        """Executor property.
+
+        :return: executor class object
+        :rtype: object
+        """
+        return self._executor
+
+    @executor.setter
+    def executor(self, value):
+        """Set executor property."""
+        raise AttributeError('Orchestrator class property cannot be set.')
 
     def profile(self):
         """Build a profile for the execute resource.

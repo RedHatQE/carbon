@@ -846,3 +846,113 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
         for param in cls.get_all_parameters():
             profile.update({param: getattr(action, param, None)})
         return profile
+
+
+class CarbonExecutor(LoggerMixin, TimeMixin):
+
+    __executor_name__ = None
+
+    # all parameters that MUST be set for the executor
+    _mandatory_parameters = ()
+
+    # additional parameters that can be set for the executor
+    _optional_parameters = ()
+
+    def __init__(self):
+        """Constructor."""
+        self._execute = None
+        self._hosts = None
+
+    def validate(self):
+        raise NotImplementedError
+
+    def run(self):
+        raise NotImplementedError
+
+    @property
+    def name(self):
+        """Return the name of the executor."""
+        return self.__executor_name__
+
+    @name.setter
+    def name(self, value):
+        raise AttributeError('You cannot set name for the executor.')
+
+    @property
+    def execute(self):
+        return self._execute
+
+    @execute.setter
+    def execute(self, value):
+        raise AttributeError('You cannot set the execute to run.')
+
+    @property
+    def hosts(self):
+        return self._hosts
+
+    @hosts.setter
+    def hosts(self, value):
+        raise AttributeError('Hosts cannot be set once the object is created.')
+
+    @classmethod
+    def _mandatory_parameters_set(cls):
+        """
+        Build a set of mandatory parameters
+        :return: a set
+        """
+        return {'{}_{}'.format(cls.__executor_name__, k) for k in cls._mandatory_parameters}
+
+    @classmethod
+    def get_mandatory_parameters(cls):
+        """
+        Get the list of the mandatory parameters
+        :return: a tuple of the mandatory parameters.
+        """
+        return (param for param in cls._mandatory_parameters_set())
+
+    @classmethod
+    def _optional_parameters_set(cls):
+        """
+        Build a set of optional parameters
+        :return: a set
+        """
+        return {'{}_{}'.format(cls.__executor_name__, k) for k in cls._optional_parameters}
+
+    @classmethod
+    def get_optional_parameters(cls):
+        """
+        Get the list of the optional parameters
+        :return: a tuple of the optional parameters.
+        """
+        return (param for param in cls._optional_parameters_set())
+
+    @classmethod
+    def _all_parameters_set(cls):
+        """
+        Build a set of all parameters
+        :return: a set
+        """
+        return cls._mandatory_parameters_set()\
+            .union(cls._optional_parameters_set())
+
+    @classmethod
+    def get_all_parameters(cls):
+        """
+        Return the list of all possible parameters for the provider.
+        :return: a tuple with all parameters
+        """
+        return (param for param in cls._all_parameters_set())
+
+    @classmethod
+    def build_profile(cls, execute):
+        """Builds a dictionary with all the parameters for the executor.
+
+        :param execute: execute object
+        :type execute: object
+        :return: dictionary with all executor parameters
+        :rtype: dict
+        """
+        profile = {}
+        for param in cls.get_all_parameters():
+            profile.update({param: getattr(execute, param, None)})
+        return profile

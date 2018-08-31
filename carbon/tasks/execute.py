@@ -31,7 +31,7 @@ class ExecuteTask(CarbonTask):
     __task_name__ = 'execute'
     __concurrent__ = False
 
-    def __init__(self, msg, **kwargs):
+    def __init__(self, msg, package, **kwargs):
         """Constructor.
 
         :param msg: task message
@@ -42,9 +42,14 @@ class ExecuteTask(CarbonTask):
         super(ExecuteTask, self).__init__(**kwargs)
         self.msg = msg
 
+        # create the executor object
+        self.executor = getattr(package, 'executor')(package)
+
     def run(self):
         """Run.
 
         This method is the main entry point to the task.
         """
         self.logger.info(self.msg)
+        # run the configuration with the given executor
+        self.executor.run()
