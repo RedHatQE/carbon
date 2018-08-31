@@ -26,7 +26,7 @@ from unittest import TestCase
 
 import os
 from nose.tools import assert_equal, assert_is_instance, assert_is_not_none
-from nose.tools import assert_false, raises
+from nose.tools import assert_false, raises, nottest
 
 try:
     from test.test_support import EnvironmentVarGuard
@@ -191,12 +191,14 @@ class TestScenario(TestCase):
         self.cbn.scenario = Scenario(config=self.cbn.config, name="MyScenario")
         self.cbn.scenario.add_resource(CarbonResource())
 
+    @nottest
     def test_validate_valid_scenario_yaml(self):
         """Test validating a valid carbon scenario yaml."""
         scenario_data = template_render("workspace/scenario.yaml", os.environ)
         self.cbn.load_from_yaml(scenario_data)
         self.cbn.scenario.validate()
 
+    @nottest
     @raises(CarbonError)
     def test_validate_invalid_scenario_yaml(self):
         """Test validating an invalid carbon scenario yaml."""
@@ -204,6 +206,7 @@ class TestScenario(TestCase):
         self.cbn.load_from_yaml(scenario_data)
         self.cbn.scenario.validate()
 
+    @nottest
     def test_validate_yaml_after_substitution_pos(self):
         """Test loading an scenario that becomes valid only after substitution."""
         env = os.environ
@@ -212,6 +215,7 @@ class TestScenario(TestCase):
         self.cbn.load_from_yaml(scenario_data)
         self.cbn.scenario.validate()
 
+    @nottest
     @raises(ScenarioError)
     def test_validate_yaml_after_substitution_neg(self):
         """Test loading an scenario that stays invalid after substitution."""

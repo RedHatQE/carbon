@@ -142,58 +142,46 @@ orchestrate:
 
 # execute section
 
-# note:
-# ----
-# the defined definition below is in planning and to be developed by carbon framework
-# it is a proposed outline for the definition
-
 execute:
-  # execute tests using the framework defined
-  - name: client_tests
-    description: "run client tests against the environemnt"
-    framework: restraint
-    vars:
-      xml: http://server/xmls/test.xml
-      role:
-        - testclient
+  - name: test suite 01
+    description: "execute tests against test clients"
+    executor: runner
+    hosts: driver
+    git:
+      repo: https://server.com/myproject.git
+      version: test-ver-0.1
+      dest: /tmp
+    shell:
+      chdir: /tmp
+      command: /usr/bin/restraint --host 1={{testclient01}}:8081 --job foo.xml
+    artifacts: retraint-*, test.log
 
-  # execute tests using the framework defined
-  - name: client_tests
-    description: "run client tests against the environemnt"
-    framework: pytest
-    vars:
-      scripts: scripts_dir/
+  - name: test suite 02
+    description: "execute tests against test clients"
+    executor: runner
+    hosts: driver
+    git:
+      repo: https://server.com/myproject.git
+      version: test-ver-0.1
+      dest: /tmp
+    script:
+      chdir: /tmp
+      name: tests.sh arg1 arg2
+    artifacts: retraint-*, test.log
+
+  - name: test suite 03
+    description: "execute tests against test clients"
+    executor: runner
+    hosts: driver
+    git:
+      repo: https://server.com/myproject.git
+      version: test-ver-0.1
+      dest: /tmp
+    playbook:
+      chdir: /tmp
+      name: test.yml
+    artifacts: retraint-*, test.log
 
 # report section
 
-# note:
-# ----
-# the defined definition below is in planning and to be developed by carbon framework
-# it is a proposed outline for the definition
-
 report:
-  # notify test results via email
-  - type: notification
-    name: email
-    description: "notify test results by email to recipients"
-    vars:
-      emails:
-        - user01@xyz.com
-        - user02@xyz.com
-
-  # upload test results to polarion
-  - type: test
-    name: polarion
-    description: "upload test results to polarion for historical tracking"
-    vars:
-      host: <host>
-      username: <username>
-      password: <password>
-
-  # notify test results via irc
-  - type: playbook
-    name: irc
-    description: "notify irc channel regarding scenario results"
-    vars:
-      channels:
-        - '#<channel>'

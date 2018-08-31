@@ -35,7 +35,7 @@ from .actions import Action
 from .executes import Execute
 from .host import Host
 from .reports import Report
-from ..constants import SCENARIO_SCHEMA, DEP_CHECK_LIST
+from ..constants import SCENARIO_SCHEMA, DEP_CHECK_LIST, SCHEMA_EXT
 from ..core import CarbonResource
 from ..exceptions import ScenarioError
 from ..helpers import gen_random_str, dep_check
@@ -334,7 +334,8 @@ class Scenario(CarbonResource):
 
         try:
             c = Core(source_data=yaml.load(self.yaml_data),
-                     schema_files=[SCENARIO_SCHEMA])
+                     schema_files=[SCENARIO_SCHEMA],
+                     extensions=[SCHEMA_EXT])
             c.validate(raise_exception=True)
 
             self.logger.debug('Successfully %s' % msg)

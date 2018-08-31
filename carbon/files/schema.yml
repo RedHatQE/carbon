@@ -1,102 +1,125 @@
-# Schema file (schema.yml)
+---
+# default carbon schema
+
 type: map
+allowempty: True
 mapping:
   name:
-    type: str
     required: True
+    type: str
   description:
-    type: str
     required: True
+    type: str
   dep_check:
-    required: False
     type: seq
     sequence:
       - type: str
   credentials:
-    required: False
-    # not fully defined
     type: seq
     sequence:
       - type: any
+
   provision:
     required: True
     sequence:
-    - type: map
-      allowempty: True
-      mapping:
-        name:
-          required: True
-        description:
-          required: False
-          type: str
-        provider:
-          required: True
+      - type: map
+        allowempty: True
+        mapping:
+          name:
+            required: True
+            type: str
+          description:
+            type: str
+          role:
+            required: True
+            type: str
+          provider:
+            required: True
+            type: str
+
   orchestrate:
-    required: False
-    matching: "any"
     sequence:
-    - type: map
-      allowempty: True
-      mapping:
-        name:
-          required: True
-        description:
-          required: False
-          type: str
-        hosts:
-          required: True
-          type: seq
-          sequence:
-            - type: str
-        ansible_options:
-          allowempty: True
-          type: map
-        ansible_galaxy_options:
-          allowempty: True
-          type: map
-    - type: map
-      allowempty: True
-      mapping:
-        name:
-          required: True
-        description:
-          required: False
-          type: str
-        hosts:
-          required: True
-        ansible_options:
-          allowempty: True
-          type: map
-        ansible_galaxy_options:
-          allowempty: True
-          type: map
+      - type: map
+        allowempty: True
+        mapping:
+          name:
+            required: True
+            type: str
+          description:
+            type: str
+          orchestrator:
+            type: str
+          hosts:
+            required: True
+            type: any
+            func: type_str_list
+          ansible_options:
+            allowempty: True
+            type: map
+          ansible_galaxy_options:
+            allowempty: True
+            type: map
+
   execute:
-    required: False
     sequence:
-    - type: map
-      allowempty: True
-      mapping:
-        name:
-          required: True
-        description:
-          required: False
-          type: str
-        vars:
-          allowempty: True
-          type: map
+      - type: map
+        func: valid_execute_types
+        mapping:
+          name:
+            required: True
+            type: str
+          description:
+            type: str
+          executor:
+            required: True
+            type: str
+            func: valid_executor
+          hosts:
+            required: True
+            type: any
+            func: type_str_list
+          git:
+            allowempty: True
+            type: map
+            mapping:
+              repo:
+                required: True
+                type: str
+              version:
+                required: True
+                type: str
+              dest:
+                required: True
+                type: str
+          shell:
+            allowempty: True
+            type: map
+            mapping:
+              chdir:
+                type: str
+              command:
+                required: True
+                type: str
+          script:
+            allowempty: True
+            type: map
+            mapping:
+              chdir:
+                type: str
+              name:
+                required: True
+                type: str
+          playbook:
+            allowempty: True
+            type: map
+            mapping:
+              chdir:
+                type: str
+              name:
+                required: True
+                type: str
+          artifacts:
+            type: any
+            func: type_str_list
+
   report:
-    required: False
-    sequence:
-    - type: map
-      allowempty: True
-      mapping:
-        type:
-          required: True
-        name:
-          required: True
-        description:
-          required: False
-          type: str
-        vars:
-          allowempty: True
-          type: map
