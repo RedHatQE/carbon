@@ -86,19 +86,19 @@ class Execute(CarbonResource):
             self._name = parameters.pop('name', None)
             if self._name is None:
                 raise CarbonExecuteError('Unable to build execute object. Name'
-                                        ' field missing!')
+                                         ' field missing!')
         else:
             self._name = name
 
         # set the execute description
-        self._description = parameters.pop('description', EXECUTOR)
+        self._description = parameters.pop('description', None)
 
         # every execute has a mandatory executor, lets set it
-        executor = parameters.pop('executor', 'runner')
+        executor = parameters.pop('executor', EXECUTOR)
 
         if executor not in get_executors_list():
             raise CarbonExecuteError('Executor: %s is not supported!' %
-                                    executor)
+                                     executor)
 
         self._executor = get_executor_class(executor)
 
