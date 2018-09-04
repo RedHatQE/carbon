@@ -111,20 +111,20 @@ class AnsibleController(object):
         :return: A tuple (rc, sterr)
         """
 
-        if extra_vars["localhost"]:
+        if "localhost" in extra_vars and extra_vars["localhost"]:
             module_call = "ansible localhost -m %s" % (module)
         else:
             module_call = "ansible -i %s %s -m %s" % \
                           (self.ansible_inventory, extra_vars["hosts"], module)
 
         # add extra arguments
-        if module == "script":
+        if module == "script" or module == "shell":
             if extra_args:
                 module_call += " -a '%s %s'" % (script, extra_args)
             else:
                 module_call += " -a '%s'" % script
         elif extra_args:
-            module_call += " -a %s" % extra_args
+            module_call += " -a '%s'" % extra_args
 
         if run_options:
             for key in run_options:
@@ -143,7 +143,7 @@ class AnsibleController(object):
             module_call += " -v%s" % ans_verbosity
 
         # Set the connection if localhost
-        if extra_vars["localhost"]:
+        if "localhost" in extra_vars and extra_vars["localhost"]:
             module_call += " -c local"
 
         logger.debug(module_call)

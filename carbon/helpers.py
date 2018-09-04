@@ -24,6 +24,7 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+import logging
 import inspect
 import json
 import os
@@ -661,3 +662,15 @@ def dep_check(scenario, config):
                 'Scenario %s will not be run! Not all external resources are available' %
                 scenario.name
             )
+
+def get_ans_verbosity(logger, config):
+    ans_verbosity = None
+    log_level = logger.getEffectiveLevel()
+
+    if log_level == logging.DEBUG:
+        ans_verbosity = "vvvv"
+
+    if "ANSIBLE_VERBOSITY" in config and \
+            config["ANSIBLE_VERBOSITY"]:
+        ans_verbosity = config["ANSIBLE_VERBOSITY"]
+    return ans_verbosity
