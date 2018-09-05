@@ -148,12 +148,12 @@ execute:
     executor: runner
     hosts: driver
     git:
-      repo: https://server.com/myproject.git
-      version: test-ver-0.1
-      dest: /tmp
+      - repo: https://server.com/myproject.git
+        version: test-ver-0.1
+        dest: /tmp
     shell:
-      chdir: /tmp
-      command: /usr/bin/restraint --host 1={{testclient01}}:8081 --job foo.xml
+      - chdir: /tmp
+        command: /usr/bin/restraint --host 1={{testclient01}}:8081 --job foo.xml
     artifacts: retraint-*, test.log
 
   - name: test suite 02
@@ -161,12 +161,12 @@ execute:
     executor: runner
     hosts: driver
     git:
-      repo: https://server.com/myproject.git
-      version: test-ver-0.1
-      dest: /tmp
+      - repo: https://server.com/myproject.git
+        version: test-ver-0.1
+        dest: /tmp
     script:
-      chdir: /tmp
-      name: tests.sh arg1 arg2
+      - chdir: /tmp
+        name: tests.sh arg1 arg2
     artifacts: retraint-*, test.log
 
   - name: test suite 03
@@ -174,12 +174,12 @@ execute:
     executor: runner
     hosts: driver
     git:
-      repo: https://server.com/myproject.git
-      version: test-ver-0.1
-      dest: /tmp
+      - repo: https://server.com/myproject.git
+        version: test-ver-0.1
+        dest: /tmp
     playbook:
-      chdir: /tmp
-      name: test.yml
+      - chdir: /tmp
+        name: test.yml
     artifacts: retraint-*, test.log
 
 # report section

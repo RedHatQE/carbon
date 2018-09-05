@@ -216,3 +216,15 @@ class OpenstackProviderError(CarbonProviderError):
         :type message: str
         """
         super(OpenstackProviderError, self).__init__(message)
+
+
+class ArchiveArtifactsError(CarbonError):
+    """Base class for when you always want to archive artifacts (pass|fail)."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: error message
+        :type message: str
+        """
+        super(ArchiveArtifactsError, self).__init__(message)

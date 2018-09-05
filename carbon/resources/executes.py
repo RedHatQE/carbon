@@ -24,6 +24,8 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+
+from .._compat import string_types
 from ..core import CarbonResource
 from ..constants import EXECUTOR
 from ..helpers import get_executor_class, \
@@ -47,14 +49,10 @@ class Execute(CarbonResource):
     _fields = [
         'name',
         'description',
-        'executor',
         'hosts',
         'artifacts',
         'ansible_options',
-        'git',
-        'shell',
-        'script',
-        'playbook'
+        'git'
     ]
 
     def __init__(self,
@@ -111,6 +109,15 @@ class Execute(CarbonResource):
             raise CarbonExecuteError('Unable to associate hosts to executor:'
                                      '%s. No hosts defined!' % self._name)
 
+        # convert the hosts into list format if hosts defined as str format
+        if isinstance(self.hosts, string_types):
+            self.hosts = self.hosts.replace(' ', '').split(',')
+
+        self.artifacts = parameters.pop('artifacts', None)
+        if self.artifacts:
+            if isinstance(self.artifacts, string_types):
+                self.artifacts = self.artifacts.replace(' ', '').split(',')
+
         # create the executor attributes in the execute object
         for p in getattr(self.executor, 'get_all_parameters')():
             setattr(self, p, parameters.get(p, {}))
@@ -118,6 +125,10 @@ class Execute(CarbonResource):
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
         self._execute_task_cls = execute_task_cls
+
+        # update fields attr with executor types
+        for item in getattr(self.executor, '_execute_types'):
+            self._fields.append(item)
 
         # reload construct task methods
         self.reload_tasks()
@@ -146,7 +157,27 @@ class Execute(CarbonResource):
         :return: the execute profile
         :rtype: dict
         """
-        raise NotImplementedError
+        # initialize the profile with executor properties
+        profile = getattr(self.executor, 'build_profile')(self)
+
+        # set additional execute properties
+        profile.update({
+            'name': self.name,
+            'description': self.description,
+            'executor': getattr(self.executor, '__executor_name__')
+        })
+
+        for item in getattr(self, '_fields'):
+            if getattr(self, item, None):
+                profile.update({item: getattr(self, item)})
+
+        # set the execute's hosts
+        if all(isinstance(item, string_types) for item in self.hosts):
+            profile.update(hosts=[host for host in self.hosts])
+        else:
+            profile.update(dict(hosts=[host.name for host in self.hosts]))
+
+        return profile
 
     def _construct_validate_task(self):
         """Constructs the validate task associated to the execute resource.

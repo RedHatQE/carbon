@@ -27,8 +27,11 @@
 
 import os.path
 from ..core import CarbonExecutor
+from ..exceptions import ArchiveArtifactsError, CarbonExecuteError
 from ..orchestrators._ansible import Inventory, AnsibleController
 from ..helpers import get_ans_verbosity
+
+# TODO: pass ansible options to each ad hoc call
 
 
 class RunnerExecutor(CarbonExecutor):
@@ -44,6 +47,12 @@ class RunnerExecutor(CarbonExecutor):
     #     'ansible_options',
     # )
 
+    _execute_types = [
+        'playbook',
+        'script',
+        'shell'
+    ]
+
     def __init__(self, package):
         """Constructor.
 
@@ -52,8 +61,7 @@ class RunnerExecutor(CarbonExecutor):
         """
         super(RunnerExecutor, self).__init__()
 
-        # set all required info here
-        # set attributes
+        # set required attributes
         self._name = getattr(package, 'name')
         self._desc = getattr(package, 'description')
         self._hosts = getattr(package, 'hosts')
@@ -107,31 +115,32 @@ class RunnerExecutor(CarbonExecutor):
 
     def __git__(self):
         """Clone git repositories."""
-        # TODO: move these into constants
-        keys = ["repo", "version", "dest"]
+        self.logger.warning('GIT PACKAGE MUST BE INSTALLED ON REMOTE HOSTS!')
 
-        extra_args = self.build_ans_extra_args(self.git, keys)
+        for item in self.git:
+            # build extra args
+            extra_args = self.build_ans_extra_args(
+                item, ["repo", "version", "dest"])
 
-        results = self.ans_controller.run_module(
-            "git",
-            logger=self.logger,
-            extra_vars=self.ans_extra_vars,
-            # run_options=run_options,
-            extra_args=extra_args,
-            ans_verbosity=self.ans_verbosity
-        )
+            results = self.ans_controller.run_module(
+                "git",
+                logger=self.logger,
+                extra_vars=self.ans_extra_vars,
+                extra_args=extra_args,
+                ans_verbosity=self.ans_verbosity
+            )
 
-        # TODO: what to do with cloning results - fail on error
-        self.logger.info(results)
+            if results[0] != 0:
+                raise CarbonExecuteError('Clone git repository %s failed!' %
+                                         item['repo'])
 
     def __shell__(self):
         """Execute the shell command."""
-        self.logger.info("running shell cmds here")
+        self.logger.info('Executing shell commands:')
 
-        # execute the shell cmds one at a time
-        for shell in self.shell:
-            self.logger.info("Running shell cmd")
-            # create an ansible controller object
+        for index, shell in enumerate(self.shell):
+            index += 1
+            self.logger.info('%s. %s' % (index, shell['command']))
 
             extra_args = self.build_ans_extra_args(self.shell, ['chdir'])
 
@@ -139,44 +148,84 @@ class RunnerExecutor(CarbonExecutor):
                 "shell",
                 logger=self.logger,
                 extra_vars=self.ans_extra_vars,
-                # run_options=run_options,
-                script=shell["command"],
+                script=shell['command'],
                 extra_args=extra_args,
                 ans_verbosity=self.ans_verbosity
             )
 
-            # TODO: what to do with shell results - fail on error??
-            self.logger.info(results)
+            if results[0] != 0:
+                raise ArchiveArtifactsError('Shell command %s failed to run '
+                                            'successfully!' % shell['command'])
 
     def __script__(self):
         """Execute the script supplied."""
-        raise NotImplementedError
+        self.logger.info('Executing scripts:')
+
+        for index, script in enumerate(self.script):
+            index += 1
+            self.logger.info('%s. %s' % (index, script['name']))
+
+            extra_args = self.build_ans_extra_args(self.script, ['chdir'])
+
+            results = self.ans_controller.run_module(
+                "script",
+                logger=self.logger,
+                extra_vars=self.ans_extra_vars,
+                script=script['name'],
+                extra_args=extra_args,
+                ans_verbosity=self.ans_verbosity
+            )
+
+            if results[0] != 0:
+                raise ArchiveArtifactsError(
+                    'Script %s failed to run successfully!' % script['name']
+                )
 
     def __playbook__(self):
         """Execute the playbook supplied."""
-        raise NotImplementedError
+        # TODO: implementation!
+        self.logger.info('Executing playbooks:')
+
+        for index, pb in enumerate(self.playbook):
+            index += 1
+            self.logger.info('%s. %s' % (index, pb['name']))
+
+            results = self.ans_controller.run_playbook(pb)
+
+            if results[0] != 0:
+                raise ArchiveArtifactsError(
+                    'Playbook %s failed to run successfully!' % pb['name']
+                )
 
     def __artifacts__(self):
         """Archive artifacts produced by the tests."""
-        results = None
+        # TODO: do we want to have a dir per remote host
+        # TODO: follow up on Vimal's email regarding issues
         dest = os.path.join(self.datadir, 'artifacts')
-        self.logger.debug("Retrieve results here")
-        self.logger.debug("Storing results in %s" % dest)
 
-        for src_artifact in self.artifacts:
-            extra_args = "src=%s dest=%s mode=pull" % (src_artifact, dest)
+        if not os.path.exists(dest):
+            os.makedirs(dest)
+
+        self.logger.info('Archiving test artifacts @ %s:' % dest)
+
+        for index, artifact in enumerate(self.artifacts):
+            index += 1
+            self.logger.info('%s. %s' % (index, artifact))
+
+            extra_args = "src=%s dest=%s mode=pull" % (artifact, dest)
 
             results = self.ans_controller.run_module(
                 "synchronize",
                 logger=self.logger,
                 extra_vars=self.ans_extra_vars,
-                # run_options=run_options,
                 extra_args=extra_args,
                 ans_verbosity=self.ans_verbosity
             )
 
-        # TODO: what to do with archive results - fail on error
-        self.logger.info(results)
+            if results[0] != 0:
+                raise CarbonExecuteError(
+                    'Failed to archive artifact: %s' % artifact
+                )
 
     def run(self):
         """Run.
@@ -190,11 +239,18 @@ class RunnerExecutor(CarbonExecutor):
         if not os.path.exists(self.inv.master_inventory):
             self.inv.create()
 
-        # TODO: dynamically get the attribute names
         for attr in ['git', 'shell', 'playbook', 'script', 'artifacts']:
             # skip if the execute resource does not have the attribute defined
             if not getattr(self, attr):
                 continue
 
             # call the method associated to the execute resource attribute
-            getattr(self, '__%s__' % attr)()
+            try:
+                getattr(self, '__%s__' % attr)()
+            except ArchiveArtifactsError as ex:
+                # test execution failed, test artifacts may still have been
+                # generated. lets go ahead and archive these for debugging
+                # purposes
+                self.logger.error(ex.message)
+                self.logger.info('Fetching test generated artifacts')
+                self.__artifacts__()

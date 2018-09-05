@@ -858,6 +858,9 @@ class CarbonExecutor(LoggerMixin, TimeMixin):
     # additional parameters that can be set for the executor
     _optional_parameters = ()
 
+    # execute types the executor offers
+    _execute_types = []
+
     def __init__(self):
         """Constructor."""
         self._execute = None

@@ -362,7 +362,6 @@ class Scenario(CarbonResource):
             # Check Status of components (UP/DOWN)
             dep_check(self, self.config)
 
-
     def profile(self):
         """Builds a profile which represents the scenario and its properties.
 
@@ -376,8 +375,8 @@ class Scenario(CarbonResource):
             credentials=self.credentials,
             provision=[host.profile() for host in self.hosts],
             orchestrate=[action.profile() for action in self.actions],
-            execute=[],
-            report=[]
+            execute=[execute.profile() for execute in self.executes],
+            report=[report.profile() for report in self.reports]
         )
         return profile
 

@@ -49,10 +49,13 @@ mapping:
             type: str
           orchestrator:
             type: str
+            func: valid_orchestrator
           hosts:
             required: True
             type: any
             func: type_str_list
+          ansible_script:
+            type: bool
           ansible_options:
             allowempty: True
             type: map
@@ -73,51 +76,58 @@ mapping:
           executor:
             required: True
             type: str
-            func: valid_executor
           hosts:
             required: True
             type: any
             func: type_str_list
           git:
             allowempty: True
-            type: map
-            mapping:
-              repo:
-                required: True
-                type: str
-              version:
-                required: True
-                type: str
-              dest:
-                required: True
-                type: str
+            type: seq
+            sequence:
+              - type: map
+                mapping:
+                  repo:
+                    required: True
+                    type: str
+                  version:
+                    required: True
+                    type: str
+                  dest:
+                    required: True
+                    type: str
           shell:
             allowempty: True
-            type: map
-            mapping:
-              chdir:
-                type: str
-              command:
-                required: True
-                type: str
+            type: seq
+            sequence:
+              - type: map
+                mapping:
+                  chdir:
+                    type: str
+                  command:
+                    required: True
+                    type: str
           script:
             allowempty: True
-            type: map
-            mapping:
-              chdir:
-                type: str
-              name:
-                required: True
-                type: str
+            type: seq
+            sequence:
+              - type: map
+                mapping:
+                  chdir:
+                    type: str
+                  name:
+                    required: True
+                    type: str
           playbook:
             allowempty: True
-            type: map
-            mapping:
-              chdir:
-                type: str
-              name:
-                required: True
-                type: str
+            type: seq
+            sequence:
+              - type: map
+                mapping:
+                  chdir:
+                    type: str
+                  name:
+                    required: True
+                    type: str
           artifacts:
             type: any
             func: type_str_list

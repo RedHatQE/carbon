@@ -77,7 +77,7 @@ class Report(CarbonResource):
         :return: the report profile
         :rtype: dict
         """
-        raise NotImplementedError
+        return {}
 
     def _construct_validate_task(self):
         """Constructs the validate task associated to the report resource.

@@ -24,7 +24,8 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-from carbon.constants import EXECUTOR
+from carbon.constants import ORCHESTRATOR
+from carbon.helpers import get_executor_class, get_executors_list
 
 
 def type_str_list(value, rule_obj, path):
@@ -36,29 +37,45 @@ def type_str_list(value, rule_obj, path):
     return True
 
 
+def valid_orchestrator(value, rule_obj, path):
+    """Verify the given orchestrator is a valid selection by carbon."""
+    if value.lower() != ORCHESTRATOR:
+        raise AssertionError(
+            'Orchestrator %s is invalid.\n'
+            'Available orchestrators %s' % (value, ORCHESTRATOR)
+        )
+    return True
+
+
 def valid_executor(value, rule_obj, path):
     """Verify the given executor is a valid selection by carbon."""
-    if value.lower() == EXECUTOR:
+    executors = get_executors_list()
+    if value.lower() not in executors:
         raise AssertionError(
             'Executor %s is invalid.\n'
-            'Available executors %s' % (value, EXECUTOR)
+            'Available executors %s' % (value, executors)
         )
     return True
 
 
 def valid_execute_types(value, rule_obj, path):
     """Verify the execute type defined is valid for the supplied executor."""
-    options = ['playbook', 'script', 'shell']
     match = list()
+    executor = value['executor']
 
-    for item in options:
+    # first verify the executor is valid
+    valid_executor(executor, rule_obj, path)
+
+    types = getattr(get_executor_class(value['executor']), '_execute_types')
+
+    for item in types:
         if item in value.keys():
             match.append(item)
 
     if match.__len__() > 1:
         raise AssertionError(
-            'Only one execute type can be set.\n'
+            'Only one execute type can be set for executor ~ %s.\n'
             'Available types: %s\n'
-            'Set types: %s' % (options, match)
+            'Set types: %s' % (executor, types, match)
         )
     return True
