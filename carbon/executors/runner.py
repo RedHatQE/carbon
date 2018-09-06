@@ -25,17 +25,29 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
+import copy
 import os.path
+
+from ruamel.yaml import YAML
+
 from ..core import CarbonExecutor
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError
-from ..orchestrators._ansible import Inventory, AnsibleController
 from ..helpers import get_ans_verbosity
+from ..orchestrators._ansible import Inventory, AnsibleController
+from ..static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK
+
 
 # TODO: pass ansible options to each ad hoc call
 
 
 class RunnerExecutor(CarbonExecutor):
-    """ The main executor for Carbon."""
+    """ The main executor for Carbon.
+
+    The runner class provides three different types on how you can execute
+    tests. Its intention is to be generic enough where you just need to supply
+    your test commands and it will process them. All tests executed against
+    remote hosts will be run through ansible.
+    """
 
     __executor_name__ = 'runner'
 
@@ -113,26 +125,53 @@ class RunnerExecutor(CarbonExecutor):
                 extra_args += '%s=%s ' % (key, attr[key])
         return extra_args
 
+    @staticmethod
+    def _create_playbook(playbook, playbook_str):
+        """Create the playbook on disk from string.
+
+        :param playbook: playbook name
+        :type playbook: str
+        :param playbook_str: playbook content
+        :type playbook_str: str
+        """
+        yaml = YAML()
+        yaml.default_flow_style = False
+        with open(playbook, 'w') as f:
+            yaml.dump(yaml.load(playbook_str), f)
+
     def __git__(self):
-        """Clone git repositories."""
-        self.logger.warning('GIT PACKAGE MUST BE INSTALLED ON REMOTE HOSTS!')
+        """Clone git repositories.
 
-        for item in self.git:
-            # build extra args
-            extra_args = self.build_ans_extra_args(
-                item, ["repo", "version", "dest"])
+        This method takes a string formatted playbook, writes it to disk,
+        provides the git details to the playbook and runs it. The result is
+        on the targeted remote hosts will have the defined gits cloned for
+        test execution.
+        """
+        # dynamic playbook
+        playbook = 'cbn_clone_git.yml'
 
-            results = self.ans_controller.run_module(
-                "git",
-                logger=self.logger,
-                extra_vars=self.ans_extra_vars,
-                extra_args=extra_args,
-                ans_verbosity=self.ans_verbosity
-            )
+        self.logger.info('Cloning git repositories.')
 
-            if results[0] != 0:
-                raise CarbonExecuteError('Clone git repository %s failed!' %
-                                         item['repo'])
+        # set playbook variables
+        extra_vars = copy.deepcopy(self.ans_extra_vars)
+        extra_vars['gits'] = self.git
+
+        # create dynamic playbook
+        self._create_playbook(playbook, GIT_CLONE_PLAYBOOK)
+
+        # run playbook
+        results = self.ans_controller.run_playbook(
+            playbook,
+            logger=self.logger,
+            extra_vars=extra_vars,
+            ans_verbosity=self.ans_verbosity
+        )
+
+        # remove dynamic playbook
+        os.remove(playbook)
+
+        if results[0] != 0:
+            raise CarbonExecuteError('Failed to clone git repositories!')
 
     def __shell__(self):
         """Execute the shell command."""
@@ -142,7 +181,7 @@ class RunnerExecutor(CarbonExecutor):
             index += 1
             self.logger.info('%s. %s' % (index, shell['command']))
 
-            extra_args = self.build_ans_extra_args(self.shell, ['chdir'])
+            extra_args = self.build_ans_extra_args(shell, ['chdir'])
 
             results = self.ans_controller.run_module(
                 "shell",
@@ -165,7 +204,7 @@ class RunnerExecutor(CarbonExecutor):
             index += 1
             self.logger.info('%s. %s' % (index, script['name']))
 
-            extra_args = self.build_ans_extra_args(self.script, ['chdir'])
+            extra_args = self.build_ans_extra_args(script, ['chdir'])
 
             results = self.ans_controller.run_module(
                 "script",
@@ -183,49 +222,82 @@ class RunnerExecutor(CarbonExecutor):
 
     def __playbook__(self):
         """Execute the playbook supplied."""
-        # TODO: implementation!
         self.logger.info('Executing playbooks:')
 
-        for index, pb in enumerate(self.playbook):
+        for index, playbook in enumerate(self.playbook):
             index += 1
-            self.logger.info('%s. %s' % (index, pb['name']))
+            self.logger.info('%s. %s' % (index, playbook['name']))
 
-            results = self.ans_controller.run_playbook(pb)
-
-            if results[0] != 0:
-                raise ArchiveArtifactsError(
-                    'Playbook %s failed to run successfully!' % pb['name']
-                )
-
-    def __artifacts__(self):
-        """Archive artifacts produced by the tests."""
-        # TODO: do we want to have a dir per remote host
-        # TODO: follow up on Vimal's email regarding issues
-        dest = os.path.join(self.datadir, 'artifacts')
-
-        if not os.path.exists(dest):
-            os.makedirs(dest)
-
-        self.logger.info('Archiving test artifacts @ %s:' % dest)
-
-        for index, artifact in enumerate(self.artifacts):
-            index += 1
-            self.logger.info('%s. %s' % (index, artifact))
-
-            extra_args = "src=%s dest=%s mode=pull" % (artifact, dest)
-
-            results = self.ans_controller.run_module(
-                "synchronize",
+            # run playbook
+            results = self.ans_controller.run_playbook(
+                playbook,
                 logger=self.logger,
                 extra_vars=self.ans_extra_vars,
-                extra_args=extra_args,
                 ans_verbosity=self.ans_verbosity
             )
 
             if results[0] != 0:
-                raise CarbonExecuteError(
-                    'Failed to archive artifact: %s' % artifact
-                )
+                raise ArchiveArtifactsError('Failed to run playbook %s '
+                                            'successfully!' % playbook['name'])
+
+    def __artifacts__(self):
+        """Archive artifacts produced by the tests.
+
+        This method takes a string formatted playbook, writes it to disk,
+        provides the test artifacts details to the playbook and runs it. The
+        result is on the machine where carbon is run, all test artifacts will
+        be archived inside the data folder.
+
+        Example artifacts archive structure:
+
+        artifacts/
+            host_01/
+                test_01_output.log
+                results/
+                    ..
+            host_02/
+                test_01_output.log
+                results/
+                    ..
+        """
+        # dynamic playbook
+        playbook = 'cbn_synchronize.yml'
+
+        # local path on disk to save artifacts
+        destination = os.path.join(self.datadir, 'artifacts')
+
+        # create artifacts location (if needed)
+        if not os.path.exists(destination):
+            os.makedirs(destination)
+
+        self.logger.info('Fetching test artifacts @ %s' % destination)
+
+        # settings required by synchronize module
+        os.environ['ANSIBLE_LOCAL_TEMP'] = '$HOME/.ansible/tmp'
+        os.environ['ANSIBLE_REMOTE_TEMP'] = '$HOME/.ansible/tmp'
+
+        # set extra vars
+        extra_vars = copy.deepcopy(self.ans_extra_vars)
+        extra_vars['dest'] = destination
+        extra_vars['artifacts'] = self.artifacts
+
+        # create dynamic playbook
+        self._create_playbook(playbook, SYNCHRONIZE_PLAYBOOK)
+
+        # run playbook
+        results = self.ans_controller.run_playbook(
+            playbook,
+            logger=self.logger,
+            extra_vars=extra_vars,
+            ans_verbosity=self.ans_verbosity
+        )
+
+        # remove dynamic playbook
+        os.remove(playbook)
+
+        if results[0] != 0:
+            raise CarbonExecuteError('A failure occurred while trying to copy '
+                                     'test artifacts.')
 
     def run(self):
         """Run.

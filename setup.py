@@ -48,9 +48,9 @@ setup(
         'blaster>=0.1.8',
         'Click>=6.7',
         'Jinja2>=2.10',
-        'PyYAML>=3.12',
         'pykwalify>=1.6.0',
-        'python-cachetclient'
+        'python-cachetclient',
+        'ruamel.yaml>=0.15.64'
     ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
