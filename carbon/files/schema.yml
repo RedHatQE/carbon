@@ -66,6 +66,7 @@ mapping:
   execute:
     sequence:
       - type: map
+        allowempty: True
         func: valid_execute_types
         mapping:
           name:
