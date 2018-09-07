@@ -37,8 +37,6 @@ from ..orchestrators._ansible import Inventory, AnsibleController
 from ..static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK
 
 
-# TODO: pass ansible options to each ad hoc call
-
 
 class RunnerExecutor(CarbonExecutor):
     """ The main executor for Carbon.
@@ -64,6 +62,9 @@ class RunnerExecutor(CarbonExecutor):
         'script',
         'shell'
     ]
+
+    user_run_vals = ["become", "become_method", "become_user", "remote_user",
+                     "connection", "forks", "tags"]
 
     def __init__(self, package):
         """Constructor.
@@ -108,8 +109,7 @@ class RunnerExecutor(CarbonExecutor):
         """Validate."""
         raise NotImplementedError
 
-    @staticmethod
-    def build_ans_extra_args(attr, keys):
+    def build_ans_extra_args(self, attr, keys):
         """Build ansible extra arguments for ansible ad hoc commands.
 
         :param attr: key/values defined by task input
@@ -120,10 +120,52 @@ class RunnerExecutor(CarbonExecutor):
         :rtype: str
         """
         extra_args = ''
+
+        if self.options and 'extra_args' in self.options and self.options['extra_args']:
+            extra_args = '%s ' % self.options['extra_args']
+
         for key in attr:
             if key in keys:
                 extra_args += '%s=%s ' % (key, attr[key])
+
         return extra_args
+
+    def build_run_options(self):
+        """Build ansible run options for ansible ad hoc commands.
+
+        :return: run options
+        :rtype: dict
+        """
+
+        run_options = {}
+
+        # override ansible options (user passed in vals for specific action)
+        for val in self.user_run_vals:
+            if self.options and val in self.options and self.options[val]:
+                run_options[val] = self.options[val]
+
+        self.logger.debug("Ansible options used: " + str(run_options))
+
+        return run_options
+
+    def build_extra_vars(self):
+        """Build ansible extra vars for ansible ad hoc commands.
+
+        :return: extra args
+        :rtype: str
+        """
+
+        extra_vars = {}
+
+        if self.options and 'extra_vars' in self.options and self.options['extra_vars']:
+            extra_vars.update(self.options['extra_vars'])
+
+        if self._hosts:
+            extra_vars["localhost"] = False
+        else:
+            extra_vars["localhost"] = True
+
+        return extra_vars
 
     @staticmethod
     def _create_playbook(playbook, playbook_str):
@@ -183,11 +225,18 @@ class RunnerExecutor(CarbonExecutor):
 
             extra_args = self.build_ans_extra_args(shell, ['chdir'])
 
+            # build run options
+            run_options = self.build_run_options()
+
+            # update extra vars
+            self.ans_extra_vars.update(self.build_extra_vars())
+
             results = self.ans_controller.run_module(
                 "shell",
                 logger=self.logger,
                 extra_vars=self.ans_extra_vars,
                 script=shell['command'],
+                run_options=run_options,
                 extra_args=extra_args,
                 ans_verbosity=self.ans_verbosity
             )
@@ -206,11 +255,18 @@ class RunnerExecutor(CarbonExecutor):
 
             extra_args = self.build_ans_extra_args(script, ['chdir'])
 
+            # update extra vars
+            self.ans_extra_vars.update(self.build_extra_vars())
+
+            # build run options
+            run_options = self.build_run_options()
+
             results = self.ans_controller.run_module(
                 "script",
                 logger=self.logger,
                 extra_vars=self.ans_extra_vars,
                 script=script['name'],
+                run_options=run_options,
                 extra_args=extra_args,
                 ans_verbosity=self.ans_verbosity
             )
@@ -224,6 +280,12 @@ class RunnerExecutor(CarbonExecutor):
         """Execute the playbook supplied."""
         self.logger.info('Executing playbooks:')
 
+        # update extra vars
+        self.ans_extra_vars.update(self.build_extra_vars())
+
+        # build run options
+        run_options = self.build_run_options()
+
         for index, playbook in enumerate(self.playbook):
             index += 1
             self.logger.info('%s. %s' % (index, playbook['name']))
@@ -233,6 +295,7 @@ class RunnerExecutor(CarbonExecutor):
                 playbook,
                 logger=self.logger,
                 extra_vars=self.ans_extra_vars,
+                run_options=run_options,
                 ans_verbosity=self.ans_verbosity
             )
 
