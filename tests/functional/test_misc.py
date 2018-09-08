@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2017 Red Hat, Inc.
+#
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
@@ -13,12 +17,21 @@
 #
 
 """
-    carbon.executors
+    tests.test_misc
 
-    Package containing carbon executor modules.
+    Unit tests for testing misc code.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
-from .runner import RunnerExecutor
+from carbon._compat import string_types
+from carbon.static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK
+
+
+def test_import_synchronize_pb():
+    assert isinstance(SYNCHRONIZE_PLAYBOOK, string_types)
+
+
+def test_import_git_clone_pb():
+    assert isinstance(GIT_CLONE_PLAYBOOK, string_types)

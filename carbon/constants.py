@@ -61,7 +61,7 @@ HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]
 RESULTS_FILE = "results.yml"
 
 # Rule for Carbon hosts naming convention
-RULE_HOST_NAMING = re.compile('[\W]+')
+RULE_HOST_NAMING = re.compile('[\\W]+')
 
 # Default orchestrator
 ORCHESTRATOR = 'ansible'

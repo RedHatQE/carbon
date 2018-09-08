@@ -137,7 +137,7 @@ class AnsibleController(object):
                     taglist = ','.join(run_options[key])
                     module_call += " --tags %s" % taglist
                 else:
-                    module_call += " --%s %s" % (key.replace('_','-'), run_options[key])
+                    module_call += " --%s %s" % (key.replace('_', '-'), run_options[key])
 
         if ans_verbosity:
             module_call += " -v%s" % ans_verbosity
@@ -173,7 +173,7 @@ class AnsibleController(object):
                 if not isinstance(extra_vars[key], string_types):
                     extra_var_dict = {}
                     extra_var_dict[key] = extra_vars[key]
-                    playbook_call += ' -e "%s" '% (extra_var_dict)
+                    playbook_call += ' -e "%s" ' % extra_var_dict
                 else:
                     playbook_call += " -e %s=%s" % (key, extra_vars[key])
 
@@ -188,7 +188,7 @@ class AnsibleController(object):
                     taglist = ','.join(run_options[key])
                     playbook_call += " --tags %s" % taglist
                 else:
-                    playbook_call += " --%s %s" % (key.replace('_','-'), run_options[key])
+                    playbook_call += " --%s %s" % (key.replace('_', '-'), run_options[key])
 
         if ans_verbosity:
             playbook_call += " -v%s" % ans_verbosity

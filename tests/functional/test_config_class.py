@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2017 Red Hat, Inc.
+#
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
@@ -13,12 +17,40 @@
 #
 
 """
-    carbon.executors
+    tests.test_config_class
 
-    Package containing carbon executor modules.
+    Unit tests for testing carbon config class.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
-from .runner import RunnerExecutor
+import copy
+import os
+
+import pytest
+
+from carbon.utils.config import Config
+
+
+@pytest.fixture(scope='class')
+def config():
+    return Config()
+
+
+class TestConfig(object):
+    @staticmethod
+    def test_del_parser(config):
+        with pytest.raises(AttributeError):
+            dummy_config = copy.copy(config)
+            dummy_config.__del_parser__()
+            print(dummy_config.parser)
+
+    @staticmethod
+    def test_load_missing_config(config):
+        config.load()
+
+    @staticmethod
+    def test_load_config_by_env_var(config):
+        os.environ['CARBON_SETTINGS'] = './assets/carbon.cfg'
+        config.load()

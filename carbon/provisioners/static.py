@@ -44,7 +44,7 @@ class StaticProvisioner(CarbonProvisioner):
         self.host = host
 
     def _create(self):
-        """Create a static node 
+        """Create a static node
 
         This method will call the static provider create method. The
         provider class handles all interactions with the provider.
@@ -55,7 +55,8 @@ class StaticProvisioner(CarbonProvisioner):
         self.host.set_ip_address([str(self.host.static_ip_address)])
         self.host.static_hostname = str(self.host.static_hostname)
 
-        self.logger.info("Successfully provisioned static machine %s." % self.host.static_hostname)
+        self.logger.info("Successfully provisioned static machine %s." %
+                         self.host.static_hostname)
 
     def _delete(self):
         """Delete a static node.
@@ -64,4 +65,5 @@ class StaticProvisioner(CarbonProvisioner):
         provider class handles all interactions with the provider.
         """
         self.logger.info('Tearing down static machines from %s', self.__class__)
-        self.logger.info('Nothing to do. Machines user defined. Not tearing down static machine %s' % self.host.static_hostname)
+        self.logger.info('Nothing to do. Machines user defined. Not tearing '
+                         'down static machine %s' % self.host.static_hostname)

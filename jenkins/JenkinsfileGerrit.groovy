@@ -43,8 +43,7 @@ pipeline {
     }
     post {
         always {
-            archiveArtifacts artifacts: 'tests/cover/**'
-            junit 'tests/cover/functional/py27/nosetests.xml, tests/cover/functional/py36/nosetests.xml'
+            archiveArtifacts artifacts: 'tests/coverage/**'
         }
     }
 }

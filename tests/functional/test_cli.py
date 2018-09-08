@@ -17,36 +17,36 @@
 #
 
 """
-    carbon.orchestrators._chef
+    tests.test_cli
 
-    Carbon's chef orchestrator module which contains all the necessary classes
-    to process chef actions defined within the scenario descriptor file.
+    Unit tests for testing carbon cli.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
-from ..core import CarbonOrchestrator
+import pytest
+from click.testing import CliRunner
+
+from carbon.cli import print_header, carbon
 
 
-class ChefOrchestrator(CarbonOrchestrator):
-    """Chef orchestrator."""
+@pytest.fixture(scope='class')
+def runner():
+    return CliRunner()
 
-    __orchestrator_name__ = 'chef'
 
-    def __init__(self, package):
-        """Constructor.
+class TestCli(object):
+    @staticmethod
+    def test_print_header():
+        assert print_header() is None
 
-        :param package: action resource
-        :type package: object
-        """
-        super(ChefOrchestrator, self).__init__()
-        self.package = package
+    @staticmethod
+    def test_carbon_create(runner):
+        results = runner.invoke(carbon, ['-v', 'create'])
+        assert results.exit_code != 0
 
-    def validate(self):
-        """Validate."""
-        raise NotImplementedError
-
-    def run(self):
-        """Run."""
-        raise NotImplementedError
+    @staticmethod
+    def test_carbon_validate_invalid_scenario(runner):
+        results = runner.invoke(carbon, ['validate', '-s', 'cdf.yml'])
+        assert 'You have to provide a valid scenario file.' in results.output

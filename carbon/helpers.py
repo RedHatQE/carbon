@@ -291,6 +291,7 @@ def get_executors_list():
     return [executor.__executor_name__ for executor in
             get_executors_classes()]
 
+
 def gen_random_str(char_num=8):
     """
     Generate a string with a specific number of characters, defined
@@ -439,6 +440,7 @@ def exec_local_cmd_pipe(cmd, logger):
         error = proc.stderr.readline()
     return rc, error
 
+
 class CustomDict(dict):
     """Carbon dictionary to represent a resource from JSON or YAML.
 
@@ -555,7 +557,6 @@ def ssh_retry(obj):
         ssh_errs = False
         args[0].set_inventory()
 
-
         host_group = kwargs['extra_vars']['hosts']
         inv_groups = args[0].inventory.groups
         if host_group not in inv_groups:
@@ -581,8 +582,8 @@ def ssh_retry(obj):
                                 username=server_user,
                                 key_filename=server_key_file,
                                 timeout=5)
-                    LOG.debug("Server %s - IP: %s is reachable." % (group,
-                                                                   server_ip))
+                    LOG.debug("Server %s - IP: %s is reachable." %
+                              (group, server_ip))
                     ssh.close()
                     break
                 except (BadHostKeyException, AuthenticationException,
@@ -599,16 +600,16 @@ def ssh_retry(obj):
             # Check Max SSH Retries performed
             if attempt > MAX_ATTEMPTS:
                 LOG.error(
-                    'Max Retries exceeded. SSH ERROR - Resource unreachable - Server %s - IP: %s!' % (
-                    group, server_ip )
-                    )
+                    'Max Retries exceeded. SSH ERROR - Resource unreachable - Server %s - IP: %s!' %
+                    (group, server_ip)
+                )
                 ssh_errs = True
 
         # Check for SSH Errors
         if ssh_errs:
-           raise HelpersError(
-               'ERROR: Unable to establish ssh connection with resources!'
-           )
+            raise HelpersError(
+                'ERROR: Unable to establish ssh connection with resources!'
+            )
 
         # Run Playbook/Module
         result = obj(*args, **kwargs)
@@ -631,7 +632,7 @@ def dep_check(scenario, config):
     #                             polarion, rpmdiff, umb, errata, rdo-cloud
     #                             gerrit
     if config['DEP_CHECK_ENDPOINT']:
-        endpoint=config['DEP_CHECK_ENDPOINT']
+        endpoint = config['DEP_CHECK_ENDPOINT']
         ext_resources_avail = True
         component_names = scenario.dep_check
         urllib3.disable_warnings()
@@ -650,9 +651,8 @@ def dep_check(scenario, config):
                     break
             if comp_resource_avail is not True:
                 ext_resources_avail = False
-            LOG.info('{:>40} {:<5} - Attempts {}'.format(comp.upper(),
-                             ': UP' if comp_resource_avail else ': DOWN',
-                             attempts))
+            LOG.info('{:>40} {:<5} - Attempts {}'.format(
+                comp.upper(), ': UP' if comp_resource_avail else ': DOWN', attempts))
         warnings.resetwarnings()
         LOG.info(''.center(60, '-'))
 
@@ -662,6 +662,7 @@ def dep_check(scenario, config):
                 'Scenario %s will not be run! Not all external resources are available' %
                 scenario.name
             )
+
 
 def get_ans_verbosity(logger, config):
     ans_verbosity = None

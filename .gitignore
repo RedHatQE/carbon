@@ -12,11 +12,9 @@ docs/_build
 
 # unit tests
 .tox
-.coverage
-.cache
-tests/cover
-tests/.coverage
-tests/.workspace
+tests/coverage
+tests/.cache
+tests/functional/.coverage
 
 # pycharm project settings
 .idea/

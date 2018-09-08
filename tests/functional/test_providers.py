@@ -15,493 +15,504 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+
 """
-    Unit tests to test carbon providers.
+    tests.test_providers
+
+    Unit tests for testing carbon provider classes.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from copy import deepcopy
-from unittest import TestCase
-
-import os
-from nose.tools import assert_true, assert_false, assert_is_instance, raises
-
-try:
-    from test.test_support import EnvironmentVarGuard
-except ImportError:
-    from test.support import EnvironmentVarGuard
-
-from carbon import Carbon
-from carbon.helpers import file_mgmt
-from carbon.providers import OpenstackProvider, OpenshiftProvider
-from carbon.providers import DigitalOceanProvider, RackspaceProvider
-from carbon.providers import AwsProvider, BeakerProvider
-
-# ++++++ IGNORE PYLINT MESSAGES ++++++ #
-# - Ignores method names, unit tests setUp method needs this naming standard
-# pylint: disable=C0103
-
-scenario_description = file_mgmt('r', 'workspace/scenario.yaml')
-
-
-class TestRackspace(TestCase):
-    """Unit tests to test carbon provider ~ rackspace."""
-    _rspace = RackspaceProvider()
-
-    def test_instantiate_class(self):
-        """Test whether the instantiated provider class object is an actual
-        instance of the provider class."""
-        assert_is_instance(self._rspace, RackspaceProvider)
-
-
-class TestOpenshift(TestCase):
-
-    """Unit tests to test carbon provider ~ openshift."""
-    _cp_scenario_description = dict(scenario_description)
-    _host1 = _cp_scenario_description['provision'][3]
-    _host2 = _cp_scenario_description['provision'][4]
-    _ocp = OpenshiftProvider()
-
-    def setUp(self):
-        self.env = EnvironmentVarGuard()
-        self.env.set('CARBON_SETTINGS', os.path.join(os.getcwd(), 'workspace/carbon.cfg'))
-
-    def test_instantiate_class(self):
-        """Test whether the instantiated provider class object is an actual
-        instance of the provider class."""
-        assert_is_instance(self._ocp, OpenshiftProvider)
-
-    def test_name(self):
-        """Test the validate name method. This test performs the following:
-            1. Name undefined.
-            2. Name defined and is a valid name.
-            3. Name defined and is a invalid data type.
-        """
-        obj = Carbon(__name__)
-        scenario_data = open("workspace/scenario_openshift.yaml")
-        obj.load_from_yaml(scenario_data)
-
-        host = obj.scenario.hosts[0]
-
-        assert_true(host.provider.name, 'openshift')
-        assert_false(host.provider.validate_name(None))
-        assert_true(host.provider.validate_name('applicationbyimage'))
-        assert_false(host.provider.validate_name(['applicationbygit']))
-
-    def test_image(self):
-        """Test the validate image method. This test performs the following:
-            1. Image undefined.
-            2. Image is a string data type.
-        """
-        key = '%simage' % self._ocp.__provider_prefix__
-        cp_parameters = deepcopy(self._host1)
-        assert_true(self._ocp.validate_image(None))
-        assert_true(self._ocp.validate_image(cp_parameters.pop(key)))
-
-    def test_git(self):
-        """Test the validate git method. This test performs the following:
-            1. Git undefined.
-            2. Git defined and is a valid git.
-            3. Git defined and is a invalid data type.
-        """
-        key = '%sgit' % self._ocp.__provider_prefix__
-        cp_parameters = deepcopy(self._host2)
-        assert_true(self._ocp.validate_git(None))
-        assert_true(self._ocp.validate_git(cp_parameters.pop(key)))
-        cp_parameters[key] = ['http://github.com']
-        assert_false(self._ocp.validate_git(cp_parameters.pop(key)))
-
-    def test_template(self):
-        """Test the validate template method. This test performs the following:
-            1. Template undefined.
-            2. Template is a string data type.
-        """
-        assert_true(self._ocp.validate_template(None))
-        assert_true(self._ocp.validate_template('my_template.yaml'))
-
-    def test_custom_template(self):
-        """Test the validate custom template method. This test performs the
-        following:
-            1. Template undefined.
-            2. Template is a string data type
-        """
-        assert_true(self._ocp.validate_custom_template(None))
-        assert_true(self._ocp.validate_custom_template('my_template.yaml'))
-
-    def test_env_vars(self):
-        """Test the validate env vars method. This test performs the following:
-            1. Env vars undefined.
-            2. Env vars is a dict data type.
-        """
-        key = '%senv_vars' % self._ocp.__provider_prefix__
-        cp_parameters = deepcopy(self._host1)
-        assert_true(self._ocp.validate_env_vars(None))
-        assert_true(self._ocp.validate_env_vars(cp_parameters.pop(key)))
-
-    def test_build_timeout(self):
-        """Test the validate build timeout method. This test performs the
-        following:
-            1. Build timeout undefined.
-            2. Build timeout is a int data type & > 0
-            3. Build timeout is a non int data type
-        """
-        key = '%sbuild_timeout' % self._ocp.__provider_prefix__
-        cp_parameters = deepcopy(self._host2)
-        assert_true(self._ocp.validate_build_timeout(None))
-        assert_true(self._ocp.validate_build_timeout(cp_parameters.pop(key)))
-        assert_false(self._ocp.validate_build_timeout(2.5))
-
-    def test_labels(self):
-        """Test teh validate labels method. This test performs the following:
-            1. Labels undefined.
-            2. Labels is not a list.
-            3. Labels list does not contain dict values.
-            4. Labels list does contain dict values.
-            5. Labels list dict contains more than one key:value.
-            6. Labels list dict contains one key:value but key:value is not
-                defined correctly.
-        """
-        key = '%slabels' % self._ocp.__provider_prefix__
-        cp_parameters = deepcopy(self._host1)
-        assert_true(self._ocp.validate_labels(None))
-        assert_false(self._ocp.validate_labels('label1'))
-        assert_false(self._ocp.validate_labels(['label1']))
-        assert_true(self._ocp.validate_labels(cp_parameters.pop(key)))
-        assert_false(self._ocp.validate_labels(
-            [dict(label1='label1', label2='label2')]))
-        assert_false(self._ocp.validate_labels(
-            [dict(label1='')]))
-
-
-class TestDigitalocean(TestCase):
-    """Unit tests to test carbon provider ~ digital ocean."""
-    _docean = DigitalOceanProvider()
-
-    def test_instantiate_class(self):
-        """Test whether the instantiated provider class object is an actual
-        instance of the provider class."""
-        assert_is_instance(self._docean, DigitalOceanProvider)
-
-
-class TestBeaker(TestCase):
-    """Unit tests to test carbon provider ~ beaker."""
-    _beaker = BeakerProvider()
-
-    def test_instantiate_class(self):
-        """Test whether the instantiated provider class object is an actual
-        instance of the provider class."""
-        assert_is_instance(self._beaker, BeakerProvider)
-
-    def test_instantiate_class(self):
-        """Test whether the instantiated provider class object is an actual
-        instance of the provider class."""
-        assert_is_instance(self._beaker, BeakerProvider)
-
-    def test_name(self):
-        """Test the validate name method. This test performs the following:
-            1. Name undefined.
-            2. Name is a string data type.
-        """
-        assert_false(self._beaker.validate_name(None))
-        assert_false(self._beaker.validate_name(1))
-        assert_true(self._beaker.validate_name('test_name'))
-
-    def test_timeout(self):
-        """Test the validate timeout method. This test performs the following:
-            1. timeout undefined.
-            2. timeout is a string data type.
-        """
-        assert_false(self._beaker.validate_timeout('11'))
-        assert_false(self._beaker.validate_timeout(3599))
-        assert_false(self._beaker.validate_timeout(172801))
-        assert_false(self._beaker.validate_timeout(-6000))
-        assert_true(self._beaker.validate_timeout(None))
-        assert_true(self._beaker.validate_timeout(3600))
-        assert_true(self._beaker.validate_timeout(172800))
-        assert_true(self._beaker.validate_timeout(100001))
-
-    def test_arch(self):
-        """Test the validate arch method."""
-        assert_true(self._beaker.validate_arch('x86_64'))
-
-    def test_tag(self):
-        """Test the validate tag method."""
-        assert_false(self._beaker.validate_tag(11))
-        assert_true(self._beaker.validate_tag(None))
-        assert_true(self._beaker.validate_tag('RTT_ACCEPTED'))
-
-    def test_family(self):
-        """Test the validate family method."""
-        assert_true(self._beaker.validate_family('FEDORA26'))
-        assert_true(self._beaker.validate_family(None))
-
-    def test_variant(self):
-        """Test the validate variant method."""
-        assert_true(self._beaker.validate_variant('workstation'))
-
-    def test_distro(self):
-        """Test the validate variant distro."""
-        assert_false(self._beaker.validate_distro(11))
-        assert_true(self._beaker.validate_distro(None))
-        assert_true(self._beaker.validate_distro('Rhel-7'))
-
-    def test_kernel_options(self):
-        """Test the validate kernel options method."""
-        assert_false(self._beaker.validate_kernel_options("isolcpus=0,5"))
-        assert_true(self._beaker.validate_kernel_options(None))
-        assert_true(self._beaker.validate_kernel_options(["selinux=--permisssive", "keyboard=us", "lang=us", "timezone=est"]))
-        assert_true(self._beaker.validate_kernel_options([1, 2, 3]))
-
-    def test_kernel_post_options(self):
-        """Test the validate kernel post options method."""
-        assert_false(self._beaker.validate_kernel_post_options("isolcpus=0,5"))
-        assert_true(self._beaker.validate_kernel_post_options(None))
-        assert_true(self._beaker.validate_kernel_post_options(["isolcpus=0,5", "timezone=est", "selinux=--disabled"]))
-        assert_true(self._beaker.validate_kernel_post_options([1, 2, 3]))
-
-    def test_host_requires_options(self):
-        """Test the validate host requires options method."""
-        assert_false(self._beaker.validate_host_requires_options(11))
-        assert_true(self._beaker.validate_host_requires_options(None))
-        assert_true(self._beaker.validate_host_requires_options(["arch=x86_64", "memory>=15000"]))
-        assert_true(self._beaker.validate_host_requires_options([1, 2, 3]))
-
-    def test_distro_requires_options(self):
-        """Test the validate distro requires options method."""
-        assert_false(self._beaker.validate_distro_requires_options(11))
-        assert_true(self._beaker.validate_distro_requires_options(None))
-        assert_true(self._beaker.validate_distro_requires_options(["arch=x86_64", "memory>=15000"]))
-        assert_true(self._beaker.validate_distro_requires_options([1, 2, 3]))
-
-    def test_virtual_machine(self):
-        """Test the validate virtual machine method."""
-        assert_false(self._beaker.validate_virtual_machine(3))
-        assert_false(self._beaker.validate_virtual_machine(1))
-        assert_false(self._beaker.validate_virtual_machine('True'))
-        assert_true(self._beaker.validate_virtual_machine(None))
-        assert_true(self._beaker.validate_virtual_machine(True))
-        assert_true(self._beaker.validate_virtual_machine(False))
-        assert_true(self._beaker.validate_virtual_machine(0))
-
-    def test_virt_capable(self):
-        """Test the validate virt capable method."""
-        assert_false(self._beaker.validate_virt_capable(5))
-        assert_false(self._beaker.validate_virt_capable(1))
-        assert_false(self._beaker.validate_virt_capable('True'))
-        assert_true(self._beaker.validate_virt_capable(None))
-        assert_true(self._beaker.validate_virt_capable(True))
-        assert_true(self._beaker.validate_virt_capable(False))
-        assert_true(self._beaker.validate_virt_capable(0))
-
-    def test_retention_tag(self):
-        """Test the validate retention tag method."""
-        assert_false(self._beaker.validate_retention_tag(11))
-        assert_true(self._beaker.validate_retention_tag(None))
-        assert_true(self._beaker.validate_retention_tag('Rhel-7'))
-        assert_true(self._beaker.validate_retention_tag('Scratch'))
-
-    def test_priority(self):
-        """Test the validate priority method."""
-        assert_false(self._beaker.validate_priority(11))
-        assert_true(self._beaker.validate_priority(None))
-        assert_true(self._beaker.validate_priority('Rhel-7'))
-        assert_true(self._beaker.validate_priority('Low'))
-
-    def test_whiteboard(self):
-        """Test the validate whiteboard method."""
-        assert_false(self._beaker.validate_whiteboard(11))
-        assert_true(self._beaker.validate_whiteboard(None))
-        assert_true(self._beaker.validate_whiteboard('Rhel-7'))
-        assert_true(self._beaker.validate_whiteboard('Title of the job or job id'))
-
-    def test_jobgroup(self):
-        """Test the validate jobgoup method."""
-        assert_false(self._beaker.validate_jobgroup(11))
-        assert_true(self._beaker.validate_jobgroup(None))
-        assert_true(self._beaker.validate_jobgroup('Rhel-7'))
-        assert_true(self._beaker.validate_jobgroup('ci-ops-pit'))
-
-    def test_key_values(self):
-        """Test the validate key_values method."""
-        assert_false(self._beaker.validate_key_values(11))
-        assert_true(self._beaker.validate_key_values(None))
-        assert_true(self._beaker.validate_key_values(["DISKSPACE>=500000", "HVM=1"]))
-        assert_true(self._beaker.validate_key_values([1, 2, 3]))
-
-    def test_username(self):
-        """Test the validate username method."""
-        assert_false(self._beaker.validate_username(11))
-        assert_true(self._beaker.validate_username(None))
-        assert_true(self._beaker.validate_username('ci-ops-pit'))
-
-    def test_password(self):
-        """Test the validate password method."""
-        assert_false(self._beaker.validate_password(11))
-        assert_true(self._beaker.validate_password(None))
-        assert_true(self._beaker.validate_password('ci-ops-pit'))
-
-    def test_keytab(self):
-        """Test the validate keytab method."""
-        assert_false(self._beaker.validate_keytab(11))
-        assert_true(self._beaker.validate_keytab(None))
-        assert_true(self._beaker.validate_keytab('ci-ops-pit'))
-
-    def test_ssh_key(self):
-        """Test the validate ssh_key method."""
-        assert_false(self._beaker.validate_ssh_key(11))
-        assert_true(self._beaker.validate_ssh_key(None))
-        assert_true(self._beaker.validate_ssh_key('ci-ops-pit'))
-
-    def test_kickstart(self):
-        """Test the validate kickstart method."""
-        assert_false(self._beaker.validate_kickstart(11))
-        assert_true(self._beaker.validate_kickstart(None))
-        assert_true(self._beaker.validate_kickstart('ci-ops-pit'))
-
-    def test_hostname(self):
-        """Test the validate hostname method."""
-        assert_false(self._beaker.validate_hostname(11))
-        assert_true(self._beaker.validate_hostname(None))
-        assert_true(self._beaker.validate_hostname('ci-ops-pit'))
-
-    def test_ip_address(self):
-        """Test the validate ip_address method."""
-        assert_false(self._beaker.validate_ip_address(11))
-        assert_true(self._beaker.validate_ip_address(None))
-        assert_true(self._beaker.validate_ip_address('ci-ops-pit'))
-
-    def test_job_id(self):
-        """Test the validate job_id method."""
-        assert_false(self._beaker.validate_job_id(11))
-        assert_true(self._beaker.validate_job_id(None))
-        assert_true(self._beaker.validate_job_id('ci-ops-pit'))
-
-    def test_taskparam(self):
-        """Test the validate taskparam method."""
-        assert_false(self._beaker.validate_taskparam(11))
-        assert_true(self._beaker.validate_taskparam(None))
-        assert_true(self._beaker.validate_taskparam(["DISKSPACE>=500000", "HVM=1"]))
-        assert_true(self._beaker.validate_taskparam([1, 2, 3]))
-
-    def test_ksmeta(self):
-        """Test the validate ksmeta method."""
-        assert_false(self._beaker.validate_ksmeta(11))
-        assert_true(self._beaker.validate_ksmeta(None))
-        assert_true(self._beaker.validate_ksmeta(["DISKSPACE>=500000", "HVM=1"]))
-        assert_true(self._beaker.validate_ksmeta([1, 2, 3]))
-
-    def test_ignore_panic(self):
-        """Test the validate ignore panic method."""
-        assert_false(self._beaker.validate_ignore_panic(3))
-        assert_false(self._beaker.validate_ignore_panic(1))
-        assert_false(self._beaker.validate_ignore_panic('True'))
-        assert_true(self._beaker.validate_ignore_panic(None))
-        assert_true(self._beaker.validate_ignore_panic(True))
-        assert_true(self._beaker.validate_ignore_panic(False))
-        assert_true(self._beaker.validate_ignore_panic(0))
-
-
-class TestAws(TestCase):
-    """Unit tests to test carbon provider ~ aws."""
-    _aws = AwsProvider()
-
-    def test_instantiate_class(self):
-        """Test whether the instantiated provider class object is an actual
-        instance of the provider class."""
-        assert_is_instance(self._aws, AwsProvider)
-
-
-class TestOpenstack(TestCase):
-    """Unit tests to test carbon provider ~ openstack.
-
-    Majority of the tests for Openstack provider are validating the parameters
-    a user would declare for a resource to be created in Openstack.
-
-    Mock up data is supplied and used to perform all positive and negative
-    testing.
-    """
-    _cp_scenario_description = dict(scenario_description)
-    _host = _cp_scenario_description.pop('provision')[0]
-    _credentials = _cp_scenario_description.pop('credentials')[0]
-    _osp = OpenstackProvider()
-
-    def setUp(self):
-        """Tasks to be performed before each test case."""
-        self._osp.set_credentials(self._credentials)
-
-    def test_instantiate_class(self):
-        """Test whether the instantiated provider class object is an actual
-        instance of the provider class."""
-        assert_is_instance(self._osp, OpenstackProvider)
-
-    def test_name(self):
-        """Test the validate name method. This test performs the following:
-            1. Name undefined.
-            2. Name defined and is a valid name.
-            3. Name defined and is a invalid data type.
-        """
-        key = 'name'
-        cp_parameters = deepcopy(self._host)
-        assert_false(self._osp.validate_name(None))
-        assert_true(self._osp.validate_name(cp_parameters.pop(key)))
-        cp_parameters[key] = ['machine1']
-        assert_false(self._osp.validate_name(cp_parameters.pop(key)))
-
-    def test_flavor(self):
-        """Test the validate flavor method. This test performs the following:
-            1. Flavor undefined.
-            2. Flavor defined and is a invalid data type(s).
-        """
-        key = '%sflavor' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_false(self._osp.validate_flavor(None))
-        cp_parameters[key] = [3]
-        assert_false(self._osp.validate_flavor(cp_parameters.pop(key)))
-
-    def test_image(self):
-        """Test the validate image method. This test performs the following:
-            1. Image undefined.
-            2. Image defined and is a invalid data type(s).
-        """
-        key = '%simage' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_false(self._osp.validate_image(None))
-        cp_parameters[key] = 1234
-        assert_false(self._osp.validate_image(cp_parameters.pop(key)))
-
-    def test_networks(self):
-        """Test the validate networks method. This test performs the following:
-            1. Networks undefined.
-            2. Networks defined and networks are a invalid data type(s).
-        """
-        key = '%snetworks' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_false(self._osp.validate_networks(None))
-        cp_parameters['os_networks'] = "local-network"
-        assert_false(self._osp.validate_networks(cp_parameters.pop(key)))
-
-    def test_keypair(self):
-        """Test the validate keypair method. This test performs the following:
-            1. Keypair undefined.
-            2. Keypair defined and is a invalid data type(s).
-        """
-        key = '%skeypair' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        assert_false(self._osp.validate_keypair(None))
-        # assert_true(self._osp.validate_keypair(cp_parameters[key]))
-        # cp_parameters[key] = 'carbon-123'
-        # assert_false(self._osp.validate_keypair(cp_parameters[key]))
-        cp_parameters[key] = ['carbon-123']
-        assert_false(self._osp.validate_keypair(cp_parameters[key]))
-
-    def test_floating_ip_pool(self):
-        """Test the validate floating ip pool method. This test performs the
-        following:
-            1. Floating ip pool undefined.
-            2. Floating ip pool defined and is a invalid data type(s).
-        """
-        key = '%sfloating_ip_pool' % self._osp.__provider_prefix__
-        cp_parameters = deepcopy(self._host)
-        cp_parameters[key] = ['192.168.1.0/22']
-        assert_false(self._osp.validate_floating_ip_pool(cp_parameters[key]))
+
+import mock
+import pytest
+
+from carbon.exceptions import OpenstackProviderError
+from carbon.providers import DigitalOceanProvider, RackspaceProvider, \
+    StaticProvider, OpenshiftProvider, OpenstackProvider, AwsProvider, \
+    BeakerProvider
+
+
+@pytest.fixture(scope='class')
+def provider_static():
+    return StaticProvider()
+
+
+@pytest.fixture(scope='class')
+def rackspace_provider():
+    return RackspaceProvider()
+
+
+@pytest.fixture(scope='class')
+def digitalocean_provider():
+    return DigitalOceanProvider()
+
+
+@pytest.fixture(scope='class')
+def openshift_provider():
+    return OpenshiftProvider()
+
+
+@pytest.fixture(scope='class')
+def openstack_provider():
+    return OpenstackProvider()
+
+
+@pytest.fixture(scope='class')
+def aws_provider():
+    return AwsProvider()
+
+
+@pytest.fixture(scope='class')
+def beaker_provider():
+    return BeakerProvider()
+
+
+class TestStaticProvider(object):
+    @staticmethod
+    def test_constructor(provider_static):
+        assert isinstance(provider_static, StaticProvider)
+
+    @staticmethod
+    def test_validate_hostname(provider_static):
+        assert provider_static.validate_hostname('host01')
+        assert provider_static.validate_hostname(None)
+
+    @staticmethod
+    def test_validate_ip_address(provider_static):
+        assert provider_static.validate_ip_address('127.0.0.1') == True
+
+    @staticmethod
+    def test_validate_name(provider_static):
+        assert provider_static.validate_name(None) is False
+        assert provider_static.validate_name('host01')
+        assert provider_static.validate_name(True) is False
+
+
+class TestRackspaceProvider(object):
+    @staticmethod
+    def test_constructor(rackspace_provider):
+        assert isinstance(rackspace_provider, RackspaceProvider)
+
+
+class TestDigitalOceanProvider(object):
+    @staticmethod
+    def test_constructor(digitalocean_provider):
+        assert isinstance(digitalocean_provider, DigitalOceanProvider)
+
+
+class TestOpenShiftProvider(object):
+    @staticmethod
+    def test_constructor(openshift_provider):
+        assert isinstance(openshift_provider, OpenshiftProvider)
+
+    @staticmethod
+    def test_validate_name(openshift_provider):
+        assert openshift_provider.validate_name(None) is False
+        assert openshift_provider.validate_name(True) is False
+        assert openshift_provider.validate_name('s2i')
+
+    @staticmethod
+    def test_validate_git(openshift_provider):
+        assert openshift_provider.validate_git(None)
+        assert openshift_provider.validate_git(True) is False
+        assert openshift_provider.validate_git('https://github.com')
+
+    @staticmethod
+    def test_validate_image(openshift_provider):
+        assert openshift_provider.validate_image(None)
+        assert openshift_provider.validate_image('image')
+
+    @staticmethod
+    def test_validate_template(openshift_provider):
+        assert openshift_provider.validate_template(None)
+        assert openshift_provider.validate_template('template')
+
+    @staticmethod
+    def test_validate_custom_template(openshift_provider):
+        assert openshift_provider.validate_custom_template(None)
+        assert openshift_provider.validate_custom_template('template')
+
+    @staticmethod
+    def test_validate_env_vars(openshift_provider):
+        assert openshift_provider.validate_env_vars(None)
+        assert openshift_provider.validate_env_vars({'var_01': 'val_01'})
+
+    @staticmethod
+    def test_validate_build_timeout(openshift_provider):
+        assert openshift_provider.validate_build_timeout(None)
+        assert openshift_provider.validate_build_timeout(10)
+        assert openshift_provider.validate_build_timeout(3.14) is False
+
+    @staticmethod
+    def test_validate_labels(openshift_provider):
+        assert openshift_provider.validate_labels(None)
+        assert openshift_provider.validate_labels('label') is False
+        assert openshift_provider.validate_labels(['label']) is False
+        assert openshift_provider.validate_labels([{'label1': 'value1'}])
+        assert not openshift_provider.validate_labels([{'a': 'b', 'c': 'd'}])
+
+    @staticmethod
+    def test_validate_routes(openshift_provider):
+        assert openshift_provider.validate_routes('route')
+
+    @staticmethod
+    def test_validate_custom_templates(openshift_provider):
+        assert openshift_provider.validate_custom_templates('templates')
+
+    @staticmethod
+    def test_validate_app_names(openshift_provider):
+        assert openshift_provider.validate_app_name('app')
+
+
+class TestOpenStackProvider(object):
+    @staticmethod
+    def test_constructor(openstack_provider):
+        assert isinstance(openstack_provider, OpenstackProvider)
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'size_lookup')
+    def test_validate_flavor(mock_func, openstack_provider):
+        assert openstack_provider.validate_flavor(None) is False
+        assert openstack_provider.validate_flavor(['small']) is False
+        mock_func.return_value = True
+        assert openstack_provider.validate_flavor('small')
+        mock_func.side_effect = OpenstackProviderError('invalid falvor')
+        assert openstack_provider.validate_flavor('small') is False
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'image_lookup')
+    def test_validate_image(mock_func, openstack_provider):
+        assert openstack_provider.validate_image(None) is False
+        assert openstack_provider.validate_image(['image']) is False
+        mock_func.return_value = True
+        assert openstack_provider.validate_image('image-01')
+        mock_func.side_effect = OpenstackProviderError('invalid image')
+        assert openstack_provider.validate_image('image-01') is False
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'network_lookup')
+    def test_validate_networks(mock_func, openstack_provider):
+        assert openstack_provider.validate_networks(None) is False
+        assert openstack_provider.validate_networks('network') is False
+        mock_func.return_value = True
+        assert openstack_provider.validate_networks(['network-01'])
+        mock_func.side_effect = OpenstackProviderError('invalid network')
+        assert openstack_provider.validate_networks(['network-01']) is False
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'floating_ip_pool_lookup')
+    def test_validate_floating_ip_pool(mock_func, openstack_provider):
+        assert openstack_provider.validate_floating_ip_pool(None)
+        assert openstack_provider.validate_floating_ip_pool(['a']) is False
+        mock_func.return_value = True
+        assert openstack_provider.validate_floating_ip_pool('127.0.0.1')
+        mock_func.side_effect = OpenstackProviderError('invalid fip')
+        assert not openstack_provider.validate_floating_ip_pool('127.0.0.1')
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'key_pair_lookup')
+    def test_validate_key_pair(mock_func, openstack_provider):
+        assert openstack_provider.validate_keypair(None) is False
+        assert openstack_provider.validate_keypair(['a']) is False
+        mock_func.return_value = True
+        assert openstack_provider.validate_keypair('a')
+        mock_func.side_effect = OpenstackProviderError('invalid key pair')
+        assert openstack_provider.validate_keypair('a') is False
+
+    @staticmethod
+    def test_validate_admin_pass(openstack_provider):
+        assert openstack_provider.validate_admin_pass('password')
+
+    @staticmethod
+    def test_validate_description(openstack_provider):
+        assert openstack_provider.validate_description('description')
+
+    @staticmethod
+    def test_validate_files(openstack_provider):
+        assert openstack_provider.validate_files('files')
+
+    @staticmethod
+    def test_validate_node_id(openstack_provider):
+        assert openstack_provider.validate_node_id('node')
+
+    @staticmethod
+    def test_validate_ip_address(openstack_provider):
+        assert openstack_provider.validate_ip_address('127.0.0.1')
+
+    @staticmethod
+    def test_validate_security_groups(openstack_provider):
+        assert openstack_provider.validate_security_groups('default')
+
+    @staticmethod
+    def test_validate_name(openstack_provider):
+        assert openstack_provider.validate_name(None) is False
+        assert openstack_provider.validate_name(['name']) is False
+        assert openstack_provider.validate_name('name')
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'driver')
+    def test_key_pair_lookup(mock_func, openstack_provider):
+        mock_func.list_key_pairs = mock.MagicMock()
+        key_pair = mock.MagicMock()
+        key_pair.name = 'default'
+        mock_func.list_key_pairs.return_value = [key_pair]
+        assert openstack_provider.key_pair_lookup('default').name == 'default'
+
+        with pytest.raises(OpenstackProviderError) as ex:
+            key_pair.name = 'custom'
+            openstack_provider.key_pair_lookup('default')
+        assert 'Keypair default not found!' in ex.value.args
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'driver')
+    def test_float_ip_pool_lookup(mock_func, openstack_provider):
+        mock_func.ex_list_floating_ip_pools = mock.MagicMock()
+        fip = mock.MagicMock()
+        fip.name = '127.0.0.1'
+        mock_func.ex_list_floating_ip_pools.return_value = [fip]
+        assert openstack_provider.floating_ip_pool_lookup('127.0.0.1')
+
+        with pytest.raises(OpenstackProviderError) as ex:
+            fip.name = '0.0.0.0'
+            openstack_provider.floating_ip_pool_lookup('127.0.0.1')
+        assert 'FIP 127.0.0.1 not found!' in ex.value.args
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'driver')
+    def test_node_lookup(mock_func, openstack_provider):
+        mock_func.list_nodes = mock.MagicMock()
+        node = mock.MagicMock()
+        node.name = 'node01'
+        mock_func.list_nodes.return_value = [node]
+        assert openstack_provider.node_lookup('node01')
+
+        with pytest.raises(OpenstackProviderError) as ex:
+            node.name = 'node02'
+            openstack_provider.node_lookup('node01')
+        assert 'Node node01 not found!' in ex.value.args
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'driver')
+    def test_network_lookup(mock_func, openstack_provider):
+        mock_func.ex_list_networks = mock.MagicMock()
+        network = mock.MagicMock()
+        network.name = 'net1'
+        mock_func.ex_list_networks.return_value = [network]
+        assert openstack_provider.network_lookup('net1')
+        assert openstack_provider.network_lookup(['net1'])
+
+        with pytest.raises(OpenstackProviderError) as ex:
+            network.name = 'net2'
+            assert openstack_provider.network_lookup('net1')
+        assert 'Network(s) net1 not found!' in ex.value.args
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'driver')
+    def test_image_lookup(mock_func, openstack_provider):
+        mock_func.list_images = mock.MagicMock()
+        image = mock.MagicMock()
+        image.name = 'image01'
+        image.id = '123'
+        mock_func.list_images.return_value = [image]
+        assert openstack_provider.image_lookup('image01')
+        assert openstack_provider.image_lookup('123')
+
+        mock_func.list_images.return_value = []
+        with pytest.raises(OpenstackProviderError) as ex:
+            openstack_provider.image_lookup('123')
+        assert 'Image 123 not found!' in ex.value.args
+
+    @staticmethod
+    @mock.patch.object(OpenstackProvider, 'driver')
+    def test_size_lookup(mock_func, openstack_provider):
+        mock_func.list_sizes = mock.MagicMock()
+        size = mock.MagicMock()
+        size.name = 'large'
+        size.id = 6
+        mock_func.list_sizes.return_value = [size]
+        assert openstack_provider.size_lookup('large')
+        assert openstack_provider.size_lookup(6)
+
+        mock_func.list_sizes.return_value = []
+        with pytest.raises(OpenstackProviderError) as ex:
+            openstack_provider.size_lookup('large')
+        assert 'Flavor large not found!' in ex.value.args
+
+
+class TestAwsProvider(object):
+    @staticmethod
+    def test_constructor(aws_provider):
+        assert isinstance(aws_provider, AwsProvider)
+
+
+class TestBeakerProvider(object):
+    @staticmethod
+    def test_constructor(beaker_provider):
+        assert isinstance(beaker_provider, BeakerProvider)
+
+    @staticmethod
+    def test_validate_name(beaker_provider):
+        assert beaker_provider.validate_name(None) is False
+        assert beaker_provider.validate_name(1) is False
+        assert beaker_provider.validate_name('name')
+
+    @staticmethod
+    def test_validate_timeout(beaker_provider):
+        assert beaker_provider.validate_timeout(None)
+        assert beaker_provider.validate_timeout(3600)
+        assert beaker_provider.validate_timeout(172800)
+        assert beaker_provider.validate_timeout(3599) is False
+        assert beaker_provider.validate_timeout('10') is False
+
+    @staticmethod
+    def test_validate_arch(beaker_provider):
+        assert beaker_provider.validate_arch('x86_64')
+
+    @staticmethod
+    def test_validate_username(beaker_provider):
+        assert beaker_provider.validate_username(None)
+        assert beaker_provider.validate_username('user')
+
+    @staticmethod
+    def test_validate_password(beaker_provider):
+        assert beaker_provider.validate_password(None)
+        assert beaker_provider.validate_password('password')
+
+    @staticmethod
+    def test_validate_tag(beaker_provider):
+        assert beaker_provider.validate_tag(None)
+        assert beaker_provider.validate_tag('tag')
+
+    @staticmethod
+    def test_validate_family(beaker_provider):
+        assert beaker_provider.validate_family(None)
+        assert beaker_provider.validate_family('family')
+
+    @staticmethod
+    def test_validate_distro(beaker_provider):
+        assert beaker_provider.validate_distro(None)
+        assert beaker_provider.validate_distro('distro')
+
+    @staticmethod
+    def test_validate_variant(beaker_provider):
+        assert beaker_provider.validate_variant(None) is False
+        assert beaker_provider.validate_variant('variant')
+
+    @staticmethod
+    def test_validate_kernel_options(beaker_provider):
+        assert beaker_provider.validate_kernel_options(None)
+        assert beaker_provider.validate_kernel_options(['keyboard=us'])
+
+    @staticmethod
+    def test_validate_kernel_post_options(beaker_provider):
+        assert beaker_provider.validate_kernel_post_options(None)
+        assert beaker_provider.validate_kernel_post_options(['timezone=set'])
+
+    @staticmethod
+    def test_validate_host_requires_options(beaker_provider):
+        assert beaker_provider.validate_host_requires_options(None)
+        assert beaker_provider.validate_host_requires_options(['arch=x86_64'])
+
+    @staticmethod
+    def test_validate_distro_requires_options(beaker_provider):
+        assert beaker_provider.validate_distro_requires_options(None)
+        assert beaker_provider.validate_distro_requires_options(
+            ['arch=x86_64'])
+
+    @staticmethod
+    def test_validate_virtual_machines(beaker_provider):
+        assert beaker_provider.validate_virtual_machine(None)
+        assert beaker_provider.validate_virtual_machine(['True']) is False
+        assert beaker_provider.validate_virtual_machine(True)
+
+    @staticmethod
+    def test_validate_virt_capable(beaker_provider):
+        assert beaker_provider.validate_virt_capable(None)
+        assert beaker_provider.validate_virt_capable(True)
+        assert beaker_provider.validate_virt_capable('True') is False
+
+    @staticmethod
+    def test_validate_retention_tags(beaker_provider):
+        assert beaker_provider.validate_retention_tag(None)
+        assert beaker_provider.validate_retention_tag('Tag')
+        assert beaker_provider.validate_retention_tag(10) is False
+
+    @staticmethod
+    def tests_validate_priority(beaker_provider):
+        assert beaker_provider.validate_priority(None)
+        assert beaker_provider.validate_priority('High')
+        assert beaker_provider.validate_priority(['High']) is False
+
+    @staticmethod
+    def test_validate_whiteboard(beaker_provider):
+        assert beaker_provider.validate_whiteboard(None)
+        assert beaker_provider.validate_whiteboard('whiteboard')
+        assert beaker_provider.validate_whiteboard(['whiteboard']) is False
+
+    @staticmethod
+    def test_validate_jobgroup(beaker_provider):
+        assert beaker_provider.validate_jobgroup(None)
+        assert beaker_provider.validate_jobgroup('group')
+        assert beaker_provider.validate_jobgroup(['group']) is False
+
+    @staticmethod
+    def test_validate_key_values(beaker_provider):
+        assert beaker_provider.validate_key_values(None)
+        assert beaker_provider.validate_key_values([1, 2])
+        assert beaker_provider.validate_key_values(1) is False
+
+    @staticmethod
+    def test_validate_taskparam(beaker_provider):
+        assert beaker_provider.validate_taskparam(None)
+        assert beaker_provider.validate_taskparam([1, 2])
+        assert beaker_provider.validate_taskparam(1) is False
+
+    @staticmethod
+    def test_validate_keytab(beaker_provider):
+        assert beaker_provider.validate_keytab(None)
+        assert beaker_provider.validate_keytab('keytab')
+        assert beaker_provider.validate_keytab(['keytab']) is False
+
+    @staticmethod
+    def test_validate_ignore_panic(beaker_provider):
+        assert beaker_provider.validate_ignore_panic(None)
+        assert beaker_provider.validate_ignore_panic(True)
+        assert beaker_provider.validate_ignore_panic('True') is False
+
+    @staticmethod
+    def test_validate_ssh_key(beaker_provider):
+        assert beaker_provider.validate_ssh_key(None)
+        assert beaker_provider.validate_ssh_key('ssh-key')
+        assert beaker_provider.validate_ssh_key(['ssh-key']) is False
+
+    @staticmethod
+    def test_validate_kickstsart(beaker_provider):
+        assert beaker_provider.validate_kickstart(None)
+        assert beaker_provider.validate_kickstart('kickstart')
+        assert beaker_provider.validate_kickstart(['kickstart']) is False
+
+    @staticmethod
+    def test_validate_hostname(beaker_provider):
+        assert beaker_provider.validate_hostname(None)
+        assert beaker_provider.validate_hostname('hostname')
+        assert beaker_provider.validate_hostname(['hostname']) is False
+
+    @staticmethod
+    def test_validate_ksmeta(beaker_provider):
+        assert beaker_provider.validate_ksmeta(None)
+        assert beaker_provider.validate_ksmeta('meta') is False
+        assert beaker_provider.validate_ksmeta(['meta'])
+
+    @staticmethod
+    def test_validate_ip_address(beaker_provider):
+        assert beaker_provider.validate_ip_address(None)
+        assert beaker_provider.validate_ip_address('127.0.0.1')
+        assert beaker_provider.validate_ip_address(['127.0.0.1']) is False
+
+    @staticmethod
+    def test_validate_job_id(beaker_provider):
+        assert beaker_provider.validate_job_id(None)
+        assert beaker_provider.validate_job_id('123')
+        assert beaker_provider.validate_job_id(['123']) is False

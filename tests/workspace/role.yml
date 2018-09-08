@@ -1,5 +1,0 @@
----
-- src: davidwittman.redis
-- src: https://github.com/bennojoy/nginx
-- src: https://github.com/bennojoy/nginx
-  name: nginx-custom-name

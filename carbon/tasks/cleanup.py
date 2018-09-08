@@ -51,6 +51,20 @@ class CleanupTask(CarbonTask):
         self.host = host
         self.package = package
 
+    def _get_orchestrator_instance(self):
+        """Get the orchestrator instance to perform clean up actions with.
+
+        :return: orchestrator class instance
+        :rtype: object
+        """
+        # set package attributes to get actual host objects over strings
+        cleanup = getattr(self.package, 'cleanup')
+        setattr(cleanup, 'all_hosts', getattr(self.package, 'all_hosts'))
+        setattr(cleanup, 'hosts', getattr(self.package, 'hosts'))
+
+        # create the orchestrator object
+        return getattr(self.package, 'orchestrator')(cleanup)
+
     def run(self):
         """Run.
 
@@ -60,13 +74,8 @@ class CleanupTask(CarbonTask):
 
         # **** TASKS BELOW ONLY SHOULD BE RELATED TO THE ORCHESTRATOR ****
         if self.package and getattr(self.package, 'cleanup') is not None:
-            # set package attributes to get actual host objects over strings
-            cleanup = getattr(self.package, 'cleanup')
-            setattr(cleanup, 'all_hosts', getattr(self.package, 'all_hosts'))
-            setattr(cleanup, 'hosts', getattr(self.package, 'hosts'))
-
-            # create the orchestrator object
-            orchestrator = getattr(self.package, 'orchestrator')(cleanup)
+            # get the orchestrator to invoke
+            orchestrator = self._get_orchestrator_instance()
 
             # perform final system configuration against test systems
             try:

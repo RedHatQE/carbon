@@ -149,7 +149,7 @@ class Execute(CarbonResource):
     @executor.setter
     def executor(self, value):
         """Set executor property."""
-        raise AttributeError('Orchestrator class property cannot be set.')
+        raise AttributeError('Executor class property cannot be set.')
 
     def profile(self):
         """Build a profile for the execute resource.

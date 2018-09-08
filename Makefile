@@ -19,11 +19,9 @@ clean:
 	rm -rf dist
 
 clean-tests:
-	rm -rf tests/coverage-report*
 	rm -rf tests/.coverage*
-	rm -rf tests/.workspace
-	rm -rf tests/__pycache__
-	rm -rf tests/cover
+	rm -rf tests/.cache
+	rm -rf tests/coverage
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +

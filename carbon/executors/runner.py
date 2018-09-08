@@ -37,7 +37,6 @@ from ..orchestrators._ansible import Inventory, AnsibleController
 from ..static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK
 
 
-
 class RunnerExecutor(CarbonExecutor):
     """ The main executor for Carbon.
 

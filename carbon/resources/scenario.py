@@ -353,11 +353,11 @@ class Scenario(CarbonResource):
 
             if all(x in DEP_CHECK_LIST for x in dep_check_val) is not True:
                 self.logger.error('Invalid Dependency Check Component specified in descriptor of scenario '
-                                    "'%s' Valid: %s - Supplied: %s." % (str(self.name), DEP_CHECK_LIST,
-                                                                       dep_check_val))
+                                    "'%s' Valid: %s - Supplied: %s." %
+                                  (str(self.name), DEP_CHECK_LIST, dep_check_val))
                 raise ScenarioError('Invalid Dependency Check Component specified in descriptor of scenario '
-                                    "'%s' Valid: %s - Supplied: %s." % (str(self.name), DEP_CHECK_LIST,
-                                                                        dep_check_val))
+                                    "'%s' Valid: %s - Supplied: %s." %
+                                    (str(self.name), DEP_CHECK_LIST, dep_check_val))
 
             # Check Status of components (UP/DOWN)
             dep_check(self, self.config)

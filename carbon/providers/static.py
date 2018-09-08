@@ -62,7 +62,6 @@ class StaticProvider(CarbonProvider):
     def __init__(self, **kwargs):
         super(StaticProvider, self).__init__(**kwargs)
 
-
     def validate_name(self, value):
         """Validate the resource name.
 
@@ -71,20 +70,18 @@ class StaticProvider(CarbonProvider):
         """
         # Quit when no value given
         if not value:
-            self.logger.warn('Invalid data for name!')
+            self.logger.warning('Invalid data for name!')
             return False
 
         # Name must be a string
         if not isinstance(value, string_types):
-            self.logger.warn('Name is required to be a string type!')
+            self.logger.warning('Name is required to be a string type!')
             return False
         return True
-
 
     def validate_ip_address(self, value):
         """Validate ip address."""
         return True
-
 
     @classmethod
     def validate_hostname(cls, value):

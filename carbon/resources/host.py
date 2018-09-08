@@ -202,7 +202,7 @@ class Host(CarbonResource):
                                       '%s, based on the %s provider:\n\n%s' %
                                       (self._credential, self._name,
                                        getattr(self.provider, 'name'),
-                                      missing_mandatory_creds_fields))
+                                       missing_mandatory_creds_fields))
 
             # create the provider credentials in provider object
             getattr(self.provider, 'set_credentials')(cdata)

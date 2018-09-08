@@ -532,7 +532,7 @@ class OpenshiftProvisioner(CarbonProvisioner):
             app_name = mydict["items"][0]["metadata"]["name"]
         except KeyError:
             # this may be the case where there is no svc for the application
-            self.logger.warn("unable to get application name " + parsed_results)
+            self.logger.warning("unable to get application name " + parsed_results)
 
         if app_name:
             _cmd = 'oc expose svc {0}'.format(self._app_name)

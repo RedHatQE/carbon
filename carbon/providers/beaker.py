@@ -97,12 +97,12 @@ class BeakerProvider(CarbonProvider):
         self.logger.info("Validating Name: {0}".format(value))
         # Quit when no value given
         if not value:
-            self.logger.warn('Invalid data for name!')
+            self.logger.warning('Invalid data for name!')
             return False
 
         # Name must be a string
         if not isinstance(value, string_types):
-            self.logger.warn("Name is required to be a string type!")
+            self.logger.warning("Name is required to be a string type!")
             return False
 
         return True
@@ -113,8 +113,8 @@ class BeakerProvider(CarbonProvider):
             if isinstance(value, int) and (3600 <= value <= 172800):
                 return True
             else:
-                self.logger.warn("Beaker timeout must be between 3600(1hr)"
-                                 " and 172800(48hrs)")
+                self.logger.warning("Beaker timeout must be between 3600(1hr) "
+                                    "and 172800(48hrs)")
                 return False
         else:
             return True

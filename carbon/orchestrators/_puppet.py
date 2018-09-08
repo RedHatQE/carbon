@@ -35,14 +35,14 @@ class PuppetOrchestrator(CarbonOrchestrator):
 
     __orchestrator_name__ = 'puppet'
 
-    def __init__(self, action, hosts, **kwargs):
+    def __init__(self, package):
         """Constructor.
 
-        :param action: action to be executed
-        :param hosts: action runs against these hosts
-        :param kwargs: action parameters
+        :param package: action resource
+        :type package: object
         """
-        super(PuppetOrchestrator, self).__init__(action, hosts, **kwargs)
+        super(PuppetOrchestrator, self).__init__()
+        self.package = package
 
     def validate(self):
         """Validate."""

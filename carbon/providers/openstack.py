@@ -39,6 +39,7 @@ from ..exceptions import OpenstackProviderError
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
 
+
 class OpenstackProvider(CarbonProvider):
     """
     Openstack provider implementation.
@@ -421,12 +422,12 @@ class OpenstackProvider(CarbonProvider):
         """
         # Quit when no value given
         if not value:
-            self.logger.warn('Invalid data for name!')
+            self.logger.warning('Invalid data for name!')
             return False
 
         # Name must be a string
         if not isinstance(value, string_types):
-            self.logger.warn('Name is required to be a string type!')
+            self.logger.warning('Name is required to be a string type!')
             return False
         return True
 
@@ -809,7 +810,7 @@ class OpenstackProvider(CarbonProvider):
         """
         # do not attach floating ip if variable has None value
         if not fip:
-            self.logger.warn('Node %s does not require fip.' % node.name)
+            self.logger.warning('Node %s does not require fip.' % node.name)
             return
 
         self.logger.info('Attaching fip to node %s.' % node.name)
@@ -856,7 +857,7 @@ class OpenstackProvider(CarbonProvider):
             # delete ip
             self.driver.ex_delete_floating_ip(_fip_obj)
         except OpenstackProviderError:
-            self.logger.warn('Node %s does not have fip.' % node.name)
+            self.logger.warning('Node %s does not have fip.' % node.name)
         except Exception as ex:
             self.logger.error(ex.message)
             raise OpenstackProviderError('Unable to detach FIP from %s' % node)

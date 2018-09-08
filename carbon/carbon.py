@@ -303,7 +303,7 @@ class Carbon(LoggerMixin, TimeMixin):
 
                 # check if carbon supports the task
                 if not pipe_builder.is_task_valid():
-                    self.logger.warn('Task %s is not valid by carbon.', task)
+                    self.logger.warning('Task %s is not valid by carbon.', task)
                     continue
 
                 # build task pipeline
@@ -315,7 +315,7 @@ class Carbon(LoggerMixin, TimeMixin):
 
                 # check if pipeline has tasks to be run
                 if not pipeline.tasks:
-                    self.logger.warn('... no tasks to be executed ...')
+                    self.logger.warning('... no tasks to be executed ...')
                     continue
 
                 # create blaster object with pipeline to run
