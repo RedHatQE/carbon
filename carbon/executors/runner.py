@@ -91,6 +91,12 @@ class RunnerExecutor(CarbonExecutor):
         # set ansible attributes
         self.__set_ansible_attr__()
 
+        # attribute defining overall status of test execution. why is this
+        # needed? when a test fails we handle the exception raised and call
+        # the method to archive test artifacts. once fetching artifacts is
+        # finished this status is used to fail carbon (if needed)
+        self.status = 0
+
     def __set_ansible_attr__(self):
         """Set commonly used class attributes for ansible."""
         # create inventory object for create/delete inventory file
@@ -241,6 +247,7 @@ class RunnerExecutor(CarbonExecutor):
             )
 
             if results[0] != 0:
+                self.status = 1
                 raise ArchiveArtifactsError('Shell command %s failed to run '
                                             'successfully!' % shell['command'])
 
@@ -271,6 +278,7 @@ class RunnerExecutor(CarbonExecutor):
             )
 
             if results[0] != 0:
+                self.status = 1
                 raise ArchiveArtifactsError(
                     'Script %s failed to run successfully!' % script['name']
                 )
@@ -299,6 +307,7 @@ class RunnerExecutor(CarbonExecutor):
             )
 
             if results[0] != 0:
+                self.status = 1
                 raise ArchiveArtifactsError('Failed to run playbook %s '
                                             'successfully!' % playbook['name'])
 
@@ -388,3 +397,7 @@ class RunnerExecutor(CarbonExecutor):
                 self.logger.error(ex.message)
                 self.logger.info('Fetching test generated artifacts')
                 self.__artifacts__()
+
+                if self.status:
+                    raise CarbonExecuteError('Test execution failed to run '
+                                             'successfully!')
