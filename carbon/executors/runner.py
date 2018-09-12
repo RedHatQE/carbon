@@ -32,7 +32,7 @@ from ruamel.yaml import YAML
 
 from ..core import CarbonExecutor
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError
-from ..helpers import get_ans_verbosity
+from ..helpers import DataInjector, get_ans_verbosity
 from ..orchestrators._ansible import Inventory, AnsibleController
 from ..static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK
 
@@ -88,6 +88,8 @@ class RunnerExecutor(CarbonExecutor):
         self.artifacts = getattr(package, 'artifacts')
         self.options = getattr(package, 'ansible_options', None)
         self.ignorerc = getattr(package, 'ignore_rc', False)
+
+        self.injector = DataInjector(self.all_hosts)
 
         # set ansible attributes
         self.__set_ansible_attr__()
@@ -173,6 +175,16 @@ class RunnerExecutor(CarbonExecutor):
 
         return extra_vars
 
+    def _evaluate_string(self, command):
+        """Perform string evaluation by injecting data.
+
+        :param command: command to inject data into
+        :type command: str
+        :return: updated command
+        :rtype: str
+        """
+        return self.injector.inject(command)
+
     @staticmethod
     def _create_playbook(playbook, playbook_str):
         """Create the playbook on disk from string.
@@ -227,6 +239,9 @@ class RunnerExecutor(CarbonExecutor):
 
         for index, shell in enumerate(self.shell):
             index += 1
+
+            shell['command'] = self._evaluate_string(shell['command'])
+
             self.logger.info('%s. %s' % (index, shell['command']))
 
             extra_args = self.build_ans_extra_args(shell, ['chdir'])
@@ -400,7 +415,6 @@ class RunnerExecutor(CarbonExecutor):
         # create inventory if it doesn't exist
         if not os.path.exists(self.inv.master_inventory):
             self.inv.create()
-
         for attr in ['git', 'shell', 'playbook', 'script', 'artifacts']:
             # skip if the execute resource does not have the attribute defined
             if not getattr(self, attr):

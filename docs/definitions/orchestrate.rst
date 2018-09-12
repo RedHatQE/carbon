@@ -322,7 +322,7 @@ the script is run with options as **create_dir.sh -c -e 12**.
     :lines: 158-166
 
 Example 10
-~~~~~~~~~
+~~~~~~~~~~
 
 Again building on the previous example, you can set more options to the
 script execution.  The script is executed using the script ansible

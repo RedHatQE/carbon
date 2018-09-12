@@ -24,34 +24,33 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-import logging
 import inspect
 import json
+import logging
 import os
 import pkgutil
 import random
+import re
 import socket
 import string
 import subprocess
 import sys
 import time
-import urllib3
 import warnings
-
 from logging import getLogger
 
+import cachetclient.cachet as cachet
 import jinja2
 import requests
+import urllib3
 import yaml
-import cachetclient.cachet as cachet
 from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
 
 from ._compat import string_types
-from .constants import PROVISIONERS, RULE_HOST_NAMING, DEP_CHECK_LIST
-from .core import CarbonError
-from .exceptions import HelpersError
+from .constants import PROVISIONERS, RULE_HOST_NAMING
+from .exceptions import CarbonError, HelpersError
 
 LOG = getLogger(__name__)
 
@@ -675,3 +674,133 @@ def get_ans_verbosity(logger, config):
             config["ANSIBLE_VERBOSITY"]:
         ans_verbosity = config["ANSIBLE_VERBOSITY"]
     return ans_verbosity
+
+
+class DataInjector(object):
+    """Data injector class.
+
+    This class is primarily used for injecting data into strings which the
+    data to be replaced needs to come from a host resource. It is helpful
+    in the cases where orchestrate or execute tasks require additional data.
+    i.e. ip address, metadata, authentication details, etc.
+
+    ---
+
+    How does this work?
+
+    You have a command in your definition file that needs the ip address of a
+    host resource.
+
+    command: /usr/bin/foo --ip { host01.ip_address[0] } --args ..
+
+    The host01 is a resource defined in the provision section of carbon and
+    the ip_address is an attribute of the host01. This class will evaluate
+    the string and lookup the ip_address[0] from the host01 resource object
+    and update the string with the correct information. This makes it helpful
+    when orchestrate/execute tasks require data from the hosts itself.
+    """
+    def __init__(self, hosts):
+        """Constructor.
+
+        :param hosts: carbon host resources
+        :type hosts: list
+        """
+        self.hosts = hosts
+
+        # regular expression to search for in the string
+        # data to be injected needs to be in the format of
+        # { host01.metadata.k1 }
+        self.regexp = r"\{(.*?)\}"
+
+    def host_exist(self, node):
+        """Determine if the host defined in the string formatted var is valid.
+
+        In the case no host is found, an exception is raised.
+
+        :param node: node name
+        :type node: str
+        :return: carbon host resource matching based on node input
+        :rtype: object
+        """
+        for host in self.hosts:
+            if node == getattr(host, 'name'):
+                return host
+        raise CarbonError('Node %s not found!' % node)
+
+    def inject(self, command):
+        """Main worker.
+
+        This method will perform the data injection.
+
+        :param command: command to inject data into
+        :type command: str
+        :return: updated command
+        :rtype: str
+        """
+        variables = list(map(str.strip, re.findall(self.regexp, command)))
+
+        if not variables.__len__():
+            return command
+
+        for variable in variables:
+            value = None
+            _vars = variable.split('.')
+            node = _vars.pop(0)
+
+            # verify variable has a valid host set
+            host = self.host_exist(node)
+
+            for index, item in enumerate(_vars):
+                try:
+                    # is the item intended to be a position in a list, if so
+                    # get the key and position
+                    key = item.split('[')[0]
+                    pos = int(item.split('[')[1].split(']')[0])
+
+                    if value:
+                        # get the latest value from the dictionary
+                        value = value[key][pos]
+                    else:
+                        # get latest value from host
+                        if hasattr(host, key) and index <= 0:
+                            value = getattr(host, key)[pos]
+                            if isinstance(value, str):
+                                break
+
+                    # is the value a dict, if so keep going!
+                    if isinstance(value, dict):
+                        continue
+                except IndexError:
+                    # item is not intended to be a position in a list
+
+                    # check if the item is an attribute of the host
+                    if hasattr(host, item) and index <= 0:
+                        value = getattr(host, item)
+
+                        if isinstance(value, str):
+                            # we know the value has no further traversing to do
+                            break
+                        # value is either a list or dict, more traversing to do
+                        continue
+                    else:
+                        if value is None:
+                            raise AttributeError('%s not found in host %s!' %
+                                                 (item, getattr(host, 'name')))
+
+                    # check if the item's value is a dict and update the value
+                    # for further traversing to do
+                    try:
+                        if isinstance(value[item], dict):
+                            value = value[item]
+                            continue
+                    except KeyError:
+                        raise CarbonError('%s not found in %s' % (item, value))
+
+                    # final check to get value no more traversing required
+                    if value:
+                        value = value[item]
+                except KeyError:
+                    raise CarbonError('Unable to locate item %s!' % item)
+
+            command = command.replace('{ %s }' % variable, value)
+        return command
