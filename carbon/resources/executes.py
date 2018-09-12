@@ -52,7 +52,8 @@ class Execute(CarbonResource):
         'hosts',
         'artifacts',
         'ansible_options',
-        'git'
+        'git',
+        'ignore_rc',
     ]
 
     def __init__(self,

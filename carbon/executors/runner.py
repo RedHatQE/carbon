@@ -87,6 +87,7 @@ class RunnerExecutor(CarbonExecutor):
         self.git = getattr(package, 'git', None)
         self.artifacts = getattr(package, 'artifacts')
         self.options = getattr(package, 'ansible_options', None)
+        self.ignorerc = getattr(package, 'ignore_rc', False)
 
         # set ansible attributes
         self.__set_ansible_attr__()
@@ -245,8 +246,13 @@ class RunnerExecutor(CarbonExecutor):
                 extra_args=extra_args,
                 ans_verbosity=self.ans_verbosity
             )
+            ignorerc = self.ignorerc
+            if "ignore_rc" in shell and shell['ignore_rc']:
+                ignorerc = shell['ignore_rc']
 
-            if results[0] != 0:
+            if ignorerc:
+                self.logger.info("Ignoring the rc for: %s" % shell['command'])
+            elif results[0] != 0:
                 self.status = 1
                 raise ArchiveArtifactsError('Shell command %s failed to run '
                                             'successfully!' % shell['command'])
@@ -277,7 +283,13 @@ class RunnerExecutor(CarbonExecutor):
                 ans_verbosity=self.ans_verbosity
             )
 
-            if results[0] != 0:
+            ignorerc = self.ignorerc
+            if "ignore_rc" in script and script['ignore_rc']:
+                ignorerc = script['ignore_rc']
+
+            if ignorerc:
+                self.logger.info("Ignoring the rc for: %s" % script['name'])
+            elif results[0] != 0:
                 self.status = 1
                 raise ArchiveArtifactsError(
                     'Script %s failed to run successfully!' % script['name']
@@ -306,7 +318,14 @@ class RunnerExecutor(CarbonExecutor):
                 ans_verbosity=self.ans_verbosity
             )
 
-            if results[0] != 0:
+            ignorerc = self.ignorerc
+            if "ignore_rc" in playbook and playbook['ignore_rc']:
+                ignorerc = playbook['ignore_rc']
+
+            if ignorerc:
+                self.logger.info("Ignoring the rc for: %s"
+                                 % playbook['name'])
+            elif results[0] != 0:
                 self.status = 1
                 raise ArchiveArtifactsError('Failed to run playbook %s '
                                             'successfully!' % playbook['name'])

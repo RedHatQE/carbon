@@ -104,6 +104,8 @@ mapping:
                 mapping:
                   chdir:
                     type: str
+                  ignore_rc:
+                    type: bool
                   command:
                     required: True
                     type: str
@@ -115,6 +117,8 @@ mapping:
                 mapping:
                   chdir:
                     type: str
+                  ignore_rc:
+                    type: bool
                   name:
                     required: True
                     type: str
@@ -126,11 +130,15 @@ mapping:
                 mapping:
                   chdir:
                     type: str
+                  ignore_rc:
+                    type: bool
                   name:
                     required: True
                     type: str
           artifacts:
             type: any
             func: type_str_list
+          ignore_rc:
+            type: bool
 
   report:
