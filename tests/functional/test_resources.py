@@ -25,17 +25,19 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
+import copy
 import os
 import uuid
 
 import mock
 import pytest
-
 from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
-    ScenarioError
+    ScenarioError, CarbonHostError
 from carbon.executors import RunnerExecutor
 from carbon.orchestrators import AnsibleOrchestrator
-from carbon.resources import Action, Execute, Report, Scenario
+from carbon.providers import OpenstackProvider
+from carbon.provisioners import OpenstackProvisioner
+from carbon.resources import Action, Execute, Host, Report, Scenario
 from carbon.utils.config import Config
 
 
@@ -84,6 +86,31 @@ def execute_resource():
 @pytest.fixture(scope='class')
 def scenario_resource():
     return Scenario(config=Config(), parameters={'k': 'v'})
+
+
+@pytest.fixture(scope='class')
+def default_host_params():
+    return dict(
+        role='client',
+        provider='openstack',
+        credential='openstack',
+        provider_creds=[
+            {'name': 'openstack', 'auth_url': 'url', 'username': 'user',
+             'password': 'password', 'tenant_name': 'tenant'}
+        ],
+        os_flavor='small',
+        os_networks='network',
+        os_image='image'
+    )
+
+
+@pytest.fixture(scope='class')
+def host(default_host_params):
+    return Host(
+        name='host01',
+        config={'DATA_FOLDER': '/tmp', 'WORKSPACE': '/tmp/ws'},
+        parameters=copy.deepcopy(default_host_params)
+    )
 
 
 class TestActionResource(object):
@@ -278,3 +305,182 @@ class TestScenarioResource(object):
     @staticmethod
     def test_yaml_data_setter(scenario_resource):
         scenario_resource.yaml_data = {'name': 'scenario'}
+
+
+class TestHostResource(object):
+    @staticmethod
+    def __get_params_copy__(params):
+        return copy.deepcopy(params)
+
+    def test_create_host_with_name(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        host = Host(name='host01', parameters=params)
+        assert isinstance(host, Host)
+        assert host.name == 'host01'
+
+    def test_create_host_without_name(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        host = Host(parameters=params)
+        assert 'hst' in host.name
+
+    def test_create_host_undefined_role(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params.pop('role')
+        with pytest.raises(CarbonHostError) as ex:
+            Host(name='host01', parameters=params)
+        assert 'A role must be set for host host01.' in ex.value.args
+
+    def test_create_host_undefined_provider(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params.pop('provider')
+        with pytest.raises(CarbonHostError) as ex:
+            Host(name='host01', parameters=params)
+        assert 'A provider must be set for the host host01.' in ex.value.args
+
+    def test_create_host_invalid_provider(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params['provider'] = 'null'
+        with pytest.raises(CarbonHostError) as ex:
+            Host(name='host01', parameters=params)
+        assert 'Invalid provider for host host01.' in ex.value.args
+
+    def test_create_host_invalid_provisioner(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params['provisioner'] = 'null'
+        with pytest.raises(CarbonHostError) as ex:
+            Host(name='host01', parameters=params)
+        assert 'Invalid provisioner for host host01.' in ex.value.args
+
+    def test_create_host_with_provisioner_set(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params['provisioner'] = 'openstack'
+        host = Host(name='host01', parameters=params)
+        assert host.provisioner is OpenstackProvisioner
+
+    def test_create_host_undefined_credential(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params.pop('credential')
+        with pytest.raises(CarbonHostError) as ex:
+            Host(name='host01', parameters=params)
+        assert 'A credential must be set for the hosts provider None.' in \
+               ex.value.args
+
+    def test_create_host_undefined_provider_creds(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params.pop('provider_creds')
+        with pytest.raises(CarbonHostError) as ex:
+            Host(name='host01', parameters=params)
+        assert 'Provider credentials must be set for host host01.' in \
+               ex.value.args
+
+    def test_create_host_provider_static(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params['provider'] = 'static'
+        params['static_ip_address'] = 'null'
+        params['static_hostname'] = 'null'
+        Host(name='host01', parameters=params)
+
+    def test_create_host_missing_req_provider_param(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params.pop('os_image')
+        with pytest.raises(CarbonHostError):
+            Host(name='host01', parameters=params)
+
+    def test_create_host_missing_req_provider_cred(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params['provider_creds'][0].pop('auth_url')
+        with pytest.raises(CarbonHostError):
+            Host(name='host01', parameters=params)
+
+    def test_ip_address_property(self, host):
+        assert host.ip_address is None
+
+    def test_ip_address_setter(self, host):
+        with pytest.raises(AttributeError) as ex:
+            host.ip_address = '127.0.0.1'
+        assert 'You cannot set ip address directly. Use function ' \
+               '~Host.set_ip_address' in ex.value.args
+
+    def test_set_ip_address(self, host):
+        host.set_ip_address('127.0.0.1')
+        assert host.ip_address == '127.0.0.1'
+        assert getattr(host, 'os_ip_address', '127.0.0.1')
+
+    def test_metadata_property(self, host):
+        assert host.metadata == {}
+
+    def test_metadata_setter(self, host):
+        with pytest.raises(AttributeError) as ex:
+            host.metadata = {'k': 'v'}
+        assert 'You cannot set metadata directly. Use function ' \
+               '~Host.set_metadata' in ex.value.args
+
+    def test_set_metadata(self, host):
+        with pytest.raises(NotImplementedError):
+            host.set_metadata()
+
+    def test_ansible_params_property(self, host):
+        assert host.ansible_params == {}
+
+    def test_ansible_params_setter(self, host):
+        with pytest.raises(AttributeError) as ex:
+            host.ansible_params = {'ansible_user': 'user01'}
+        assert 'You cannot set the ansible parameters directly. This is set' \
+               ' one time within the YAML input.' in ex.value.args
+
+    def test_provider_property(self, host):
+        assert isinstance(host.provider, OpenstackProvider)
+
+    def test_provider_setter(self, host):
+        with pytest.raises(AttributeError) as ex:
+            host.provider = 'null'
+        assert 'You cannot set the host provider after host class is ' \
+               'instantiated.' in ex.value.args
+
+    def test_provisioner_property(self, host):
+        assert host.provisioner is OpenstackProvisioner
+
+    def test_provisioner_setter(self, host):
+        with pytest.raises(AttributeError) as ex:
+            host.provisioner = 'null'
+        assert 'You cannot set the host provisioner after host class ' \
+               'is instantiated.' in ex.value.args
+
+    def test_role_property(self, host):
+        assert host.role == 'client'
+
+    def test_role_setter(self, host):
+        with pytest.raises(AttributeError) as ex:
+            host.role = 'null'
+        assert 'You cannot set the role after host class is instantiated.' in \
+               ex.value.args
+
+    def test_uuid_property(self, host):
+        assert host.uid
+
+    def test_uuid_setter(self, host):
+        with pytest.raises(AttributeError) as ex:
+            host.uid = 'null'
+        assert 'You cannot set the uid for the host.' in ex.value.args
+
+    def test_build_profile(self, host):
+        assert isinstance(host.profile(), dict)
+
+    def test_validate_success(self, host):
+        host.provider.validate = mock.MagicMock(return_value=[])
+        host.validate()
+
+    def test_validate_failure(self, host):
+        host.provider.validate = mock.MagicMock(return_value=[('a', 'b')])
+        with pytest.raises(CarbonHostError) as ex:
+            host.validate()
+        assert 'Host host01 validation failed!' in ex.value.args
+
+    def test_create_host_with_provider_prefix_name(self, default_host_params):
+        params = self.__get_params_copy__(default_host_params)
+        params['os_name'] = 'null'
+        with pytest.raises(CarbonHostError) as ex:
+            Host(name='host01', parameters=params)
+        assert "The os_name parameter for host01 should not be set as it is " \
+               "under the framework's control" in ex.value.args
+
