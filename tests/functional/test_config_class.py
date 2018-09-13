@@ -52,5 +52,5 @@ class TestConfig(object):
 
     @staticmethod
     def test_load_config_by_env_var(config):
-        os.environ['CARBON_SETTINGS'] = './assets/carbon.cfg'
+        os.environ['CARBON_SETTINGS'] = '../assets/carbon.cfg'
         config.load()
