@@ -50,7 +50,8 @@ understand the key/values defined.
         - Yes
         - n/a
 
-**Hosts**
+Hosts
+-----
 
 You can associate hosts to a given orchestrate task a couple of different ways.
 First is to define your hosts in a comma separated string.
