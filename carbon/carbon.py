@@ -126,16 +126,15 @@ class Carbon(LoggerMixin, TimeMixin):
 
         for f in [self.config['DATA_FOLDER'], self.config['RESULTS_FOLDER']]:
             try:
-                os.makedirs(f)
-            except OSError:
-                pass
-            except IOError as ex:
+                if not os.path.exists(f):
+                    os.makedirs(f)
+            except (OSError, IOError) as ex:
                 if ex.errno == errno.EACCES:
                     raise CarbonError("You don't have permission to create '"
                                       "the data folder.")
                 else:
                     raise CarbonError('Error creating data folder - '
-                                      '{0}'.format(ex.message))
+                                      '{0}'.format(ex))
 
         # configure loggers
         self.create_logger(__carbon_name__, self.config)
@@ -209,14 +208,11 @@ class Carbon(LoggerMixin, TimeMixin):
         self.scenario.yaml_data = filedata
         data = dict(yaml.safe_load(filedata))
 
-        try:
-            cred_items = data.pop('credentials', None)
-            pro_items = data.pop('provision', None)
-            orc_items = data.pop('orchestrate', None)
-            exe_items = data.pop('execute', None)
-            rpt_items = data.pop('report', None)
-        except KeyError as ex:
-            raise CarbonError(ex)
+        cred_items = data.pop('credentials', None)
+        pro_items = data.pop('provision', None)
+        orc_items = data.pop('orchestrate', None)
+        exe_items = data.pop('execute', None)
+        rpt_items = data.pop('report', None)
 
         self.scenario.load(data)
 

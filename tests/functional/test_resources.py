@@ -227,12 +227,139 @@ class TestScenarioResource(object):
             Scenario(config=config, parameters={'k': 'v'})
 
     @staticmethod
+    @mock.patch.object(os, 'makedirs')
+    @pytest.mark.filterwarnings('ignore::DeprecationWarning')
+    def test_create_scenario_04(mock_method):
+        config = Config()
+        config['DATA_FOLDER'] = '/tmp/%s' % uuid.uuid4()
+        with pytest.raises(ScenarioError):
+            mock_method.side_effect = OSError()
+            mock_method.side_effect.errno = 0
+            Scenario(config=config, parameters={'k': 'v'})
+
+    @staticmethod
     def test_yaml_data_property(scenario_resource):
         assert isinstance(scenario_resource.yaml_data, dict)
 
     @staticmethod
     def test_yaml_data_setter(scenario_resource):
         scenario_resource.yaml_data = {'name': 'scenario'}
+
+    @staticmethod
+    def test_add_host_resource(scenario_resource, host):
+        scenario_resource.add_resource(host)
+
+    @staticmethod
+    def test_add_action_resource(scenario_resource, action_resource):
+        scenario_resource.add_resource(action_resource)
+
+    @staticmethod
+    def test_add_execute_resource(scenario_resource, execute_resource):
+        scenario_resource.add_resource(execute_resource)
+
+    @staticmethod
+    def test_add_report_resource(scenario_resource, report_resource):
+        scenario_resource.add_resource(report_resource)
+
+    @staticmethod
+    def test_add_invalid_resource(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.add_resource(mock.MagicMock())
+
+    @staticmethod
+    def test_initialize_host_resource(scenario_resource, host):
+        scenario_resource.initialize_resource(host)
+        assert scenario_resource.hosts.__len__() == 0
+
+    @staticmethod
+    def test_initialize_action_resource(scenario_resource, action_resource):
+        scenario_resource.initialize_resource(action_resource)
+        assert scenario_resource.actions.__len__() == 0
+
+    @staticmethod
+    def test_initialize_execute_resource(scenario_resource, execute_resource):
+        scenario_resource.initialize_resource(execute_resource)
+        assert scenario_resource.executes.__len__() == 0
+
+    @staticmethod
+    def test_initialize_report_resource(scenario_resource, report_resource):
+        scenario_resource.initialize_resource(report_resource)
+        assert scenario_resource.reports.__len__() == 0
+
+    @staticmethod
+    def test_initialize_invalid_resource(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.initialize_resource(mock.MagicMock())
+
+    @staticmethod
+    def test_hosts_property(scenario_resource):
+        assert isinstance(scenario_resource.hosts, list)
+
+    @staticmethod
+    def test_hosts_setter(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.hosts = ['host']
+
+    @staticmethod
+    def test_add_invalid_hosts(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.add_hosts(mock.MagicMock())
+
+    @staticmethod
+    def test_actions_property(scenario_resource):
+        assert isinstance(scenario_resource.actions, list)
+
+    @staticmethod
+    def test_actions_setter(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.actions = ['action']
+
+    @staticmethod
+    def test_add_invalid_action(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.add_actions(mock.MagicMock())
+
+    @staticmethod
+    def test_executes_property(scenario_resource):
+        assert isinstance(scenario_resource.executes, list)
+
+    @staticmethod
+    def test_executes_setter(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.executes = ['execute']
+
+    @staticmethod
+    def test_add_invalid_execute(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.add_executes(mock.MagicMock())
+
+    @staticmethod
+    def test_reports_property(scenario_resource):
+        assert isinstance(scenario_resource.reports, list)
+
+    @staticmethod
+    def test_reports_setter(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.reports = ['report']
+
+    @staticmethod
+    def test_add_invalid_report(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.add_reports(mock.MagicMock())
+
+    @staticmethod
+    def test_credentials_property(scenario_resource):
+        assert isinstance(scenario_resource.credentials, list)
+
+    @staticmethod
+    def test_credentials_setter(scenario_resource):
+        with pytest.raises(ValueError):
+            scenario_resource.credentials = ['credential']
+
+    @staticmethod
+    def test_profile(scenario):
+        profile = scenario.profile()
+        assert isinstance(profile, dict)
 
 
 class TestHostResource(object):

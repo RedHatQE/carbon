@@ -112,7 +112,7 @@ class Scenario(CarbonResource):
                                     ' the workspace.')
             else:
                 raise ScenarioError('Error creating scenario workspace: '
-                                    '%s' % ex.message)
+                                    '%s' % ex)
 
         # reload construct task methods
         self.reload_tasks()

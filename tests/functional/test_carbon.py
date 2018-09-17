@@ -25,11 +25,19 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
+import copy
 import os
+import sys
+
+import mock
+import pytest
+import yaml
 
 from carbon import Carbon
 from carbon.constants import RESULTS_FILE
+from carbon.exceptions import CarbonError
 from carbon.helpers import template_render
+from carbon.resources import Host
 
 
 class TestCarbon(object):
@@ -50,6 +58,22 @@ class TestCarbon(object):
         assert carbon.workspace == '/tmp'
 
     @staticmethod
+    @mock.patch.object(os, 'makedirs')
+    @pytest.mark.filterwarnings('ignore::DeprecationWarning')
+    def test_create_carbon_instance_04(mock_method):
+        with pytest.raises(CarbonError):
+            mock_method.side_effect = IOError()
+            Carbon(data_folder='/tmp', workspace='/tmp')
+
+    @staticmethod
+    @mock.patch.object(os, 'makedirs')
+    def test_create_carbon_instance_05(mock_method):
+        with pytest.raises(CarbonError):
+            mock_method.side_effect = IOError()
+            mock_method.side_effect.errno = 13
+            Carbon(data_folder='/tmp', workspace='/tmp')
+
+    @staticmethod
     def test_data_folder_property():
         carbon = Carbon(data_folder='/tmp')
         assert carbon.data_folder == carbon.config['DATA_FOLDER']
@@ -61,26 +85,57 @@ class TestCarbon(object):
             carbon.data_folder, RESULTS_FILE)
 
     @staticmethod
-    def test_carbon_load_from_yaml_01():
-        data = template_render('../assets/descriptor.yml', os.environ)
+    @mock.patch.object(yaml, 'safe_load')
+    def test_carbon_load_from_yaml_01(mock_method):
+        mock_method.return_value = {}
         carbon = Carbon(data_folder='/tmp')
-        carbon.load_from_yaml(data)
+        carbon.load_from_yaml('')
 
     @staticmethod
     def test_carbon_load_from_yaml_02():
         data = template_render('../assets/descriptor.yml', os.environ)
         carbon = Carbon(data_folder='/tmp')
-        carbon.config['CREDENTIALS'] = [{'name': 'provider'}]
         carbon.load_from_yaml(data)
 
     @staticmethod
     def test_carbon_load_from_yaml_03():
         data = template_render('../assets/descriptor.yml', os.environ)
         carbon = Carbon(data_folder='/tmp')
+        carbon.config['CREDENTIALS'] = [{'name': 'provider'}]
         carbon.load_from_yaml(data)
 
     @staticmethod
-    def test_name_property():
+    def test_carbon_load_from_yaml_04():
+        data = template_render('../assets/descriptor.yml', os.environ)
+        carbon = Carbon(data_folder='/tmp')
+        carbon.load_from_yaml(data)
+
+    @staticmethod
+    def test_name_property_01():
         carbon = Carbon(data_folder='/tmp')
         assert carbon.name == 'carbon'
 
+    @staticmethod
+    def test_name_property_02():
+        carbon = Carbon(import_name='__main__', data_folder='/tmp')
+        assert carbon.name != 'carbon'
+
+    @staticmethod
+    def test_name_property_03():
+        sys.modules['__main__'].__file__ = None
+        carbon = Carbon(import_name='__main__', data_folder='/tmp')
+        assert carbon.name == '__main__'
+
+    @staticmethod
+    def test_run_wo_set_secnario():
+        with pytest.raises(CarbonError):
+            carbon = Carbon(data_folder='/tmp')
+            carbon.scenario = None
+            carbon.run()
+
+    @staticmethod
+    def test_load_resource(default_host_params):
+        carbon = Carbon(data_folder='/tmp')
+        params = copy.deepcopy(default_host_params)
+        carbon.scenario.add_credentials(params['provider_creds'][0])
+        carbon._load_resources(Host, [params])

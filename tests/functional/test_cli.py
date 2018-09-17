@@ -25,10 +25,12 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
+import mock
 import pytest
-from click.testing import CliRunner
-
+import yaml
+from carbon import Carbon
 from carbon.cli import print_header, carbon
+from click.testing import CliRunner
 
 
 @pytest.fixture(scope='class')
@@ -47,6 +49,49 @@ class TestCli(object):
         assert results.exit_code != 0
 
     @staticmethod
-    def test_carbon_validate_invalid_scenario(runner):
+    def test_invalid_validate(runner):
         results = runner.invoke(carbon, ['validate', '-s', 'cdf.yml'])
         assert 'You have to provide a valid scenario file.' in results.output
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_valid_validate(mock_method, runner):
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['validate', '-s', '../assets/descriptor.yml',
+                     '-d', '/tmp']
+        )
+        assert results.exit_code == 0
+
+    @staticmethod
+    def test_invalid_run(runner):
+        results = runner.invoke(carbon, ['run', '-s', 'cdf.yml'])
+        assert 'You have to provide a valid scenario file.' in results.output
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_valid_run(mock_method, runner):
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['run', '-s', '../assets/descriptor.yml', '-d', '/tmp']
+        )
+        assert results.exit_code == 0
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_valid_run_set_task(mock_method, runner):
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['run', '-t', 'validate', '-s', '../assets/descriptor.yml',
+                     '-d', '/tmp']
+        )
+        assert results.exit_code == 0
+
+    @staticmethod
+    @mock.patch.object(yaml, 'safe_load')
+    def test_invalid_run_malformed_input(mock_method, runner):
+        mock_method.side_effect = yaml.YAMLError('error')
+        results = runner.invoke(
+            carbon, ['run', '-s', '../assets/descriptor.yml', '-d', '/tmp']
+        )
+        assert 'Error loading updated scenario data!' in results.output

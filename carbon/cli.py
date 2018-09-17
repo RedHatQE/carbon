@@ -145,8 +145,8 @@ def run(ctx, task, scenario, log_level, data_folder, workspace):
     # Verify the updated data is valid
     try:
         yaml.safe_load(scenario_data)
-    except yaml.YAMLError as ex:
-        click.echo('Error:\n%s\n%s' % (ex.problem, ex.problem_mark))
+    except yaml.YAMLError:
+        click.echo('Error loading updated scenario data!')
         ctx.exit()
 
     # set workspace to scenario directory if undefined
