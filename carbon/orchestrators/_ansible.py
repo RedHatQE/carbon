@@ -348,7 +348,6 @@ class AnsibleOrchestrator(CarbonOrchestrator):
     playbook or module call.
     """
     __orchestrator_name__ = 'ansible'
-    _action_abs = None
 
     _optional_parameters = (
         'options',
@@ -368,7 +367,6 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         super(AnsibleOrchestrator, self).__init__()
 
         # set attributes
-        self._action = getattr(package, 'name')
         self._hosts = getattr(package, 'hosts')
         self.options = getattr(package, '%s_options' % self.name)
         self.galaxy_options = getattr(package, '%s_galaxy_options' % self.name)
@@ -376,6 +374,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.config = getattr(package, 'config')
         self.all_hosts = getattr(package, 'all_hosts')
         self.workspace = self.config['WORKSPACE']
+        self._action = os.path.join(self.workspace, getattr(package, 'name'))
 
         # create inventory object for create/delete inventory file
         self.inv = Inventory(
@@ -384,51 +383,17 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             data_dir=self.config['DATA_FOLDER']
         )
 
-    @property
-    def action_abs(self):
-        """Return the action absolute path."""
-        return self._action_abs
-
-    @action_abs.setter
-    def action_abs(self, value):
-        """Set the action absolute path."""
-        self._action_abs = value
-
     def validate(self):
-        """Validate.
-
-        TBD..
-        """
-        raise NotImplementedError
-
-    def find_playbook(self):
-        """fn to see if a playbook exists and to set the path of it
-        """
-        # TODO: this should be moved to validate task
-        # determine the directory to traverse through
-        path = self.workspace
-        _path = os.path.dirname(self.action)
-        if not _path == "":
-            path = os.path.join(path, _path)
-
-        for item in os.listdir(path):
-            if item in self.action:
-                self.action_abs = os.path.join(path, item)
-                self.logger.info(
-                    'Playbook found for action: %s @ %s' %
-                    (self.action, self.action_abs)
-                )
-                return
-        self.logger.warning(
-            'Playbook not found for action: %s @ '
-            '%s' % (self.action, path)
-        )
-
-        if self.action_abs is None:
-            raise CarbonOrchestratorError(
-                'Unable to locate action %s for ansible orchestrator. '
-                'Cannot continue!'
-            )
+        """Validate that action is valid and exists."""
+        found = os.path.exists(self.action)
+        msg = 'Action %s ' % self.action
+        if found:
+            msg += 'found!'
+            self.logger.debug(msg)
+        else:
+            msg += 'not found!'
+            self.logger.error(msg)
+            raise CarbonOrchestratorError(msg)
 
     def download_roles(self):
         """Download ansible roles defined for the given action."""
@@ -552,31 +517,27 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         if log_level == logging.DEBUG:
             ans_verbosity = "vvvv"
 
+        # download ansible roles (if applicable)
+        self.download_roles()
+
         if "ANSIBLE_VERBOSITY" in self.config and \
                 self.config["ANSIBLE_VERBOSITY"]:
             ans_verbosity = self.config["ANSIBLE_VERBOSITY"]
 
         if self.script:
             # running a script, using the ansible script module
-            # get full path of the script
-            self._action_abs = os.path.join(self.workspace, self.action)
-            if os.path.exists(self._action_abs):
-                self.logger.info("found script to run: %s" % self._action_abs)
-            else:
-                raise CarbonOrchestratorError(
-                    "Unable to find script: %s" % self._action_abs
-                )
 
             run_options = {}
 
-            # override ansible options (user passed in vals for specific action)
+            # override ansible options (user passed vals for specific action)
             for val in self.user_run_vals:
                 if self.options and val in self.options and self.options[val]:
                     run_options[val] = self.options[val]
 
             extra_args = None
 
-            if self.options and 'extra_args' in self.options and self.options['extra_args']:
+            if self.options and 'extra_args' in self.options and \
+                    self.options['extra_args']:
                 extra_args = self.options['extra_args']
 
             if self._hosts:
@@ -587,28 +548,17 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             results = obj.run_module(
                 "script",
                 extra_vars=extra_vars,
-                script=self.action_abs,
+                script=self.action,
                 run_options=run_options,
                 extra_args=extra_args,
                 logger=self.logger,
                 ans_verbosity=ans_verbosity
             )
-
-            # self.logger.info("Ansible action finished with status: %s" % results[0])
-            # self.logger.info(results[1])
-
         else:
             # If not a script then it must be a playbook
-            # TODO: future we can add support for using Ansible modules also
-            self.find_playbook()
 
-            # download ansible roles (if applicable)
-            self.download_roles()
-
-            # configure playbook variables
-            extra_vars = dict(hosts=self.inv.group)
-
-            if self.options and 'extra_vars' in self.options and self.options['extra_vars']:
+            if self.options and 'extra_vars' in self.options and \
+                    self.options['extra_vars']:
                 extra_vars.update(self.options['extra_vars'])
 
             self.logger.info('Executing action: %s.' % self.action)
@@ -618,7 +568,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             if "tags" in self.options and self.options["tags"]:
                 run_options["tags"] = self.options["tags"]
 
-            # override ansible options (user passed in vals for specific action)
+            # override ansible options (user passed vals for specific action)
             for val in self.user_run_vals:
                 if self.options and val in self.options and self.options[val]:
                     run_options[val] = self.options[val]
@@ -626,7 +576,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             self.logger.debug("Ansible options used: " + str(run_options))
 
             results = obj.run_playbook(
-                self.action_abs,
+                self.action,
                 extra_vars=extra_vars,
                 run_options=run_options,
                 ans_verbosity=ans_verbosity,

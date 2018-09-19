@@ -186,6 +186,10 @@ class Action(CarbonResource):
 
         return profile
 
+    def validate(self):
+        """Validate the action."""
+        getattr(self._orchestrator(self), 'validate')()
+
     def _construct_validate_task(self):
         """Constructs the validate task associated to the action resource.
 
