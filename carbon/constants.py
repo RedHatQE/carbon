@@ -83,3 +83,6 @@ DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator']
 # Component List
 DEP_CHECK_LIST = ['ci-rhos', 'zabbix-sysops', 'brew', 'covscan', 'polarion',
                   'rpmdiff', 'umb', 'errata', 'rdo-cloud', 'gerrit']
+
+# options on how credentials can be set
+SET_CREDENTIALS_OPTIONS = ['config', 'scenario']

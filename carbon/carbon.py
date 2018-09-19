@@ -220,9 +220,11 @@ class Carbon(LoggerMixin, TimeMixin):
         if "CREDENTIALS" in self.config and self.config["CREDENTIALS"]:
             for item in self.config["CREDENTIALS"]:
                 self.scenario.add_credentials(item)
+                self.scenario.credentials_set_by = 'config'
         if cred_items:
             for item in cred_items:
                 self.scenario.add_credentials(item)
+                self.scenario.credentials_set_by = 'scenario'
 
         if not self.scenario.credentials:
             self.logger.warning(

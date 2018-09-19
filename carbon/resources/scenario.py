@@ -35,7 +35,8 @@ from .actions import Action
 from .executes import Execute
 from .host import Host
 from .reports import Report
-from ..constants import SCENARIO_SCHEMA, DEP_CHECK_LIST, SCHEMA_EXT
+from ..constants import SCENARIO_SCHEMA, DEP_CHECK_LIST, SCHEMA_EXT, \
+    SET_CREDENTIALS_OPTIONS
 from ..core import CarbonResource
 from ..exceptions import ScenarioError
 from ..helpers import gen_random_str, dep_check
@@ -89,7 +90,9 @@ class Scenario(CarbonResource):
         # External Dependency Component list of Scenario
         self.dep_check = ""
 
+        # set credentials attributes
         self._credentials = list()
+        self._credentials_set_by = ''
 
         # set resource attributes
         self._hosts = list()
@@ -326,6 +329,27 @@ class Scenario(CarbonResource):
         else:
             self._credentials.append(data)
 
+    @property
+    def credentials_set_by(self):
+        """Credentials set by property.
+
+        :return: how the credentials were set
+        :rtype: str
+        """
+        return self._credentials_set_by
+
+    @credentials_set_by.setter
+    def credentials_set_by(self, value):
+        """Credentials set by property setter.
+
+        :param value: keyword on how credentials are set (config|scenario)
+        :type value: str
+        """
+        if value not in SET_CREDENTIALS_OPTIONS:
+            raise IndexError('%s is an invalid way for setting credentials.' %
+                             value)
+        self._credentials_set_by = value
+
     def validate(self):
         """Validate the scenario based on the default schema."""
         self.logger.debug('Validating scenario YAML file')
@@ -368,6 +392,13 @@ class Scenario(CarbonResource):
         :return: a dictionary representing the scenario
         :rtype: dict
         """
+        # clear the credentials attribute if credentials set within config
+        # credentials should only be added back to the profile to be wrote to
+        # updated definition file when defined within the starting definition
+        # file
+        if self.credentials_set_by == 'config':
+            self._credentials = list()
+
         profile = dict(
             name=self.name,
             description=self.description,

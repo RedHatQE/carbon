@@ -357,9 +357,21 @@ class TestScenarioResource(object):
             scenario_resource.credentials = ['credential']
 
     @staticmethod
-    def test_profile(scenario):
+    def test_credentials_set_by_setter(scenario_resource):
+        with pytest.raises(IndexError):
+            scenario_resource.credentials_set_by = 'env'
+
+    @staticmethod
+    def test_profile_uc01(scenario):
         profile = scenario.profile()
         assert isinstance(profile, dict)
+
+    @staticmethod
+    def test_profile_uc02(scenario):
+        scenario.credentials_set_by = 'config'
+        profile = scenario.profile()
+        assert isinstance(profile, dict)
+        assert profile['credentials'].__len__() == 0
 
 
 class TestHostResource(object):
