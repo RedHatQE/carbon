@@ -110,7 +110,7 @@ class RunnerExecutor(CarbonExecutor):
         )
 
         self.ans_verbosity = get_ans_verbosity(self.logger, self.config)
-        self.ans_controller = AnsibleController(self.inv.inventory_dir)
+        self.ans_controller = AnsibleController(self.inv.inv_dir)
         self.ans_extra_vars = dict(hosts=self.inv.group)
 
     def validate(self):
@@ -411,14 +411,13 @@ class RunnerExecutor(CarbonExecutor):
         method will invoke various other methods in order to successfully
         run the runners execute types given.
         """
-
-        # create inventory if it doesn't exist
-        if not os.path.exists(self.inv.master_inventory):
-            self.inv.create()
         for attr in ['git', 'shell', 'playbook', 'script', 'artifacts']:
             # skip if the execute resource does not have the attribute defined
             if not getattr(self, attr):
                 continue
+
+            # create inventory files
+            self.inv.create()
 
             # call the method associated to the execute resource attribute
             try:
@@ -434,3 +433,6 @@ class RunnerExecutor(CarbonExecutor):
                 if self.status:
                     raise CarbonExecuteError('Test execution failed to run '
                                              'successfully!')
+            finally:
+                # delete the unique inventory particular to this run
+                self.inv.delete_unique()

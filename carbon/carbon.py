@@ -281,14 +281,21 @@ class Carbon(LoggerMixin, TimeMixin):
         pipeline and then each pipeline is sent to blaster blastoff.
         For every pipeline within ~self.pipelines,
         """
-        # check if scenario was set
-        if self.scenario is None:
-            raise CarbonError(
-                'You must set a scenario before running the framework!'
-            )
+        # lists to control which tasks passed or failed
+        passed_tasks = list()
+        failed_tasks = list()
 
         # initialize overall status
         status = 0
+
+        self.logger.info('CARBON RUN (START)'.center(79))
+        self.logger.info('-' * 79)
+        self.logger.info(' * Scenario    : %s' % self.scenario.name)
+        self.logger.info(' * Tasks       : %s' % tasklist)
+        self.logger.info(' * Data Folder : %s' % self.data_folder)
+        self.logger.info(' * Workspace   : %s' % self.workspace)
+        self.logger.info(' * Log Level   : %s' % self.config['LOG_LEVEL'])
+        self.logger.info('-' * 79 + '\n')
 
         try:
             # save start time
@@ -328,10 +335,16 @@ class Carbon(LoggerMixin, TimeMixin):
                 # reload resource objects
                 self.scenario.reload_resources(data)
 
+                # update list of passed tasks
+                passed_tasks.append(task)
+
                 self.logger.info("." * 50)
         except blaster.BlasterError as ex:
             # set overall status
             status = 1
+
+            # update list of failed tasks
+            failed_tasks.append(task)
 
             self.logger.error(ex)
 
@@ -341,16 +354,32 @@ class Carbon(LoggerMixin, TimeMixin):
             # save end time
             self.end()
 
-            self.logger.info('Carbon run time duration: %dh:%dm:%ds' %
-                             (self.hours, self.minutes, self.seconds))
+            # determine state
+            state = 'FAILED' if status else 'PASSED'
 
+            # write the updated carbon definition file
             file_mgmt('w', self.results_file, self.scenario.profile())
-            shutil.copy(self.results_file, self.config['RESULTS_FOLDER'])
-            self.logger.info('Scenario results file ~ %s' % self.results_file)
 
-            # Raise final carbon exception based on status of task execution
-            if status:
-                raise CarbonError(
-                    'Scenario %s failed to run successfully!' %
-                    self.scenario.name
-                )
+            # archive everything from the data folder into the results folder
+            os.system('cp -r %s/* %s' % (self.data_folder, self.config[
+                'RESULTS_FOLDER']))
+
+            self.logger.info('\n')
+            self.logger.info('CARBON RUN (END)'.center(79))
+            self.logger.info('-' * 79)
+            self.logger.info(' * Duration                   : %dh:%dm:%ds' %
+                             (self.hours, self.minutes, self.seconds))
+            if passed_tasks.__len__() > 0:
+                self.logger.info(' * Passed Tasks               : %s' %
+                                 passed_tasks)
+            if failed_tasks.__len__() > 0:
+                self.logger.info(' * Failed Tasks               : %s' %
+                                 failed_tasks)
+            self.logger.info(' * Results Folder             : %s' %
+                             self.config['RESULTS_FOLDER'])
+            self.logger.info(' * Latest Scenario Definition : %s' %
+                             self.results_file)
+            self.logger.info('-' * 79)
+            self.logger.info('CARBON RUN (RESULT=%s)' % state)
+
+            sys.exit(status)

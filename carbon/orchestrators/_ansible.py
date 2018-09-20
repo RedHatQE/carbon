@@ -30,8 +30,6 @@
 import logging
 import os
 from collections import namedtuple
-from os import remove
-from os.path import isfile
 from shutil import copyfile
 from uuid import uuid4
 
@@ -41,7 +39,7 @@ from ansible.parsing.dataloader import DataLoader
 from ansible.vars.manager import VariableManager
 
 from .._compat import RawConfigParser, string_types
-from ..core import CarbonOrchestrator
+from ..core import CarbonOrchestrator, LoggerMixin
 from ..exceptions import CarbonOrchestratorError
 from ..helpers import ssh_retry, exec_local_cmd_pipe
 
@@ -198,7 +196,7 @@ class AnsibleController(object):
         return output
 
 
-class Inventory(object):
+class Inventory(LoggerMixin):
     """Inventory.
 
     This class primary responsibility is handling creating/deleting the
@@ -218,55 +216,30 @@ class Inventory(object):
         self.hosts = hosts
         self.all_hosts = all_hosts
 
-        # create the inventory directory where all inventory files are stored
-        self._inventory_dir = os.path.join(data_dir, 'inventory')
+        # set & create the inventory directory
+        self.inv_dir = os.path.join(data_dir, 'inventory')
+        if not os.path.isdir(self.inv_dir):
+            os.makedirs(self.inv_dir)
 
-        # create a master inventory for all hosts within the scenario.
-        self._master_inventory = os.path.join(
-            self._inventory_dir, 'master-%s' % uuid4())
+        # set the master inventory
+        self.master_inv = os.path.join(self.inv_dir, 'master')
 
-        # create a unique inventory for the actions hosts
-        self._unique_inventory = os.path.join(
-            self._inventory_dir, 'unique-%s' % uuid4())
+        # set the unique inventory
+        self.unique_inv = os.path.join(self.inv_dir, 'unique-%s' % uuid4())
 
-        # Each action inventory will have a default group. This group will be
-        # the one given to ansible controller object. Within this group is all
-        # the hosts to have the given action run against. Nice feature is with
-        # the group having potentially multiple hosts. Ansible will run that
-        # action against all the hosts in the group concurrently.
-        self._group = 'hosts'
+        # defines the custom group to run the play against
+        self.group = 'hosts'
 
-    @property
-    def master_inventory(self):
-        """Return the master inventory."""
-        return self._master_inventory
-
-    @property
-    def unique_inventory(self):
-        """Return the unique inventory."""
-        return self._unique_inventory
-
-    @property
-    def inventory_dir(self):
-        """Return the ansible inventory directory."""
-        return self._inventory_dir
-
-    @property
-    def group(self):
-        """Return the ansible base group name."""
-        return self._group
-
-    def _create_inventory_dir(self):
-        """Create the ansible inventory directory."""
-        if not os.path.isdir(self.inventory_dir):
-            os.makedirs(self.inventory_dir)
-
-    def _create_master(self):
+    def create_master(self):
         """Create the master ansible inventory.
 
         This method will create a master inventory which contains all the
         hosts in the given scenario. Each host will have a group/group:vars.
         """
+        # do not create master inventory if already exists
+        if os.path.exists(self.master_inv):
+            return
+
         # create parser object, raw config parser allows keys with no values
         config = RawConfigParser(allow_no_value=True)
 
@@ -300,10 +273,10 @@ class Inventory(object):
                 config.set(section_vars, k, v)
 
         # write the inventory
-        with open(self.master_inventory, 'w') as f:
+        with open(self.master_inv, 'w') as f:
             config.write(f)
 
-    def _create_unique(self):
+    def create_unique(self):
         """Create the unique ansible inventory.
 
         This method will create a unique inventory which contains placeholders
@@ -324,20 +297,35 @@ class Inventory(object):
             config.set(main_section, host.name)
 
         # write the inventory
-        with open(self.unique_inventory, 'w') as f:
+        with open(self.unique_inv, 'w') as f:
             config.write(f)
 
     def create(self):
         """Create the inventory."""
-        self._create_inventory_dir()
-        self._create_master()
-        self._create_unique()
+        self.create_master()
+        self.create_unique()
+
+    def delete_master(self):
+        """Delete the master inventory file generated."""
+        try:
+            os.remove(self.master_inv)
+        except OSError as ex:
+            self.logger.warning(ex)
+
+    def delete_unique(self):
+        """Delete the unique inventory file generated."""
+        try:
+            os.remove(self.unique_inv)
+        except OSError as ex:
+            self.logger.warning(ex)
+            self.logger.warning('You may experience problems with future '
+                                'ansible calls due to additional inventory '
+                                'files in the same inventory directory.')
 
     def delete(self):
-        """Delete the ansible inventory file if it exists."""
-        for item in [self.master_inventory, self.unique_inventory]:
-            if isfile(item):
-                remove(item)
+        """Delete all ansible inventory files."""
+        self.delete_unique()
+        self.delete_master()
 
 
 class AnsibleOrchestrator(CarbonOrchestrator):
@@ -505,7 +493,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.inv.create()
 
         # create an ansible controller object
-        obj = AnsibleController(self.inv.inventory_dir)
+        obj = AnsibleController(self.inv.inv_dir)
 
         # configure playbook variables
         extra_vars = dict(hosts=self.inv.group)
@@ -589,11 +577,8 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         # get ansible logs as needed
         self.alog_update()
 
-        # Since we reached here, we are done processing the action. Lets go
-        # ahead and delete the inventory for this action run, unless log level
-        # is set to debug.
-        if log_level != logging.DEBUG:
-            self.inv.delete()
+        # delete the unique inventory particular to this run
+        self.inv.delete_unique()
 
         # raise an exception if the ansible action failed
         if results[0] != 0:

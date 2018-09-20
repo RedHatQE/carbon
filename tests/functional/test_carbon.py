@@ -127,13 +127,6 @@ class TestCarbon(object):
         assert carbon.name == '__main__'
 
     @staticmethod
-    def test_run_wo_set_secnario():
-        with pytest.raises(CarbonError):
-            carbon = Carbon(data_folder='/tmp')
-            carbon.scenario = None
-            carbon.run()
-
-    @staticmethod
     def test_load_resource(default_host_params):
         carbon = Carbon(data_folder='/tmp')
         params = copy.deepcopy(default_host_params)
