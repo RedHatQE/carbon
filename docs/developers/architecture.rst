@@ -2,8 +2,9 @@ Architecture
 ============
 
 This page is intended to explain the architecture behind carbon. We strongly
-recommend that you review the `scenario descriptor <scenario_descriptor.html>`_
-since it will be helpful when following this document.
+recommend that you review the `scenario descriptor
+<../users/scenario_descriptor.html>`_ since it will be helpful when following
+this document.
 
 Basics
 ------
@@ -32,7 +33,7 @@ tasks to it. Those tasks will execute the resoures asscoiated to it.
 Lets see a diagram with the available resources for a carbon object. The carbon
 object is directly the entire scenario.
 
-.. image:: ./_static/cbn_scenario_resource.png
+.. image:: ../_static/cbn_scenario_resource.png
 
 The diagram above shows the resources that make up a scenario. The table
 below describes each resource in more detail.
@@ -67,7 +68,7 @@ includes a number of resources. Lets dive depper into the resources. What do
 we mean by this? Every resource has a number of tasks that it can correspond
 to.
 
-.. image:: ./_static/cbn_scenario_resource_task.png
+.. image:: ../_static/cbn_scenario_resource_task.png
 
 The diagram above shows the carbon object with resources defined. Each of
 those resources then have a list of tasks associated to it. This means that
@@ -96,7 +97,7 @@ certain order which the user can provide.
 Lets see a diagram showing the default tasks that will get executed
 when running carbon.
 
-.. image:: ./_static/cbn_pipeline.png
+.. image:: ../_static/cbn_pipeline.png
 
 The above diagram shows the ordered list from top to bottom of the tasks
 carbon will execute.

@@ -103,7 +103,7 @@ a new review.
 At the root of the project is a **.gitreview** file. You can see the file
 content below. It just defines the details where to push your review too.
 
-.. literalinclude:: ../.gitreview
+.. literalinclude:: ../../.gitreview
 
 At this point you have your local development environment setup. You made some
 code changes, ran through the unit tests and pep8 validation. Your good to go!

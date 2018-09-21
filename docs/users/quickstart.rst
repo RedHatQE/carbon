@@ -1,5 +1,94 @@
-Running
-=======
+Quick Start
+-----------
+
+.. attention::
+
+       Quickstart examples need to be added!, coming soon.
+
+Carbon Installation
+~~~~~~~~~~~~~~~~~~~
+
+Requirements
+++++++++++++
+
+Your system requires the following packages to install carbon:
+
+.. code-block:: bash
+
+    # To install git using dnf package manager
+    $ sudo dnf install -y git
+
+    # To install git using yum package manager
+    $ sudo yum install -y git
+
+    # Install python pip: https://pip.pypa.io/en/stable/installing
+    $ sudo curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    $ sudo python get-pip.py
+
+    # Recommend installation of virtualenv using pip
+    $ sudo pip install virtualenv
+
+Installation
+++++++++++++
+
+Install carbon from source:
+
+.. code-block:: bash
+
+    # for ansible modules requiring selinux, you will need to enable system site packages
+    $ virtualenv --system-site-packages carbon
+    $ source carbon/bin/activate
+    (carbon) $ pip install git+https://code.engineering.redhat.com/gerrit/p/carbon.git
+
+Post Install
+++++++++++++
+
+If you require carbon to interface with beaker, you will need to enable the
+beaker client repository/install the beaker-client package. Carbon uses the
+beaker client package to provision physical machines in beaker.
+
+.. code-block:: bash
+
+    # https://beaker-project.org/download.html
+    $ sudo curl -o /etc/yum.repos.d/bkr-client.repo \
+    https://beaker-project.org/yum/beaker-client-<DISTRO>.repo
+
+    # dnf package manager
+    $ sudo dnf install -y beaker-client
+
+.. note::
+
+    Beaker-client could be installed from PyPI rather than RPM. Installing from
+    pip fails in Python 3. Beaker client is not compatible with Python 3
+    currently. Once compatibile it can be installed with carbon. Carbon is
+    Python 2.7 & Python 3.6 compatible.
+
+
+Carbon Configuration
+~~~~~~~~~~~~~~~~~~~~
+
+This is an optional configuration file to help you adjust your settings you
+use when running Carbon.  The default configuration should be sufficient;
+however, please read through the options you have.
+
+Where it is loaded from (using precedence low to high):
+
+#. /etc/carbon/carbon.cfg (global configuration file)
+#. ./carbon.cfg (current working directory)
+#. CARBON_SETTINGS environment variable to the location of the file
+
+Configuration example (with all options):
+
+.. literalinclude:: ../../examples/carbon.cfg
+
+
+.. note::
+
+    Many of the configuration options can be overridden by passing cli options when running
+    carbon. See the options in the running carbon `example. <examples.html#run>`__
+
+Running Carbon
+~~~~~~~~~~~~~~
 
 Once carbon is installed, you can run the carbon command to view its options:
 
@@ -23,7 +112,7 @@ Once carbon is installed, you can run the carbon command to view its options:
       validate  Validate a scenario configuration.
 
 Run
----
++++
 
 The run command will run your scenario descriptor executing all tasks you
 select. Below are the available run command options.
@@ -136,13 +225,13 @@ following command:
 .. Mention about how they can pick up at a certain task
 
 Create
-------
+++++++
 
 The create command provides a helper for dynamically creating your scenario
 descriptor.  This command is currently not implemented.
 
 Validate
---------
+++++++++
 
 The validate command validates the scenario descriptor.
 
@@ -160,3 +249,4 @@ The validate command validates the scenario descriptor.
       --log-level [debug|info|warning|error|critical]
                                       Select logging level. (default=info)
       --help                          Show this message and exit.
+

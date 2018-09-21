@@ -21,26 +21,26 @@ The execution is further broken down into 3 different types:
 The folowing is the basic structure that defines an execution task, using a
 command for execution:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 1-18
 
 The following is the basic structure that defines an execution task, using a
 user defined script for execution:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 20-37
 
 The following is the basic structure that defines an exectuion task, using a
 user defined playbook for execution:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 40-57
 
 
 The above code snippet is the minimal structure that is required to create a
 execute task within carbon. This task is translated into a carbon execute
 object which is part of the carbon compound. You can learn more about this at
-the `architecture <../architecture.html>`_ page. Please see the table below to
+the `architecture <../../developers/architecture.html>`_ page. Please see the table below to
 understand the key/values defined.
 
 .. list-table::
@@ -139,7 +139,7 @@ perform the actions, the user can set ansible_options.  In this case, the
 options should mostly be used for defining the user that is performing the
 execution, the following is an example:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 59-65
 
 Return Code for Test Execution
@@ -156,7 +156,7 @@ specific call.  The following shows an example, where it is defined in both
 areas.  The top level is set to False, which is the default, then it is used
 only for the 2nd pytest execution call, where there are failures:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 68-88
 
 Data Substitution Required for Test Execution
@@ -168,7 +168,7 @@ allows you to substitute the information from the dynamically created hosts.
 Let's first take a look at some example data of key/values a user may use
 for provisioning a host:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 110-125
 
 After the machines are provsioned, we have more information in the host object,
@@ -176,7 +176,7 @@ and this can be seen by the results.yml file after a provision is successful.
 Some basic information that is added is the machine's actual name and ip
 address.  The following is what the data looks like after provisioning:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 128-155
 
 Looking at the data presented above, there is a lot of information about the
@@ -189,7 +189,7 @@ execution command.  From the data above, you can see the user is accessing the
 data from **test_client_a**, **ip_address**, and the first list item ([0]) in
 the **ip_address** list.
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 90-107
 
 
@@ -207,37 +207,37 @@ file.
 
 The following is a simple example of the data gathering (defining artifacts):
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 158-165
 
 Going through the basics of artifacts, the user can archive individual files,
 as shown by the following example:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 168-172
 
 The user can also artifact files using wildcards as shown in the following
 example:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 174-177
 
 The user can also archive a directory using either of the following two
 examples:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 179-182
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 184-187
 
 Finally, the user can archive a directory using a wildcard using either
 of the following two examples:
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
    :lines: 189-192
 
-.. literalinclude:: ../../examples/docs-usage/execute.yml
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
    :lines: 194-197
 
 Common Examples

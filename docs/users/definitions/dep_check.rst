@@ -13,7 +13,7 @@ components listed below.
 
 Dependency Check Section (with all available components):
 
-.. literalinclude:: ../../examples/docs-usage/dep_check.yml
+.. literalinclude:: ../../../examples/docs-usage/dep_check.yml
     :lines: 1-12
 
 Examples
@@ -24,7 +24,7 @@ Example 1
 
 List format 1.
 
-.. literalinclude:: ../../examples/docs-usage/dep_check.yml
+.. literalinclude:: ../../../examples/docs-usage/dep_check.yml
     :lines: 14-20
 
 Example 2
@@ -32,7 +32,7 @@ Example 2
 
 List format 2.
 
-.. literalinclude:: ../../examples/docs-usage/dep_check.yml
+.. literalinclude:: ../../../examples/docs-usage/dep_check.yml
     :lines: 22-23
 
 Example 3
@@ -40,7 +40,7 @@ Example 3
 
 Gerrit component and endpoint url in list format 1.
 
-.. literalinclude:: ../../examples/docs-usage/dep_check.yml
+.. literalinclude:: ../../../examples/docs-usage/dep_check.yml
     :lines: 25-29
 
 Example 4
@@ -48,6 +48,6 @@ Example 4
 
 Gerrit component and endpoint url in list format 2.
 
-.. literalinclude:: ../../examples/docs-usage/dep_check.yml
+.. literalinclude:: ../../../examples/docs-usage/dep_check.yml
     :lines: 31-32
 

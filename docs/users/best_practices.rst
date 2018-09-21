@@ -1,16 +1,20 @@
+Best Practices
+==============
+
 Scenario Structure
-==================
+------------------
 
 .. attention::
 
     This document is out dated and will be updated soon! Some of this content
     will be the same just revisions are needed.
 
-The intended focus of this page is to provide a standard structure for
-building multi product scenarios. This is just a standard that can be adopted
-but is not required for running carbon. Having a solid structure as a
-foundation will help lead to easier maintenance during the scenarios lifespan.
-Along with faster turn around for creating new multi product scenarios.
+The intended focus of this section is to provide a standard structure for
+building multi product scenarios. This is just a standard that can be adopted,
+as a best practice, but is not required for running carbon. Having a solid
+structure as a foundation will help lead to easier maintenance during the
+scenarios lifespan. Along with faster turn around for creating new multi
+product scenarios.
 
 .. note::
 
@@ -51,7 +55,7 @@ from a Jenkins job. Below are two sections which go into more detail regarding
 each file.
 
 Carbon Files
-------------
+~~~~~~~~~~~~
 
 Based on the standard scenario structure, lets review the directories and files
 which carbon consumes.
@@ -113,7 +117,7 @@ more about running carbon in the running section shortly.
     --assets-path ./assets
 
 Carbon Jenkins Files
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 Based on the standard scenario structure, lets review the directories and files
 which are used to configure a Jenkins job for running the scenario using
@@ -168,7 +172,7 @@ from Jenkins. This is just one possible option.
         - No **
 
 Source
-------
+~~~~~~
 
 The source for this template scenario structure can be found here: `template
 <https://code.engineering.redhat.com/gerrit/gitweb?p=carbon-scenarios.git;
