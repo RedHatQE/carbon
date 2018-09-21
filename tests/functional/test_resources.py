@@ -31,8 +31,9 @@ import uuid
 
 import mock
 import pytest
+
 from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
-    ScenarioError, CarbonHostError
+    ScenarioError, CarbonError
 from carbon.executors import RunnerExecutor
 from carbon.orchestrators import AnsibleOrchestrator
 from carbon.providers import OpenstackProvider
@@ -393,30 +394,26 @@ class TestHostResource(object):
     def test_create_host_undefined_role(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params.pop('role')
-        with pytest.raises(CarbonHostError) as ex:
+        with pytest.raises(SystemExit):
             Host(name='host01', parameters=params)
-        assert 'A role must be set for host host01.' in ex.value.args
 
     def test_create_host_undefined_provider(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params.pop('provider')
-        with pytest.raises(CarbonHostError) as ex:
+        with pytest.raises(SystemExit):
             Host(name='host01', parameters=params)
-        assert 'A provider must be set for the host host01.' in ex.value.args
 
     def test_create_host_invalid_provider(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
-        params['provider'] = 'null'
-        with pytest.raises(CarbonHostError) as ex:
+        params['provider']['name'] = 'null'
+        with pytest.raises(SystemExit):
             Host(name='host01', parameters=params)
-        assert 'Invalid provider for host host01.' in ex.value.args
 
     def test_create_host_invalid_provisioner(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'null'
-        with pytest.raises(CarbonHostError) as ex:
+        with pytest.raises(SystemExit):
             Host(name='host01', parameters=params)
-        assert 'Invalid provisioner for host host01.' in ex.value.args
 
     def test_create_host_with_provisioner_set(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
@@ -426,52 +423,28 @@ class TestHostResource(object):
 
     def test_create_host_undefined_credential(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
-        params.pop('credential')
-        with pytest.raises(CarbonHostError) as ex:
+        params['provider'].pop('credential')
+        with pytest.raises(SystemExit):
             Host(name='host01', parameters=params)
-        assert 'A credential must be set for the hosts provider None.' in \
-               ex.value.args
 
     def test_create_host_undefined_provider_creds(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params.pop('provider_creds')
-        with pytest.raises(CarbonHostError) as ex:
+        with pytest.raises(SystemExit):
             Host(name='host01', parameters=params)
-        assert 'Provider credentials must be set for host host01.' in \
-               ex.value.args
 
     def test_create_host_provider_static(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
-        params['provider'] = 'static'
-        params['static_ip_address'] = 'null'
-        params['static_hostname'] = 'null'
+        params.pop('provider')
+        params['ip_address'] = '127.0.0.1'
         Host(name='host01', parameters=params)
-
-    def test_create_host_missing_req_provider_param(self, default_host_params):
-        params = self.__get_params_copy__(default_host_params)
-        params.pop('os_image')
-        with pytest.raises(CarbonHostError):
-            Host(name='host01', parameters=params)
-
-    def test_create_host_missing_req_provider_cred(self, default_host_params):
-        params = self.__get_params_copy__(default_host_params)
-        params['provider_creds'][0].pop('auth_url')
-        with pytest.raises(CarbonHostError):
-            Host(name='host01', parameters=params)
 
     def test_ip_address_property(self, host):
         assert host.ip_address is None
 
     def test_ip_address_setter(self, host):
-        with pytest.raises(AttributeError) as ex:
-            host.ip_address = '127.0.0.1'
-        assert 'You cannot set ip address directly. Use function ' \
-               '~Host.set_ip_address' in ex.value.args
-
-    def test_set_ip_address(self, host):
-        host.set_ip_address('127.0.0.1')
+        host.ip_address = '127.0.0.1'
         assert host.ip_address == '127.0.0.1'
-        assert getattr(host, 'os_ip_address', '127.0.0.1')
 
     def test_metadata_property(self, host):
         assert host.metadata == {}
@@ -522,32 +495,20 @@ class TestHostResource(object):
         assert 'You cannot set the role after host class is instantiated.' in \
                ex.value.args
 
-    def test_uuid_property(self, host):
-        assert host.uid
-
-    def test_uuid_setter(self, host):
-        with pytest.raises(AttributeError) as ex:
-            host.uid = 'null'
-        assert 'You cannot set the uid for the host.' in ex.value.args
-
     def test_build_profile(self, host):
         assert isinstance(host.profile(), dict)
 
+    def test_build_profile(self, host):
+        static_host = copy.deepcopy(host)
+        del static_host.provider_params
+        setattr(static_host, 'ip_address', '127.0.0.1')
+        assert isinstance(static_host.profile(), dict)
+
     def test_validate_success(self, host):
-        host.provider.validate = mock.MagicMock(return_value=[])
         host.validate()
 
     def test_validate_failure(self, host):
-        host.provider.validate = mock.MagicMock(return_value=[('a', 'b')])
-        with pytest.raises(CarbonHostError) as ex:
-            host.validate()
-        assert 'Host host01 validation failed!' in ex.value.args
-
-    def test_create_host_with_provider_prefix_name(self, default_host_params):
-        params = self.__get_params_copy__(default_host_params)
-        params['os_name'] = 'null'
-        with pytest.raises(CarbonHostError) as ex:
-            Host(name='host01', parameters=params)
-        assert "The os_name parameter for host01 should not be set as it is " \
-               "under the framework's control" in ex.value.args
-
+        with pytest.raises(CarbonError):
+            host_copy = copy.deepcopy(host)
+            host_copy.provider_params['name'] = ['client']
+            host_copy.validate()

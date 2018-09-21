@@ -61,7 +61,7 @@ class BeakerProvisioner(CarbonProvisioner):
         self.host = host
         self.data_folder = getattr(host, 'data_folder')
         self.workspace = getattr(host, 'workspace')
-        self.job_xml = 'bkrjob_%s.xml' % getattr(host, 'bkr_name')
+        self.job_xml = 'bkrjob_%s.xml' % getattr(host, 'name')
         self.bkr_xml = BeakerXML()
         self.conf_dir = '%s/.beaker_client' % os.path.expanduser('~')
         self.conf = '%s/config' % self.conf_dir
@@ -82,15 +82,15 @@ class BeakerProvisioner(CarbonProvisioner):
         if not os.path.isdir(self.conf_dir):
             os.makedirs(self.conf_dir)
 
+        if 'hub_url' in credentials and credentials['hub_url']:
+            self.url = credentials['hub_url']
+
         if os.path.isfile(self.conf):
             self.logger.info('Beaker config already exists, skip creation.')
             return
 
         # open conf file for writing
         conf_obj = open(self.conf, 'w')
-
-        if 'hub_url' in credentials and credentials['hub_url']:
-            self.url = credentials['hub_url']
 
         conf_obj.write('HUB_URL = "%s"\n' % self.url)
 
@@ -133,18 +133,14 @@ class BeakerProvisioner(CarbonProvisioner):
 
         This method builds xml content and writes xml to file.
         """
-        # save host profile details
-        host_desc = self.host.profile()
-
         # set beaker xml absolute file path
         bkr_xml_file = os.path.join(self.data_folder, self.job_xml)
 
         # set attributes for beaker xml object
-        for key in host_desc:
-            if key is not 'bkr_name' and key.startswith('bkr_'):
-                xml_key = key.split("bkr_", 1)[1]
-                if host_desc[key]:
-                    setattr(self.bkr_xml, xml_key, host_desc[key])
+        for key, value in getattr(self.host, 'provider_params').items():
+            if key is not 'name':
+                if value:
+                    setattr(self.bkr_xml, key, value)
 
         # generate beaker job xml (workflow-simple command)
         self.bkr_xml.generate_beaker_xml(
@@ -195,13 +191,14 @@ class BeakerProvisioner(CarbonProvisioner):
             mod_output = output[output.find("Submitted:"):]
 
             # set the result as ascii instead of unicode
-            self.host.bkr_job_id = mod_output[mod_output.find(
+            job_id = mod_output[mod_output.find(
                 "[") + 2:mod_output.find("]") - 1].encode('ascii', 'ignore')
-            self.host.bkr_job_url = os.path.join(self.url, 'jobs',
-                                                 self.host.bkr_job_id[2:])
+            getattr(self.host, 'provider_params')['job_id'] = job_id
+            job_url = os.path.join(self.url, 'jobs', job_id[2:])
+            getattr(self.host, 'provider_params')['job_url'] = job_url
 
-            self.logger.info('Beaker job ID: %s.' % self.host.bkr_job_id)
-            self.logger.info('Beaker job URL: %s.' % self.host.bkr_job_url)
+            self.logger.info('Beaker job ID: %s.' % job_id)
+            self.logger.info('Beaker job URL: %s.' % job_url)
 
         self.logger.info('Successfully submitted beaker XML!')
 
@@ -229,7 +226,8 @@ class BeakerProvisioner(CarbonProvisioner):
                              '%s.' % (attempt, total_attempts))
 
             # setup beaker job results command
-            _cmd = "bkr job-results %s" % self.host.bkr_job_id
+            job_id = getattr(self.host, 'provider_params')['job_id']
+            _cmd = "bkr job-results %s" % job_id
 
             self.logger.debug('Fetching beaker job status..')
 
@@ -247,7 +245,7 @@ class BeakerProvisioner(CarbonProvisioner):
             status = self.analyze_results(bkr_job_status_dict)
 
             self.logger.info('Beaker Job: id: %s status: %s.' %
-                             (self.host.bkr_job_id, status))
+                             (job_id, status))
 
             if status == "wait":
                 wait -= 60
@@ -261,11 +259,11 @@ class BeakerProvisioner(CarbonProvisioner):
                 return
             elif status == "fail":
                 raise BeakerProvisionerError(
-                    'Beaker job %s provision failed!' % self.host.bkr_job_id
+                    'Beaker job %s provision failed!' % job_id
                 )
             else:
                 raise BeakerProvisionerError(
-                    'Beaker job %s has unknown status!' % self.host.bkr_job_id
+                    'Beaker job %s has unknown status!' % job_id
                 )
 
         # timeout reached for Beaker job
@@ -278,7 +276,7 @@ class BeakerProvisioner(CarbonProvisioner):
             'Timeout reached waiting for beaker job to finish!'
         )
 
-    def _create(self):
+    def create(self):
         """Create a new job in Beaker.
 
         This method will create a Beaker job xml based on host information,
@@ -299,7 +297,7 @@ class BeakerProvisioner(CarbonProvisioner):
         self.wait_for_bkr_job()
 
         # copy ssh key to remote system
-        if self.host.bkr_ssh_key:
+        if getattr(self.host, 'provider_params')['ssh_key']:
             self.copy_ssh_key()
 
     def cancel_job(self):
@@ -307,8 +305,9 @@ class BeakerProvisioner(CarbonProvisioner):
 
         This method will cancel a existing beaker job using the job id.
         """
+        job_id = getattr(self.host, 'provider_params')['job_id']
         # setup beaker job cancel command
-        _cmd = "bkr job-cancel {0}".format(self.host.bkr_job_id)
+        _cmd = "bkr job-cancel {0}".format(job_id)
 
         self.logger.info('Canceling beaker job..')
 
@@ -320,21 +319,18 @@ class BeakerProvisioner(CarbonProvisioner):
         output = results[1]
 
         if "Cancelled" in output:
-            self.logger.info("Job %s cancelled." % self.host.bkr_job_id)
+            self.logger.info("Job %s cancelled." % job_id)
         else:
             raise BeakerProvisionerError('Failed to cancel beaker job!')
 
         self.logger.info('Successfully cancelled beaker job!')
 
-    def _delete(self):
+    def delete(self):
         """Delete a beaker job to release system back to the pool.
 
         This method will cancel a existing beaker job based on beaker job id.
         """
         self.logger.info('Tearing down machines from %s', self.__class__)
-
-        # start container
-        # self.start_container()
 
         # authenticate with beaker
         self.authenticate()
@@ -409,7 +405,7 @@ class BeakerProvisioner(CarbonProvisioner):
                     getAttribute("value")
                 addr = socket.gethostbyname(hostname)
                 self.host.bkr_hostname = hostname.encode('ascii', 'ignore')
-                self.host.set_ip_address(addr)
+                setattr(self.host, 'ip_address', addr)
 
     def copy_ssh_key(self):
         """Copy SSH public key to remote system.
@@ -417,10 +413,13 @@ class BeakerProvisioner(CarbonProvisioner):
         This method will inject the public SSH key into remote system. It
         will create the public key content from the private key given.
         """
+        ssh_key = getattr(self.host, 'provider_params')['ssh_key']
+        username = getattr(self.host, 'provider_params')['username']
+        password = getattr(self.host, 'provider_params')['password']
+        hostname = getattr(self.host, 'bkr_hostname')
+
         # setup absolute path for private key
-        private_key = os.path.join(
-            self.workspace, self.host.bkr_ssh_key
-        )
+        private_key = os.path.join(self.workspace, ssh_key)
 
         # set permission of the private key
         try:
@@ -434,7 +433,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         # generate public key from private
         public_key = os.path.join(
-            self.workspace, self.host.bkr_ssh_key + ".pub"
+            self.workspace, ssh_key + ".pub"
         )
         rsa_key = paramiko.RSAKey(filename=private_key)
         with open(public_key, 'w') as f:
@@ -443,7 +442,7 @@ class BeakerProvisioner(CarbonProvisioner):
         self.logger.info('Successfully generated SSH public key from private!')
 
         self.logger.info('Send SSH key to remote system %s:%s' %
-                         (self.host.bkr_hostname, self.host.ip_address))
+                         (hostname, self.host.ip_address))
 
         # send the key to the beaker machine
         ssh_con = paramiko.SSHClient()
@@ -451,8 +450,8 @@ class BeakerProvisioner(CarbonProvisioner):
 
         try:
             ssh_con.connect(hostname=self.host.ip_address,
-                            username=self.host.bkr_username,
-                            password=self.host.bkr_password)
+                            username=username,
+                            password=password)
             sftp = ssh_con.open_sftp()
             sftp.put(public_key, '/root/.ssh/authorized_keys')
         except paramiko.SSHException as ex:
@@ -468,7 +467,7 @@ class BeakerProvisioner(CarbonProvisioner):
 
         self.logger.debug("Successfully sent key: {0}, "
                           "{1}".format(self.host.ip_address,
-                                       self.host.bkr_hostname))
+                                       hostname))
 
     def analyze_results(self, resultsdict):
         """Analyze the beaker job install task status.

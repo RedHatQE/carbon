@@ -25,10 +25,5 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-from .aws import AwsProvider
 from .beaker import BeakerProvider
-from .digitalocean import DigitalOceanProvider
-from .openshift import OpenshiftProvider
 from .openstack import OpenstackProvider
-from .rackspace import RackspaceProvider
-from .static import StaticProvider

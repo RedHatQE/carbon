@@ -25,7 +25,6 @@
 """
 import errno
 import os
-import shutil
 import sys
 
 import blaster
@@ -260,8 +259,8 @@ class Carbon(LoggerMixin, TimeMixin):
             return
 
         for item in res_list:
-            if res_type == Host and item['provider'] != 'static':
-                # Set all available provider credentials into host object
+            if res_type == Host:
+                # set provider credentials if applicable
                 item['provider_creds'] = self.scenario.credentials
             self.scenario.add_resource(
                 res_type(config=self.config,
@@ -288,6 +287,7 @@ class Carbon(LoggerMixin, TimeMixin):
         # initialize overall status
         status = 0
 
+        self.logger.info('\n')
         self.logger.info('CARBON RUN (START)'.center(79))
         self.logger.info('-' * 79)
         self.logger.info(' * Scenario    : %s' % self.scenario.name)

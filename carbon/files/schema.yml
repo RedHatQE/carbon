@@ -33,9 +33,6 @@ mapping:
           role:
             required: True
             type: str
-          provider:
-            required: True
-            type: str
 
   orchestrate:
     sequence:

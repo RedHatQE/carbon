@@ -311,16 +311,6 @@ class TestCarbonProvider(object):
         assert 'You cannot set provider name.' in ex.value.args
 
     @staticmethod
-    def test_prefix_property(carbon_provider):
-        assert carbon_provider.prefix is None
-
-    @staticmethod
-    def test_prefix_setter(carbon_provider):
-        with pytest.raises(AttributeError) as ex:
-            carbon_provider.prefix = 'null'
-        assert 'You cannot set provider prefix.' in ex.value.args
-
-    @staticmethod
     def test_credentials_property(carbon_provider):
         assert isinstance(carbon_provider.credentials, dict)
 
@@ -332,81 +322,27 @@ class TestCarbonProvider(object):
                'function ~CarbonProvider.set_credentials' in ex.value.args
 
     @staticmethod
-    @mock.patch.object(CarbonProvider, 'get_mandatory_creds_parameters')
-    @mock.patch.object(CarbonProvider, 'get_optional_creds_parameters')
-    def test_set_credentials(mock_01, mock_02, carbon_provider):
+    def test_set_credentials(carbon_provider):
         provider = copy.deepcopy(carbon_provider)
-        mock_02.return_value = ('m1',)
-        mock_01.return_value = ('o1', 'o2')
-        provider.set_credentials({'m1': 'v1', 'o1': 'v1'})
+        provider.req_credential_params = [('name', [str])]
+        provider.opt_credential_params = [('region', [str])]
+        provider.set_credentials({'name': 'v1', 'region': 'v1'})
 
     @staticmethod
     def test_get_mandatory_parameters(carbon_provider):
-        data = carbon_provider.get_mandatory_parameters()
-        assert isinstance(data, types.GeneratorType)
+        assert isinstance(carbon_provider.req_params, list)
 
     @staticmethod
     def test_get_mandatory_credentials_parameters(carbon_provider):
-        data = carbon_provider.get_mandatory_creds_parameters()
-        assert isinstance(data, types.GeneratorType)
+        assert isinstance(carbon_provider.req_credential_params, list)
 
     @staticmethod
     def test_get_optional_parameters(carbon_provider):
-        data = carbon_provider.get_optional_parameters()
-        assert isinstance(data, types.GeneratorType)
+        assert isinstance(carbon_provider.opt_params, list)
 
     @staticmethod
     def test_get_optional_credentials_parameters(carbon_provider):
-        data = carbon_provider.get_optional_creds_parameters()
-        assert isinstance(data, types.GeneratorType)
-
-    @staticmethod
-    def test_get_all_parameters(carbon_provider):
-        data = carbon_provider.get_all_parameters()
-        assert isinstance(data, types.GeneratorType)
-
-    @staticmethod
-    def test_get_all_credentials_parameters(carbon_provider):
-        data = carbon_provider.get_all_creds_parameters()
-        assert isinstance(data, types.GeneratorType)
-
-    @staticmethod
-    def test_get_output_parameters(carbon_provider):
-        data = carbon_provider.get_output_parameters()
-        assert isinstance(data, types.GeneratorType)
-
-    @staticmethod
-    def test_check_mandatory_parameters(carbon_provider):
-        carbon_provider.check_mandatory_parameters({'name': 'name'})
-
-    @staticmethod
-    def test_check_mandatory_credentials_parameters(carbon_provider):
-        carbon_provider.check_mandatory_creds_parameters({'name': 'name'})
-
-    @staticmethod
-    def test_is_optional(carbon_provider):
-        carbon_provider.is_optional('name')
-
-    @staticmethod
-    def test_is_mandatory(carbon_provider):
-        carbon_provider.is_mandatory('name')
-
-    @staticmethod
-    def test_is_output(carbon_provider):
-        carbon_provider.is_output('name')
-
-    @staticmethod
-    @mock.patch.object(CarbonProvider, 'get_all_parameters')
-    def test_build_profile(mock_01, carbon_provider):
-        mock_01.return_value = ('name',)
-        host = mock.MagicMock()
-        profile = carbon_provider.build_profile(host)
-        assert isinstance(profile, dict)
-
-    @staticmethod
-    def test_validate_pass(carbon_provider):
-        host = mock.MagicMock()
-        carbon_provider.validate(host)
+        assert isinstance(carbon_provider.opt_credential_params, list)
 
 
 class TestCarbonOrchestrator(object):

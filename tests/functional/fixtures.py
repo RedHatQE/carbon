@@ -42,15 +42,17 @@ from carbon.utils.config import Config
 def default_host_params():
     return dict(
         role='client',
-        provider='openstack',
-        credential='openstack',
+        provider=dict(
+            name='openstack',
+            credential='openstack',
+            image='image',
+            flavor='small',
+            networks=['network']
+        ),
         provider_creds=[
             {'name': 'openstack', 'auth_url': 'url', 'username': 'user',
              'password': 'password', 'tenant_name': 'tenant'}
-        ],
-        os_flavor='small',
-        os_networks='network',
-        os_image='image'
+        ]
     )
 
 

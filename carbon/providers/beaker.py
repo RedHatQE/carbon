@@ -24,278 +24,69 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from .._compat import string_types
-from ..core import CarbonProvider
+
+from ..core import PhysicalProvider
 
 
-class BeakerProvider(CarbonProvider):
-    """
-    Beaker provider implementation
-    """
+class BeakerProvider(PhysicalProvider):
+    """Beaker provider class."""
     __provider_name__ = 'beaker'
-    __provider_prefix__ = 'bkr_'
 
-    _mandatory_parameters = (
-        'name',
-        'arch',
-        'variant',
-    )
+    def __init__(self):
+        """Constructor.
 
-    _optional_parameters = (
-        'distro',
-        'family',
-        'whiteboard',
-        'kernel_options',
-        'kernel_post_options',
-        'host_requires_options',
-        'distro_requires_options',
-        'virtual_machine',
-        'virt_capable',
-        'retention_tag',
-        'tag',
-        'priority',
-        'jobgroup',
-        'key_values',
-        'timeout',
-        'hostname',
-        'ip_address',
-        'job_id',
-        'ssh_key',
-        'username',
-        'password',
-        'taskparam',
-        'ignore_panic',
-        'kickstart',
-        'ksmeta'
-    )
+        Sets the following attributes:
+            - required provider parameters
+            - optional provider parameters
+            - required provider credential parameters
+            - optional provider credential parameters
 
-    _output_parameters = (
-        'hostname',
-        'ip_address',
-        'job_id',
-    )
-
-    _mandatory_creds_parameters = (
-        'hub_url',
-    )
-
-    _optional_creds_parameters = (
-        'keytab_principal',
-        'keytab',
-        'username',
-        'password'
-    )
-
-    def __init__(self, **kwargs):
-        super(BeakerProvider, self).__init__(**kwargs)
-
-    def validate_name(self, value):
-        """Validate the resource name.
-        :param value: The resource name
-        :return: A boolean, true = valid, false = invalid
+        Each attribute is a list of tuples. Within the tuple index 0 is the
+        parameter name and the index 1 is the data type for the parameter.
         """
-        self.logger.info("Validating Name: {0}".format(value))
-        # Quit when no value given
-        if not value:
-            self.logger.warning('Invalid data for name!')
-            return False
+        super(BeakerProvider, self).__init__()
 
-        # Name must be a string
-        if not isinstance(value, string_types):
-            self.logger.warning("Name is required to be a string type!")
-            return False
+        self.req_params = [
+            ('name', [str]),
+            ('arch', [str]),
+            ('variant', [str])
+        ]
 
-        return True
+        self.opt_params = [
+            ('distro', [str]),
+            ('family', [str]),
+            ('whiteboard', [str]),
+            ('kernel_options', [list]),
+            ('kernel_post_options', [list]),
+            ('host_requires_options', [list]),
+            ('distro_requires_options', [list]),
+            ('virtual_machine', [bool]),
+            ('virt_capable', [bool]),
+            ('retention_tag', [str]),
+            ('tag', [str]),
+            ('priority', [str]),
+            ('jobgroup', [str]),
+            ('key_values', [list]),
+            ('timeout', [int]),
+            ('hostname', [str]),
+            ('ip_address', [str]),
+            ('job_id', [str]),
+            ('ssh_key', [str]),
+            ('username', [str]),
+            ('password', [str]),
+            ('taskparam', [list]),
+            ('ignore_panic', [str]),
+            ('kickstart', [str]),
+            ('ksmeta', [list])
+        ]
 
-    def validate_timeout(self, value):
-        if value:
-            self.logger.info("Validating env vars: {0}".format(value))
-            if isinstance(value, int) and (3600 <= value <= 172800):
-                return True
-            else:
-                self.logger.warning("Beaker timeout must be between 3600(1hr) "
-                                    "and 172800(48hrs)")
-                return False
-        else:
-            return True
+        self.req_credential_params = [
+            ('hub_url', [str])
+        ]
 
-    @classmethod
-    def validate_arch(cls, value):
-        return isinstance(value, string_types)
-
-    @classmethod
-    def validate_username(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        return True
-
-    @classmethod
-    def validate_password(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        return True
-
-    @classmethod
-    def validate_tag(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_family(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_variant(cls, value):
-        return isinstance(value, string_types)
-
-    @classmethod
-    def validate_distro(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_kernel_options(cls, value):
-        if value:
-            return isinstance(value, list)
-        else:
-            return True
-
-    @classmethod
-    def validate_kernel_post_options(cls, value):
-        if value:
-            return isinstance(value, list)
-        else:
-            return True
-
-    @classmethod
-    def validate_host_requires_options(cls, value):
-        if value:
-            return isinstance(value, list)
-        else:
-            return True
-
-    @classmethod
-    def validate_distro_requires_options(cls, value):
-        if value:
-            return isinstance(value, list)
-        else:
-            return True
-
-    @classmethod
-    def validate_virtual_machine(cls, value):
-        if value:
-            return isinstance(value, bool)
-        else:
-            return True
-
-    @classmethod
-    def validate_virt_capable(cls, value):
-        if value:
-            return isinstance(value, bool)
-        else:
-            return True
-
-    @classmethod
-    def validate_retention_tag(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_priority(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_whiteboard(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_jobgroup(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_key_values(cls, value):
-        if value:
-            return isinstance(value, list)
-        else:
-            return True
-
-    @classmethod
-    def validate_taskparam(cls, value):
-        if value:
-            return isinstance(value, list)
-        else:
-            return True
-
-    @classmethod
-    def validate_keytab(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_ignore_panic(cls, value):
-        if value:
-            return isinstance(value, bool)
-        else:
-            return True
-
-    @classmethod
-    def validate_ssh_key(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_kickstart(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_hostname(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_ksmeta(cls, value):
-        if value:
-            return isinstance(value, list)
-        else:
-            return True
-
-    @classmethod
-    def validate_ip_address(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
-
-    @classmethod
-    def validate_job_id(cls, value):
-        if value:
-            return isinstance(value, string_types)
-        else:
-            return True
+        self.opt_credential_params = [
+            ('keytab_principal', [str]),
+            ('keytab', [str]),
+            ('username', [str]),
+            ('password', [str])
+        ]

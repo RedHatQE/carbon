@@ -89,8 +89,12 @@ class CleanupTask(CarbonTask):
 
         # **** TASKS BELOW ONLY SHOULD BE RELATED TO THE PROVISIONER ****
         if self.host:
-            # create the provisioner object
-            provisioner = getattr(self.host, 'provisioner')(self.host)
+            try:
+                # create the provisioner object
+                provisioner = getattr(self.host, 'provisioner')(self.host)
 
-            # teardown the host
-            getattr(provisioner, 'delete')()
+                # teardown the host
+                getattr(provisioner, 'delete')()
+            except AttributeError:
+                self.logger.warning('Host %s is static, skipping teardown.' %
+                                    getattr(self.host, 'name'))

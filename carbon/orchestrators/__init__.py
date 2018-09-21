@@ -26,5 +26,3 @@
 """
 
 from ._ansible import AnsibleOrchestrator
-from ._chef import ChefOrchestrator
-from ._puppet import PuppetOrchestrator

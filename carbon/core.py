@@ -31,8 +31,7 @@ from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
 from time import time
 
-from .exceptions import CarbonError, CarbonResourceError, CarbonProviderError,\
-    LoggerMixinError
+from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError
 from .helpers import get_core_tasks_classes
 
 
@@ -404,17 +403,11 @@ class CarbonProvisioner(LoggerMixin, TimeMixin):
     __provisioner_name__ = None
     host = None
 
-    def _create(self):
-        raise NotImplementedError
-
     def create(self):
-        self._create()
-
-    def _delete(self):
         raise NotImplementedError
 
     def delete(self):
-        self._delete()
+        raise NotImplementedError
 
     @property
     def name(self):
@@ -431,52 +424,16 @@ class CarbonProvisioner(LoggerMixin, TimeMixin):
 
 
 class CarbonProvider(LoggerMixin, TimeMixin):
-    """
-    This is the base class for all providers.
-
-    Every host needs to be associated with a CarbonProvider. The
-    subclasses of CarbonProvider needs to implement the validation
-    functions for each mandatory and optional parameters. The format
-    for the validation function signature is:
-
-    @classmethod
-    def validate_<parameter_name>(cls, value)
-
-    """
-    # the YAML definition uses this value to reference to this class.
-    # you have to override this variable in the subclasses so it can be
-    # referenced within the YAML definition with provider=...
+    """Carbon Provider."""
     __provider_name__ = None
-    __provider_prefix__ = None
 
-    # all parameters that MUST be set for the provider
-    _mandatory_parameters = ()
-
-    # additional parameters that can be set for the provider
-    _optional_parameters = ()
-
-    # parameters that will be set based on output of the provider
-    # for instance, for the Openstack, ip_address and for Openshift
-    # routes
-    _output_parameters = ()
-
-    # all credential parameters that MUST be set for the provider's credential
-    _mandatory_creds_parameters = ()
-
-    # additional parameters that can be set for the provider's credential
-    _optional_creds_parameters = ()
-
-    def __init__(self, **kwargs):
-        # I care only about the parameters set on ~self._parameters
+    def __init__(self):
+        """Constructor."""
+        self._req_params = []
+        self._opt_params = []
+        self._req_credential_params = []
+        self._opt_credential_params = []
         self._credentials = {}
-        params = {k for k, v in kwargs.items()}\
-            .intersection({'{}{}'.format(self.__provider_prefix__, k) for k in self._mandatory_parameters})
-        for k, v in kwargs.items():
-            if k in params:
-                setattr(self, k, v)
-
-    def __str__(self):
-        return '<Provider: %s>' % self.__provider_name__
 
     @property
     def name(self):
@@ -491,16 +448,44 @@ class CarbonProvider(LoggerMixin, TimeMixin):
         raise AttributeError('You cannot set provider name.')
 
     @property
-    def prefix(self):
-        """Return the provider prefix"""
-        return self.__provider_prefix__
+    def req_params(self):
+        """Return the required parameters."""
+        return self._req_params
 
-    @prefix.setter
-    def prefix(self, value):
-        """Raises an exception when trying to set the provider prefix
-        :param value: prefix
-        """
-        raise AttributeError('You cannot set provider prefix.')
+    @req_params.setter
+    def req_params(self, value):
+        """Set the required parameters."""
+        self._req_params.extend(value)
+
+    @property
+    def opt_params(self):
+        """Return the optional parameters."""
+        return self._opt_params
+
+    @opt_params.setter
+    def opt_params(self, value):
+        """Set the optional parameters."""
+        self._opt_params.extend(value)
+
+    @property
+    def req_credential_params(self):
+        """Return the required credential parameters."""
+        return self._req_credential_params
+
+    @req_credential_params.setter
+    def req_credential_params(self, value):
+        """Set the required credential parameters."""
+        self._req_credential_params.extend(value)
+
+    @property
+    def opt_credential_params(self):
+        """Return the optional credential parameters."""
+        return self._opt_credential_params
+
+    @opt_credential_params.setter
+    def opt_credential_params(self, value):
+        """Set the optional credential parameters."""
+        self._opt_credential_params.extend(value)
 
     @property
     def credentials(self):
@@ -521,220 +506,146 @@ class CarbonProvider(LoggerMixin, TimeMixin):
         """Set the provider credentials.
         :param cdata: The provider credentials dict
         """
-        for p in self.get_mandatory_creds_parameters():
-            self._credentials[p] = cdata[p]
+        for p in self.req_credential_params:
+            param = p[0]
+            self._credentials[param] = cdata[param]
 
-        for p in self.get_optional_creds_parameters():
-            if p in cdata:
-                self._credentials[p] = cdata[p]
-            else:
-                self._credentials[p] = None
+        for p in self.opt_credential_params:
+            param = p[0]
+            if param in cdata:
+                self._credentials[param] = cdata[param]
 
-    @classmethod
-    def check_mandatory_parameters(cls, parameters):
-        """
-        Validates the parameters against the mandatory parameters set
-        by the class.
-        :param parameters: a dictionary of parameters
-        :return: an empty set if all mandatory fields satisfy or the list of
-                 fields that needs to be filled.
-        """
-        intersec = {k for k, v in parameters.items()}\
-            .intersection(cls._mandatory_parameters_set())
+    def validate_req_params(self, host):
+        """Validate the required parameters exists in the host resource.
 
-        return cls._mandatory_parameters_set().difference(intersec)
+        :param host: host resource
+        :type host: object
+        """
+        for item in self.req_params:
+            name = getattr(host, 'name')
+            param, param_type = item[0], item[1]
+            msg = "Host %s : required param '%s' " % (name, param)
+            try:
+                param_value = getattr(host, 'provider_params')[param]
+                self.logger.info(msg + 'exists.')
 
-    @classmethod
-    def check_mandatory_creds_parameters(cls, parameters):
-        """
-        Validates the parameters against the mandatory credentials parameters
-        set by the class.
-        :param parameters: a dictionary of parameters
-        :return: an empty set if all mandatory creds fields satisfy or the list
-                 of fields that needs to be filled.
-        """
-        intersec = {k for k, v in parameters.items()}\
-            .intersection({k for k in cls.get_mandatory_creds_parameters()})
-        return {k for k in cls.get_mandatory_creds_parameters()}.difference(intersec)
+                if not type(param_value) in param_type:
+                    self.logger.error(
+                        '    - Type=%s, Required Type=%s. (ERROR)' %
+                        (type(param_value), param_type))
+                    raise CarbonError(
+                        'Error occurred while validating required provider '
+                        'parameters for host %s' % getattr(host, 'name')
+                    )
+            except KeyError:
+                msg = 'msg' + 'does not exist.'
+                self.logger.error(msg)
+                raise CarbonError(msg)
 
-    @classmethod
-    def _mandatory_parameters_set(cls):
-        """
-        Build a set of mandatory parameters
-        :return: a set
-        """
-        return {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._mandatory_parameters}
+    def validate_opt_params(self, host):
+        """Validate the optional parameters exists in the host resource.
 
-    @classmethod
-    def get_mandatory_parameters(cls):
+        :param host: host resource
+        :type host: object
         """
-        Get the list of the mandatory parameters
-        :return: a tuple of the mandatory parameters.
-        """
-        return (param for param in cls._mandatory_parameters_set())
+        for item in self.opt_params:
+            name = getattr(host, 'name')
+            param, param_type = item[0], item[1]
+            msg = "Host %s : optional param '%s' " % (name, param)
+            try:
+                param_value = getattr(host, 'provider_params')[param]
+                self.logger.info(msg + 'exists.')
 
-    @classmethod
-    def _mandatory_creds_parameters_set(cls):
-        """
-        Build a set of mandatory parameters
-        :return: a set
-        """
-        return {k for k in cls._mandatory_creds_parameters}
+                if not type(param_value) in param_type:
+                    self.logger.error(
+                        '    - Type=%s, Optional Type=%s. (ERROR)' %
+                        (type(param_value), param_type))
+                    raise CarbonError(
+                        'Error occurred while validating required provider '
+                        'parameters for host %s' % getattr(host, 'name')
+                    )
+            except KeyError:
+                self.logger.warning(msg + 'is undefined for host.')
 
-    @classmethod
-    def get_mandatory_creds_parameters(cls):
-        """
-        Get the list of the mandatory credential parameters
-        :return: a tuple of the mandatory parameters.
-        """
-        return (param for param in cls._mandatory_creds_parameters_set())
+    def validate_req_credential_params(self, host):
+        """Validate the required credential parameters exists in the host.
 
-    @classmethod
-    def _optional_creds_parameters_set(cls):
+        :param host: host resource
+        :type host: object
         """
-        Build a set of optional parameters
-        :return: a set
-        """
-        return {k for k in cls._optional_creds_parameters}
+        for item in self.req_credential_params:
+            name = getattr(host, 'name')
+            param, param_type = item[0], item[1]
+            msg = "Host %s : required credential param '%s' " % (name, param)
+            try:
+                provider = getattr(host, 'provider')
+                param_value = getattr(provider, 'credentials')[param]
+                self.logger.info(msg + 'exists.')
 
-    @classmethod
-    def get_optional_creds_parameters(cls):
-        """
-        Get the list of the optional credential parameters
-        :return: a tuple of the optional parameters.
-        """
-        return (param for param in cls._optional_creds_parameters_set())
+                if not type(param_value) in param_type:
+                    self.logger.error(
+                        '    - Type=%s, Required Type=%s. (ERROR)' %
+                        (type(param_value), param_type)
+                    )
+                    raise CarbonError(
+                        'Error occurred while validating required provider '
+                        'parameters for host %s' % getattr(host, 'name')
+                    )
+            except (AttributeError, KeyError):
+                msg = msg + 'does not exist.'
+                self.logger.error(msg)
+                raise CarbonError(msg)
 
-    @classmethod
-    def _optional_parameters_set(cls):
-        """
-        Build a set of optional parameters
-        :return: a set
-        """
-        return {'{}{}'.format(cls.__provider_prefix__, k) for k in cls._optional_parameters}
+    def validate_opt_credential_params(self, host):
+        """Validate the optional credential parameters exists in the host.
 
-    @classmethod
-    def get_optional_parameters(cls):
+        :param host: host resource
+        :type host: object
         """
-        Get the list of the optional parameters
-        :return: a tuple of the optional parameters.
-        """
-        return (param for param in cls._optional_parameters_set())
+        for item in self.opt_credential_params:
+            name = getattr(host, 'name')
+            param, param_type = item[0], item[1]
+            msg = "Host %s : optional credential param '%s' " % (name, param)
+            try:
+                provider = getattr(host, 'provider')
+                param_value = getattr(provider, 'credentials')[param]
+                self.logger.info(msg + 'exists.')
 
-    @classmethod
-    def _all_parameters_set(cls):
-        """
-        Build a set of all parameters
-        :return: a set
-        """
-        return cls._mandatory_parameters_set()\
-            .union(cls._optional_parameters_set())
+                if not type(param_value) in param_type:
+                    self.logger.error(
+                        '    - Type=%s, Optional Type=%s. (ERROR)' %
+                        (type(param_value), param_type)
+                    )
+                    raise CarbonError(
+                        'Error occurred while validating required provider '
+                        'parameters for host %s' % getattr(host, 'name')
+                    )
+            except (AttributeError, KeyError):
+                self.logger.warning(msg + 'does not exist.')
 
-    @classmethod
-    def get_all_parameters(cls):
-        """
-        Return the list of all possible parameters for the provider.
-        :return: a tuple with all parameters
-        """
-        return (param for param in cls._all_parameters_set())
 
-    @classmethod
-    def _all_creds_parameters_set(cls):
-        """
-        Build a set of all credential parameters
-        :return: a set
-        """
-        return cls._mandatory_creds_parameters_set()\
-            .union(cls._optional_creds_parameters_set())
+class CloudProvider(CarbonProvider):
+    """Cloud provider class."""
+    def __init__(self):
+        super(CloudProvider, self).__init__()
+        """Constructor."""
+        self._req_params = [
+            ('name', [str]),
+            ('image', [str]),
+            ('flavor', [str]),
+            ('networks', [list])
+        ]
+        self._opt_params = [
+            ('hostname', [str])
+        ]
 
-    @classmethod
-    def get_all_creds_parameters(cls):
-        """
-        Return the list of all possible credential parameters for
-        the provider.
-        :return: a tuple
-        """
-        return (param for param in cls._all_creds_parameters_set())
 
-    @classmethod
-    def _output_parameters_set(cls):
-        """
-        Build a set of output parameters from the
-        intersection between all parameters.
-        :return: a set
-        """
-        return cls._all_parameters_set().intersection(
-            {'{}{}'.format(cls.__provider_prefix__, k)
-             for k in cls._output_parameters}
-        )
-
-    @classmethod
-    def get_output_parameters(cls):
-        """
-        Get the list of the output parameters
-        :return: a tuple
-        """
-        return (param for param in cls._output_parameters_set())
-
-    @classmethod
-    def is_optional(cls, value):
-        return value in cls.get_optional_parameters()
-
-    @classmethod
-    def is_mandatory(cls, value):
-        return value in cls.get_mandatory_parameters()
-
-    @classmethod
-    def is_output(cls, value):
-        return value in cls.get_output_parameters()
-
-    def validate(self, host):
-        """
-        Run a validation for all validate_<param_name> that is
-        found in the provider class.
-        :param host: the Host object to which the validation is run for
-        :return: list of invalid parameters
-        """
-        # collect the host paramaters and its validate functions
-        try:
-            # This generator goes through all provider parameters
-            # and generate a list of tuples of each holds the host
-            # parameter and the provider function that validates the
-            # host parameter. For example, for Openstack Provider:
-            #
-            # items = [
-            #   ('host.os_image', 'provider.validate_image()'),
-            #   ('host.os_flavor', 'provider.validate_flavor()'),
-            # ]
-            #
-            # It then returns the list of parameters that the validate
-            # functions will return false.
-            #
-            # It throws an CarbonProviderError if the host doesn't have the
-            # attribute to be validated or if the provider has not implemented
-            # the validate_<param> function.
-            items = [
-                (param,
-                 getattr(host, '{}{}'.format(self.__provider_prefix__, param)),
-                 getattr(self, "validate_%s" % param),)
-                for param in (self._mandatory_parameters + self._optional_parameters)]
-            return [(param, value) for param, value, func in [item for item in items] if not func(value)]
-        except AttributeError as e:
-            raise CarbonProviderError(e.args[0])
-
-    @classmethod
-    def build_profile(cls, host):
-        """
-        Builds a dictionary with with all parameters for the provider
-        :param host: a Host object
-        :return: a dictionary with all parameters
-        """
-        profile = {}
-        for param in cls.get_all_parameters():
-            profile.update({
-                param: getattr(host, param, None)
-            })
-        return profile
+class PhysicalProvider(CarbonProvider):
+    """Physical provider class."""
+    def __init__(self):
+        super(PhysicalProvider, self).__init__()
+        """Constructor."""
+        pass
 
 
 class CarbonOrchestrator(LoggerMixin, TimeMixin):

@@ -25,10 +25,10 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from copy import copy
+
+import sys
 
 from ..core import CarbonResource
-from ..exceptions import CarbonHostError
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
 from ..helpers import get_provisioner_class, get_default_provisioner
 from ..helpers import get_provisioners_list, filter_host_name
@@ -56,7 +56,6 @@ class Host(CarbonResource):
     def __init__(self,
                  config=None,
                  name=None,
-                 provider=None,
                  provisioner=None,
                  parameters={},
                  validate_task_cls=ValidateTask,
@@ -69,8 +68,6 @@ class Host(CarbonResource):
         :type config: dict
         :param name: host resource name
         :type name: str
-        :param provider: provider name where host lives
-        :type provider: str
         :param provisioner: provisioner name used to create the host in the
             defined provider
         :type provisioner: str
@@ -87,12 +84,7 @@ class Host(CarbonResource):
         """
         super(Host, self).__init__(config=config, name=name, **kwargs)
 
-        # The name set in the constructor has precedence over other names.
-        # If no name is set in the constructor, then it will look for the
-        # name set in the parameters (usually done via YAML descriptor).
-        # If no name is set in the parameters, then it generates a 20
-        # characters name. Any way it is set, it will pass through the
-        # filter. See `filter_host_name` for more info.
+        # set name attribute & apply filter
         if name is None:
             self._name = parameters.pop('name', None)
             if self._name is None:
@@ -100,114 +92,41 @@ class Host(CarbonResource):
         else:
             self._name = name
 
-        # apply filter to the hosts name
-        self._name = filter_host_name(self._name)
-
-        # set host description
+        # set description attribute
         self._description = parameters.pop('description', None)
+        try:
+            self._role = parameters.pop('role')
+        except KeyError:
+            self.logger.error('A role must be set for host %s.' % self.name)
+            sys.exit(1)
 
-        # set the hosts role
-        # TODO: we must define what role means for a host and document it.
-        self._role = parameters.pop('role', None)
-        if self._role is None:
-            raise CarbonHostError('A role must be set for host %s.' %
-                                  str(self.name))
-
-        # set host metadata attribute (data pass-through)
+        # set metadata attribute (data pass-through)
         self._metadata = parameters.pop('metadata', {})
 
-        # set host ansible parameters for later use by carbon actions
+        # set ansible parameters
         self._ansible_params = parameters.pop('ansible_params', {})
 
-        # set host ip address attribute (updated with ip after provisioning)
-        self._ip_address = parameters.pop('ip_address', None)
-
-        # (mandatory) set host provider
-        provider_param = parameters.pop('provider', provider)
-        if provider_param is None:
-            raise CarbonHostError('A provider must be set for the host '
-                                  '%s.' % str(self.name))
-
-        # verify provider is supported by carbon
-        if provider_param not in get_providers_list():
-            raise CarbonHostError('Invalid provider for host '
-                                  '%s.' % str(self.name))
+        # determine if the host is a static machine already provisioned
+        # how? if the ip_address param is defined and provider is not defined
+        # then we can be safe to say the machine is static
+        if 'ip_address' in parameters and 'provider' not in parameters:
+            self._ip_address = parameters.pop('ip_address')
         else:
-            self._provider = get_provider_class(provider_param)()
+            # host needs to be provisioned, get the provider parameters
+            parameters = self.__set_provider_attr_(parameters)
 
-        # (mandatory) set the provisioner and validate
-        provisioner_param = parameters.pop('provisioner', provisioner)
-        if provisioner_param is None:
-            self._provisioner = get_default_provisioner(self.provider)
-        elif provisioner_param not in get_provisioners_list():
-            raise CarbonHostError('Invalid provisioner for host '
-                                  '%s.' % str(self.name))
-        else:
-            self._provisioner = get_provisioner_class(provisioner_param)
+            # finally lets get the right provisioner to use
+            provisioner_name = parameters.pop('provisioner', provisioner)
+            if provisioner_name is None:
+                self._provisioner = get_default_provisioner(self._provider)
+            elif provisioner_name not in get_provisioners_list():
+                self.logger.error('Provisioner %s for host %s is invalid.' %
+                                  (provisioner_name, self.name))
+                sys.exit(1)
+            else:
+                self._provisioner = get_provisioner_class(provisioner_name)
 
-        # Get required credentials for all providers other than Static
-        # Static is user defined
-        if provider_param != 'static':
-            # (mandatory if not static) get the host provider credential name
-            self._credential = parameters.pop('credential', None)
-            if self._credential is None:
-                raise CarbonHostError('A credential must be set for the hosts '
-                                      'provider %s.' % provider)
-
-            # (mandatory) set host provider credentials
-            provider_creds = parameters.pop('provider_creds', None)
-            if provider_creds is None:
-                raise CarbonHostError('Provider credentials must be set for '
-                                      'host %s.' % str(self.name))
-
-            # get the credentials for the host provider
-            cdata = next(i for i in provider_creds if i['name'] == self._credential)
-
-        # every provider has a name as mandatory field.
-        # first check if name exist (probably because of reusing machine).
-        # otherwise generate random bits to be added to provider instance name
-        # and create the provider name
-        p_name_param = '{}{}'.format(getattr(self.provider,
-                                             '__provider_prefix__'), 'name')
-        p_name_set = parameters.get(p_name_param, None)
-        if not p_name_set:
-            parameters.update(
-                {p_name_param: 'cbn_{}_{}'.format(self.name, gen_random_str(5))})
-        elif not p_name_set[:4] == 'cbn_':
-            raise CarbonHostError('The {0} parameter for {1} should not be'
-                                  ' set as it is under the framework\'s '
-                                  'control'.format(p_name_param, self._name))
-
-        # check if we have all the mandatory fields set
-        missing_mandatory_fields = \
-            getattr(self.provider, 'check_mandatory_parameters')(parameters)
-        if len(missing_mandatory_fields) > 0:
-            raise CarbonHostError('Missing mandatory fields for node %s,'
-                                  ' based on the %s provider:\n\n%s'
-                                  % (self.name, getattr(self.provider, 'name'),
-                                     missing_mandatory_fields))
-
-        # create the provider attributes in the host object
-        for p in getattr(self.provider, 'get_all_parameters')():
-            setattr(self, p, parameters.get(p, None))
-
-        # every provider other than Static must have credentials
-        # check if non Static provider credentials have all the mandatory fields set
-        if provider_param != 'static':
-            missing_mandatory_creds_fields = \
-                getattr(self.provider, 'check_mandatory_creds_parameters')(cdata)
-            if len(missing_mandatory_creds_fields) > 0:
-                raise CarbonHostError('Missing mandatory credentials fields '
-                                      'for credentials section %s, for node '
-                                      '%s, based on the %s provider:\n\n%s' %
-                                      (self._credential, self._name,
-                                       getattr(self.provider, 'name'),
-                                       missing_mandatory_creds_fields))
-
-            # create the provider credentials in provider object
-            getattr(self.provider, 'set_credentials')(cdata)
-        else:
-            self._credential = None
+            self._ip_address = parameters.pop('ip_address', None)
 
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
@@ -221,6 +140,53 @@ class Host(CarbonResource):
         if parameters:
             self.load(parameters)
 
+    def __set_provider_attr_(self, parameters):
+        """Configure the host provider attributes.
+
+        :param parameters: content which makes up the host resource
+        :type parameters: dict
+        :return: updated parameters
+        :rtype: dict
+        """
+        try:
+            self.provider_params = parameters.pop('provider')
+        except KeyError:
+            self.logger.error('Provider parameter is required for hosts being'
+                              ' provisioned.')
+            sys.exit(1)
+
+        provider_name = self.provider_params['name']
+
+        # lets verify the provider is valid
+        if provider_name not in get_providers_list():
+            self.logger.error('Provider %s for host %s is invalid.' %
+                              (provider_name, self.name))
+            sys.exit(1)
+
+        # now that we have the provider, lets create the provider object
+        self._provider = get_provider_class(provider_name)()
+
+        # finally lets set the provider credentials
+        try:
+            self._credential = self.provider_params['credential']
+            provider_credentials = parameters.pop('provider_creds')
+        except KeyError:
+            self.logger.error('A credential must be set for the provider %s.'
+                              % provider_name)
+            sys.exit(1)
+
+        for item in provider_credentials:
+            if item['name'] == self._credential:
+                getattr(self.provider, 'set_credentials')(item)
+                break
+
+        # determine hostname for the host
+        if 'hostname' not in self.provider_params:
+            self.provider_params['hostname'] = \
+                filter_host_name(self._name) + '_%s' % gen_random_str(5)
+
+        return parameters
+
     @property
     def ip_address(self):
         """IP address property.
@@ -233,22 +199,7 @@ class Host(CarbonResource):
     @ip_address.setter
     def ip_address(self, value):
         """Set ip address property."""
-        raise AttributeError('You cannot set ip address directly. '
-                             'Use function ~Host.set_ip_address')
-
-    def set_ip_address(self, value):
-        """Set the ip address for the host.
-
-        Following attributes will be set:
-            1. _ip_address
-            2. <provider_prefix>_ip_address
-
-        :param value: The IP address of the host.
-        :type value: str
-        """
-        attr = 'ip_address'
-        setattr(self, '_' + attr, value)
-        setattr(self, getattr(self.provider, 'prefix') + attr, copy(value))
+        self._ip_address = value
 
     @property
     def metadata(self):
@@ -333,58 +284,55 @@ class Host(CarbonResource):
         raise AttributeError('You cannot set the role after host class is '
                              'instantiated.')
 
-    @property
-    def uid(self):
-        """UID property.
-
-        :return: the unique ID for the host
-        :rtype: str
-        """
-        return getattr(self, '{}name'.format(getattr(self.provider, 'prefix')))
-
-    @uid.setter
-    def uid(self, value):
-        """Set UID property."""
-        raise AttributeError('You cannot set the uid for the host.')
-
     def profile(self):
         """Builds a profile for the host resource.
 
         :return: the host profile
         :rtype: dict
         """
-        # initialize the profile with the provider properties
-        profile = getattr(self.provider, 'build_profile')(self)
-
-        # set additional host properties
-        profile.update({
+        # initialize profile with default parameters
+        profile = {
             'name': self.name,
+            'role': self.role,
             'description': self.description,
-            'metadata': self.metadata,
             'ansible_params': self.ansible_params,
-            'provider': getattr(self.provider, 'name'),
-            'credential': self._credential,
-            'provisioner': getattr(self.provisioner, '__provisioner_name__'),
-            'role': self._role,
-            'data_folder': self.data_folder,
-            'workspace': self.workspace
-        })
+            'metadata': self.metadata,
+            'workspace': self.workspace,
+            'data_folder': self.data_folder
+        }
 
-        # set ip address attribute (if applicable)
-        if self.ip_address:
-            profile.update({'ip_address': self.ip_address})
+        try:
+            profile.update({
+                'provider': self.provider_params,
+                'provisioner': getattr(
+                    self.provisioner, '__provisioner_name__')
+            })
+        except AttributeError:
+            self.logger.debug('Host is static, no need to profile provider '
+                              'facts.')
+        finally:
+            if self.ip_address:
+                profile.update({'ip_address': self.ip_address})
 
         return profile
 
     def validate(self):
         """Validate the host."""
-        status = 0
-        for item in getattr(self.provider, 'validate')(self):
-            status = 1
-            self.logger.error('Parameter error: "%s": %s' % (item[0], item[1]))
+        self.logger.info('Validating host %s provider required parameters.' %
+                         self.name)
+        getattr(self.provider, 'validate_req_params')(self)
 
-        if status > 0:
-            raise CarbonHostError('Host %s validation failed!' % self.name)
+        self.logger.info('Validating host %s provider optional parameters.' %
+                         self.name)
+        getattr(self.provider, 'validate_opt_params')(self)
+
+        self.logger.info('Validating host %s provider required credential '
+                         'parameters.' % self.name)
+        getattr(self.provider, 'validate_req_credential_params')(self)
+
+        self.logger.info('Validating host %s provider optional credential '
+                         'parameters.' % self.name)
+        getattr(self.provider, 'validate_opt_credential_params')(self)
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.

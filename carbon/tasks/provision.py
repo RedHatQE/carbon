@@ -42,16 +42,22 @@ class ProvisionTask(CarbonTask):
         """
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
+        self.provision = True
 
         # create the provisioner object to create hosts
-        self.provisioner = getattr(host, 'provisioner')(host)
+        try:
+            self.provisioner = getattr(host, 'provisioner')(host)
+        except AttributeError:
+            self.provision = False
+            self.logger.warning('Host %s is static, provision will be '
+                                'skipped.' % getattr(host, 'name'))
 
     def run(self):
         """Run.
 
         This method is the main entry point to the task.
         """
-        self.logger.info(self.msg)
-
         # provision the host given in their declared provider
-        self.provisioner.create()
+        if self.provision:
+            self.logger.info(self.msg)
+            self.provisioner.create()
