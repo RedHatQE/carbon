@@ -72,9 +72,9 @@ def carbon_resource():
     return CarbonResource(name='action', config={})
 
 
-@pytest.fixture(scope='class')
-def carbon_provisioner():
-    return CarbonProvisioner()
+@pytest.fixture
+def carbon_provisioner(host):
+    return CarbonProvisioner(host)
 
 
 @pytest.fixture(scope='class')

@@ -57,8 +57,7 @@ class BeakerProvisioner(CarbonProvisioner):
         :param host: The host object.
         :type host: object
         """
-        super(BeakerProvisioner, self).__init__()
-        self.host = host
+        super(BeakerProvisioner, self).__init__(host)
         self.data_folder = getattr(host, 'data_folder')
         self.workspace = getattr(host, 'workspace')
         self.job_xml = 'bkrjob_%s.xml' % getattr(host, 'name')

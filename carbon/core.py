@@ -31,7 +31,8 @@ from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler
 from time import time
 
-from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError
+from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError, \
+    CarbonProvisionerError
 from .helpers import get_core_tasks_classes
 
 
@@ -397,16 +398,57 @@ class CarbonResource(LoggerMixin, TimeMixin):
 
 
 class CarbonProvisioner(LoggerMixin, TimeMixin):
+    """Carbon provisioner class.
+
+    Each provisioner implementation added into carbon requires that they
+    inherit the carbon provisioner class. This enforces that the
+    required methods are implemented in the new provisioner class.
     """
-    This is the base class for all provisioners for provisioning machines
-    """
+    # set the provisioner name
     __provisioner_name__ = None
-    host = None
+
+    def __init__(self, host):
+        """Constructor.
+
+        Every provisioner requires a carbon host resource. This resource
+        contains all the necessary elements that are needed to fulfill a
+        provision request by the provisioner of choice.
+
+        :param host: carbons host resource
+        :type host: object
+        """
+        self.host = host
+
+        # set commonly accessed data used by provisioners
+        self.data_folder = getattr(self.host, 'data_folder')
+        self.provider = getattr(getattr(host, 'provider'), 'name')
+        self.provider_params = getattr(host, 'provider_params')
+        self.provider_credentials = getattr(getattr(
+            host, 'provider'), 'credentials')
+        self.workspace = getattr(self.host, 'workspace')
+
+        if not self.name and self.__class__.__name__ != 'CarbonProvisioner':
+            raise CarbonProvisionerError(
+                'Attribute __provisioner_name__ is None. Please set the '
+                'attribute and retry creating an object from the class.'
+            )
 
     def create(self):
+        """Create method.
+
+        Main entry point for the provisioner to fulfill a provision request for
+        machines. Carbons provision task invokes the provisioners create
+        method to create all test machines.
+        """
         raise NotImplementedError
 
     def delete(self):
+        """Delete method.
+
+        Main entry point for the provisioner to fulfill the request to delete
+        machines. Carbons cleanup task invokes the provisioners delete method
+        to delete all test machines.
+        """
         raise NotImplementedError
 
     @property
@@ -416,9 +458,10 @@ class CarbonProvisioner(LoggerMixin, TimeMixin):
 
     @name.setter
     def name(self, value):
-        """
-        Returns the name of the provisioner
-        :param value: The name for the provisioner.
+        """Set the provisioner name.
+
+        :param value: provisioner name
+        :type value: str
         """
         raise AttributeError('You cannot set name for the provisioner.')
 

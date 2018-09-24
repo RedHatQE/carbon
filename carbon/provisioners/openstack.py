@@ -53,8 +53,7 @@ class OpenstackProvisioner(CarbonProvisioner):
 
         :param host: The host object.
         """
-        super(OpenstackProvisioner, self).__init__()
-        self.host = host
+        super(OpenstackProvisioner, self).__init__(host)
 
         # object place holders
         self._driver = object
