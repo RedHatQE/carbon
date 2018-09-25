@@ -296,8 +296,12 @@ class BeakerProvisioner(CarbonProvisioner):
         self.wait_for_bkr_job()
 
         # copy ssh key to remote system
-        if getattr(self.host, 'provider_params')['ssh_key']:
+        if 'ssh_key' in getattr(self.host, 'provider_params') and \
+                getattr(self.host, 'provider_params')['ssh_key']:
+            self.logger.info('Inject SSH key into remote machine.')
             self.copy_ssh_key()
+        else:
+            self.logger.warning('No SSH key defined, skip injecting key.')
 
     def cancel_job(self):
         """Cancel a existing beaker job.
