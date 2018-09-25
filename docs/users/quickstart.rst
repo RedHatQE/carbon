@@ -73,7 +73,6 @@ however, please read through the options you have.
 
 Where it is loaded from (using precedence low to high):
 
-#. /etc/carbon/carbon.cfg (global configuration file)
 #. ./carbon.cfg (current working directory)
 #. CARBON_SETTINGS environment variable to the location of the file
 
