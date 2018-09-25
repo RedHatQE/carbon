@@ -566,6 +566,11 @@ def ssh_retry(obj):
         for group in inv_groups[host_group].child_groups:
             sys_vars = group.vars
             server_ip = group.hosts[0].address
+
+            # skip ssh connectivity check if server is localhost
+            if is_host_localhost(server_ip):
+                continue
+
             server_user = sys_vars['ansible_user']
             server_key_file = sys_vars['ansible_ssh_private_key_file']
 
@@ -804,3 +809,23 @@ class DataInjector(object):
 
             command = command.replace('{ %s }' % variable, value)
         return command
+
+
+def is_host_localhost(host_ip):
+    """Determine if the host ip address given is localhost.
+
+    Since it can be hard to determine if the host is localhost, we will
+    initially verify its localhost if the ip_address has a value of either:
+        - 127.0.0.1
+        - localhost
+    If the host ip_address is either of those, then we know that the machine
+    is the localhost.
+
+    :param host_ip: host resource ip address
+    :type host_ip: str
+    :return: whether the ip address is localhost or not
+    :rtype: bool
+    """
+    if host_ip not in ['127.0.0.1', 'localhost']:
+        return False
+    return True

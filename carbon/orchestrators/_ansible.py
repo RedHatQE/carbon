@@ -41,7 +41,7 @@ from ansible.vars.manager import VariableManager
 from .._compat import RawConfigParser, string_types
 from ..core import CarbonOrchestrator, LoggerMixin
 from ..exceptions import CarbonOrchestratorError
-from ..helpers import ssh_retry, exec_local_cmd_pipe
+from ..helpers import ssh_retry, exec_local_cmd_pipe, is_host_localhost
 
 
 class AnsibleController(object):
@@ -265,6 +265,11 @@ class Inventory(LoggerMixin):
                     config.set(section, item)
             elif isinstance(host.ip_address, str):
                 config.set(section, host.ip_address)
+
+            # localhost does not need ssh key set, uses connection=local
+            # default connection=smart, ansible knows which one to select
+            if is_host_localhost(host.ip_address):
+                continue
 
             # add host vars
             for k, v in host.ansible_params.items():
