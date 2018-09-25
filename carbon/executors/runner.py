@@ -25,6 +25,8 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
+import ast
+import collections
 import copy
 import os.path
 
@@ -34,7 +36,8 @@ from ..core import CarbonExecutor
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError
 from ..helpers import DataInjector, get_ans_verbosity
 from ..orchestrators._ansible import Inventory, AnsibleController
-from ..static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK
+from ..static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK,\
+    ADHOC_SHELL_PLAYBOOK, ADHOC_SCRIPT_PLAYBOOK
 
 
 class RunnerExecutor(CarbonExecutor):
@@ -88,6 +91,7 @@ class RunnerExecutor(CarbonExecutor):
         self.artifacts = getattr(package, 'artifacts')
         self.options = getattr(package, 'ansible_options', None)
         self.ignorerc = getattr(package, 'ignore_rc', False)
+        self.validrc = getattr(package, 'valid_rc', None)
 
         self.injector = DataInjector(self.all_hosts)
 
@@ -111,7 +115,7 @@ class RunnerExecutor(CarbonExecutor):
 
         self.ans_verbosity = get_ans_verbosity(self.logger, self.config)
         self.ans_controller = AnsibleController(self.inv.inv_dir)
-        self.ans_extra_vars = dict(hosts=self.inv.group)
+        self.ans_extra_vars = collections.OrderedDict(hosts=self.inv.group)
 
     def validate(self):
         """Validate."""
@@ -132,17 +136,19 @@ class RunnerExecutor(CarbonExecutor):
         if self.options and 'extra_args' in self.options and self.options['extra_args']:
             extra_args = '%s ' % self.options['extra_args']
 
+        extra_args = "args:"
         for key in attr:
             if key in keys:
-                extra_args += '%s=%s ' % (key, attr[key])
+                extra_args += '\n        %s: %s' % (key, attr[key])
 
         return extra_args
 
     def build_run_options(self):
         """Build ansible run options for ansible ad hoc commands.
 
-        :return: run options
+        :return: run_options
         :rtype: dict
+
         """
 
         run_options = {}
@@ -155,6 +161,27 @@ class RunnerExecutor(CarbonExecutor):
         self.logger.debug("Ansible options used: " + str(run_options))
 
         return run_options
+
+    def convert_run_options(self, run_options):
+        """Convert run options dict to string for task in playbook.
+
+        :param run_options: run options dictionary
+        :type run_options: dict
+        :return: run options string
+        :rtype: str
+
+        """
+        run_options_str = ''
+
+        first = True
+        for opt in run_options:
+            if first:
+                run_options_str += '%s: %s\n' % (opt, run_options[opt])
+                first = False
+            else:
+                run_options_str += '      %s: %s\n' % (opt, run_options[opt])
+
+        return run_options_str
 
     def build_extra_vars(self):
         """Build ansible extra vars for ansible ad hoc commands.
@@ -184,6 +211,9 @@ class RunnerExecutor(CarbonExecutor):
         :rtype: str
         """
         return self.injector.inject(command)
+
+    def _update_playbook_str(self, playbook_str, search_str, replace_str):
+        return playbook_str.replace(search_str, replace_str)
 
     @staticmethod
     def _create_playbook(playbook, playbook_str):
@@ -235,6 +265,9 @@ class RunnerExecutor(CarbonExecutor):
 
     def __shell__(self):
         """Execute the shell command."""
+        # dynamic playbook
+        playbook = 'cbn_execute_shell.yml'
+
         self.logger.info('Executing shell commands:')
 
         for index, shell in enumerate(self.shell):
@@ -248,32 +281,81 @@ class RunnerExecutor(CarbonExecutor):
 
             # build run options
             run_options = self.build_run_options()
+            run_options_str = self.convert_run_options(run_options)
 
             # update extra vars
             self.ans_extra_vars.update(self.build_extra_vars())
 
-            results = self.ans_controller.run_module(
-                "shell",
+            # set playbook variables
+            extra_vars = copy.deepcopy(self.ans_extra_vars)
+            extra_vars['xcmd'] = shell['command']
+
+            # update dynamic playbook shell task with extra args
+            playbook_str = self._update_playbook_str(ADHOC_SHELL_PLAYBOOK, "{{ args }}", extra_args)
+
+            # update dynamic playbook shell task with options
+            playbook_str = self._update_playbook_str(playbook_str, "{{ options }}", run_options_str)
+
+            # create dynamic playbook
+            self._create_playbook(playbook, playbook_str)
+
+            # run playbook
+            results = self.ans_controller.run_playbook(
+                playbook,
                 logger=self.logger,
-                extra_vars=self.ans_extra_vars,
-                script=shell['command'],
-                run_options=run_options,
-                extra_args=extra_args,
+                extra_vars=extra_vars,
                 ans_verbosity=self.ans_verbosity
             )
+
+            # remove dynamic playbook
+            os.remove(playbook)
+
+            # Get results from file
+            with open('shell-results.txt') as fp:
+                lines = fp.read().splitlines()
+
+            # Build Results
+            sh_results = []
+            for line in lines:
+                host, rc, err = ast.literal_eval(line)
+                sh_results.append({'host': host, 'rc': rc, 'err': err})
+
+            # remove Shell Results file
+            os.remove('shell-results.txt')
+
             ignorerc = self.ignorerc
+            validrc = self.validrc
             if "ignore_rc" in shell and shell['ignore_rc']:
                 ignorerc = shell['ignore_rc']
+            elif "valid_rc" in shell and shell['valid_rc']:
+                validrc = shell['valid_rc']
 
             if ignorerc:
                 self.logger.info("Ignoring the rc for: %s" % shell['command'])
-            elif results[0] != 0:
-                self.status = 1
+
+            elif validrc:
+                for result in sh_results:
+                    if result['rc'] not in validrc:
+                        self.status = 1
+                        self.logger.error('Shell command %s failed. Host=%s rc=%d Error: %s'
+                                          % (shell['command'], result['host'], result['rc'], result['err']))
+
+            else:
+                for result in sh_results:
+                    if result['rc'] != 0:
+                        self.status = 1
+                        self.logger.error('Shell command %s failed. Host=%s rc=%d Error: %s'
+                                          % (shell['command'], result['host'], result['rc'], result['err']))
+
+            if self.status == 1:
                 raise ArchiveArtifactsError('Shell command %s failed to run '
                                             'successfully!' % shell['command'])
 
     def __script__(self):
         """Execute the script supplied."""
+        # dynamic playbook
+        playbook = 'cbn_execute_script.yml'
+
         self.logger.info('Executing scripts:')
 
         for index, script in enumerate(self.script):
@@ -287,28 +369,72 @@ class RunnerExecutor(CarbonExecutor):
 
             # build run options
             run_options = self.build_run_options()
+            run_options_str = self.convert_run_options(run_options)
 
-            results = self.ans_controller.run_module(
-                "script",
+            # set playbook variables
+            extra_vars = copy.deepcopy(self.ans_extra_vars)
+            extra_vars['xscript'] = script['name']
+
+            # update dynamic playbook shell task with args
+            playbook_str = self._update_playbook_str(ADHOC_SCRIPT_PLAYBOOK, "{{ args }}", extra_args)
+
+            # update dynamic playbook shell task with options
+            playbook_str = self._update_playbook_str(playbook_str, "{{ options }}", run_options_str)
+
+            # create dynamic playbook
+            self._create_playbook(playbook, playbook_str)
+
+            # run playbook
+            results = self.ans_controller.run_playbook(
+                playbook,
                 logger=self.logger,
-                extra_vars=self.ans_extra_vars,
-                script=script['name'],
-                run_options=run_options,
-                extra_args=extra_args,
+                extra_vars=extra_vars,
                 ans_verbosity=self.ans_verbosity
             )
 
+            # remove dynamic playbook
+            os.remove(playbook)
+
+            # Get results from file
+            with open('script-results.txt') as fp:
+                lines = fp.read().splitlines()
+
+            # Build Results
+            script_results = []
+            for line in lines:
+                host, rc, err = ast.literal_eval(line)
+                script_results.append({'host': host, 'rc': rc, 'err': err})
+
+            # remove Shell Results file
+            os.remove('script-results.txt')
+
             ignorerc = self.ignorerc
+            validrc = self.validrc
             if "ignore_rc" in script and script['ignore_rc']:
                 ignorerc = script['ignore_rc']
+            elif "valid_rc" in script and script['valid_rc']:
+                validrc = script['valid_rc']
 
             if ignorerc:
                 self.logger.info("Ignoring the rc for: %s" % script['name'])
-            elif results[0] != 0:
-                self.status = 1
-                raise ArchiveArtifactsError(
-                    'Script %s failed to run successfully!' % script['name']
-                )
+
+            elif validrc:
+                for result in script_results:
+                    if result['rc'] not in validrc:
+                        self.status = 1
+                        self.logger.error('Script %s failed. Host=%s rc=%d Error: %s'
+                                          % (script['name'], result['host'], result['rc'], result['err']))
+
+            else:
+                for result in script_results:
+                    if result['rc'] != 0:
+                        self.status = 1
+                        self.logger.error('Script %s failed. Host=%s rc=%d Error: %s'
+                                          % (script['name'], result['host'], result['rc'], result['err']))
+
+            if self.status == 1:
+                raise ArchiveArtifactsError('Script %s failed to run '
+                                            'successfully!' % script['name'])
 
     def __playbook__(self):
         """Execute the playbook supplied."""

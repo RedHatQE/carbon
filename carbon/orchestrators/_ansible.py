@@ -173,7 +173,7 @@ class AnsibleController(object):
                     extra_var_dict[key] = extra_vars[key]
                     playbook_call += ' -e "%s" ' % extra_var_dict
                 else:
-                    playbook_call += " -e %s=%s" % (key, extra_vars[key])
+                    playbook_call += " -e %s=\"'%s'\"" % (key, extra_vars[key])
 
         if run_options:
             for key in run_options:

@@ -103,6 +103,9 @@ mapping:
                     type: str
                   ignore_rc:
                     type: bool
+                  valid_rc:
+                    type: any
+                    func: type_int_list
                   command:
                     required: True
                     type: str
@@ -116,6 +119,9 @@ mapping:
                     type: str
                   ignore_rc:
                     type: bool
+                  valid_rc:
+                    type: any
+                    func: type_int_list
                   name:
                     required: True
                     type: str

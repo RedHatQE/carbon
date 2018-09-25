@@ -37,6 +37,21 @@ def type_str_list(value, rule_obj, path):
     return True
 
 
+def type_int_list(value, rule_obj, path):
+    """Verfiy a key's value is either a int or list."""
+    if not isinstance(value, (int, list)):
+        raise AssertionError(
+            '%s must be either a integer or list of integers.' % path.split('/')[-1]
+        )
+    if isinstance(value, list):
+        for x in value:
+            if not isinstance(x, int):
+                raise AssertionError(
+                    '%s must be either a integer or list of integers.' % path.split('/')[-1]
+                )
+    return True
+
+
 def valid_orchestrator(value, rule_obj, path):
     """Verify the given orchestrator is a valid selection by carbon."""
     if value.lower() != ORCHESTRATOR:

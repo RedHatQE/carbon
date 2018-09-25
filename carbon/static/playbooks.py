@@ -66,3 +66,39 @@ GIT_CLONE_PLAYBOOK = '''
       with_items:
         - "{{ gits }}"
 '''
+
+ADHOC_SHELL_PLAYBOOK = '''
+- name: run shell and fetch results
+  hosts: "{{ hosts }}"
+
+  tasks:
+    - name: shell command
+      shell: "{{ xcmd }}"
+      register: sh_results
+      ignore_errors: true
+      {{ args }}
+      {{ options }}
+
+    - name: copy results to file
+      shell:
+        echo "('{{ inventory_hostname }}', {{ sh_results.rc }}, '{{ sh_results.stderr }}')" >> shell-results.txt
+      delegate_to: localhost
+'''
+
+ADHOC_SCRIPT_PLAYBOOK = '''
+- name: run script and fetch results
+  hosts: "{{ hosts }}"
+
+  tasks:
+    - name: script command
+      script: "{{ xscript }}"
+      register: scrpt_results
+      ignore_errors: true
+      {{ args }}
+      {{ options }}
+
+    - name: copy results to file
+      shell:
+        echo "('{{ inventory_hostname }}', {{ scrpt_results.rc }}, '{{ scrpt_results.stderr }}')" >> script-results.txt
+      delegate_to: localhost
+'''

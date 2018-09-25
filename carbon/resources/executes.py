@@ -54,6 +54,7 @@ class Execute(CarbonResource):
         'ansible_options',
         'git',
         'ignore_rc',
+        'valid_rc',
     ]
 
     def __init__(self,
