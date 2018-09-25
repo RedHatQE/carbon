@@ -127,8 +127,8 @@ class TestCarbon(object):
         assert carbon.name == '__main__'
 
     @staticmethod
-    def test_load_resource(default_host_params):
+    def test_load_resource(default_host_params, config):
         carbon = Carbon(data_folder='/tmp')
+        carbon.config = config
         params = copy.deepcopy(default_host_params)
-        carbon.scenario.add_credentials(params['provider_creds'][0])
         carbon._load_resources(Host, [params])

@@ -90,10 +90,6 @@ class Scenario(CarbonResource):
         # External Dependency Component list of Scenario
         self.dep_check = ""
 
-        # set credentials attributes
-        self._credentials = list()
-        self._credentials_set_by = ''
-
         # set resource attributes
         self._hosts = list()
         self._actions = list()
@@ -299,57 +295,6 @@ class Scenario(CarbonResource):
             raise ValueError('Execute must be of type %s ' % type(Execute))
         self._reports.append(report)
 
-    @property
-    def credentials(self):
-        """Credentials property.
-
-        :return: credentials associated to the scenario.
-        :rtype: list
-        """
-        return self._credentials
-
-    @credentials.setter
-    def credentials(self, value):
-        """Set credentials property."""
-        raise ValueError('You cannot set credentials directly. '
-                         'Use function ~Scenario.add_credentials')
-
-    def add_credentials(self, data):
-        """Add credentials to the scenario.
-
-        :param data: credentials data
-        :type data: dict
-        """
-        if self._credentials:
-            for index, value in enumerate(self._credentials):
-                # overwrite if exists
-                if value["name"] == data["name"]:
-                    self._credentials.pop(index)
-            self._credentials.append(data)
-        else:
-            self._credentials.append(data)
-
-    @property
-    def credentials_set_by(self):
-        """Credentials set by property.
-
-        :return: how the credentials were set
-        :rtype: str
-        """
-        return self._credentials_set_by
-
-    @credentials_set_by.setter
-    def credentials_set_by(self, value):
-        """Credentials set by property setter.
-
-        :param value: keyword on how credentials are set (config|scenario)
-        :type value: str
-        """
-        if value not in SET_CREDENTIALS_OPTIONS:
-            raise IndexError('%s is an invalid way for setting credentials.' %
-                             value)
-        self._credentials_set_by = value
-
     def validate(self):
         """Validate the scenario based on the default schema."""
         self.logger.debug('Validating scenario YAML file')
@@ -392,18 +337,10 @@ class Scenario(CarbonResource):
         :return: a dictionary representing the scenario
         :rtype: dict
         """
-        # clear the credentials attribute if credentials set within config
-        # credentials should only be added back to the profile to be wrote to
-        # updated definition file when defined within the starting definition
-        # file
-        if self.credentials_set_by == 'config':
-            self._credentials = list()
-
         profile = dict(
             name=self.name,
             description=self.description,
             dep_check=self.dep_check,
-            credentials=self.credentials,
             provision=[host.profile() for host in self.hosts],
             orchestrate=[action.profile() for action in self.actions],
             execute=[execute.profile() for execute in self.executes],

@@ -32,10 +32,20 @@
 """
 
 import copy
+import os
 
 import pytest
 from carbon.resources import Action, Execute, Host, Report, Scenario
 from carbon.utils.config import Config
+
+os.environ['CARBON_SETTINGS'] = '../assets/carbon.cfg'
+
+
+@pytest.fixture
+def config():
+    config = Config()
+    config.load()
+    return config
 
 
 @pytest.fixture
@@ -48,11 +58,7 @@ def default_host_params():
             image='image',
             flavor='small',
             networks=['network']
-        ),
-        provider_creds=[
-            {'name': 'openstack', 'auth_url': 'url', 'username': 'user',
-             'password': 'password', 'tenant_name': 'tenant'}
-        ]
+        )
     )
 
 
@@ -92,10 +98,10 @@ def action_resource_cleanup():
 
 
 @pytest.fixture
-def host(default_host_params):
+def host(default_host_params, config):
     return Host(
         name='host01',
-        config={'DATA_FOLDER': '/tmp', 'WORKSPACE': '/tmp/ws'},
+        config=config,
         parameters=copy.deepcopy(default_host_params)
     )
 

@@ -207,28 +207,12 @@ class Carbon(LoggerMixin, TimeMixin):
         self.scenario.yaml_data = filedata
         data = dict(yaml.safe_load(filedata))
 
-        cred_items = data.pop('credentials', None)
         pro_items = data.pop('provision', None)
         orc_items = data.pop('orchestrate', None)
         exe_items = data.pop('execute', None)
         rpt_items = data.pop('report', None)
 
         self.scenario.load(data)
-
-        # setting up credentials
-        if "CREDENTIALS" in self.config and self.config["CREDENTIALS"]:
-            for item in self.config["CREDENTIALS"]:
-                self.scenario.add_credentials(item)
-                self.scenario.credentials_set_by = 'config'
-        if cred_items:
-            for item in cred_items:
-                self.scenario.add_credentials(item)
-                self.scenario.credentials_set_by = 'scenario'
-
-        if not self.scenario.credentials:
-            self.logger.warning(
-                'Credentials are not set, problems may emerge in the future.'
-            )
 
         self._load_resources(Host, pro_items)
         self._load_resources(Action, orc_items)
@@ -259,9 +243,6 @@ class Carbon(LoggerMixin, TimeMixin):
             return
 
         for item in res_list:
-            if res_type == Host:
-                # set provider credentials if applicable
-                item['provider_creds'] = self.scenario.credentials
             self.scenario.add_resource(
                 res_type(config=self.config,
                          parameters=item))

@@ -640,7 +640,7 @@ class OpenstackProvisioner(CarbonProvisioner):
 
         # set new attributes in host object
         setattr(self.host, 'ip_address', str(_ip))
-        setattr(self.host, 'node_id', str(_id))
+        getattr(self.host, 'provider_params')['node_id'] = str(_id)
 
     def delete(self):
         """Delete a node in openstack.

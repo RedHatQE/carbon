@@ -59,15 +59,6 @@ def carbon_task_named():
 
 
 @pytest.fixture(scope='class')
-def config():
-    return dict(
-        DATA_FOLDER='/tmp',
-        LOG_LEVEL='info',
-        WORKSPACE='/tmp'
-    )
-
-
-@pytest.fixture(scope='class')
 def carbon_resource():
     return CarbonResource(name='action', config={})
 

@@ -173,7 +173,7 @@ class Host(CarbonResource):
         # finally lets set the provider credentials
         try:
             self._credential = self.provider_params['credential']
-            provider_credentials = parameters.pop('provider_creds')
+            provider_credentials = self.config['CREDENTIALS']
         except KeyError:
             self.logger.error('A credential must be set for the provider %s.'
                               % provider_name)

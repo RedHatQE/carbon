@@ -349,30 +349,9 @@ class TestScenarioResource(object):
             scenario_resource.add_reports(mock.MagicMock())
 
     @staticmethod
-    def test_credentials_property(scenario_resource):
-        assert isinstance(scenario_resource.credentials, list)
-
-    @staticmethod
-    def test_credentials_setter(scenario_resource):
-        with pytest.raises(ValueError):
-            scenario_resource.credentials = ['credential']
-
-    @staticmethod
-    def test_credentials_set_by_setter(scenario_resource):
-        with pytest.raises(IndexError):
-            scenario_resource.credentials_set_by = 'env'
-
-    @staticmethod
     def test_profile_uc01(scenario):
         profile = scenario.profile()
         assert isinstance(profile, dict)
-
-    @staticmethod
-    def test_profile_uc02(scenario):
-        scenario.credentials_set_by = 'config'
-        profile = scenario.profile()
-        assert isinstance(profile, dict)
-        assert profile['credentials'].__len__() == 0
 
 
 class TestHostResource(object):
@@ -380,15 +359,15 @@ class TestHostResource(object):
     def __get_params_copy__(params):
         return copy.deepcopy(params)
 
-    def test_create_host_with_name(self, default_host_params):
+    def test_create_host_with_name(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
-        host = Host(name='host01', parameters=params)
+        host = Host(name='host01', config=config, parameters=params)
         assert isinstance(host, Host)
         assert host.name == 'host01'
 
-    def test_create_host_without_name(self, default_host_params):
+    def test_create_host_without_name(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
-        host = Host(parameters=params)
+        host = Host(parameters=params, config=config)
         assert 'hst' in host.name
 
     def test_create_host_undefined_role(self, default_host_params):
@@ -409,27 +388,23 @@ class TestHostResource(object):
         with pytest.raises(SystemExit):
             Host(name='host01', parameters=params)
 
-    def test_create_host_invalid_provisioner(self, default_host_params):
+    def test_create_host_invalid_provisioner(
+            self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'null'
         with pytest.raises(SystemExit):
-            Host(name='host01', parameters=params)
+            Host(name='host01', parameters=params, config=config)
 
-    def test_create_host_with_provisioner_set(self, default_host_params):
+    def test_create_host_with_provisioner_set(
+            self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'openstack'
-        host = Host(name='host01', parameters=params)
+        host = Host(name='host01', parameters=params, config=config)
         assert host.provisioner is OpenstackProvisioner
 
     def test_create_host_undefined_credential(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params['provider'].pop('credential')
-        with pytest.raises(SystemExit):
-            Host(name='host01', parameters=params)
-
-    def test_create_host_undefined_provider_creds(self, default_host_params):
-        params = self.__get_params_copy__(default_host_params)
-        params.pop('provider_creds')
         with pytest.raises(SystemExit):
             Host(name='host01', parameters=params)
 
@@ -495,20 +470,13 @@ class TestHostResource(object):
         assert 'You cannot set the role after host class is instantiated.' in \
                ex.value.args
 
-    def test_build_profile(self, host):
+    def test_build_profile_uc01(self, host):
         assert isinstance(host.profile(), dict)
 
-    def test_build_profile(self, host):
-        static_host = copy.deepcopy(host)
-        del static_host.provider_params
+    def test_build_profile_uc02(self, host):
+        static_host = copy.copy(host)
         setattr(static_host, 'ip_address', '127.0.0.1')
         assert isinstance(static_host.profile(), dict)
 
     def test_validate_success(self, host):
         host.validate()
-
-    def test_validate_failure(self, host):
-        with pytest.raises(CarbonError):
-            host_copy = copy.deepcopy(host)
-            host_copy.provider_params['name'] = ['client']
-            host_copy.validate()
