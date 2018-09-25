@@ -111,7 +111,11 @@ class Host(CarbonResource):
         # then we can be safe to say the machine is static
         if 'ip_address' in parameters and 'provider' not in parameters:
             self._ip_address = parameters.pop('ip_address')
+            # set flag to control whether the host is static or not
+            self.is_static = True
         else:
+            # set flag to control whether the host is static or not
+            self.is_static = False
             # host needs to be provisioned, get the provider parameters
             parameters = self.__set_provider_attr_(parameters)
 
@@ -318,6 +322,10 @@ class Host(CarbonResource):
 
     def validate(self):
         """Validate the host."""
+        if self.is_static:
+            self.logger.debug('Validation is not required for static hosts!')
+            return
+
         self.logger.info('Validating host %s provider required parameters.' %
                          self.name)
         getattr(self.provider, 'validate_req_params')(self)
