@@ -91,6 +91,7 @@ class Host(CarbonResource):
                 self._name = 'hst{0}'.format(gen_random_str(10))
         else:
             self._name = name
+        self._name = filter_host_name(self._name)
 
         # set description attribute
         self._description = parameters.pop('description', None)
