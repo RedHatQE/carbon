@@ -25,5 +25,5 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-from .beaker import BeakerProvisioner
-from .openstack import OpenstackProvisioner
+from .beaker_client import BeakerClientProvisioner
+from .openstack_libcloud import OpenstackLibCloudProvisioner

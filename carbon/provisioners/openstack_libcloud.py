@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.provisioners.openstack
+    carbon.provisioners.openstack_libcloud
 
     Carbon's own OpenStack provisioner. This module handles everything from
     authentication to creating/deleting resources in OpenStack.
@@ -40,20 +40,20 @@ MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
 
 
-class OpenstackProvisioner(CarbonProvisioner):
-    """Carbon's openstack provisioner.
+class OpenstackLibCloudProvisioner(CarbonProvisioner):
+    """Carbon's openstack apache libcloud provisioner.
 
     This class is a base which calls openstack provider methods to perform
     the actions to create and delete resources.
     """
-    __provisioner_name__ = 'openstack'
+    __provisioner_name__ = 'openstack-libcloud'
 
     def __init__(self, host):
         """Constructor.
 
         :param host: The host object.
         """
-        super(OpenstackProvisioner, self).__init__(host)
+        super(OpenstackLibCloudProvisioner, self).__init__(host)
 
         # object place holders
         self._driver = object

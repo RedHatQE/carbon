@@ -37,7 +37,7 @@ from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
 from carbon.executors import RunnerExecutor
 from carbon.orchestrators import AnsibleOrchestrator
 from carbon.providers import OpenstackProvider
-from carbon.provisioners import OpenstackProvisioner
+from carbon.provisioners import OpenstackLibCloudProvisioner
 from carbon.resources import Action, Execute, Host, Report, Scenario
 from carbon.utils.config import Config
 
@@ -398,9 +398,9 @@ class TestHostResource(object):
     def test_create_host_with_provisioner_set(
             self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
-        params['provisioner'] = 'openstack'
+        params['provisioner'] = 'openstack-libcloud'
         host = Host(name='host01', parameters=params, config=config)
-        assert host.provisioner is OpenstackProvisioner
+        assert host.provisioner is OpenstackLibCloudProvisioner
 
     def test_create_host_undefined_credential(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
@@ -453,7 +453,7 @@ class TestHostResource(object):
                'instantiated.' in ex.value.args
 
     def test_provisioner_property(self, host):
-        assert host.provisioner is OpenstackProvisioner
+        assert host.provisioner is OpenstackLibCloudProvisioner
 
     def test_provisioner_setter(self, host):
         with pytest.raises(AttributeError) as ex:
