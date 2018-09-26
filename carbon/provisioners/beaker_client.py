@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.provisioners.beaker
+    carbon.provisioners.beaker_client
 
     Carbon's own Beaker provisioner. This module handles everything from
     authentication to creating/deleting resources in Beaker.
@@ -37,8 +37,8 @@ from ..exceptions import BeakerProvisionerError
 from ..helpers import exec_local_cmd
 
 
-class BeakerProvisioner(CarbonProvisioner):
-    """The main class for carbon Beaker provisioner.
+class BeakerClientProvisioner(CarbonProvisioner):
+    """The main class for carbon Beaker client provisioner.
 
     This provisioner will interact with the Beaker server using the
     beaker client (bkr) to submit jobs to get resources from Beaker.
@@ -48,7 +48,7 @@ class BeakerProvisioner(CarbonProvisioner):
         multiple requests with different authentication in the same namespace
         (with same config file).
     """
-    __provisioner_name__ = "beaker"
+    __provisioner_name__ = "beaker-client"
     __provisioner_prefix__ = 'bkr_'
 
     def __init__(self, host):
@@ -57,7 +57,7 @@ class BeakerProvisioner(CarbonProvisioner):
         :param host: The host object.
         :type host: object
         """
-        super(BeakerProvisioner, self).__init__(host)
+        super(BeakerClientProvisioner, self).__init__(host)
         self.data_folder = getattr(host, 'data_folder')
         self.workspace = getattr(host, 'workspace')
         self.job_xml = 'bkrjob_%s.xml' % getattr(host, 'name')
