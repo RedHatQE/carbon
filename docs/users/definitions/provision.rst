@@ -84,31 +84,33 @@ provisioning resource for Beaker:
     provision:
       - name: <name>
         role: <role>
-        provider: openstack
         provisioner: <provisioner>
-        credential: <credential>
+        provider:
+          name: beaker
+          credential: <credential>
+          arch: <arch>
+          variant: <variant>
+          family: <family>
+          distro: <os_distro>
+          whiteboard: <whiteboard>
+          jobgroup: <group_id>
+          tag: <tag>
+          host_requires_options: [<list of host options>]
+          distro_requires_options: [<list of distro options>]
+          virtual_machine: <True or False>
+          virt_capable: <True or False>
+          priority: <priority of the job>
+          retention_tag: <retention tag>
+          timeout: <timeout val for Beaker job>
+          kernel_options: [<list of kernel options>]
+          kernel_post_options: [<list of kernel post options>]
+          kickstart: < Filename of kickstart file>
+          ignore_panic: <True or False>
+          taskparam: [<list of task parameter settings>]
+          ksmeta: [<list of kick start meta OPTIONS>]
         metadata: <dict_key_values>
         ansible_params: <dict_key_values>
-        bkr_arch: <arch>
-        bkr_variant: <variant>
-        bkr_family: <family>
-        bkr_distro: <os_distro>
-        bkr_whiteboard: <whiteboard>
-        bkr_jobgroup: <group_id>
-        bkr_tag: <tag>
-        bkr_host_requires_options: [<list of host options>]
-        bkr_distro_requires_options: [<list of distro options>]
-        bkr_virtual_machine: <True or False>
-        bkr_virt_capable: <True or False>
-        bkr_priority: <priority of the job>
-        bkr_retention_tag: <retention tag>
-        bkr_timeout: <timeout val for Beaker job>
-        bkr_kernel_options: [<list of kernel options>]
-        bkr_kernel_post_options: [<list of kernel post options>]
-        bkr_kickstart: < Filename of kickstart file>
-        bkr_ignore_panic: <True or False>
-        bkr_taskparam: [<list of task parameter settings>]
-        bkr_ksmeta: [<list of kick start meta OPTIONS>]
+
 
 .. list-table::
     :widths: auto
@@ -145,119 +147,119 @@ provisioning resource for Beaker:
         - String
         - True
 
-    *   - bkr_arch
+    *   - arch
         - The arch of the node.
         - String
         - True
 
-    *   - bkr_variant
+    *   - variant
         - The OS variant of the node.
         - String
         - True
 
-    *   - bkr_family
+    *   - family
         - The OS family of the node. (family or distro needs to be set)
         - String
         - False
 
-    *   - bkr_distro
+    *   - distro
         - The specific OS distribution. (family or distro needs to be set)
         - String
         - False
 
-    *   - bkr_whiteboard
+    *   - whiteboard
         - The name to set for the Beaker whiteboard to help identify your job.
         - String
         - False
 
-    *   - bkr_jobgroup
+    *   - jobgroup
         - The name of the beaker group to set, of who can see the machines and used for machine searching.
         - String
         - False
 
-    *   - bkr_tag
+    *   - tag
         - The name of a tag to get the correct OS (i.e. RTT-ACCEPTED).
         - String
         - False
 
-    *   - bkr_host_requires_options
+    *   - host_requires_options
         - List of host options with the format:["<key><operand><value>"].
         - List
         - False
 
-    *   - bkr_distro_requires_options
+    *   - distro_requires_options
         - List of OS options with the format:["<key><operand><value>"].
         - List
         - False
 
-    *   - bkr_kernel_options
-        - List of bkr kernel options during install with the format:["<key><operand><value>"]
+    *   - kernel_options
+        - List of Beaker kernel options during install with the format:["<key><operand><value>"]
         - List
         - False
 
-    *   - bkr_kernel_options_post
-        - List of bkr kernel options after install with the format:["<key><operand><value>"]
+    *   - kernel_options_post
+        - List of Beaker kernel options after install with the format:["<key><operand><value>"]
         - List
         - False
 
-    *   - bkr_virtual_machine
+    *   - virtual_machine
         - Look for a node that is a virtural machine.
         - Boolean
         - False
 
-    *   - bkr_virt_capable
+    *   - virt_capable
         - Look for a machine that is virt capable.
         - Boolean
         - False
 
-    *   - bkr_priority
+    *   - priority
         - Set the priority of the Beaker job.
         - String
         - False
 
-    *   - bkr_retention_tag
+    *   - retention_tag
         - Set the tag value of how long to keep the job results.
         - String
         - False
 
-    *   - bkr_ssh_key
+    *   - ssh_key
         - Name of the ssh key to inject to the test system, file must be
           placed in your scenario workspace directory.
         - String
         - False
 
-    *   - bkr_username
-        - username of the bkr machine, required if using bkr_ssh_key.
+    *   - username
+        - username of the Beaker machine, required if using **ssh_key**.
         - String
         - False
 
-    *   - bkr_password
-        - password of the bkr machine, required if using bkr_ssh_key.
+    *   - password
+        - password of the Beaker machine, required if using **ssh_key**.
         - String
         - False
 
-    *   - bkr_timeout
+    *   - timeout
         - Set a value of how long to wait for the Beaker job in seconds.(Default is 8hrs = 28800)
         - Boolean
         - False
 
-    *   - bkr_kickstart
+    *   - kickstart
         - Name of the kickstart template for installation, the file must be
           placed in your scenario workspace directory.
         - String
         - False
 
-    *   - bkr_ignore_panic
+    *   - ignore_panic
         - Do not abort job if panic message appears on serial console
         - Boolean
         - False
 
-    *   - bkr_taskparam
+    *   - taskparam
         - parameter settings of form NAME=VALUE that will be set for every task in job
         - List
         - False
 
-    *   - bkr_ksmeta
+    *   - ksmeta
         - kickstart metadata OPTIONS for when generating kickstart
         - List
         - False
@@ -293,13 +295,14 @@ Example
     provision:
 
       - name: Machine from Beaker
-        provider: beaker
-        credential: beaker
         role: bkr-machine
-        bkr_arch: x86_64
-        bkr_variant: Server
-        bkr_whiteboard: Testing machine provisioning from Carbon
-        bkr_distro: RHEL-7.4-20170621.0
+        provider:
+          name: beaker
+          credential: beaker
+          arch: x86_64
+          variant: Server
+          whiteboard: Testing machine provisioning from Carbon
+          distro: RHEL-7.4-20170621.0
 
 
 .. _openstack_provisioning:
@@ -376,16 +379,17 @@ resource for OpenStack:
     provision:
       - name: <name>
         role: <role>
-        provider: openstack
         provisioner: <provisioner>
-        credential: <credential>
         metadata: <dict_key_values>
         ansible_params: <dict_key_values>
-        os_image: <image>
-        os_flavor: <flavor>
-        os_networks: <networks>
-        os_floating_ip_pool: <floating_ip_pool>
-        os_keypair: <keypair>
+        provider:
+          credential: beaker
+          name: openstack
+          image: <image>
+          flavor: <flavor>
+          networks: <networks>
+          floating_ip_pool: <floating_ip_pool>
+          keypair: <keypair>
 
 .. list-table::
     :widths: auto
@@ -422,27 +426,27 @@ resource for OpenStack:
         - String
         - True
 
-    *   - os_image
+    *   - image
         - The name or ID of the image to boot.
         - String
         - True
 
-    *   - os_flavor
+    *   - flavor
         - The name or ID of the flavor to boot.
         - String
         - True
 
-    *   - os_networks
+    *   - networks
         - The name of the internal network to attach node too.
         - List
         - True
 
-    *   - os_floating_ip_pool
+    *   - floating_ip_pool
         - The name of the external network to attach node too.
         - String
         - False
 
-    *   - os_keypair
+    *   - keypair
         - The name of the keypair to associate the node with.
         - String
         - True
@@ -479,11 +483,12 @@ Example
     provision:
       - name: test_client
         role: client
-        provider: openstack
-        credential: openstack
-        os_image: Fedora-Cloud-Base-25-compose-latest
-        os_flavor: m1.small
-        os_networks: [pit-jenkins]
-        os_floating_ip_pool: 10.8.240.0
-        os_keypair: pit-jenkins
+        provider:
+          name: openstack
+          credential: openstack
+          image: Fedora-Cloud-Base-25-compose-latest
+          flavor: m1.small
+          networks: [pit-jenkins]
+          floating_ip_pool: 10.8.240.0
+          keypair: pit-jenkins
 

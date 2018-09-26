@@ -146,15 +146,16 @@ provision task request.
 
     provision:
         - name: machine1
-          provider: openstack
           provisioner: openstack        # provisioner name
-          credential: openstack
-          os_image: image1
-          os_flavor: flavor
-          os_networks:
-            - network
-          os_floating_ip_pool: 0.0.0.0
-          os_keypair: keypair
+          provider:
+            name: openstack
+            credential: openstack
+            image: image1
+            flavor: flavor
+            networks:
+              - network
+            floating_ip_pool: 0.0.0.0
+            keypair: keypair
           role: role
 
 The above code snippets demonstrate how from the host resource definition
@@ -194,15 +195,16 @@ Here is an example based on a custom provisioner module:
 
     provision:
         - name: machine1
-          provider: openstack
           provisioner: provisioner_xyz        # provisioner name
-          credential: openstack
-          os_image: image1
-          os_flavor: flavor
-          os_networks:
-            - network
-          os_floating_ip_pool: 0.0.0.0
-          os_keypair: keypair
+          provider:
+            name: openstack
+            credential: openstack
+            image: image1
+            flavor: flavor
+            networks:
+              - network
+            floating_ip_pool: 0.0.0.0
+            keypair: keypair
           role: role
 
 This also applies to the other resources within the carbon object. Lets look
@@ -232,15 +234,15 @@ orchestrator by carbon.
 
     provision:
         - name: machine1
-          provider: openstack
           provisioner: openstack
-          credential: openstack
-          os_image: image1
-          os_flavor: flavor
-          os_networks:
-            - network
-          os_floating_ip_pool: 0.0.0.0
-          os_keypair: keypair
+          provider: openstack
+            credential: openstack
+            image: image1
+            flavor: flavor
+            networks:
+              - network
+            floating_ip_pool: 0.0.0.0
+            keypair: keypair
           role: role
 
     orchestrate:

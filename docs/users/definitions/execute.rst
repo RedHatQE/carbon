@@ -169,7 +169,7 @@ Let's first take a look at some example data of key/values a user may use
 for provisioning a host:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-    :lines: 110-125
+    :lines: 110-126
 
 After the machines are provsioned, we have more information in the host object,
 and this can be seen by the results.yml file after a provision is successful.
@@ -177,7 +177,7 @@ Some basic information that is added is the machine's actual name and ip
 address.  The following is what the data looks like after provisioning:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-    :lines: 128-155
+    :lines: 129-153
 
 Looking at the data presented above, there is a lot of information about the
 host, that may be useful for test execution.  You can also see the key
@@ -186,8 +186,7 @@ running carbon.
 
 The following is an example, where the user plans to use the ip address in an
 execution command.  From the data above, you can see the user is accessing the
-data from **test_client_a**, **ip_address**, and the first list item ([0]) in
-the **ip_address** list.
+data from **test_client_a** -> **ip_address**.
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 90-107
@@ -208,37 +207,37 @@ file.
 The following is a simple example of the data gathering (defining artifacts):
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-    :lines: 158-165
+    :lines: 156-163
 
 Going through the basics of artifacts, the user can archive individual files,
 as shown by the following example:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-    :lines: 168-172
+    :lines: 166-170
 
 The user can also artifact files using wildcards as shown in the following
 example:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-    :lines: 174-177
+    :lines: 172-175
 
 The user can also archive a directory using either of the following two
 examples:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-    :lines: 179-182
+    :lines: 177-180
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-    :lines: 184-187
+    :lines: 182-185
 
 Finally, the user can archive a directory using a wildcard using either
 of the following two examples:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-   :lines: 189-192
+   :lines: 187-190
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-   :lines: 194-197
+   :lines: 192-195
 
 Common Examples
 ---------------

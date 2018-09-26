@@ -20,26 +20,28 @@ The main output will be:
 #. logs of the run (under the logs directory of that run). (carbon.log and ansible.log, if set)
 #. results.yml (updated descriptor that will be updated after each successful task)
 
-The following is a snippet of results.yml after a provisioning of an OpenStack
-system was complete (os_name, os_ip_address, and os_node_id added - shown highlighted)
-has been added to the default descriptor:
+The following is a snippet of results.yml after provisioning an OpenStack
+system was complete.  As you can see, the ip_address was added to the top level
+of the resource definition and hostname and node_id were added under the
+provider, the added data has been highlighted.
 
 .. code-block:: bash
-  :emphasize-lines: 9,10,12,13
+  :emphasize-lines: 7,13,14
 
   ...
   name: ffdriver
-  os_admin_pass: null
-  os_description: null
-  os_files: null
-  os_flavor: m1.small
-  os_floating_ip_pool: 10.8.240.0
-  os_image: rhel-7.5-server-x86_64-released
-  os_ip_address:
-  - 10.8.249.2
-  os_keypair: pit-jenkins
-  os_name: cbn_ffdriver_agqrs
-  os_node_id: 4beb3789-1e61-4f7c-bf9e-722ed480b280
+  provider:
+    credential: openstack
+    flavor: m1.small
+    floating_ip_pool: <definied ip pool>
+    hostname: ffdriver_l3zqh
+    image: rhel-7.5-server-x86_64-released
+    keypair: pit-jenkins
+    name: openstack
+    networks:
+    - pit-jenkins
+    node_id: 4beb3789-1e61-4f7c-bf9e-722ed480b280
+  ip_address: 10.8.249.2
   ...
 
 .. note::
