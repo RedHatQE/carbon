@@ -13,6 +13,7 @@ clean:
 	rm -rf *.egg
 	rm -rf *.egg-info
 	rm -rf docs/_build
+	rm -rf docs/.examples
 	rm -rf .cache
 	rm -rf .tox
 	rm -rf build

@@ -9,6 +9,7 @@ build
 
 # docs
 docs/_build
+docs/.examples
 
 # unit tests
 .tox
