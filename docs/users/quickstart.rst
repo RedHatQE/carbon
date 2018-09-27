@@ -67,9 +67,11 @@ beaker client package to provision physical machines in beaker.
 Carbon Configuration
 ~~~~~~~~~~~~~~~~~~~~
 
-This is an optional configuration file to help you adjust your settings you
-use when running Carbon.  The default configuration should be sufficient;
-however, please read through the options you have.
+This is a mandatory configuration file, where you set your credentials, and
+there are many optional settings to help you adjust your usage of Carbon.
+The credentials of the configuration file is the only thing that
+is mandatory.  Most of the other default configuration settings should be
+sufficient; however, please read through the options you have.
 
 Where it is loaded from (using precedence low to high):
 
@@ -84,7 +86,7 @@ Configuration example (with all options):
 .. note::
 
     Many of the configuration options can be overridden by passing cli options when running
-    carbon. See the options in the running carbon `example. <examples.html#run>`__
+    carbon. See the options in the running carbon `example. <quickstart.html#run>`__
 
 Running Carbon
 ~~~~~~~~~~~~~~

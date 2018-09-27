@@ -137,19 +137,12 @@ provision task request.
     name: demo
     description: demo
 
-    credentials:
-        - name: openstack
-          auth_url: <auth_url>
-          tenant_name: <tenant_name>
-          username: <username>
-          password: <password>
-
     provision:
         - name: machine1
           provisioner: openstack        # provisioner name
           provider:
             name: openstack
-            credential: openstack
+            credential: openstack-creds
             image: image1
             flavor: flavor
             networks:
@@ -186,19 +179,12 @@ Here is an example based on a custom provisioner module:
     name: demo
     description: demo
 
-    credentials:
-        - name: openstack
-          auth_url: <auth_url>
-          tenant_name: <tenant_name>
-          username: <username>
-          password: <password>
-
     provision:
         - name: machine1
           provisioner: provisioner_xyz        # provisioner name
           provider:
             name: openstack
-            credential: openstack
+            credential: openstack-creds
             image: image1
             flavor: flavor
             networks:

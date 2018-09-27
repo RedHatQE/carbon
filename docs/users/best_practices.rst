@@ -7,6 +7,38 @@ Data pass-through
 Please visit the following `page <data_pass_through.html>`_ to understand how
 you can pass data within carbon tasks.
 
+Handing Off A Scenario
+----------------------
+
+After you successfully created a carbon definition file that describes an
+end to end scenario, it should take minimal effort to hand off the scenario
+for someone else to run.
+
+If the person handing off the scenario is using the same tools for
+provisioning (i.e. all your machines are provisioned using OpenStack
+and you hand off to someone else to run the scenario who also plans
+to provision their resources using OpenStack), it is really simple. You just
+need to follow the following steps:
+
+ #. Tell them to set their credentials for their resource in their `carbon.cfg
+    <quickstart.html#carbon-configuration>`_ file, using the same name that you
+    used in your scenario descriptor file.  A good tip would be to give them
+    your carbon.cfg file with your `credentials 
+    <definitions/credentials.html#credentials>`_  removed.
+ #. Tell them to update refrences to the ssh keys that you used for machine
+    access.
+
+If you are handing off to a person that plans to use a different tool for
+provisioning this can be more complicated.  A good tip for this case would
+be to tell them provision their systems first and inject the driver machine's
+ssh key into all the machines, and then redefine their systems in carbon
+as `static machines <definitions/provision.html#definining-static-machines>`_.
+If this is not an option, the user would have to
+redefine each of their systems with the correct keys for the provisioning
+system they plan to use.  Please see the `provisioning 
+<definitions/provision.html#provision>`_ documentation for all options.
+
+
 Scenario Structure
 ------------------
 

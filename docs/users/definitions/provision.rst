@@ -5,7 +5,8 @@ Overview
 --------
 
 The input for provisioning will depend upon the type of resource you are
-trying to provision. The current support for provisioning resources are: :ref:`Beaker<beaker_provisioning>` and :ref:`OpenStack<openstack_provisioning>`.
+trying to provision. The current support for provisioning resources are:
+:ref:`Beaker<beaker_provisioning>` and :ref:`OpenStack<openstack_provisioning>`.
 
 
 .. _beaker_provisioning:
@@ -16,61 +17,9 @@ Provisioning Systems from Beaker
 Credentials
 +++++++++++
 
-To authenticate with Beaker, you will need to create a Beaker
-credentials section within your scenario descriptor file. Below is an example
-credentials section with all available Beaker credential keys.  You must set
-either keytab and keytab_principal or username and password.
-
-.. code-block:: yaml
-
-    ---
-    credentials:
-      - name: beaker
-        hub_url: <Beaker server url>
-        keytab: <your keytab file, must be in your scenario workspace dir>
-        keytab_principal: <The principal value for your keytab>
-        username: <username>
-        password: <password>
-
-.. list-table::
-    :widths: auto
-    :header-rows: 1
-
-    *   - Key
-        - Description
-        - Type
-        - Required
-
-    *   - name
-        - The name of the Beaker credentials section.
-        - String
-        - True
-
-    *   - hub_url
-        - The beaker server url.
-        - String
-        - False
-
-    *   - keytab
-        - name of the keytab file, which must be placed in the scenario
-          workspace directory.
-        - String
-        - False
-
-    *   - keytab_principal
-        - The principal value of the keytab.
-        - String
-        - False
-
-    *   - username
-        - Beaker username.
-        - String
-        - False
-
-    *   - password
-        - Beaker username's password.
-        - String
-        - False
+To authenticate with Beaker, you will need to have your Beaker credentials
+in your carbon.cfg file, see `Beaker Credentials
+<credentials.html#beaker-credentials>`_ for more details.
 
 Provision Resource
 ++++++++++++++++++
@@ -143,7 +92,7 @@ provisioning resource for Beaker:
 
     *   - credential
         - The name of the credentials to use to boot node. This is the one
-          defined in the credentials section of the scenario descriptor.
+          defined in the credentials section of the carbon config file.
         - String
         - True
 
@@ -280,29 +229,7 @@ provisioning resource for Beaker:
 Example
 +++++++
 
-.. code-block:: yaml
-
-    ---
-    name: Beaker example
-    description: Get a specific RHEL7 distro
-
-    credentials:
-
-      - name: beaker
-        keytab:
-        keytab_principal:
-
-    provision:
-
-      - name: Machine from Beaker
-        role: bkr-machine
-        provider:
-          name: beaker
-          credential: beaker
-          arch: x86_64
-          variant: Server
-          whiteboard: Testing machine provisioning from Carbon
-          distro: RHEL-7.4-20170621.0
+.. literalinclude:: ../../.examples/provision/beaker/scenario.yml
 
 
 .. _openstack_provisioning:
@@ -313,59 +240,9 @@ Provisioning Systems from OpenStack
 Credentials
 +++++++++++
 
-To authenticate with OpenStack, you will need to create an OpenStack
-credentials section within your scenario descriptor file. Below is an example
-credentials section with all available OpenStack credential keys.
-
-.. code-block:: yaml
-
-    ---
-    credentials:
-      - name: openstack
-        auth_url: <auth_url>
-        tenant_name: <tenant_name>
-        username: <username>
-        password: <password>
-        region: <region>
-
-.. list-table::
-    :widths: auto
-    :header-rows: 1
-
-    *   - Key
-        - Description
-        - Type
-        - Required
-
-    *   - name
-        - The name of the OpenStack credentials section.
-        - String
-        - True
-
-    *   - auth_url
-        - The authentication URL of your OpenStack tenant. (identity)
-        - String
-        - True
-
-    *   - tenant_name
-        - The name of your OpenStack tenant.
-        - String
-        - True
-
-    *   - username
-        - The username of your OpenStack tenant.
-        - String
-        - True
-
-    *   - password
-        - The password of your OpenStack tenant.
-        - String
-        - True
-
-    *   - region
-        - The region of your OpenStack tenant to authenticate with.
-        - String
-        - False
+To authenticate with OpenStack, you will need to have your OpenStack
+credentials in your carbon.cfg file, see `OpenStack Credentials
+<credentials.html#openstack-credentials>`_ for more details.
 
 Provision Resource
 ++++++++++++++++++
@@ -383,7 +260,7 @@ resource for OpenStack:
         metadata: <dict_key_values>
         ansible_params: <dict_key_values>
         provider:
-          credential: beaker
+          credential: openstack-creds
           name: openstack
           image: <image>
           flavor: <flavor>
@@ -422,7 +299,7 @@ resource for OpenStack:
 
     *   - credential
         - The name of the credentials to use to boot node. This is the one
-          defined in the credentials section of the scenario descriptor.
+          defined in the credentials section of the carbon config file.
         - String
         - True
 
@@ -467,28 +344,18 @@ resource for OpenStack:
 Example
 +++++++
 
-.. code-block:: yaml
+.. literalinclude:: ../../.examples/provision/openstack/scenario.yml
 
-    ---
-    name: OpenStack provider example
-    description: Provision one resource in OpenStack
+Definining Static Machines
+--------------------------
 
-    credentials:
-      - name: openstack
-        auth_url: https://ci-rhos.centralci.eng.rdu2.redhat.com:13000/v2.0
-        tenant_name: pit-jenkins
-        username: username
-        password: password
+There may be scenarios where you already have machines provisioned and would
+like carbon to use these static machines.  This option is supported in carbon.
+THe main key that needs to be stated is the **ip_address**.
 
-    provision:
-      - name: test_client
-        role: client
-        provider:
-          name: openstack
-          credential: openstack
-          image: Fedora-Cloud-Base-25-compose-latest
-          flavor: m1.small
-          networks: [pit-jenkins]
-          floating_ip_pool: 10.8.240.0
-          keypair: pit-jenkins
+The following is an example of a statically defined machine:
 
+Example
++++++++
+
+.. literalinclude:: ../../.examples/provision/static/scenario.yml
