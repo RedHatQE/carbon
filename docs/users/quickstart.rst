@@ -78,7 +78,7 @@ Where it is loaded from (using precedence low to high):
 
 Configuration example (with all options):
 
-.. literalinclude:: ../../examples/carbon.cfg
+.. literalinclude:: ../.examples/configuration/carbon/carbon.cfg
 
 
 .. note::

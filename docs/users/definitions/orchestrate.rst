@@ -167,7 +167,7 @@ own ansible.cfg file. This can be used for specific connection requirements,
 logging, and other settings for the scenario.  The following is an example
 of a configuration file that can be used as a base.
 
-.. literalinclude:: ../../../examples/ansible.cfg
+.. literalinclude:: ../../.examples/configuration/ansible/ansible.cfg
 
 To see all of the settings that can be set see `Ansible Configuation Settings
 <https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-configuration-settings>`_.
