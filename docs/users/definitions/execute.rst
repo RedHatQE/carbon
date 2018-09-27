@@ -83,6 +83,12 @@ understand the key/values defined.
         - No
         - False
 
+    *   - valid_rc
+        - valid return codes of the execution (success)
+        - list of integers
+        - No
+        - n/a
+
     *   - git
         - git information for the tests in execution
         - list of dictionaries
@@ -146,11 +152,12 @@ Return Code for Test Execution
 ------------------------------
 
 Carbon will fail out if there is a non-zero return code.  However, for many
-unit testing frameworks there is a non-zero return code if there are failures.
-For this case, carbon has an option to ignore the return code for the test
-execution.
+unit testing frameworks there is a non-zero return code if there are test failures.
+For this case, carbon has two options to handle these situations:
+    1.  ignore the return code for the test execution
+    2.  give list of valid return codes that will not flag failure
 
-The option that can be used for this case is called **ignore_rc**, this option
+Option 1 to handle non-zero return codes is called **ignore_rc**, this option 
 can be used at the top level key of execute or can also be used for each
 specific call.  The following shows an example, where it is defined in both
 areas.  The top level is set to False, which is the default, then it is used
@@ -158,6 +165,15 @@ only for the 2nd pytest execution call, where there are failures:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 68-88
+
+Options 2 to handle non-zero return codes is called **valid_rc**, this option
+can also be used at the top level key of execute or can be used for each
+specific call. If **ignore_rc** is set it takes precedence. The following shows
+an example, where it is defined in both areas. The top level is set to one value
+and the call overides it:
+
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
+    :lines: 197-217
 
 Data Substitution Required for Test Execution
 ---------------------------------------------

@@ -193,3 +193,26 @@ execute:
     artifacts:
       - ~/restraint-example/test*/
 ...
+
+---
+execute:
+  - name: pytest execution
+    description: "execute pytests on the clients"
+    hosts: clients
+    executor: runner
+    valid_rc: [3, 5, 9]
+    git:
+      - repo: https://gitlab.cee.redhat.com/PIT/carbon/pytest-example.git
+        version: master
+        dest: /home/cloud-user/pytest
+    shell:
+      - chdir: /home/cloud-user/pytest/tests
+        command: python -m pytest test_sample.py --junit-xml test-report/suite1_results.xml
+      - chdir: /home/cloud-user/pytest/tests
+        command: python -m pytest sample_unittest.py --junit-xml test-report/suite2_results.xml
+        valid_rc: [2, 7]
+    artifacts:
+      - /home/cloud-user/pytest/tests/test-report/suite1_results.xml
+      - /home/cloud-user/pytest/tests/test-report/suite2_results.xml
+...
+
