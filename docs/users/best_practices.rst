@@ -1,6 +1,12 @@
 Best Practices
 ==============
 
+Data pass-through
+-----------------
+
+Please visit the following `page <data_pass_through.html>`_ to understand how
+you can pass data within carbon tasks.
+
 Scenario Structure
 ------------------
 

@@ -17,6 +17,8 @@ Detailed Information
    :maxdepth: 2
 
    scenario_descriptor
+   data_pass_through
+
 .. toctree::
    :maxdepth: 1
 
