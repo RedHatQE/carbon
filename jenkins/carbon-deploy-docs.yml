@@ -1,0 +1,26 @@
+- job:
+    name: Carbon-Deploy-Docs
+    project-type: pipeline
+    description: "Build and deploy carbons web documentation."
+    concurrent: false
+    logrotate:
+      numToKeep: 25
+    parameters:
+      - string:
+          name: AGENT
+          default: carbon-dev-01
+          description: "The agent where the job should run on."
+      - string:
+          name: BRANCH
+          default: develop
+          description: "The carbon branch to build the documentation for."
+    triggers:
+      - pollscm: "H/15 * * * 1-5"
+    pipeline-scm:
+      scm:
+        - git:
+            url: https://code.engineering.redhat.com/gerrit/carbon.git
+            branches:
+              - develop
+      script-path: jenkins/JenkinsfileDeployDocs.groovy
+      lightweight-checkout: true
