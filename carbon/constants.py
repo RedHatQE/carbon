@@ -72,15 +72,11 @@ DEFAULT_CONFIG = {
     'ANSIBLE_LOG_REMOVE': True,
     'DATA_FOLDER': tempfile.gettempdir(),
     'LOG_LEVEL': 'info',
-    'DEP_CHECK_ENDPOINT': '',
+    'RESOURCE_CHECK_ENDPOINT': '',
 }
 
 # Default config sections
 DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator']
-
-# Component List
-DEP_CHECK_LIST = ['ci-rhos', 'zabbix-sysops', 'brew', 'covscan', 'polarion',
-                  'rpmdiff', 'umb', 'errata', 'rdo-cloud', 'gerrit']
 
 # options on how credentials can be set
 SET_CREDENTIALS_OPTIONS = ['config', 'scenario']

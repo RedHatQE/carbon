@@ -15,7 +15,7 @@ into further detail explaining the different sections.
 .. toctree::
     :maxdepth: 1
 
-    definitions/dep_check
+    definitions/resource_check
     definitions/credentials
     definitions/provision
     definitions/orchestrate

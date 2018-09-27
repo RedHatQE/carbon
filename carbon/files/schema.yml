@@ -10,7 +10,7 @@ mapping:
   description:
     required: True
     type: str
-  dep_check:
+  resource_check:
     type: seq
     sequence:
       - type: str

@@ -1,0 +1,52 @@
+---
+name: Example Discriptor
+description: Descriptor file with resource check section
+
+resource_check:
+  - component1
+  - component2
+  - component3
+  - component4
+  - component5
+  - component6
+  - component7
+  - component8
+  - component9
+  - component10
+
+provision:
+   .
+   .
+   .
+
+orchestrate:
+   .
+   .
+   .
+
+execute:
+   .
+   .
+   .
+
+---
+name: Example Discriptor
+description: Descriptor file with resource check section
+
+resource_check: ['component1', 'component2', 'component3', 'component5']
+
+provision:
+   .
+   .
+   .
+
+orchestrate:
+   .
+   .
+   .
+
+execute:
+   .
+   .
+   .
+
