@@ -53,7 +53,7 @@ def carbon(verbose):
         click.echo('\n--- Verbose mode ON (verbosity %s)---\n' % verbose)
 
 
-@carbon.command()
+# @carbon.command()
 def create():
     """Create a scenario configuration."""
     raise NotImplementedError
