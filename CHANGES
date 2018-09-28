@@ -1,14 +1,14 @@
 Version 1.0.0 (2018-10-01)
--------------------
+--------------------------
 
 Features
 ~~~~~~~~
 
 * configuration for scenario execution
 * use user defined ansible configuration
+* ability to consume and use ansible roles
 * input validation & defined descriptor structure
 * resource checking
-* internal provisioning (OpenStack, Beaker, and OpenShift)
+* internal provisioning (OpenStack and Beaker)
 * ansible orchestration using ansible.
 * execution support (cmd, script, or playbook)
-
