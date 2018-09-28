@@ -18,7 +18,7 @@ The execution is further broken down into 3 different types:
 - execution using a user defined script
 - execution using a user defined playbook
 
-The folowing is the basic structure that defines an execution task, using a
+The following is the basic structure that defines an execution task, using a
 command for execution:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
@@ -140,10 +140,10 @@ defining the hosts `here <orchestrate.html#hosts>`_.
 Ansible
 -------
 
-Since using the default executor, which is called runner, uses ansible to
-perform the actions, the user can set ansible_options.  In this case, the
-options should mostly be used for defining the user that is performing the
-execution, the following is an example:
+The default executor '*runner*' uses ansible to perform the requested actions.
+This means users can set ansible options to be used by the runner executor.
+In this case, the options should mostly be used for defining the user that is
+performing the execution. Please see the following example for more details:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 59-65

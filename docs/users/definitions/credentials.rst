@@ -3,7 +3,7 @@ Credentials
 
 For each resource that needs to be provisioned, credentials are required.
 These credentials will be set in the required `carbon.cfg file
-<../quickstart.html#carbon-configuration>`_, and the credential name will be
+<../configuration.html#carbon-configuration>`_, and the credential name will be
 referenced in your scenario descriptor file in the provision section for each
 resource that is defined.
 

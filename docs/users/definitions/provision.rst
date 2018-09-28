@@ -351,7 +351,7 @@ Definining Static Machines
 
 There may be scenarios where you already have machines provisioned and would
 like carbon to use these static machines.  This option is supported in carbon.
-THe main key that needs to be stated is the **ip_address**.
+The main key that needs to be stated is the **ip_address**.
 
 The following is an example of a statically defined machine:
 
