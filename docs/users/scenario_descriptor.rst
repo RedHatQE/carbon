@@ -23,5 +23,7 @@ into further detail explaining the different sections.
     definitions/report
 
 When we put all of these sections together, we have a complete scenario to
-provide to carbon. Please look at this `template <https://gitlab.cee.redhat.com/PIT/carbon/examples/blob/master/e2e/template.yml>`_
-for details on what a complete scenario descriptor should look like.
+provide to carbon. You can see an example of a complete scenario descriptor
+below:
+
+.. literalinclude:: ../.examples/e2e/template.yml

@@ -1,8 +1,5 @@
 User's Guide
-------------
-
-Quick Start Guide
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
 
 .. toctree::
    :maxdepth: 2
@@ -11,7 +8,6 @@ Quick Start Guide
 
 Detailed Information
 ~~~~~~~~~~~~~~~~~~~~
-
 
 .. toctree::
    :maxdepth: 2

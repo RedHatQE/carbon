@@ -1,24 +1,29 @@
-User's Guide
-------------
+.. toctree::
+    :maxdepth: 2
+    :caption: Installation & Configuration
+    :hidden:
+
+    users/install
+    users/configuration
 
 .. toctree::
     :maxdepth: 2
+    :caption: Using Carbon
+    :hidden:
 
     users/index
 
-Developer's Guide
------------------
-
 .. toctree::
     :maxdepth: 2
+    :caption: Carbon Development
+    :hidden:
 
     developers/index
 
-Additional Information
-----------------------
-
 .. toctree::
     :maxdepth: 1
+    :caption: References
+    :hidden:
 
     glossary
     changelog

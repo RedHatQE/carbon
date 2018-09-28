@@ -1,95 +1,28 @@
-Quick Start
------------
+Carbon Quickstart
+-----------------
 
-.. attention::
+Welcome to the carbon quick start guide! This guide will help get you started
+with using carbon. This guide is broken down into two sections:
 
-       Quickstart examples need to be added!, coming soon.
+#. Carbon Usage
+#. Getting Started Examples
 
-Carbon Installation
-~~~~~~~~~~~~~~~~~~~
-
-Requirements
-++++++++++++
-
-Your system requires the following packages to install carbon:
-
-.. code-block:: bash
-
-    # To install git using dnf package manager
-    $ sudo dnf install -y git
-
-    # To install git using yum package manager
-    $ sudo yum install -y git
-
-    # Install python pip: https://pip.pypa.io/en/stable/installing
-    $ sudo curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-    $ sudo python get-pip.py
-
-    # Recommend installation of virtualenv using pip
-    $ sudo pip install virtualenv
-
-Installation
-++++++++++++
-
-Install carbon from source:
-
-.. code-block:: bash
-
-    # for ansible modules requiring selinux, you will need to enable system site packages
-    $ virtualenv --system-site-packages carbon
-    $ source carbon/bin/activate
-    (carbon) $ pip install git+https://code.engineering.redhat.com/gerrit/p/carbon.git
-
-Post Install
-++++++++++++
-
-If you require carbon to interface with beaker, you will need to enable the
-beaker client repository/install the beaker-client package. Carbon uses the
-beaker client package to provision physical machines in beaker.
-
-.. code-block:: bash
-
-    # https://beaker-project.org/download.html
-    $ sudo curl -o /etc/yum.repos.d/bkr-client.repo \
-    https://beaker-project.org/yum/beaker-client-<DISTRO>.repo
-
-    # dnf package manager
-    $ sudo dnf install -y beaker-client
+Carbon usage will provide you with an overview of how you can call carbon.
+It can be called from either a command line or invoked within a Python
+module. The getting started examples section will show you working examples
+for each carbon task. Each example is stored within a git repository for you
+to clone and try in your local environment.
 
 .. note::
 
-    Beaker-client could be installed from PyPI rather than RPM. Installing from
-    pip fails in Python 3. Beaker client is not compatible with Python 3
-    currently. Once compatibile it can be installed with carbon. Carbon is
-    Python 2.7 & Python 3.6 compatible.
+    At this point, you should already have carbon installed and configured.
+    If not, please view the `install <install.html>`_ guide and the
+    `configuration <configuration.html>`_ guide.
 
+----
 
-Carbon Configuration
-~~~~~~~~~~~~~~~~~~~~
-
-This is a mandatory configuration file, where you set your credentials, and
-there are many optional settings to help you adjust your usage of Carbon.
-The credentials of the configuration file is the only thing that
-is mandatory.  Most of the other default configuration settings should be
-sufficient; however, please read through the options you have.
-
-Where it is loaded from (using precedence low to high):
-
-#. ./carbon.cfg (current working directory)
-#. CARBON_SETTINGS environment variable to the location of the file
-
-Configuration example (with all options):
-
-.. literalinclude:: ../.examples/configuration/carbon/carbon.cfg
-
-
-.. note::
-
-    Many of the configuration options can be overridden by passing cli options when running
-    carbon. See the options in the running carbon `example. <quickstart.html#run>`__
-
-Running Carbon
-~~~~~~~~~~~~~~
+Carbon Usage
+~~~~~~~~~~~~
 
 Once carbon is installed, you can run the carbon command to view its options:
 
@@ -225,12 +158,6 @@ following command:
 
 .. Mention about how they can pick up at a certain task
 
-Create
-++++++
-
-The create command provides a helper for dynamically creating your scenario
-descriptor.  This command is currently not implemented.
-
 Validate
 ++++++++
 
@@ -251,3 +178,7 @@ The validate command validates the scenario descriptor.
                                       Select logging level. (default=info)
       --help                          Show this message and exit.
 
+Getting Started Examples
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Content comming soon!
