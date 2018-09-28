@@ -181,4 +181,37 @@ The validate command validates the scenario descriptor.
 Getting Started Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Content comming soon!
+This section contains examples to help get you started with carbon. A
+separate `examples <https://gitlab.cee.redhat.com/PIT/carbon/examples.git>`_
+repository contains all the examples that will be covered below. Please clone
+this repository into your local environment to use.
+
+Provision
++++++++++
+
+Please visit the following `page <https://gitlab.cee.redhat.com/PIT/carbon/
+examples/tree/master/provision>`_ for complete examples on using carbons
+provision task.
+
+Orchestrate
++++++++++++
+
+Please visit the following `page <https://gitlab.cee.redhat.com/PIT/carbon/
+examples/tree/master/orchestrate>`_ for complete examples on using carbons
+orchestrate task.
+
+Execute
++++++++
+
+Please visit the following `page <https://gitlab.cee.redhat.com/PIT/carbon/
+examples/tree/master/execute>`_ for complete examples on using carbons
+execute task.
+
+Report
+++++++
+
+Please visit the following `page <https://gitlab.cee.redhat.com/PIT/carbon/
+examples/tree/master/report>`_ for complete examples on using carbons
+report task.
+
+.. note::
