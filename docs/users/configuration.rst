@@ -12,6 +12,13 @@ Where it is loaded from (using precedence low to high):
 #. ./carbon.cfg (current working directory)
 #. CARBON_SETTINGS environment variable to the location of the file
 
+.. important::
+
+   It is important to realize if you have a configuration file set using
+   both options, the configuration files will be combined, and common
+   key values will be overrided by the higher precedent option, which will
+   be the CARBON_SETTINGS environment variable.
+
 Configuration example (with all options):
 
 .. literalinclude:: ../.examples/configuration/carbon/carbon.cfg
