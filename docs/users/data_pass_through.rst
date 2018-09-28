@@ -12,7 +12,7 @@ frameworks, etc. This is all defined by the user. When you setup your scenario
 descriptor file (SDF) orchestrate section, you define the actions you wish to
 run. Lets look at an example below:
 
-.. literalinclude:: ../.examples/orchestrate/data_pass_through/scenario.yml
+.. literalinclude:: ../.examples/orchestrate/ansible/data_pass_through/scenario.yml
 
 The orchestrate section above has two actions to be run. Both actions are
 ansible playbooks. This example shows installing product a then product b.
@@ -25,8 +25,8 @@ write to disk allows the second playbook to have access to the return data
 from product a install.
 
 This example can be found at the following `page <https://gitlab.cee.redhat.
-com/PIT/carbon/examples/tree/master/orchestrate/data_pass_through>`_ for you
-to run.
+com/PIT/carbon/examples/tree/master/orchestrate/ansible/data_pass_through>`_
+for you to run.
 
 .. note::
 
