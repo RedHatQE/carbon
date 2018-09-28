@@ -46,8 +46,11 @@ beaker client package to provision physical machines in beaker.
     $ sudo curl -o /etc/yum.repos.d/bkr-client.repo \
     https://beaker-project.org/yum/beaker-client-<DISTRO>.repo
 
-    # dnf package manager
+    # To install beaker-client using dnf package manager
     $ sudo dnf install -y beaker-client
+
+    # To install beaker-client using yum package manager
+    $ sudo yum install -y beaker-client
 
 .. note::
 

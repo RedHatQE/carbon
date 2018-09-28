@@ -63,7 +63,7 @@ scenario descriptor by the host as **credential: beaker-creds**:
   username=<username>
   password=<password>
 
-The following is an example of a resource in the carbon descriptor file
+The following is an example of a resource in the scenario descriptor file
 that references this credential:
 
 .. literalinclude:: ../../.examples/provision/beaker/scenario.yml
@@ -119,7 +119,7 @@ your credential section in your carbon.cfg file.
   password=<password>
   region=<region>
 
-The following is an example of a resource in the carbon descriptor file
+The following is an example of a resource in the scenario descriptor file
 that references this credential:
 
 

@@ -49,7 +49,7 @@ class BluePrintProvisioner(CarbonProvisioner):
             - i.e. from .customprovisioner123 import CustomProvisioner123
 
     Once you have completed those steps, you will want to update your host
-    resource defined in your carbon descriptor file to point to this
+    resource defined in your scenario descriptor file to point to this
     provisioner.
 
     i.e.
