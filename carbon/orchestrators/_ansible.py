@@ -266,11 +266,6 @@ class Inventory(LoggerMixin):
             elif isinstance(host.ip_address, str):
                 config.set(section, host.ip_address)
 
-            # localhost does not need ssh key set, uses connection=local
-            # default connection=smart, ansible knows which one to select
-            if is_host_localhost(host.ip_address):
-                continue
-
             # add host vars
             for k, v in host.ansible_params.items():
                 if k in ['ansible_ssh_private_key_file']:
