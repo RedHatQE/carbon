@@ -1,3 +1,11 @@
+Version 1.0.1 (2018-10-02)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* removes filtering host resource names
+
 Version 1.0.0 (2018-10-01)
 --------------------------
 
