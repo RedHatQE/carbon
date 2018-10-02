@@ -499,19 +499,15 @@ def fetch_hosts(hosts, task, all_hosts=True):
 
     # determine the task host data types
     if all(isinstance(item, string_types) for item in task[_type].hosts):
-        # filter hosts
-        for host in task[_type].hosts:
-            _filtered_hosts.append(filter_host_name(host))
-
         for host in hosts:
             if all_hosts:
                 _all_hosts.append(host)
-            if 'all' in _filtered_hosts:
+            if 'all' in task[_type].hosts:
                 _hosts.append(host)
                 continue
-            if host.name in _filtered_hosts:
+            if host.name in task[_type].hosts:
                 _hosts.append(host)
-            if host.role in _filtered_hosts:
+            if host.role in task[_type].hosts:
                 _hosts.append(host)
     else:
         for host in hosts:

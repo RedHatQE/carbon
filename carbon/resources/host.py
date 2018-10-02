@@ -91,7 +91,6 @@ class Host(CarbonResource):
                 self._name = 'hst{0}'.format(gen_random_str(10))
         else:
             self._name = name
-        self._name = filter_host_name(self._name)
 
         # set description attribute
         self._description = parameters.pop('description', None)
@@ -188,7 +187,7 @@ class Host(CarbonResource):
         # determine hostname for the host
         if 'hostname' not in self.provider_params:
             self.provider_params['hostname'] = \
-                filter_host_name(self._name) + '_%s' % gen_random_str(5)
+                filter_host_name(self.name) + '_%s' % gen_random_str(5)
 
         return parameters
 
