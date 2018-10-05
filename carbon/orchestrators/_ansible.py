@@ -242,6 +242,8 @@ class Inventory(LoggerMixin):
 
         # create parser object, raw config parser allows keys with no values
         config = RawConfigParser(allow_no_value=True)
+        # disable default behavior to set values to lower case
+        config.optionxform = str
 
         for host in self.all_hosts:
             section = host.name
@@ -285,6 +287,8 @@ class Inventory(LoggerMixin):
         """
         # create parser object, raw config parser allows keys with no values
         config = RawConfigParser(allow_no_value=True)
+        # disable default behavior to set values to lower case
+        config.optionxform = str
         main_section = self.group + ":children"
         config.add_section(main_section)
 
