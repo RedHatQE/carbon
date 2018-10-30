@@ -13,6 +13,13 @@ You need to define the machine as a static machine in the carbon definition
 file.  See `Defining Static Machines
 <definitions/provision.html#definining-static-machines>`_ for details.
 
+... run scripts on my local system?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You need to define your local system as a static resource.
+See `The localhost example for provisioning
+<definitions/provision.html#localhost-example>`_ for details.
+
 ... run carbon and not delete my machines at the end of the run?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

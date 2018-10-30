@@ -8,6 +8,66 @@ The input for provisioning will depend upon the type of resource you are
 trying to provision. The current support for provisioning resources are:
 :ref:`Beaker<beaker_provisioning>` and :ref:`OpenStack<openstack_provisioning>`.
 
+Provision Resource
+++++++++++++++++++
+
+Each resource defined within a provision section can have the following
+common keys, and the table below will describe whether the keys are
+required or optional:
+
+.. code-block:: yaml
+
+    ---
+    provision:
+      - name: <name>
+        role: <role>
+        provisioner: <provisioner>
+        metadata: <dict_key_values>
+        ansible_params: <dict_key_values>
+        provider: <dict_key_values>
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Key
+        - Description
+        - Type
+        - Required
+
+    *   - name
+        - The name of the node to boot.
+        - String
+        - True
+
+    *   - role
+        - The name of the role for the node.
+        - String
+        - True
+
+    *   - provisioner
+        - The name of the provisioner to use to boot nodes.
+        - String
+        - False
+
+    *   - metadata
+        - Data that the resource may need access to after provisioning is
+          finished. This data is passed through and is not modified by carbon
+          framework.
+        - Dict
+        - False
+
+    *   - ansible_params
+        - Ansible parameters to be used within a inventory file to control how
+          ansible communicates with the host.
+        - Dict
+        - False
+
+    *   - provider
+        - Dictionary of the specific provider key/values.
+        - Dict
+        - True
+
 
 .. _beaker_provisioning:
 
@@ -21,8 +81,8 @@ To authenticate with Beaker, you will need to have your Beaker credentials
 in your carbon.cfg file, see `Beaker Credentials
 <credentials.html#beaker-credentials>`_ for more details.
 
-Provision Resource
-++++++++++++++++++
+Beaker Resource
++++++++++++++++
 
 The following shows all the possible keys for defining a
 provisioning resource for Beaker:
@@ -71,24 +131,9 @@ provisioning resource for Beaker:
         - Required
 
     *   - name
-        - The name to identify the node.
+        - The name to identify the provider (beaker).
         - String
         - True
-
-    *   - role
-        - The name of the role for the node.
-        - String
-        - True
-
-    *   - provider
-        - The name of the provider. (beaker)
-        - String
-        - True
-
-    *   - provisioner
-        - The name of the provisioner to use to boot nodes.
-        - String
-        - False
 
     *   - credential
         - The name of the credentials to use to boot node. This is the one
@@ -133,6 +178,11 @@ provisioning resource for Beaker:
 
     *   - host_requires_options
         - List of host options with the format:["<key><operand><value>"].
+        - List
+        - False
+
+    *   - key_values
+        - List of key/value pairs defining the host, with the format:["<key><operand><value>"].
         - List
         - False
 
@@ -213,19 +263,6 @@ provisioning resource for Beaker:
         - List
         - False
 
-    *   - metadata
-        - Data that the resource may need access to after provisioning is
-          finished. This data is passed through and is not modified by carbon
-          framework.
-        - Dict
-        - False
-
-    *   - ansible_params
-        - Ansible parameters to be used within a inventory file to control how
-          ansible communicates with the host.
-        - Dict
-        - False
-
 Example
 +++++++
 
@@ -244,7 +281,7 @@ To authenticate with OpenStack, you will need to have your OpenStack
 credentials in your carbon.cfg file, see `OpenStack Credentials
 <credentials.html#openstack-credentials>`_ for more details.
 
-Provision Resource
+OpenStack Resource
 ++++++++++++++++++
 
 The following shows all the possible keys for defining a provisioning
@@ -278,24 +315,9 @@ resource for OpenStack:
         - Required
 
     *   - name
-        - The name of the node to boot.
+        - The name of the provider (openstack).
         - String
         - True
-
-    *   - role
-        - The name of the role for the node.
-        - String
-        - True
-
-    *   - provider
-        - The name of the provider. (openstack)
-        - String
-        - True
-
-    *   - provisioner
-        - The name of the provisioner to use to boot nodes.
-        - String
-        - False
 
     *   - credential
         - The name of the credentials to use to boot node. This is the one
@@ -328,26 +350,14 @@ resource for OpenStack:
         - String
         - True
 
-    *   - metadata
-        - Data that the resource may need access to after provisioning is
-          finished. This data is passed through and is not modified by carbon
-          framework.
-        - Dict
-        - False
-
-    *   - ansible_params
-        - Ansible parameters to be used within a inventory file to control how
-          ansible communicates with the host.
-        - Dict
-        - False
 
 Example
 +++++++
 
 .. literalinclude:: ../../.examples/provision/openstack/scenario.yml
 
-Definining Static Machines
---------------------------
+Defining Static Machines
+------------------------
 
 There may be scenarios where you already have machines provisioned and would
 like carbon to use these static machines.  This option is supported in carbon.
@@ -359,3 +369,18 @@ Example
 +++++++
 
 .. literalinclude:: ../../.examples/provision/static/scenario.yml
+
+There may also be a scenario where you want to run cmds or scripts on the
+local system instead of the provisioned resources.  In that case, you should
+define a static localhost system.
+
+The following is an example of a statically defined local machine:
+
+.. _localhost_example:
+
+Example
++++++++
+
+.. literalinclude:: ../../.examples/orchestrate/ansible/basic/scenario.yml
+    :lines: 1-11
+
