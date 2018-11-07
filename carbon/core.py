@@ -913,3 +913,139 @@ class CarbonExecutor(LoggerMixin, TimeMixin):
         for param in cls.get_all_parameters():
             profile.update({param: getattr(execute, param, None)})
         return profile
+
+
+class CarbonPlugin(LoggerMixin, TimeMixin):
+    """Carbon gateway class.
+
+        Base class that all carbon resource implmentations will use. This
+        is to facilitate decoupling the interface from the implementation.
+        """
+    # set the plugin name
+    __plugin_name__ = None
+
+
+class ProvisionerPlugin(CarbonPlugin):
+    """Carbon provisioner plugin class.
+
+    Each provisioner implementation added into carbon requires that they
+    inherit the carbon provisioner class. This enforces that the
+    required methods are implemented in the new provisioner class.
+    Additional support/helper methods can be added to this class
+    """
+
+    def __init__(self, host):
+
+        """Constructor.
+
+        Each host resource is linked to a provider which is the location where
+        the host will be provisioned. Along with the provider you will also
+        have access to all the provider parameters needed to fulfill the
+        provision request. (i.e. images, flavor, network, etc. depending on
+        the provider).
+
+        Common Attributes:
+          - name: data_folder
+            description: the runtime folder where all files/results are stored
+            and archived for historical purposes.
+            type: string
+
+          - name: provider
+            description: name of the provider where host is to be created or
+            deleted.
+            type: string
+
+          - name: provider_params
+            description: available data about the host to be created or
+            deleted in the provider defined.
+            type: dictionary
+
+          - name: provider_credentials
+            description: credentials for the provider associated to the host
+            resource.
+            type: dictionary
+
+          - name: workspace
+            description: workspace where carbon can access all files needed
+            by the scenario in order to successfully run it.
+            type: string
+
+        There can be more information within the host resource but the ones
+        defined above are the most commonly ones used by provisioners.
+
+        :param host: carbon host resource
+        :type host: object
+        """
+
+        self.host = host
+
+        # set commonly accessed data used by provisioners
+        self.data_folder = getattr(self.host, 'data_folder')
+        self.provider = getattr(getattr(host, 'provider'), 'name')
+        self.provider_params = getattr(host, 'provider_params')
+        self.provider_credentials = getattr(getattr(
+            host, 'provider'), 'credentials')
+        self.workspace = getattr(self.host, 'workspace')
+
+    def create(self):
+        raise NotImplementedError
+
+    def delete(self):
+        raise NotImplementedError
+
+    def authenticate(self):
+        raise NotImplementedError
+
+
+class ReporterPlugin(CarbonPlugin):
+    """Carbon reporter plugin class.
+
+    Each reporter implementation added into carbon requires that they
+    inherit the carbon reporter plugin class. This enforces that the
+    required methods are implemented in the new plugin class.
+    Additional support/helper methods can be added to this class.
+    """
+
+    def __init__(self):
+        pass
+
+    def aggregate_artifacts(self):
+        raise NotImplementedError
+
+    def push_artifacts(self):
+        raise NotImplementedError
+
+    def cleanup_artifacts(self):
+        raise NotImplementedError
+
+
+class OrchestratorPlugin(CarbonPlugin):
+    """Carbon orchestrator gateway class.
+
+    Each orchestrator implementation added into carbon requires that they
+    inherit the carbon orchestrator plugin class. This enforces that the
+    required methods are implemented in the new plugin class.
+    Additional support/helper methods can be added to this class.
+    """
+
+    def __init__(self):
+        pass
+
+    def run(self):
+        raise NotImplementedError
+
+
+class ExecutorPlugin(CarbonPlugin):
+    """Carbon executor plugin class.
+
+    Each executor implementation added into carbon requires that they
+    inherit the carbon executor plugin class. This enforces that the
+    required methods are implemented in the new plugin class.
+    Additional support/helper methods can be added to this class.
+    """
+
+    def __init__(self):
+        pass
+
+    def run(self):
+        raise NotImplementedError

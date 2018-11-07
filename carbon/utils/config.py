@@ -88,6 +88,24 @@ class Config(dict):
                     self.parser.get(section, option)
                 )
 
+    def __set_feature_toggles__(self):
+        """Set the feature toggle configuration settings."""
+        toggles = []
+
+        for section in getattr(self.parser, '_sections'):
+            if not section.startswith('feature_toggles'):
+                continue
+
+            _toggles = {}
+
+            for option in self.parser.options(section):
+                _toggles[option] = \
+                    self.parser.get(section, option)
+            _toggles['name'] = section.split(':')[-1]
+            toggles.append(_toggles)
+
+        self.__setitem__('TOGGLES', toggles)
+
     def load(self):
         """Load configuration settings.
 

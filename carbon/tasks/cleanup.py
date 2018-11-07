@@ -90,8 +90,21 @@ class CleanupTask(CarbonTask):
         # **** TASKS BELOW ONLY SHOULD BE RELATED TO THE PROVISIONER ****
         if self.host:
             try:
-                # create the provisioner object
-                provisioner = getattr(self.host, 'provisioner')(self.host)
+
+                # let's try to create the provisioner gateway implementation first
+                if getattr(self.host, 'provisioner_plugin') is not None:
+                    plugin = getattr(self.host, 'provisioner_plugin')(self.host)
+                    self.logger.debug('Host loaded the following provisioner plugin: %s' % plugin.__plugin_name__)
+                    provisioner = getattr(self.host, 'provisioner')(self.host, plugin)
+                    self.logger.debug('Host loaded the following provisioner interface: %s'
+                                      % provisioner.__provisioner_name__)
+                else:
+                    self.logger.warning("Found no plugin. "
+                                        "This is ok it might mean the feature is not enabled.")
+                    # create the provisioner object
+                    provisioner = getattr(self.host, 'provisioner')(self.host)
+                    self.logger.debug('Host loaded the following provisioner interface: %s'
+                                      % provisioner.__provisioner_name__)
 
                 # teardown the host
                 getattr(provisioner, 'delete')()

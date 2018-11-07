@@ -52,7 +52,8 @@ TASK_LOGLEVEL_CHOICES = [
 PROVISIONERS = {
     "beaker": "beaker-client",
     "openstack": "openstack-libcloud",
-    "linchpin": "linchpin-wrapper"
+    "linchpin": "linchpin-wrapper",
+    "host": "host-provisioner"
 }
 
 HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]
@@ -77,7 +78,7 @@ DEFAULT_CONFIG = {
 }
 
 # Default config sections
-DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator']
+DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator', 'feature_toggles']
 
 # options on how credentials can be set
 SET_CREDENTIALS_OPTIONS = ['config', 'scenario']

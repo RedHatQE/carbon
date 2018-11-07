@@ -32,6 +32,7 @@ from ..core import CarbonResource
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
 from ..helpers import get_provisioner_class, get_default_provisioner
 from ..helpers import get_provisioners_list, filter_host_name
+from ..helpers import get_provisioners_plugins_list, get_provisioner_plugin_class, get_default_provisioner_plugin
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 
 
@@ -119,16 +120,41 @@ class Host(CarbonResource):
             # host needs to be provisioned, get the provider parameters
             parameters = self.__set_provider_attr_(parameters)
 
+            # lets setup any feature toggles that we defined in the configuration file
+            self.__set_feature_toggles_()
+
             # finally lets get the right provisioner to use
             provisioner_name = parameters.pop('provisioner', provisioner)
-            if provisioner_name is None:
-                self._provisioner = get_default_provisioner(self._provider)
-            elif provisioner_name not in get_provisioners_list():
-                self.logger.error('Provisioner %s for host %s is invalid.' %
-                                  (provisioner_name, self.name))
-                sys.exit(1)
+
+            # TODO: Should we instantiate here rather just getting the classes
+            # check the feature toggle for gateway implementation
+            if self._feature_toggles is not None and self._feature_toggles['plugin_implementation'] == 'True':
+                self._provisioner = get_default_provisioner()
+                if provisioner_name is None:
+                    self._provisioner_plugin = get_default_provisioner_plugin()
+                else:
+                    found_name = False
+                    for name in get_provisioners_plugins_list():
+                        if name.startswith(provisioner_name):
+                            found_name = True
+
+                    if found_name:
+                        self._provisioner_plugin = get_provisioner_plugin_class(provisioner_name)
+                    else:
+                        self.logger.error('Provisioner %s for host %s is invalid.'
+                                          % (provisioner_name, self.name))
+                        sys.exit(1)
             else:
-                self._provisioner = get_provisioner_class(provisioner_name)
+                if provisioner_name is None:
+                    self._provisioner = get_default_provisioner(self._provider)
+                    self._provisioner_plugin = None
+                elif provisioner_name not in get_provisioners_list():
+                    self.logger.error('Provisioner %s for host %s is invalid.'
+                                      % (provisioner_name, self.name))
+                    sys.exit(1)
+                else:
+                    self._provisioner = get_provisioner_class(provisioner_name)
+                    self._provisioner_plugin = None
 
             self._ip_address = parameters.pop('ip_address', None)
 
@@ -143,6 +169,14 @@ class Host(CarbonResource):
         # load the parameters set into the object itself
         if parameters:
             self.load(parameters)
+
+    def __set_feature_toggles_(self):
+
+        self._feature_toggles = None
+
+        for item in self.config['TOGGLES']:
+            if item['name'] == 'host':
+                self._feature_toggles = item
 
     def __set_provider_attr_(self, parameters):
         """Configure the host provider attributes.
@@ -274,6 +308,21 @@ class Host(CarbonResource):
                              'class is instantiated.')
 
     @property
+    def provisioner_plugin(self):
+        """Provisioner plugin property.
+
+        :return: provisioner plugin class
+        :rtype: object
+        """
+        return self._provisioner_plugin
+
+    @provisioner_plugin.setter
+    def provisioner_plugin(self, value):
+        """Set provisioner plugin property."""
+        raise AttributeError('You cannot set the host provisioner plugin after host '
+                             'class is instantiated.')
+
+    @property
     def role(self):
         """Role property.
 
@@ -306,11 +355,19 @@ class Host(CarbonResource):
         }
 
         try:
-            profile.update({
-                'provider': self.provider_params,
-                'provisioner': getattr(
-                    self.provisioner, '__provisioner_name__')
-            })
+            if getattr(self, 'provisioner_plugin')is not None:
+
+                profile.update({
+                    'provider': self.provider_params,
+                    'provisioner': getattr(
+                        self.provisioner_plugin, '__plugin_name__')
+                })
+            else:
+                profile.update({
+                    'provider': self.provider_params,
+                    'provisioner': getattr(
+                        self.provisioner, '__provisioner_name__')
+                })
         except AttributeError:
             self.logger.debug('Host is static, no need to profile provider '
                               'facts.')

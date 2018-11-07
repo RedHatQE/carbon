@@ -37,12 +37,20 @@ import os
 import pytest
 from carbon.resources import Action, Execute, Host, Report, Scenario
 from carbon.utils.config import Config
+from carbon._compat import ConfigParser
 
 os.environ['CARBON_SETTINGS'] = '../assets/carbon.cfg'
 
 
 @pytest.fixture
 def config():
+    config_file = '../assets/carbon.cfg'
+    cfgp = ConfigParser()
+    cfgp.read(config_file)
+    if cfgp.get('feature_toggles:host','plugin_implementation') != 'False':
+        cfgp.set('feature_toggles:host','plugin_implementation','False')
+        with open(config_file, 'w') as cf:
+            cfgp.write(cf)
     config = Config()
     config.load()
     return config
