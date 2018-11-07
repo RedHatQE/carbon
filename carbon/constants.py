@@ -51,7 +51,8 @@ TASK_LOGLEVEL_CHOICES = [
 
 PROVISIONERS = {
     "beaker": "beaker-client",
-    "openstack": "openstack-libcloud"
+    "openstack": "openstack-libcloud",
+    "linchpin": "linchpin-wrapper"
 }
 
 HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]

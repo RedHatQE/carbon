@@ -1,0 +1,12 @@
+---
+carbon:
+  topology:
+    topology_name: carbon
+    resource_groups: []
+  layout:
+    inventory_layout:
+      vars:
+        hostname: __IP__
+      hosts:
+        node:
+          count: 1
