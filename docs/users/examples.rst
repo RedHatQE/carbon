@@ -50,6 +50,6 @@ can execute this example with carbon to run a restraint example.
 
 ----
 
-.. _junit repository: https://gitlab.cee.redhat.com/PIT/carbon/junit-install-example
-.. _pytest repository: https://gitlab.cee.redhat.com/PIT/carbon/pytest-install-example
-.. _restraint repository: https://gitlab.cee.redhat.com/PIT/carbon/restraint-install-example
+.. _junit repository: https://gitlab.cee.redhat.com/qeet/carbon/junit-example
+.. _pytest repository: https://gitlab.cee.redhat.com/qeet/carbon/pytest-example
+.. _restraint repository: https://gitlab.cee.redhat.com/qeet/carbon/restraint-example
