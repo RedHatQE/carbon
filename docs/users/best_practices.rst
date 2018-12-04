@@ -27,7 +27,7 @@ product scenarios.
 
 Below is a tree formatted scenario structure for a multi product scenario.
 This references the scenario `template
-<https://gitlab.cee.redhat.com/PIT/mpqe-scenario-template>`_.
+<https://gitlab.cee.redhat.com/qeet/carbon/mpqe-scenario-template>`_.
 
 .. code-block:: bash
 
@@ -116,7 +116,7 @@ Source
 
 The source for this template scenario structure and details on running the
 scenario can be found here: `template
-<https://gitlab.cee.redhat.com/PIT/mpqe-scenario-template>`_.
+<https://gitlab.cee.redhat.com/qeet/carbon/mpqe-scenario-template>`_.
 
 Handing Off A Scenario
 ----------------------

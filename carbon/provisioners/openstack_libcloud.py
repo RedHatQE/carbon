@@ -94,13 +94,22 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
         except KeyError:
             credentials['region'] = 'regionOne'
 
+        # determine domain
+        try:
+            if not credentials['domain_name']:
+                # set the default domain if no domain is defined
+                credentials['domain_name'] = 'default'
+        except KeyError:
+            credentials['domain_name'] = 'default'
+
         # create libcloud driver object
         self._driver = get_driver(Provider.OPENSTACK)(
             credentials['username'],
             credentials['password'],
             ex_tenant_name=credentials['tenant_name'],
             ex_force_auth_url=credentials['auth_url'].split('/v')[0],
-            ex_force_auth_version='2.0_password',
+            ex_force_auth_version='3.x_password',
+            ex_domain_name=credentials['domain_name'],
             ex_force_service_region=credentials['region']
         )
 
@@ -442,7 +451,7 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
             'Maximum attempts reached to delete node %s.' % node.name
         )
 
-    def _create(self, name, image, size, network, key_pair, fip):
+    def _create(self, name, image, size, network, key_pair, fip=None):
         """Create.
 
         This method will create a resource (node) in openstack. It will
@@ -490,6 +499,12 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
             raise OpenstackProviderError('Failed to attach fip.')
 
         self.logger.info('Successfully provisioned node %s.' % name)
+
+        # if no floating ip is assigned get updated node details and look for private_ip
+        # TODO: This might need more logic if we support a use case for more than one network specified
+        if ip is None:
+            node = self.driver.ex_get_node_details(node.id)
+            ip = node.private_ips[-1]
 
         return ip, node.id
 
@@ -629,13 +644,19 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
         """
         self.logger.info('Provisioning machines from %s', self.__class__)
 
+        # Check if floating ip pool was provided as part of scenario
+        try:
+            fip = getattr(self.host, 'provider_params')['floating_ip_pool']
+        except KeyError:
+            fip = None
+
         _ip, _id = self._create(
             getattr(self.host, 'provider_params')['hostname'],
             getattr(self.host, 'provider_params')['image'],
             getattr(self.host, 'provider_params')['flavor'],
             getattr(self.host, 'provider_params')['networks'],
             getattr(self.host, 'provider_params')['keypair'],
-            getattr(self.host, 'provider_params')['floating_ip_pool'],
+            fip
         )
 
         # set new attributes in host object

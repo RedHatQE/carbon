@@ -25,7 +25,7 @@ write to disk allows the second playbook to have access to the return data
 from product a install.
 
 This example can be found at the following `page <https://gitlab.cee.redhat.
-com/PIT/carbon/examples/tree/master/orchestrate/ansible/data_pass_through>`_
+com/qeet/carbon/examples/tree/master/orchestrate/ansible/data_pass_through>`_
 for you to run.
 
 .. note::
