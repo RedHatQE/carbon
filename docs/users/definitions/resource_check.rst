@@ -31,6 +31,6 @@ List format 2.
 .. literalinclude:: ../../../examples/docs-usage/resource_check.yml
     :lines: 32-51
 
-Please look at this `template <https://gitlab.cee.redhat.com/PIT/carbon/examples/blob/master/e2e/template.yml>`_
+Please look at this `template <https://gitlab.cee.redhat.com/qeet/carbon/examples/blob/master/e2e/template.yml>`_
 for details on what a complete scenario descriptor should look like.
 

@@ -59,5 +59,6 @@ class OpenstackProvider(CloudProvider):
         ]
 
         self.opt_credential_params = [
-            ('region', [str])
+            ('region', [str]),
+            ('domain_name', [str])
         ]

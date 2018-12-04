@@ -109,6 +109,12 @@ your credential section in your carbon.cfg file.
         - String
         - False
 
+    *   - domain_name
+        - The name of your OpenStack domain to authenticate with.
+        When not set carbon will use the 'default' domain
+        - String
+        - False
+
 
 .. code-block:: bash
 
@@ -118,6 +124,7 @@ your credential section in your carbon.cfg file.
   username=<username>
   password=<password>
   region=<region>
+  domain_name=<domain_name>
 
 The following is an example of a resource in the scenario descriptor file
 that references this credential:
