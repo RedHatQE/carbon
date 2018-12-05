@@ -1,3 +1,16 @@
+Version 1.0.3 (2018-12-5)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* Do not attempt to attach a floating ip to an OpenStack instance if the floating_ip_pool parameter is not specified
+
+Enhancment
+~~~~~~~~~~
+
+* General provisioning support on the latest OpenStack Cloud environment  
+
 Version 1.0.2 (2018-10-29)
 --------------------------
 
