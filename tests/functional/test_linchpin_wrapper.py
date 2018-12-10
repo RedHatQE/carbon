@@ -26,9 +26,9 @@
 """
 
 import copy
-import mock
+import json
 import pytest
-
+import mock
 from carbon.resources import Host
 from carbon.core import CarbonProvisioner
 from carbon.exceptions import CarbonProvisionerError
@@ -36,72 +36,86 @@ from carbon.provisioners import LinchpinWrapperProvisioner
 from linchpin import LinchpinAPI
 
 
-@pytest.fixture
-def host_params():
-  return dict(
-      role='client',
-      provider=dict(
-          name='openstack',
-          credential='openstack',
-          image='image',
-          flavor='small',
-          networks=['network'],
-          keypair='key',
-          floating_ip_pool='pool'
-      )
-  )
+def os_params():
+    return dict(
+        role='client',
+        provider=dict(
+            name='openstack',
+            credential='openstack',
+            image='image',
+            flavor='small',
+            networks=['network'],
+            keypair='key',
+            floating_ip_pool='pool'
+        )
+    )
 
-@pytest.fixture
-def host(host_params, config):
-  return Host(
-      name='host01',
-      config=config,
-      provisioner='linchpin-wrapper',
-      parameters=copy.deepcopy(host_params)
-  )
+def beaker_params():
+    return dict(
+        role='client',
+        provider=dict(
+            name='beaker',
+            credential='beaker-creds',
+            arch='x86_64',
+            distro='RHEL-7.5',
+            variant='Server',
+            whiteboard='carbon beaker resource examples'
+        )
+    )
+
+@pytest.fixture(params=['os', 'beaker'])
+def host(request, config):
+    return Host(
+        name='host01',
+        config=config,
+        provisioner='linchpin-wrapper',
+        parameters=copy.deepcopy(eval('%s_params()' % request.param))
+    )
+
 
 @pytest.fixture
 def linchpin_wrapper(host):
-  return LinchpinWrapperProvisioner(host)
+    return LinchpinWrapperProvisioner(host)
 
 
 class TestLinchpinWrapperProvisioner(object):
+    def do_action(*args, **kwargs):
+        pinfile = args[1]
+        resource = pinfile['carbon']['topology']['resource_groups'][0]
+        cloud = resource['resource_group_type']
+        if kwargs['action'] == 'up':
+            sample_file = '../assets/linchpin_%s_results.json' % cloud
+            with open(sample_file) as sample:
+                results = json.load(sample)
+            return (0, [results])
+        elif kwargs['action'] == 'destroy':
+            return True
 
-  def up(*args, **kwargs):
-    return (0, {'carbon':{'inputs': {}, 'outputs': { 'resources': {}}}})
+    def up_failed(self, *args, **kwargs):
+        return (1, {})
 
-  def destroy(*args, **kwargs):
-    return True
+    def get_run_data(*args, **kwargs):
+        return args[1]
 
-  def up_failed(*args, **kwargs):
-    return (1, {'carbon':{'inputs': {}, 'outputs': { 'resources': {}}}})
 
-  def run_data(*args, **kwargs):
-    resources = {'os_server_res': [{'servers':[{
-        'interface_ip': '1.1.1.1',
-        'id': '1'
-        }]}]}
-    return {'carbon':{'inputs': {}, 'outputs': { 'resources': resources }}}
+    @staticmethod
+    def test_linchpin_constructor(linchpin_wrapper):
+        assert isinstance(linchpin_wrapper, LinchpinWrapperProvisioner)
 
-  @staticmethod
-  def test_linchpin_wrapper_constructor(linchpin_wrapper):
-    assert isinstance(linchpin_wrapper, LinchpinWrapperProvisioner)
+    @staticmethod
+    @mock.patch.object(LinchpinAPI, 'do_action', do_action)
+    def test_linchpin_delete(linchpin_wrapper):
+        linchpin_wrapper.delete()
 
-  @staticmethod
-  @mock.patch.object(LinchpinAPI, 'do_action', destroy)
-  def test_linchpin_wrapper_delete(linchpin_wrapper):
-    linchpin_wrapper.delete()
+    @staticmethod
+    @mock.patch.object(LinchpinAPI, 'do_action', up_failed)
+    def test_linchpin_failed_os_create(linchpin_wrapper):
+        with pytest.raises(CarbonProvisionerError):
+            linchpin_wrapper.create()
 
-  @staticmethod
-  @mock.patch.object(LinchpinAPI, 'do_action', up_failed)
-  @mock.patch.object(LinchpinAPI, 'get_run_data', run_data)
-  def test_linchpin_wrapper_failed_create(linchpin_wrapper):
-    with pytest.raises(CarbonProvisionerError):
-      linchpin_wrapper.create()
-
-  @staticmethod
-  @mock.patch.object(LinchpinAPI, 'do_action', up)
-  @mock.patch.object(LinchpinAPI, 'get_run_data', run_data)
-  def test_linchpin_wrapper_create(linchpin_wrapper):
-    linchpin_wrapper.create()
-    assert getattr(linchpin_wrapper.host, 'ip_address') == "1.1.1.1"
+    @staticmethod
+    @mock.patch.object(LinchpinAPI, 'do_action', do_action)
+    @mock.patch.object(LinchpinAPI, 'get_run_data', get_run_data)
+    def test_linchpin_wrapper_create(linchpin_wrapper):
+        linchpin_wrapper.create()
+        assert getattr(linchpin_wrapper.host, 'ip_address') == "10.0.58.5"

@@ -10,3 +10,5 @@ carbon:
       hosts:
         node:
           count: 1
+          host_groups:
+            - carbon

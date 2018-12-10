@@ -1,0 +1,120 @@
+{
+  "carbon":{
+      "inputs": {
+            "topology_data":{
+                "topology_name":"carbon",
+                "resource_groups":[
+                  {
+                      "resource_group_name":"carbon",
+                      "resource_definitions":[
+                        {
+                            "role":"bkr_server",
+                            "recipesets":[
+                              {
+                                  "arch":"x86_64",
+                                  "variant":"Server",
+                                  "name":"beaker",
+                                  "distro":"RHEL-7.5"
+                              }
+                            ]
+                        }
+                      ],
+                      "resource_group_type":"beaker"
+                  }
+                ]
+            },
+            "layout_data":{
+                "inventory_layout":{
+                  "hosts":[
+                      {
+                        "count":1,
+                        "name":"node",
+                        "host_groups":[
+                            "carbon"
+                        ]
+                      }
+                  ],
+                  "vars":{
+                      "hostname":"__IP__",
+                      "ansible_user":"cloud-user"
+                  }
+                }
+          }
+       },
+      "outputs": {
+            "bkr_id_values":
+                {
+                  "url":"https://beaker.engineering.redhat.com/jobs/3240848",
+                  "id":"3240848"
+                },
+
+            "resources":{
+                "ovirt_vms_res":[
+
+                ],
+                "rax_server_res":[
+
+                ],
+                "aws_ec2_res":[
+
+                ],
+                "os_server_res":[
+
+                ],
+                "os_keypair_res":[
+
+                ],
+                "aws_ec2_key_res":[
+
+                ],
+                "gcloud_gce_res":[
+
+                ],
+                "aws_s3_res":[
+
+                ],
+                "duffy_res":[
+
+                ],
+                "os_sg_res":[
+
+                ],
+                "dummy_res":[
+
+                ],
+                "beaker_res":[
+                  {
+                      "status":"Running",
+                      "name":"beaker",
+                      "family":"RedHatEnterpriseLinux7",
+                      "url":"https://beaker.engineering.redhat.com/jobs/3240848",
+                      "variant":"Server",
+                      "system":"10.0.58.5",
+                      "result":"Pass",
+                      "rid":"6313090",
+                      "arch":"x86_64",
+                      "id":"3240848",
+                      "distro":"RHEL-7.5"
+                  }],
+                "aws_cfn_res":[
+
+                ],
+                "os_heat_res":[
+
+                ],
+                "os_obj_res":[
+
+                ],
+                "libvirt_res":[
+
+                ],
+                "os_volume_res":[
+
+                ]
+            },
+            "inventory_path":[
+                "/home/ccit/carbon_bkr_test/.carbon/.results/linchpin/inventories/carbon.inventory"
+            ]
+          }
+  }
+}

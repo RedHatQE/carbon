@@ -51,7 +51,8 @@ setup(
         'pykwalify>=1.6.0',
         'python-cachetclient',
         'ruamel.yaml>=0.15.64',
-        'linchpin==1.6.4'
+        'linchpin==1.6.4',
+        'linchpin[beaker]==1.6.4'
     ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
