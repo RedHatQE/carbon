@@ -1,5 +1,6 @@
 include CHANGES LICENSE AUTHORS README.rst
 include carbon/files/schema.yml
+include carbon/files/PinFile.yml
 include carbon/files/extensions.py
 exclude setup.cfg
 prune docs/_build

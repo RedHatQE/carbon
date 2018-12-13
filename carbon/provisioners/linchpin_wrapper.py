@@ -28,9 +28,9 @@
 """
 
 import yaml
-from os import path, environ
+from os import path, environ, pardir
 from carbon.core import CarbonProvisioner
-from carbon.exceptions import CarbonProviderError
+from carbon.exceptions import CarbonProvisionerError
 from linchpin import LinchpinAPI
 from linchpin.context import LinchpinContext
 
@@ -64,7 +64,8 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         environ['OS_PROJECT_NAME'] = self.provider_credentials['tenant_name']
 
     def _create_pinfile(self):
-        tpath = path.join(path.dirname(__file__), "..", "files", "PinFile.yml")
+        tpath = path.abspath(path.join(path.dirname(__file__), pardir, "files",
+                                       "PinFile.yml"))
         with open(tpath, 'r') as template:
             pindict = yaml.load(template)
         if self.provider == 'openstack':
@@ -74,7 +75,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                 'verify': 'false',
                 'name': getattr(self.host, 'name', 'carbon-name'),
             }
-            for key, value in self.provider_params.iteritems():
+            for key, value in self.provider_params.items():
                 if key in ['flavor', 'image', 'keypair', 'networks']:
                     resource_def[key] = value
                 elif key is 'floating_ip_pool':
@@ -94,10 +95,10 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         host = getattr(self.host, 'name', 'carbon-name')
         code, results = self.linchpin_api.do_action(self.pinfile, action='up')
         if code:
-            raise CarbonProviderError("Failed to provision host %s" % host)
+            raise CarbonProvisionerError("Failed to provision host %s" % host)
         self.logger.info('Successfully created host %s' % host)
         results = self.linchpin_api.get_run_data(
-            results.keys()[0], ('inputs', 'outputs'))
+            list(results)[0], ('inputs', 'outputs'))
         results = results['carbon']['outputs']['resources']
         if self.provider == 'openstack':
             _ip = results['os_server_res'][0]['servers'][0]['interface_ip']
