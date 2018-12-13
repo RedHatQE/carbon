@@ -40,11 +40,13 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
 
     def __init__(self, host):
         super(LinchpinWrapperProvisioner, self).__init__(host)
+        data_folder = path.realpath(getattr(host, 'data_folder'))
         self.context = LinchpinContext()
         self.context.setup_logging()
         self.context.load_config()
         self.context.load_global_evars()
-        self.context.set_evar('workspace', '.')  # TODO: should be carbon workspace
+        self.context.set_cfg('lp', 'workspace', "%s/linchpin" % data_folder)
+        self.context.set_evar('workspace', "%s/linchpin" % data_folder)
         self.linchpin_api = LinchpinAPI(self.context)
         self.rundb = self.linchpin_api.setup_rundb()
         self._create_pinfile()
