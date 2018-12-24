@@ -27,7 +27,8 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-from os import path, environ, pardir
+from os import path, environ, pardir, makedirs
+import errno
 import yaml
 from linchpin import LinchpinAPI
 from linchpin.context import LinchpinContext
@@ -41,23 +42,24 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
 
     def __init__(self, host):
         super(LinchpinWrapperProvisioner, self).__init__(host)
-        data_folder = path.realpath(getattr(host, 'data_folder'))
-        self.linchpin_api = LinchpinAPI(self._init_context(data_folder))
+        self.data_folder = path.realpath(getattr(host, 'data_folder'))
+        self.linchpin_api = LinchpinAPI(self._init_context())
         self.linchpin_api.setup_rundb()
         self._create_pinfile()
         self._load_credentials()
         self.linchpin_api.validate_topology(self.pinfile['carbon']['topology'])
 
-    def _init_context(self, data_folder):
+    def _init_context(self):
         context = LinchpinContext()
         context.setup_logging()
         context.load_config()
         context.load_global_evars()
-        results_dir = path.abspath(path.join(data_folder, pardir, '.results'))
+        results_dir = path.abspath(path.join(self.data_folder, pardir,
+                                             '.results'))
         if path.exists(results_dir):
-            lws_path = "%s/linchpin" % results_dir
+            lws_path = path.join(results_dir, 'linchpin')
         else:
-            lws_path = "%s/linchpin" % data_folder
+            lws_path = path.join(self.data_folder, 'linchpin')
         context.set_cfg('lp', 'workspace', lws_path)
         context.set_evar('workspace', lws_path)
         context.set_cfg('lp', 'distill_data', True)
@@ -75,8 +77,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             environ['OS_AUTH_URL'] = self.provider_credentials['auth_url']
             environ['OS_PROJECT_NAME'] = self.provider_credentials['tenant_name']
         elif self.provider == 'beaker':
-            data_folder = path.realpath(getattr(self.host, 'data_folder'))
-            bkr_conf = "%s/beaker.conf" % data_folder
+            bkr_conf = path.join(self.data_folder, 'beaker.conf')
             environ['BEAKER_CONF'] = bkr_conf
             creds = self.provider_credentials
             with open(bkr_conf, 'w') as conf:
@@ -159,21 +160,34 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             raise CarbonProviderError("Unknown provider %s" % self.provider)
         self.logger.info('Generated PinFile:\n%s' % yaml.dump(pindict))
 
-    def _create(self):
-        host = getattr(self.host, 'name', 'carbon-name')
-        code, results = self.linchpin_api.do_action(self.pinfile, action='up')
-        print(json.dumps(results))
-        if code:
-            raise CarbonProvisionerError("Failed to provision host %s" % host)
-        self.logger.info('Successfully created host %s' % host)
-        results = self.linchpin_api.get_run_data(
-            list(results)[0], ('inputs', 'outputs'))
+    def _create_inventory(self, results):
         inv = self.linchpin_api.generate_inventory(
             resource_data=results['carbon']['outputs']['resources'],
             layout=results['carbon']['inputs']['layout_data']['inventory_layout'],
             topology_data=results['carbon']['inputs']['topology_data']
         )
         self.logger.debug(inv)
+        inv_path = path.join(self.data_folder, 'inventory')
+        try:
+            makedirs(path.dirname(inv_path))
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and path.isdir(path.dirname(inv_path)):
+                pass
+            else:
+                raise
+        with open(inv_path, 'w+') as inv_file:
+            inv_file.write(inv)
+
+    def _create(self):
+        host = getattr(self.host, 'name', 'carbon-name')
+        code, results = self.linchpin_api.do_action(self.pinfile, action='up')
+        self.logger.debug(json.dumps(results))
+        if code:
+            raise CarbonProvisionerError("Failed to provision host %s" % host)
+        self.logger.info('Successfully created host %s' % host)
+        results = self.linchpin_api.get_run_data(
+            list(results)[0], ('inputs', 'outputs'))
+        self._create_inventory(results)
         resource = results['carbon']['outputs']['resources']
         if self.provider == 'openstack':
             os_server = resource['os_server_res'][0]['servers'][0]

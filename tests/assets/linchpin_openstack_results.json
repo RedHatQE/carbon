@@ -33,7 +33,7 @@
       }
     },
     "outputs": {
-      "inventory_path": ["/home/ccit/os_test/.carbon/.results/linchpin/inventories/carbon.inventory"],
+      "inventory_path": ["/tmp/os_test/.carbon/.results/linchpin/inventories/carbon.inventory"],
       "resources": {
         "aws_cfn_res": [],
         "aws_ec2_key_res": [],

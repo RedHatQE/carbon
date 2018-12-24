@@ -113,7 +113,7 @@
                 ]
             },
             "inventory_path":[
-                "/home/ccit/carbon_bkr_test/.carbon/.results/linchpin/inventories/carbon.inventory"
+                "/tmp/carbon_bkr_test/.carbon/.results/linchpin/inventories/carbon.inventory"
             ]
           }
   }
