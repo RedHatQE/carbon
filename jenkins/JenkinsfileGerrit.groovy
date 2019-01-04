@@ -6,15 +6,14 @@ def cloneRepo() {
         extensions: [[$class: 'CleanBeforeCheckout']],
         submoduleCfg: [],
         userRemoteConfigs: [[
-            credentialsId: '5ed678e3-0a20-46da-979a-4192e7523c33',
             refspec: "${GERRIT_REFSPEC}",
-            url: 'ssh://qe-pit-jenkins@code.engineering.redhat.com:22/carbon'
+            url: 'https://code.engineering.redhat.com/gerrit/carbon.git'
         ]]
     ])
 }
 
 pipeline {
-    agent { label "${AGENT}" }
+    agent { label "carbon-slave" }
 
     stages {
         stage('clone') {
