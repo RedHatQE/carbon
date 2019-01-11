@@ -494,14 +494,14 @@ def exec_local_cmd_pipe(cmd, logger):
     while True:
         output, error = ("", "")
         if proc.poll is not None:
-            output = proc.stdout.readline()
+            output = proc.stdout.readline().decode()
         if output == "" and error == "" and proc.poll() is not None:
             break
         if output:
             logger.info(output.strip())
     rc = proc.poll()
     if rc != 0:
-        error = proc.stderr.readline()
+        error = proc.stderr.readline().decode()
     return rc, error
 
 
