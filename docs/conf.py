@@ -39,8 +39,16 @@ release = u'1.0.4'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-]
+extensions = ['sphinxcontrib.confluencebuilder']
+confluence_publish = True
+confluence_server_url = 'https://docs.engineering.redhat.com'
+confluence_page_hierarchy = True
+confluence_asset_override = True
+#confluence_space_name = 'wiki-space'
+#confluence_server_user = 'user'
+#confluence_server_pass = 'changeme'
+#confluence_parent_page = 'wiki-doc'
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
