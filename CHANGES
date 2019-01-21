@@ -1,3 +1,11 @@
+Version 1.0.4 (2019-01-23)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* Needed to decode the subprocess output when running ansible playbooks
+
 Version 1.0.3 (2018-12-5)
 --------------------------
 
