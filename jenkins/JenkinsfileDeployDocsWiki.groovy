@@ -17,7 +17,7 @@ pipeline {
     stages {
         stage('clone') {
             steps {
-                cleanWS()
+                cleanWs()
                 cloneRepo()
             }
         }
