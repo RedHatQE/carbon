@@ -320,7 +320,7 @@ class Carbon(LoggerMixin, TimeMixin):
                 passed_tasks.append(task)
 
                 self.logger.info("." * 50)
-        except blaster.BlasterError as ex:
+        except Exception as ex:
             # set overall status
             status = 1
 
@@ -331,6 +331,41 @@ class Carbon(LoggerMixin, TimeMixin):
 
             # reload resource objects
             self.scenario.reload_resources(ex.results)
+
+            # roll back by cleaning up any resources that might have been provisioned
+            if 'cleanup' in tasklist and [item for item in failed_tasks if item != 'cleanup']:
+                if [item for item in passed_tasks if item == 'provision'] \
+                        or [item for item in failed_tasks if item == 'provision']:
+                    self.logger.info("\n")
+                    self.logger.warning("A failure occured before running the cleanup task. "
+                                        "Attempting to run the cleanup task to roll back all provisioned resources.")
+                    task = tasklist[tasklist.index('cleanup')]
+                    try:
+                        # create a pipeline builder object
+                        pipe_builder = PipelineBuilder(task)
+
+                        # build task pipeline
+                        pipeline = pipe_builder.build(self.scenario)
+
+                        # create blaster object with pipeline to run
+                        blast = blaster.Blaster(pipeline.tasks)
+
+                        # blast off the pipeline list of tasks
+                        data = blast.blastoff(
+                            serial=not pipeline.type.__concurrent__,
+                            raise_on_failure=True
+                        )
+
+                        # reload resource objects
+                        self.scenario.reload_resources(data)
+                        passed_tasks.append(task)
+                    except Exception as ex:
+                        self.logger.error(ex)
+                        self.logger.error("There was a problem running the cleanup task to roll back the resources. "
+                                          "You may need to manually cleanup any provisioned resources")
+                        failed_tasks.append(task)
+                        raise
+
         finally:
             # save end time
             self.end()
@@ -340,10 +375,6 @@ class Carbon(LoggerMixin, TimeMixin):
 
             # write the updated carbon definition file
             file_mgmt('w', self.results_file, self.scenario.profile())
-
-            # archive everything from the data folder into the results folder
-            os.system('cp -r %s/* %s' % (self.data_folder, self.config[
-                'RESULTS_FOLDER']))
 
             self.logger.info('\n')
             self.logger.info('CARBON RUN (END)'.center(79))
@@ -362,5 +393,9 @@ class Carbon(LoggerMixin, TimeMixin):
                              self.results_file)
             self.logger.info('-' * 79)
             self.logger.info('CARBON RUN (RESULT=%s)' % state)
+
+            # archive everything from the data folder into the results folder
+            os.system('cp -r %s/* %s' % (self.data_folder, self.config[
+                'RESULTS_FOLDER']))
 
             sys.exit(status)

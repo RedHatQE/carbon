@@ -28,12 +28,14 @@ import errno
 import inspect
 import os
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
-from logging import Formatter, getLogger, StreamHandler, FileHandler
+from logging import Formatter, getLogger, StreamHandler, FileHandler, LoggerAdapter, Filter
 from time import time
 
 from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError, \
     CarbonProvisionerError
 from .helpers import get_core_tasks_classes
+from traceback import format_exc
+from sys import exc_info
 
 
 class LoggerMixin(object):
@@ -66,8 +68,8 @@ class LoggerMixin(object):
     a property to return that specific logger for easy access.
     """
 
-    _LOG_FORMAT = ("%(asctime)s %(levelname)s "
-                   "[%(name)s.%(funcName)s:%(lineno)d] %(message)s")
+    _DEBUG_LOG_FORMAT = ("%(asctime)s %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s")
+    _INFO_LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 
     _LOG_LEVELS = {
         'debug': DEBUG,
@@ -119,7 +121,15 @@ class LoggerMixin(object):
         # configure handlers
         for handler in [stream_handler, file_handler]:
             handler.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
-            handler.setFormatter(Formatter(cls._LOG_FORMAT))
+            # remove the extra logging regarding class/function/lineno if not in debug mode
+            if config['LOG_LEVEL'] == 'info':
+                handler.setFormatter(Formatter(cls._INFO_LOG_FORMAT))
+            else:
+                handler.setFormatter(Formatter(cls._DEBUG_LOG_FORMAT))
+
+        # add exception filter to the stream handler so we don't print stack trace
+        filter = LoggerMixin.ExceptionFilter()
+        stream_handler.addFilter(filter)
 
         # configure logger
         logger.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
@@ -130,6 +140,14 @@ class LoggerMixin(object):
     def logger(self):
         """Returns the default logger (carbon logger) object."""
         return getLogger(inspect.getmodule(inspect.stack()[1][0]).__name__)
+
+    class ExceptionFilter(Filter):
+
+        def filter(self, record):
+            if record.getMessage().find('Traceback') != -1:
+                return False
+            else:
+                return True
 
 
 class TimeMixin(object):
@@ -240,6 +258,7 @@ class CarbonTask(LoggerMixin, TimeMixin):
 
     __task_name__ = None
     __concurrent__ = True
+    __task_id__ = ''
 
     def __init__(self, name=None, **kwargs):
         if name is not None:
@@ -250,6 +269,16 @@ class CarbonTask(LoggerMixin, TimeMixin):
 
     def __str__(self):
         return self.name
+
+    @staticmethod
+    def get_formatted_traceback():
+        """Get traceback when exception is raised. Will log traceback as well.
+        :return: Exception information.
+        :rtype: tuple
+        """
+
+        tb = exc_info()
+        return format_exc(tb)
 
 
 class CarbonResource(LoggerMixin, TimeMixin):

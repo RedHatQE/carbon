@@ -36,15 +36,53 @@ SYNCHRONIZE_PLAYBOOK = '''
         state: present
       become: true
 
+    - name: find artifacts
+      find:
+        path: "{{ (item | regex_replace('/$', '')).split('/')[:-1] | join('/') }}"
+        patterns: "{{ (item | regex_replace('/$', '')).split('/')[-1] }}"
+        file_type: any
+      with_items:
+        - "{{ artifacts }}"
+      register: found_artifacts
+
     - name: fetch artifacts
       synchronize:
-        src: "{{ item[1] }}"
+        src: "{{ item[1].item }}"
         dest: "{{ dest }}/{{ hostvars[item[0]]['ansible_hostname'] }}/"
         mode: pull
         recursive: yes
       with_nested:
         - "{{ inventory_hostname }}"
-        - "{{ artifacts }}"
+        - "{{ found_artifacts.results }}"
+      register: sync_output
+      when: item[1].matched > 0
+
+    - name: copy skipped artifacts results to file
+      shell:
+        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', True, 0, )" \
+        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
+      delegate_to: localhost
+      when: item is skipped
+      with_items:
+        - "{{ sync_output.results }}"
+
+    - name: copy passed artifacts results to file
+      shell:
+        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', False, 0, )" \
+        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
+      delegate_to: localhost
+      when: item is success and item is not skipped
+      with_items:
+        - "{{ sync_output.results }}"
+
+    - name: copy failed artifacts results to file
+      shell:
+        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', False, 1, )" \
+        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
+      delegate_to: localhost
+      when: item is failure
+      with_items:
+        - "{{ sync_output.results }}"
 '''
 
 GIT_CLONE_PLAYBOOK = '''
@@ -82,7 +120,7 @@ ADHOC_SHELL_PLAYBOOK = '''
     - name: copy results to file
       shell:
         echo -e "('{{ inventory_hostname }}', {{ sh_results.rc }}, '{{ sh_results.stderr }}')" \
-        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> shell-results.txt
+        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> shell-results.txt
       delegate_to: localhost
 '''
 
@@ -101,6 +139,6 @@ ADHOC_SCRIPT_PLAYBOOK = '''
     - name: copy results to file
       shell:
         echo -e "('{{ inventory_hostname }}', {{ scrpt_results.rc }}, '{{ scrpt_results.stderr }}')" \
-        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> script-results.txt
+        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> script-results.txt
       delegate_to: localhost
 '''

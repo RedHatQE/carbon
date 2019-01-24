@@ -41,7 +41,7 @@ from ansible.vars.manager import VariableManager
 from .._compat import RawConfigParser, string_types
 from ..core import CarbonOrchestrator, LoggerMixin
 from ..exceptions import CarbonOrchestratorError
-from ..helpers import ssh_retry, exec_local_cmd_pipe, is_host_localhost
+from ..helpers import ssh_retry, exec_local_cmd_pipe, is_host_localhost, get_ans_verbosity
 
 
 class AnsibleController(object):
@@ -138,7 +138,7 @@ class AnsibleController(object):
                     module_call += " --%s %s" % (key.replace('_', '-'), run_options[key])
 
         if ans_verbosity:
-            module_call += " -v%s" % ans_verbosity
+            module_call += " -%s" % ans_verbosity
 
         # Set the connection if localhost
         if "localhost" in extra_vars and extra_vars["localhost"]:
@@ -189,7 +189,7 @@ class AnsibleController(object):
                     playbook_call += " --%s %s" % (key.replace('_', '-'), run_options[key])
 
         if ans_verbosity:
-            playbook_call += " -v%s" % ans_verbosity
+            playbook_call += " -%s" % ans_verbosity
 
         logger.debug(playbook_call)
         output = exec_local_cmd_pipe(playbook_call, logger)
@@ -278,6 +278,9 @@ class Inventory(LoggerMixin):
         with open(self.master_inv, 'w') as f:
             config.write(f)
 
+        self.logger.debug("Master inventory content")
+        self.log_inventory_content(config)
+
     def create_unique(self):
         """Create the unique ansible inventory.
 
@@ -303,6 +306,9 @@ class Inventory(LoggerMixin):
         # write the inventory
         with open(self.unique_inv, 'w') as f:
             config.write(f)
+
+        self.logger.debug("Unique inventory content")
+        self.log_inventory_content(config)
 
     def create(self):
         """Create the inventory."""
@@ -330,6 +336,13 @@ class Inventory(LoggerMixin):
         """Delete all ansible inventory files."""
         self.delete_unique()
         self.delete_master()
+
+    def log_inventory_content(self, parser):
+        # log the inventory file content
+        for section in parser.sections():
+            self.logger.debug('Section-> %s' % section)
+            for item in parser.items(section):
+                self.logger.debug(item)
 
 
 class AnsibleOrchestrator(CarbonOrchestrator):
@@ -502,19 +515,10 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         # configure playbook variables
         extra_vars = dict(hosts=self.inv.group)
 
-        log_level = self.logger.getEffectiveLevel()
-
-        ans_verbosity = None
-
-        if log_level == logging.DEBUG:
-            ans_verbosity = "vvvv"
+        ans_verbosity = get_ans_verbosity(self.logger, self.config)
 
         # download ansible roles (if applicable)
         self.download_roles()
-
-        if "ANSIBLE_VERBOSITY" in self.config and \
-                self.config["ANSIBLE_VERBOSITY"]:
-            ans_verbosity = self.config["ANSIBLE_VERBOSITY"]
 
         if self.script:
             # running a script, using the ansible script module
@@ -537,6 +541,8 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             else:
                 extra_vars["localhost"] = True
 
+            self.logger.debug("Extra variables used: " + str(extra_vars))
+            self.logger.debug("Extra arguments used: " + str(extra_args))
             results = obj.run_module(
                 "script",
                 extra_vars=extra_vars,
@@ -566,7 +572,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
                     run_options[val] = self.options[val]
 
             self.logger.debug("Ansible options used: " + str(run_options))
-
+            self.logger.debug("Extra variables being used: " + str(extra_vars))
             results = obj.run_playbook(
                 self.action,
                 extra_vars=extra_vars,

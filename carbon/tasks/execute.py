@@ -51,5 +51,12 @@ class ExecuteTask(CarbonTask):
         This method is the main entry point to the task.
         """
         self.logger.info(self.msg)
-        # run the configuration with the given executor
-        self.executor.run()
+        try:
+            # run the configuration with the given executor
+            self.executor.run()
+        except Exception as ex:
+            self.logger.error('Failed to execute %s' % self.name)
+            stackmsg = self.get_formatted_traceback()
+            self.logger.error(ex)
+            self.logger.error(stackmsg)
+            raise

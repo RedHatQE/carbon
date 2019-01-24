@@ -99,8 +99,6 @@ class CleanupTask(CarbonTask):
                     self.logger.debug('Host loaded the following provisioner interface: %s'
                                       % provisioner.__provisioner_name__)
                 else:
-                    self.logger.warning("Found no plugin. "
-                                        "This is ok it might mean the feature is not enabled.")
                     # create the provisioner object
                     provisioner = getattr(self.host, 'provisioner')(self.host)
                     self.logger.debug('Host loaded the following provisioner interface: %s'

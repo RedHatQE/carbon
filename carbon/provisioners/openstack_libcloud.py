@@ -478,7 +478,11 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
         self.logger.info('Provisioning node %s.' % name)
 
         # create node
-        node = self.create_node(name, image, size, network, key_pair)
+        try:
+            node = self.create_node(name, image, size, network, key_pair)
+        except Exception:
+            self.logger.error("Failed to create node %s " % name)
+            raise
 
         # wait for node to complete building
         try:

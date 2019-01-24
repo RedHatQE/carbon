@@ -507,6 +507,9 @@ class RunnerExecutor(CarbonExecutor):
         os.environ['ANSIBLE_LOCAL_TEMP'] = '$HOME/.ansible/tmp'
         os.environ['ANSIBLE_REMOTE_TEMP'] = '$HOME/.ansible/tmp'
 
+        # setting variable so to no display any skipped tasks
+        os.environ['DISPLAY_SKIPPED_HOSTS'] = 'False'
+
         # set extra vars
         extra_vars = copy.deepcopy(self.ans_extra_vars)
         extra_vars['dest'] = destination
@@ -526,9 +529,32 @@ class RunnerExecutor(CarbonExecutor):
         # remove dynamic playbook
         os.remove(playbook)
 
+        # Get results from file
+        with open('sync-results.txt') as fp:
+            lines = fp.read().splitlines()
+
+        # Build Results
+        sync_results = []
+        for line in lines:
+            host, artifact, skipped, rc = ast.literal_eval(line)
+            sync_results.append({'host': host, 'artifact': artifact, 'skipped': skipped, 'rc': rc})
+
+        # remove Sync Results file
+        os.remove('sync-results.txt')
+
         if results[0] != 0:
+            self.logger.error(results[1])
+            for r in sync_results:
+                if r['rc'] != 0 and not r['skipped']:
+                    self.logger.error('Failed to copy the artifact(s), %s, from %s' % (r['artifact'], r['host']))
             raise CarbonExecuteError('A failure occurred while trying to copy '
                                      'test artifacts.')
+        for r in sync_results:
+            if r['rc'] == 0 and not r['skipped']:
+                self.logger.info('Copied the artifact(s), %s, from %s' % (r['artifact'], r['host']))
+            if r['skipped']:
+                self.logger.warning('Could not find artifact(s), %s, on %s. Make sure the file exists '
+                                    'and defined properly in the definition file.' % (r['artifact'], r['host']))
 
     def run(self):
         """Run.

@@ -53,21 +53,21 @@ def report_task():
 def execute_task():
     package = mock.MagicMock()
     package.executor = mock.MagicMock()
-    return ExecuteTask(msg='execute task', package=package)
+    return ExecuteTask(msg='execute task', package=package, name='Test-Package')
 
 
 @pytest.fixture(scope='class')
 def orchestrate_task():
     package = mock.MagicMock()
     package.orchestrator = mock.MagicMock()
-    return OrchestrateTask(msg='orchestrate task', package=package)
+    return OrchestrateTask(msg='orchestrate task', package=package, name='Test-Package')
 
 
 @pytest.fixture(scope='class')
 def provision_task():
     host = mock.MagicMock()
     host.provisioner = mock.MagicMock()
-    return ProvisionTask(msg='provision task', host=host)
+    return ProvisionTask(msg='provision task', host=host, name='Test-Host')
 
 
 @pytest.fixture(scope='class')
@@ -86,6 +86,15 @@ class TestValidateTask(object):
     def test_run(validate_task):
         validate_task.resource = mock.MagicMock()
         validate_task.run()
+
+    @staticmethod
+    @mock.patch.object(ValidateTask, 'get_formatted_traceback')
+    def test_run_execute_failure(mock_method, validate_task):
+        mock_method.return_value = 'Traceback'
+        mock_resource = mock.MagicMock(validate=mock.MagicMock(side_effect=CarbonOrchestratorError('e')))
+        validate_task.resource = mock_resource
+        with pytest.raises(CarbonOrchestratorError):
+            validate_task.run()
 
 
 class TestReportTask(object):
@@ -107,6 +116,14 @@ class TestExecuteTask(object):
     def test_run(execute_task):
         execute_task.run()
 
+    @staticmethod
+    @mock.patch.object(ExecuteTask, 'get_formatted_traceback')
+    def test_run_execute_failure(mock_method, execute_task):
+        mock_method.return_value = 'Traceback'
+        mock_executor = mock.MagicMock(run=mock.MagicMock(side_effect=CarbonOrchestratorError('e')))
+        execute_task.executor = mock_executor
+        with pytest.raises(CarbonOrchestratorError):
+            execute_task.run()
 
 class TestOrchestrateTask(object):
     @staticmethod
@@ -116,6 +133,15 @@ class TestOrchestrateTask(object):
     @staticmethod
     def test_run(orchestrate_task):
         orchestrate_task.run()
+
+    @staticmethod
+    @mock.patch.object(OrchestrateTask, 'get_formatted_traceback')
+    def test_run_orchestrate_failure(mock_method, orchestrate_task):
+        mock_method.return_value = 'Traceback'
+        mock_orchestrator = mock.MagicMock(run=mock.MagicMock(side_effect=CarbonOrchestratorError('e')))
+        orchestrate_task.orchestrator = mock_orchestrator
+        with pytest.raises(CarbonOrchestratorError):
+            orchestrate_task.run()
 
 
 class TestProvisionTask(object):
@@ -149,6 +175,15 @@ class TestProvisionTask(object):
         pt = ProvisionTask('provision task', host=host)
         assert pt.provision
 
+    @staticmethod
+    @mock.patch.object(ProvisionTask, 'get_formatted_traceback')
+    def test_run_provision_failure(mock_method, provision_task):
+        mock_method.return_value = 'Traceback'
+        mock_provisioner = mock.MagicMock(spec=CarbonProvisioner, create=mock.MagicMock(side_effect=CarbonOrchestratorError('e')))
+        provision_task.provision = True
+        provision_task.provisioner = mock_provisioner
+        with pytest.raises(CarbonOrchestratorError):
+            provision_task.run()
 
 class TestCleanupTask(object):
     @staticmethod

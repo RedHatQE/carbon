@@ -49,6 +49,11 @@ class ValidateTask(CarbonTask):
         self.logger.info(
             'Validating %s (%s)', self.resource.__class__, self.resource.name
         )
-
-        # validate the given resource
-        self.resource.validate()
+        try:
+            # validate the given resource
+            self.resource.validate()
+        except Exception:
+            self.logger.error('Failed to validate %s' % self.resource.name)
+            stackmsg = self.get_formatted_traceback()
+            self.logger.error(stackmsg)
+            raise

@@ -494,14 +494,14 @@ def exec_local_cmd_pipe(cmd, logger):
     while True:
         output, error = ("", "")
         if proc.poll is not None:
-            output = proc.stdout.readline().decode()
+            output = proc.stdout.readline().decode('utf-8')
         if output == "" and error == "" and proc.poll() is not None:
             break
         if output:
             logger.info(output.strip())
     rc = proc.poll()
     if rc != 0:
-        error = proc.stderr.readline().decode()
+        error = proc.stderr.readline().decode('utf-8')
     return rc, error
 
 
@@ -582,6 +582,7 @@ def fetch_hosts(hosts, task, all_hosts=True):
                 if host.name == task_host.name:
                     _hosts.append(host)
                     break
+
     task[_type].hosts = _hosts
     task[_type].all_hosts = _all_hosts
     return task
@@ -740,14 +741,13 @@ def resource_check(scenario, config):
 
 def get_ans_verbosity(logger, config):
     ans_verbosity = None
-    log_level = logger.getEffectiveLevel()
-
-    if log_level == logging.DEBUG:
-        ans_verbosity = "vvvv"
 
     if "ANSIBLE_VERBOSITY" in config and \
             config["ANSIBLE_VERBOSITY"]:
         ans_verbosity = config["ANSIBLE_VERBOSITY"]
+    else:
+        ans_verbosity = 'v'
+
     return ans_verbosity
 
 

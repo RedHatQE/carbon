@@ -1,3 +1,37 @@
+Version 1.0.5 (2019-02-6)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* Permanently decoding subprocess output to utf-8
+
+* No longer fail in the execute phase when gathering an artifact that doesn't exist.
+  Now log which were successfully collected, which were skipped due to not existing,
+  and which failed due to external reasons.
+
+* Strip all carriage returns when processing script or shell command output in the
+  execute phase.
+
+* Anisble verbosity will always default to a single (-v) and can now be
+  configured to any ansible supported level in the carbon.cfg file independent of
+  carbon log level.
+
+* If a cleanup task is specified for a run and carbon fails at some point before
+  that cleanup task is launched, carbon will launch the cleanup task so
+  as to not leave stale resources behind.
+
+Enhancement
+~~~~~~~~~~
+
+* Added to Beaker Credentials the optional parameter, ca_path, to allow a user to
+  specify a path to a trusted CA file.
+
+* Added to Beaker support for the host_requires_option, force=<FQDN>, to facilitate
+  forcing the selection of a host regardless of state.
+
+* Added more logging and exception handling enhancements.
+
 Version 1.0.4 (2019-01-23)
 --------------------------
 

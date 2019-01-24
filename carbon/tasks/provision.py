@@ -24,12 +24,13 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+import time
 
 
 class ProvisionTask(CarbonTask):
     """Provision task."""
     __task_name__ = 'provision'
-    __concurrent__ = False
+    __concurrent__ = True
 
     def __init__(self, msg, host, **kwargs):
         """Constructor.
@@ -58,8 +59,6 @@ class ProvisionTask(CarbonTask):
                     self.logger.debug('Host loaded the following provisioner interface: %s'
                                       % self.provisioner.__provisioner_name__)
                 else:
-                    self.logger.warning("Found no plugin. "
-                                        "This is ok it might mean the feature is not enabled.")
                     self.provisioner = getattr(host, 'provisioner')(host)
                     self.logger.debug('Host loaded the following provisioner interface: %s'
                                       % self.provisioner.__provisioner_name__)
@@ -79,4 +78,11 @@ class ProvisionTask(CarbonTask):
         # provision the host given in their declared provider
         if self.provision:
             self.logger.info(self.msg)
-            self.provisioner.create()
+            try:
+                self.provisioner.create()
+            except Exception as ex:
+                self.logger.error('Failed to provision node %s' % self.name)
+                stackmsg = self.get_formatted_traceback()
+                self.logger.error(ex)
+                self.logger.error(stackmsg)
+                raise

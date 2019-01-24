@@ -50,10 +50,12 @@ setup(
         'Jinja2>=2.10',
         'pykwalify>=1.6.0',
         'python-cachetclient',
-        'ruamel.yaml>=0.15.64',
-        'linchpin==1.6.4',
-        'linchpin[beaker]==1.6.4'
+        'ruamel.yaml>=0.15.64'
     ],
+    extras_require={
+        'linchpin': ['linchpin==1.6.4'],
+        'linchpin-bkr': ['linchpin[beaker]==1.6.4']
+    },
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

@@ -53,6 +53,12 @@ class OrchestrateTask(CarbonTask):
         This method is the main entry point to the task.
         """
         self.logger.info(self.msg)
-
-        # run the configuration with the given orchestrator
-        self.orchestrator.run()
+        try:
+            # run the configuration with the given orchestrator
+            self.orchestrator.run()
+        except Exception as ex:
+            self.logger.error('Failed to run orchestration %s ' % self.name)
+            stackmsg = self.get_formatted_traceback()
+            self.logger.error(ex)
+            self.logger.error(stackmsg)
+            raise

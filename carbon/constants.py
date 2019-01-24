@@ -43,10 +43,7 @@ TASKLIST = [
 
 TASK_LOGLEVEL_CHOICES = [
     "debug",
-    "info",
-    "warning",
-    "error",
-    "critical"
+    "info"
 ]
 
 PROVISIONERS = {
