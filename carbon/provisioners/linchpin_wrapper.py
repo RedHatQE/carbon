@@ -30,8 +30,11 @@
 from os import path, environ, pardir, makedirs
 import errno
 import yaml
-from linchpin import LinchpinAPI
-from linchpin.context import LinchpinContext
+try:
+    from linchpin import LinchpinAPI
+    from linchpin.context import LinchpinContext
+except ImportError:
+    pass
 from carbon.core import CarbonProvisioner
 from carbon.exceptions import CarbonProvisionerError
 import json

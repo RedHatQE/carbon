@@ -29,4 +29,3 @@ from .beaker_client import BeakerClientProvisioner
 from .openstack_libcloud import OpenstackLibCloudProvisioner
 from .linchpin_wrapper import LinchpinWrapperProvisioner
 from .host_provisioner import HostProvisioner
-from .linchpin_wrapper import LinchpinWrapperProvisioner
