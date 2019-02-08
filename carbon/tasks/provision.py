@@ -24,11 +24,13 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+import time
 
 
 class ProvisionTask(CarbonTask):
     """Provision task."""
     __task_name__ = 'provision'
+    __concurrent__ = True
 
     def __init__(self, msg, host, **kwargs):
         """Constructor.
@@ -44,10 +46,26 @@ class ProvisionTask(CarbonTask):
         self.msg = msg
         self.provision = True
 
-        # create the provisioner object to create hosts
-        try:
-            self.provisioner = getattr(host, 'provisioner')(host)
-        except AttributeError:
+        if not host.is_static:
+            # create the provisioner object to create hosts
+            try:
+                # TODO We should move this code out into the Host Resource to instantiate there?
+                # let's try to create the provisioner gateway implementation first
+                if getattr(host, 'provisioner_plugin') is not None:
+                    plugin = getattr(host, 'provisioner_plugin')(host)
+                    self.logger.debug('Host loaded the following provisioner plugin: %s'
+                                      % plugin.__plugin_name__)
+                    self.provisioner = getattr(host, 'provisioner')(host, plugin)
+                    self.logger.debug('Host loaded the following provisioner interface: %s'
+                                      % self.provisioner.__provisioner_name__)
+                else:
+                    self.provisioner = getattr(host, 'provisioner')(host)
+                    self.logger.debug('Host loaded the following provisioner interface: %s'
+                                      % self.provisioner.__provisioner_name__)
+            except AttributeError as ex:
+                self.logger.error(ex)
+                raise
+        else:
             self.provision = False
             self.logger.warning('Host %s is static, provision will be '
                                 'skipped.' % getattr(host, 'name'))
@@ -60,4 +78,11 @@ class ProvisionTask(CarbonTask):
         # provision the host given in their declared provider
         if self.provision:
             self.logger.info(self.msg)
-            self.provisioner.create()
+            try:
+                self.provisioner.create()
+            except Exception as ex:
+                self.logger.error('Failed to provision node %s' % self.name)
+                stackmsg = self.get_formatted_traceback()
+                self.logger.error(ex)
+                self.logger.error(stackmsg)
+                raise

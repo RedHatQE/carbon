@@ -32,13 +32,13 @@ import os
 import paramiko
 import stat
 
-from ..core import CarbonProvisioner
-from ..exceptions import BeakerProvisionerError
-from ..helpers import exec_local_cmd
+from ...core import ProvisionerPlugin
+from ...exceptions import BeakerProvisionerError
+from ...helpers import exec_local_cmd
 
 
-class BeakerClientProvisioner(CarbonProvisioner):
-    """The main class for carbon Beaker client provisioner.
+class BeakerClientProvisionerPlugin(ProvisionerPlugin):
+    """The main class for carbon Beaker client provisioner plugin.
 
     This provisioner will interact with the Beaker server using the
     beaker client (bkr) to submit jobs to get resources from Beaker.
@@ -48,8 +48,8 @@ class BeakerClientProvisioner(CarbonProvisioner):
         multiple requests with different authentication in the same namespace
         (with same config file).
     """
-    __provisioner_name__ = "beaker-client"
-    __provisioner_prefix__ = 'bkr_'
+    __plugin_name__ = "beaker-client"
+    __plugin_prefix__ = 'bkr_'
 
     def __init__(self, host):
         """Constructor.
@@ -57,7 +57,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
         :param host: The host object.
         :type host: object
         """
-        super(BeakerClientProvisioner, self).__init__(host)
+        super(BeakerClientProvisionerPlugin, self).__init__(host)
         self.data_folder = getattr(host, 'data_folder')
         self.workspace = getattr(host, 'workspace')
         self.job_xml = 'bkrjob_%s.xml' % getattr(host, 'name')
@@ -92,11 +92,6 @@ class BeakerClientProvisioner(CarbonProvisioner):
         conf_obj = open(self.conf, 'w')
 
         conf_obj.write('HUB_URL = "%s"\n' % self.url)
-
-        # write the path to beaker trusted ssl certs if specified.
-        if 'ca_path' in credentials and credentials['ca_path']:
-            self.logger.debug('ca_path was provided %s' % credentials['ca_path'])
-            conf_obj.write('CA_PATH = "%s"\n' % credentials['ca_path'])
 
         if 'username' in credentials and credentials['username'] \
                 and 'password' in credentials and credentials['password']:
@@ -151,10 +146,6 @@ class BeakerClientProvisioner(CarbonProvisioner):
             bkr_xml_file, kickstart_path=self.workspace, savefile=True
         )
 
-        if 'force' in self.bkr_xml.hrname:
-            self.logger.warning('Force was specified as a host_require_option.'
-                                'Any other host_require_options will be ignored since '
-                                'force is a mutually exclusive option in beaker.')
         # format beaker client command to run
         # Latest version of beaker client fails to generate xml with this
         # replacement
@@ -172,6 +163,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
 
         # generate complete beaker job XML
         self.bkr_xml.generate_xml_dom(bkr_xml_file, output, savefile=True)
+
         self.logger.info('Successfully generated beaker job XML!')
 
     def submit_bkr_xml(self):
@@ -733,7 +725,7 @@ class BeakerXML(object):
         # Create host requires  elementi
         if len(dom1.getElementsByTagName('and')) > 1:
             hre_parent = dom1.getElementsByTagName('and')[1]
-        elif 'force' not in self.hrname:
+        else:
             temp_parent = dom1.getElementsByTagName('hostRequires')[0]
             # print temp_parent
             temp_parent.appendChild(dom1.createElement('and'))
@@ -744,22 +736,17 @@ class BeakerXML(object):
 
         # should check for an empty host requires first
         if self.hrname:
-            if 'force' in self.hrname:
-                index = self.hrname.index('force')
-                hre = dom1.getElementsByTagName('hostRequires')[0]
-                hre.attributes[str(self.hrname[index])] = str(self.hrvalue[index])
-            else:
-                for index, value in enumerate(self.hrname):
-                    # parse the value hostrequires key, first is op the rest is the value
-                    # print str(self.hrname[index])
-                    # print str(self.hrop[index])
-                    # print str(self.hrvalue[index])
-                    # Add all host requires here
-                    hre = dom1.createElement(str(self.hrname[index]))
-                    hre.attributes['op'] = str(self.hrop[index])
-                    hre.attributes['value'] = str(self.hrvalue[index])
+            for index, value in enumerate(self.hrname):
+                # parse the value hostrequires key, first is op the rest is the value
+                # print str(self.hrname[index])
+                # print str(self.hrop[index])
+                # print str(self.hrvalue[index])
+                # Add all host requires here
+                hre = dom1.createElement(str(self.hrname[index]))
+                hre.attributes['op'] = str(self.hrop[index])
+                hre.attributes['value'] = str(self.hrvalue[index])
 
-                    hre_parent.appendChild(hre)
+                hre_parent.appendChild(hre)
 
         # should check for an empty distro requires first
         if self.drname:

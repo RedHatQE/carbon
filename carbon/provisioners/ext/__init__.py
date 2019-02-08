@@ -15,3 +15,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+from .openstack_libcloud_plugin import OpenstackLibCloudProvisionerPlugin
+from .linchpin_wrapper_plugin import LinchpinWrapperProvisionerPlugin
+from .beaker_client_plugin import BeakerClientProvisionerPlugin

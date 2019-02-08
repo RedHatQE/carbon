@@ -34,7 +34,8 @@ import mock
 import pytest
 
 from carbon.core import CarbonOrchestrator, CarbonProvider, CarbonProvisioner, \
-    CarbonResource, CarbonTask, LoggerMixin, TimeMixin, CarbonExecutor
+    CarbonResource, CarbonTask, LoggerMixin, TimeMixin, CarbonExecutor, \
+    CarbonPlugin, ProvisionerPlugin, ExecutorPlugin, ReporterPlugin, OrchestratorPlugin
 from carbon.exceptions import CarbonError, LoggerMixinError
 
 
@@ -81,6 +82,26 @@ def carbon_orchestrator():
 @pytest.fixture(scope='class')
 def carbon_executor():
     return CarbonExecutor()
+
+@pytest.fixture(scope='class')
+def carbon_plugin():
+    return CarbonPlugin()
+
+@pytest.fixture
+def provisioner_plugin(host):
+    return ProvisionerPlugin(host)
+
+@pytest.fixture(scope='class')
+def executor_plugin():
+    return ExecutorPlugin()
+
+@pytest.fixture(scope='class')
+def reporter_plugin():
+    return ReporterPlugin()
+
+@pytest.fixture(scope='class')
+def orchestrator_plugin():
+    return OrchestratorPlugin()
 
 
 class TestTimeMixin(object):
@@ -475,3 +496,65 @@ class TestCarbonExecutor(object):
         execute = mock.MagicMock()
         profile = carbon_executor.build_profile(execute)
         assert isinstance(profile, dict)
+
+class TestCarbonCorePlugins(object):
+
+    @staticmethod
+    def test_constructor(carbon_plugin):
+        assert isinstance(carbon_plugin, CarbonPlugin)
+
+    @staticmethod
+    def test_contructor_provisioner_gw(provisioner_plugin):
+        assert isinstance(provisioner_plugin, ProvisionerPlugin)
+
+    @staticmethod
+    def test_constructor_executor_gw(executor_plugin):
+        assert isinstance(executor_plugin, ExecutorPlugin)
+
+    @staticmethod
+    def test_constructor_reporter_gw(reporter_plugin):
+        assert isinstance(reporter_plugin, ReporterPlugin)
+
+    @staticmethod
+    def test_constructor_orchestrator_gw(orchestrator_plugin):
+        assert isinstance(orchestrator_plugin, OrchestratorPlugin)
+
+    @staticmethod
+    def test_provisioner_gw_create(provisioner_plugin):
+        with pytest.raises(NotImplementedError):
+            provisioner_plugin.create()
+
+    @staticmethod
+    def test_provisioner_gw_delete(provisioner_plugin):
+        with pytest.raises(NotImplementedError):
+            provisioner_plugin.delete()
+
+    @staticmethod
+    def test_provisioner_gw_authenticate(provisioner_plugin):
+        with pytest.raises(NotImplementedError):
+            provisioner_plugin.authenticate()
+
+    @staticmethod
+    def test_reporter_gw_aggregate(reporter_plugin):
+        with pytest.raises(NotImplementedError):
+            reporter_plugin.aggregate_artifacts()
+
+    @staticmethod
+    def test_reporter_gw_push(reporter_plugin):
+        with pytest.raises(NotImplementedError):
+            reporter_plugin.push_artifacts()
+
+    @staticmethod
+    def test_reporter_gw_cleanup(reporter_plugin):
+        with pytest.raises(NotImplementedError):
+            reporter_plugin.cleanup_artifacts()
+
+    @staticmethod
+    def test_executor_gw_run(executor_plugin):
+        with pytest.raises(NotImplementedError):
+            executor_plugin.run()
+
+    @staticmethod
+    def test_orchestrator_gw_run(orchestrator_plugin):
+        with pytest.raises(NotImplementedError):
+            orchestrator_plugin.run()

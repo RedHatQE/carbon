@@ -117,14 +117,57 @@ def get_provisioners_classes():
     return provisioners_list
 
 
-def get_default_provisioner(provider):
+def get_provisioners_plugin_classes():
+    """Go through all modules within carbon.provisioners package and return
+    the list of all provisioner gateway classes within it. All provisioners within
+    the carbon.provisioners.ext package are considered valid provisioner gateway classes
+    to be used by Carbon framework.
+    :return: List of all provisioner gateway classes"""
+
+    from .core import ProvisionerPlugin
+    from . import provisioners
+
+    # all task classes must
+    prefix = provisioners.__name__ + "."
+
+    provisioners_list = []
+
+    # Run through each module within tasks and take the list of
+    # classes that are subclass of CarbonTask but not CarbonTask itself.
+    # When you import a class within a module, it becames a member of
+    # that class
+    for importer, modname, ispkg in pkgutil.walk_packages(provisioners.__path__, prefix):
+        if str(modname).endswith('.ext') or str(modname).endswith('.blueprint'):
+            continue
+        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
+        for clsname, clsmember in clsmembers:
+            if (clsmember is not ProvisionerPlugin) and issubclass(clsmember, ProvisionerPlugin):
+                provisioners_list.append(clsmember)
+
+    return provisioners_list
+
+
+def get_default_provisioner(provider=None):
     """
     Given a provider, it will return the default provisioner
     :param provider: the provider value
     :return: the default provisioner
     """
-    provisioner_name = PROVISIONERS[provider.__provider_name__]
+
+    if provider is None:
+        provisioner_name = PROVISIONERS['host']
+    else:
+        provisioner_name = PROVISIONERS[provider.__provider_name__]
     return get_provisioner_class(provisioner_name)
+
+
+def get_default_provisioner_plugin(provider=None):
+    if provider is not None:
+        for plugin_class in get_provisioners_plugin_classes():
+            if plugin_class.__plugin_name__.startswith(provider.__provider_name__):
+                return plugin_class
+    else:
+        return get_provisioner_plugin_class('linchpin')
 
 
 def get_provisioners_list():
@@ -138,6 +181,17 @@ def get_provisioners_list():
     return valid_provisioners
 
 
+def get_provisioners_plugins_list():
+    """
+    Returns a list of all the valid provisioner gateways.
+    :return: list of provisioner gateways
+    """
+    valid_provisioners = []
+    for provisioner_gateway_class in get_provisioners_plugin_classes():
+        valid_provisioners.append(provisioner_gateway_class.__plugin_name__)
+    return valid_provisioners
+
+
 def get_provisioner_class(name):
     """Return the provisioner class based on the __provisioner_name__ set
     within the class. See ~carbon.core.CarbonProvisioner for more information.
@@ -146,6 +200,17 @@ def get_provisioner_class(name):
     """
     for provisioner in get_provisioners_classes():
         if provisioner.__provisioner_name__ == name:
+            return provisioner
+
+
+def get_provisioner_plugin_class(name):
+    """Return the provisioner gateway class based on the __provisioner_name__ set
+    within the class. See ~carbon.core.CarbonPlugin for more information.
+    :param name: The name of the provisioner
+    :return: The provisioner gateway class
+    """
+    for provisioner in get_provisioners_plugin_classes():
+        if provisioner.__plugin_name__.startswith(name):
             return provisioner
 
 
@@ -429,14 +494,14 @@ def exec_local_cmd_pipe(cmd, logger):
     while True:
         output, error = ("", "")
         if proc.poll is not None:
-            output = proc.stdout.readline().decode()
+            output = proc.stdout.readline().decode('utf-8')
         if output == "" and error == "" and proc.poll() is not None:
             break
         if output:
             logger.info(output.strip())
     rc = proc.poll()
     if rc != 0:
-        error = proc.stderr.readline().decode()
+        error = proc.stderr.readline().decode('utf-8')
     return rc, error
 
 
@@ -517,6 +582,7 @@ def fetch_hosts(hosts, task, all_hosts=True):
                 if host.name == task_host.name:
                     _hosts.append(host)
                     break
+
     task[_type].hosts = _hosts
     task[_type].all_hosts = _all_hosts
     return task
@@ -675,14 +741,13 @@ def resource_check(scenario, config):
 
 def get_ans_verbosity(logger, config):
     ans_verbosity = None
-    log_level = logger.getEffectiveLevel()
-
-    if log_level == logging.DEBUG:
-        ans_verbosity = "vvvv"
 
     if "ANSIBLE_VERBOSITY" in config and \
             config["ANSIBLE_VERBOSITY"]:
         ans_verbosity = config["ANSIBLE_VERBOSITY"]
+    else:
+        ans_verbosity = 'v'
+
     return ans_verbosity
 
 

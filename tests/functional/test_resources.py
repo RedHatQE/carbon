@@ -32,15 +32,29 @@ import uuid
 import mock
 import pytest
 
+from carbon._compat import ConfigParser
 from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
     ScenarioError, CarbonError
 from carbon.executors import RunnerExecutor
 from carbon.orchestrators import AnsibleOrchestrator
 from carbon.providers import OpenstackProvider
-from carbon.provisioners import OpenstackLibCloudProvisioner
+from carbon.provisioners import OpenstackLibCloudProvisioner, HostProvisioner
+from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin, LinchpinWrapperProvisionerPlugin
 from carbon.resources import Action, Execute, Host, Report, Scenario
 from carbon.utils.config import Config
 
+@pytest.fixture(scope='class')
+def feature_toggle_config():
+    config_file = '../assets/carbon.cfg'
+    cfgp = ConfigParser()
+    cfgp.read(config_file)
+    cfgp.set('feature_toggles:host','plugin_implementation','True')
+    with open(config_file, 'w') as cf:
+        cfgp.write(cf)
+    os.environ['CARBON_SETTINGS'] = config_file
+    config = Config()
+    config.load()
+    return config
 
 class TestActionResource(object):
     @staticmethod
@@ -480,3 +494,36 @@ class TestHostResource(object):
 
     def test_validate_success(self, host):
         host.validate()
+
+    def test_provisioner_plugin_property(self, default_host_params, feature_toggle_config):
+        params = self.__get_params_copy__(default_host_params)
+        host = Host(name='host01', parameters=params, config=feature_toggle_config)
+        assert host.provisioner_plugin is LinchpinWrapperProvisionerPlugin
+
+    def test_provisioner_plugin_setter(self, default_host_params, feature_toggle_config):
+        params = self.__get_params_copy__(default_host_params)
+        host = Host(name='host01', parameters=params, config=feature_toggle_config)
+        with pytest.raises(AttributeError) as ex:
+            host.provisioner_plugin = 'null'
+        assert 'You cannot set the host provisioner plugin after host class ' \
+               'is instantiated.' in ex.value.args
+
+    def test_create_host_that_loads_host_provisioner_interface(
+            self, default_host_params, feature_toggle_config):
+        params = self.__get_params_copy__(default_host_params)
+        host = Host(name='host01', parameters=params, config=feature_toggle_config)
+        assert host.provisioner is HostProvisioner
+
+    def test_create_host_with_provisioner_set_loads_provisioner_plugin(
+            self, default_host_params, feature_toggle_config):
+        params = self.__get_params_copy__(default_host_params)
+        params['provisioner'] = 'openstack-libcloud'
+        host = Host(name='host01', parameters=params, config=feature_toggle_config)
+        assert host.provisioner_plugin is OpenstackLibCloudProvisionerPlugin
+
+    def test_create_host_invalid_provisioner_plugin(
+            self, default_host_params, feature_toggle_config):
+        params = self.__get_params_copy__(default_host_params)
+        params['provisioner'] = 'null'
+        with pytest.raises(SystemExit):
+            Host(name='host01', parameters=params, config=feature_toggle_config)

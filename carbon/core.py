@@ -28,12 +28,14 @@ import errno
 import inspect
 import os
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
-from logging import Formatter, getLogger, StreamHandler, FileHandler
+from logging import Formatter, getLogger, StreamHandler, FileHandler, LoggerAdapter, Filter
 from time import time
 
 from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError, \
     CarbonProvisionerError
 from .helpers import get_core_tasks_classes
+from traceback import format_exc
+from sys import exc_info
 
 
 class LoggerMixin(object):
@@ -66,8 +68,8 @@ class LoggerMixin(object):
     a property to return that specific logger for easy access.
     """
 
-    _LOG_FORMAT = ("%(asctime)s %(levelname)s "
-                   "[%(name)s.%(funcName)s:%(lineno)d] %(message)s")
+    _DEBUG_LOG_FORMAT = ("%(asctime)s %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s")
+    _INFO_LOG_FORMAT = ("%(asctime)s %(levelname)s %(message)s")
 
     _LOG_LEVELS = {
         'debug': DEBUG,
@@ -119,7 +121,15 @@ class LoggerMixin(object):
         # configure handlers
         for handler in [stream_handler, file_handler]:
             handler.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
-            handler.setFormatter(Formatter(cls._LOG_FORMAT))
+            # remove the extra logging regarding class/function/lineno if not in debug mode
+            if config['LOG_LEVEL'] == 'info':
+                handler.setFormatter(Formatter(cls._INFO_LOG_FORMAT))
+            else:
+                handler.setFormatter(Formatter(cls._DEBUG_LOG_FORMAT))
+
+        # add exception filter to the stream handler so we don't print stack trace
+        filter = LoggerMixin.ExceptionFilter()
+        stream_handler.addFilter(filter)
 
         # configure logger
         logger.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
@@ -130,6 +140,14 @@ class LoggerMixin(object):
     def logger(self):
         """Returns the default logger (carbon logger) object."""
         return getLogger(inspect.getmodule(inspect.stack()[1][0]).__name__)
+
+    class ExceptionFilter(Filter):
+
+        def filter(self, record):
+            if record.getMessage().find('Traceback') != -1:
+                return False
+            else:
+                return True
 
 
 class TimeMixin(object):
@@ -240,6 +258,7 @@ class CarbonTask(LoggerMixin, TimeMixin):
 
     __task_name__ = None
     __concurrent__ = True
+    __task_id__ = ''
 
     def __init__(self, name=None, **kwargs):
         if name is not None:
@@ -250,6 +269,16 @@ class CarbonTask(LoggerMixin, TimeMixin):
 
     def __str__(self):
         return self.name
+
+    @staticmethod
+    def get_formatted_traceback():
+        """Get traceback when exception is raised. Will log traceback as well.
+        :return: Exception information.
+        :rtype: tuple
+        """
+
+        tb = exc_info()
+        return format_exc(tb)
 
 
 class CarbonResource(LoggerMixin, TimeMixin):
@@ -913,3 +942,139 @@ class CarbonExecutor(LoggerMixin, TimeMixin):
         for param in cls.get_all_parameters():
             profile.update({param: getattr(execute, param, None)})
         return profile
+
+
+class CarbonPlugin(LoggerMixin, TimeMixin):
+    """Carbon gateway class.
+
+        Base class that all carbon resource implmentations will use. This
+        is to facilitate decoupling the interface from the implementation.
+        """
+    # set the plugin name
+    __plugin_name__ = None
+
+
+class ProvisionerPlugin(CarbonPlugin):
+    """Carbon provisioner plugin class.
+
+    Each provisioner implementation added into carbon requires that they
+    inherit the carbon provisioner class. This enforces that the
+    required methods are implemented in the new provisioner class.
+    Additional support/helper methods can be added to this class
+    """
+
+    def __init__(self, host):
+
+        """Constructor.
+
+        Each host resource is linked to a provider which is the location where
+        the host will be provisioned. Along with the provider you will also
+        have access to all the provider parameters needed to fulfill the
+        provision request. (i.e. images, flavor, network, etc. depending on
+        the provider).
+
+        Common Attributes:
+          - name: data_folder
+            description: the runtime folder where all files/results are stored
+            and archived for historical purposes.
+            type: string
+
+          - name: provider
+            description: name of the provider where host is to be created or
+            deleted.
+            type: string
+
+          - name: provider_params
+            description: available data about the host to be created or
+            deleted in the provider defined.
+            type: dictionary
+
+          - name: provider_credentials
+            description: credentials for the provider associated to the host
+            resource.
+            type: dictionary
+
+          - name: workspace
+            description: workspace where carbon can access all files needed
+            by the scenario in order to successfully run it.
+            type: string
+
+        There can be more information within the host resource but the ones
+        defined above are the most commonly ones used by provisioners.
+
+        :param host: carbon host resource
+        :type host: object
+        """
+
+        self.host = host
+
+        # set commonly accessed data used by provisioners
+        self.data_folder = getattr(self.host, 'data_folder')
+        self.provider = getattr(getattr(host, 'provider'), 'name')
+        self.provider_params = getattr(host, 'provider_params')
+        self.provider_credentials = getattr(getattr(
+            host, 'provider'), 'credentials')
+        self.workspace = getattr(self.host, 'workspace')
+
+    def create(self):
+        raise NotImplementedError
+
+    def delete(self):
+        raise NotImplementedError
+
+    def authenticate(self):
+        raise NotImplementedError
+
+
+class ReporterPlugin(CarbonPlugin):
+    """Carbon reporter plugin class.
+
+    Each reporter implementation added into carbon requires that they
+    inherit the carbon reporter plugin class. This enforces that the
+    required methods are implemented in the new plugin class.
+    Additional support/helper methods can be added to this class.
+    """
+
+    def __init__(self):
+        pass
+
+    def aggregate_artifacts(self):
+        raise NotImplementedError
+
+    def push_artifacts(self):
+        raise NotImplementedError
+
+    def cleanup_artifacts(self):
+        raise NotImplementedError
+
+
+class OrchestratorPlugin(CarbonPlugin):
+    """Carbon orchestrator gateway class.
+
+    Each orchestrator implementation added into carbon requires that they
+    inherit the carbon orchestrator plugin class. This enforces that the
+    required methods are implemented in the new plugin class.
+    Additional support/helper methods can be added to this class.
+    """
+
+    def __init__(self):
+        pass
+
+    def run(self):
+        raise NotImplementedError
+
+
+class ExecutorPlugin(CarbonPlugin):
+    """Carbon executor plugin class.
+
+    Each executor implementation added into carbon requires that they
+    inherit the carbon executor plugin class. This enforces that the
+    required methods are implemented in the new plugin class.
+    Additional support/helper methods can be added to this class.
+    """
+
+    def __init__(self):
+        pass
+
+    def run(self):
+        raise NotImplementedError

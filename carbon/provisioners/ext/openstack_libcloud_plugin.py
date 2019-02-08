@@ -32,28 +32,28 @@ import urllib3
 from libcloud.compute.providers import get_driver
 from libcloud.compute.types import InvalidCredsError, Provider
 
-from .._compat import string_types
-from ..core import CarbonProvisioner
-from ..exceptions import OpenstackProviderError
+from carbon._compat import string_types
+from carbon.core import ProvisionerPlugin
+from carbon.exceptions import OpenstackProviderError
 
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
 
 
-class OpenstackLibCloudProvisioner(CarbonProvisioner):
-    """Carbon's openstack apache libcloud provisioner.
+class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
+    """Carbon's openstack apache libcloud provisioner plugin implementation.
 
     This class is a base which calls openstack provider methods to perform
     the actions to create and delete resources.
     """
-    __provisioner_name__ = 'openstack-libcloud'
+    __plugin_name__ = 'openstack-libcloud'
 
     def __init__(self, host):
         """Constructor.
 
         :param host: The host object.
         """
-        super(OpenstackLibCloudProvisioner, self).__init__(host)
+        super(OpenstackLibCloudProvisionerPlugin, self).__init__(host)
 
         # object place holders
         self._driver = object
@@ -94,22 +94,13 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
         except KeyError:
             credentials['region'] = 'regionOne'
 
-        # determine domain
-        try:
-            if not credentials['domain_name']:
-                # set the default domain if no domain is defined
-                credentials['domain_name'] = 'default'
-        except KeyError:
-            credentials['domain_name'] = 'default'
-
         # create libcloud driver object
         self._driver = get_driver(Provider.OPENSTACK)(
             credentials['username'],
             credentials['password'],
             ex_tenant_name=credentials['tenant_name'],
             ex_force_auth_url=credentials['auth_url'].split('/v')[0],
-            ex_force_auth_version='3.x_password',
-            ex_domain_name=credentials['domain_name'],
+            ex_force_auth_version='2.0_password',
             ex_force_service_region=credentials['region']
         )
 
@@ -451,7 +442,7 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
             'Maximum attempts reached to delete node %s.' % node.name
         )
 
-    def _create(self, name, image, size, network, key_pair, fip=None):
+    def _create(self, name, image, size, network, key_pair, fip):
         """Create.
 
         This method will create a resource (node) in openstack. It will
@@ -478,11 +469,7 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
         self.logger.info('Provisioning node %s.' % name)
 
         # create node
-        try:
-            node = self.create_node(name, image, size, network, key_pair)
-        except Exception:
-            self.logger.error("Failed to create node %s " % name)
-            raise
+        node = self.create_node(name, image, size, network, key_pair)
 
         # wait for node to complete building
         try:
@@ -503,12 +490,6 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
             raise OpenstackProviderError('Failed to attach fip.')
 
         self.logger.info('Successfully provisioned node %s.' % name)
-
-        # if no floating ip is assigned get updated node details and look for private_ip
-        # TODO: This might need more logic if we support a use case for more than one network specified
-        if ip is None:
-            node = self.driver.ex_get_node_details(node.id)
-            ip = node.private_ips[-1]
 
         return ip, node.id
 
@@ -648,19 +629,13 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
         """
         self.logger.info('Provisioning machines from %s', self.__class__)
 
-        # Check if floating ip pool was provided as part of scenario
-        try:
-            fip = getattr(self.host, 'provider_params')['floating_ip_pool']
-        except KeyError:
-            fip = None
-
         _ip, _id = self._create(
             getattr(self.host, 'provider_params')['hostname'],
             getattr(self.host, 'provider_params')['image'],
             getattr(self.host, 'provider_params')['flavor'],
             getattr(self.host, 'provider_params')['networks'],
             getattr(self.host, 'provider_params')['keypair'],
-            fip
+            getattr(self.host, 'provider_params')['floating_ip_pool'],
         )
 
         # set new attributes in host object

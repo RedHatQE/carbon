@@ -88,5 +88,6 @@ class BeakerProvider(PhysicalProvider):
             ('keytab_principal', [str]),
             ('keytab', [str]),
             ('username', [str]),
-            ('password', [str])
+            ('password', [str]),
+            ('ca_path', [str])
         ]

@@ -63,3 +63,8 @@ try:
     from urlparse import urlparse
 except ImportError:
     from urllib.parse import urlparse
+
+try:
+    from ConfigParser import ConfigParser
+except Exception:
+    from configparser import ConfigParser

@@ -49,6 +49,11 @@ either keytab and keytab_principal or username and password:
         - String
         - False
 
+    *   - ca_path
+        - path to a trusted certificate file
+        - String
+        - False
+
 
 Below is an example credentials section in the carbon.cfg file.  If the
 credential was defined as below, it should be referenced in your carbon
@@ -62,6 +67,7 @@ scenario descriptor by the host as **credential: beaker-creds**:
   keytab_principal=<keytab_principal>
   username=<username>
   password=<password>
+  ca_path=<ca_path>
 
 The following is an example of a resource in the scenario descriptor file
 that references this credential:
@@ -111,7 +117,7 @@ your credential section in your carbon.cfg file.
 
     *   - domain_name
         - The name of your OpenStack domain to authenticate with.
-        When not set carbon will use the 'default' domain
+          When not set carbon will use the 'default' domain
         - String
         - False
 
