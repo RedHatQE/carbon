@@ -34,6 +34,7 @@ from ..helpers import get_provisioner_class, get_default_provisioner
 from ..helpers import get_provisioners_list, filter_host_name
 from ..helpers import get_provisioners_plugins_list, get_provisioner_plugin_class, get_default_provisioner_plugin
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
+from .._compat import string_types
 
 
 class Host(CarbonResource):
@@ -96,7 +97,10 @@ class Host(CarbonResource):
         # set description attribute
         self._description = parameters.pop('description', None)
         try:
+            # convert the roles into list format if roles defined as str format
             self._role = parameters.pop('role')
+            if isinstance(self._role, string_types):
+                self._role = self._role.replace(' ', '').split(',')
         except KeyError:
             self.logger.error('A role must be set for host %s.' % self.name)
             sys.exit(1)
@@ -346,13 +350,16 @@ class Host(CarbonResource):
         # initialize profile with default parameters
         profile = {
             'name': self.name,
-            'role': self.role,
             'description': self.description,
             'ansible_params': self.ansible_params,
             'metadata': self.metadata,
             'workspace': self.workspace,
             'data_folder': self.data_folder
         }
+
+        # set the hosts's roles
+        if all(isinstance(item, string_types) for item in self.role):
+            profile.update(role=[role for role in self.role])
 
         try:
             if getattr(self, 'provisioner_plugin')is not None:

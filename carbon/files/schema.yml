@@ -28,7 +28,7 @@ mapping:
             type: str
           role:
             required: True
-            type: str
+            type: type_str_list
 
   orchestrate:
     sequence:

@@ -572,8 +572,9 @@ def fetch_hosts(hosts, task, all_hosts=True):
                 continue
             if host.name in task[_type].hosts:
                 _hosts.append(host)
-            if host.role in task[_type].hosts:
-                _hosts.append(host)
+            for r in host.role:
+                if r in task[_type].hosts:
+                    _hosts.append(host)
     else:
         for host in hosts:
             if all_hosts:
