@@ -277,8 +277,7 @@ class CarbonTask(LoggerMixin, TimeMixin):
         :rtype: tuple
         """
 
-        tb = exc_info()
-        return format_exc(tb)
+        return format_exc()
 
 
 class CarbonResource(LoggerMixin, TimeMixin):
