@@ -580,8 +580,9 @@ class RunnerExecutor(CarbonExecutor):
                 # generated. lets go ahead and archive these for debugging
                 # purposes
                 self.logger.error(ex.message)
-                self.logger.info('Fetching test generated artifacts')
-                self.__artifacts__()
+                if (attr != 'git' or attr != 'artifacts') and self.artifacts is not None:
+                    self.logger.info('Fetching test generated artifacts')
+                    self.__artifacts__()
 
                 if self.status:
                     raise CarbonExecuteError('Test execution failed to run '
