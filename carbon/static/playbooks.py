@@ -119,7 +119,7 @@ ADHOC_SHELL_PLAYBOOK = '''
 
     - name: copy results to file
       shell:
-        echo -e "('{{ inventory_hostname }}', {{ sh_results.rc }}, '{{ sh_results.stderr }}')" \
+        echo -e "('{{ inventory_hostname }}', {{ sh_results.rc }}, \'\'\'{{ sh_results.stderr }}\'\'\')" \
         | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> shell-results.txt
       delegate_to: localhost
 '''
@@ -138,7 +138,7 @@ ADHOC_SCRIPT_PLAYBOOK = '''
 
     - name: copy results to file
       shell:
-        echo -e "('{{ inventory_hostname }}', {{ scrpt_results.rc }}, '{{ scrpt_results.stderr }}')" \
+        echo -e "('{{ inventory_hostname }}', {{ scrpt_results.rc }}, \'\'\'{{ scrpt_results.stderr }}\'\'\')" \
         | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> script-results.txt
       delegate_to: localhost
 '''
