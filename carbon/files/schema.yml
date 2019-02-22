@@ -28,7 +28,8 @@ mapping:
             type: str
           role:
             required: True
-            type: type_str_list
+            type: any
+            func: type_str_list
 
   orchestrate:
     sequence:
@@ -141,3 +142,15 @@ mapping:
             type: bool
 
   report:
+    sequence:
+    - type: map
+      allowempty: True
+      mapping:
+        name:
+          required: True
+          type: str
+        description:
+          type: str
+        reporter:
+          required: True
+          type: str
