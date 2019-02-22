@@ -415,7 +415,11 @@ class BeakerClientProvisioner(CarbonProvisioner):
                 hostname = task.getElementsByTagName('system')[0]. \
                     getAttribute("value")
                 addr = socket.gethostbyname(hostname)
-                self.host.bkr_hostname = hostname.encode('ascii', 'ignore')
+                try:
+                    getattr(self.host, 'provider_params')['hostname'] = hostname.split('.')[0].encode('ascii', 'ignore')
+                except Exception:
+                    getattr(self.host, 'provider_params')['hostname'] = hostname.encode('ascii', 'ignore')
+
                 setattr(self.host, 'ip_address', addr)
 
     def copy_ssh_key(self):
@@ -427,7 +431,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
         ssh_key = getattr(self.host, 'provider_params')['ssh_key']
         username = getattr(self.host, 'provider_params')['username']
         password = getattr(self.host, 'provider_params')['password']
-        hostname = getattr(self.host, 'bkr_hostname')
+        hostname = getattr(self.host, 'provider_params')['hostname']
 
         # setup absolute path for private key
         private_key = os.path.join(self.workspace, ssh_key)
