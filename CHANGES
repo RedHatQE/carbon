@@ -1,3 +1,34 @@
+Version 1.0.6 (2019-03-6)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* Modified the execute phase so that shell/script results.txt output generated
+  is text wrapped and dedented before parsing the results
+
+* A regression in python 3 exception handling was throwing another exception that
+  the exception could not be parsed.
+
+* The Beaker hostname is correctly save to the Provider hostname key during provision
+  phase so that it correlates with the hostname folder created during the artifact
+  step in the execute phase
+
+* Modified artifact step so as to not collect artifacts during an exception
+  handling if a user has not specified any artifacts.
+
+* Modified artifact step so as to not collect artifacts during an exception
+  handling when it happens during the git or artifact step.
+
+Enhancement
+~~~~~~~~~~
+
+* Support for assigning multiple roles to a host in the Provision phase.
+
+* Enhanced python 3 support for native Beaker provisioner so that resources
+  can be provisioned and cleaned up in a python 3 environment.
+
+
 Version 1.0.5 (2019-02-6)
 --------------------------
 
