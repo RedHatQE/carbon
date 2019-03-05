@@ -24,6 +24,7 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+from __future__ import unicode_literals
 import socket
 import time
 from xml.dom.minidom import parse, parseString
@@ -185,6 +186,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
             self.data_folder, self.job_xml)
 
         self.logger.info('Submitting beaker job XML..')
+        self.logger.debug('Command to be run: %s' % _cmd)
 
         # submit beaker XML
         results = exec_local_cmd(_cmd)
@@ -199,7 +201,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
 
             # set the result as ascii instead of unicode
             job_id = mod_output[mod_output.find(
-                "[") + 2:mod_output.find("]") - 1].encode('ascii', 'ignore')
+                "[") + 2:mod_output.find("]") - 1]
             getattr(self.host, 'provider_params')['job_id'] = job_id
             job_url = os.path.join(self.url, 'jobs', job_id[2:])
             getattr(self.host, 'provider_params')['job_url'] = job_url
@@ -416,9 +418,9 @@ class BeakerClientProvisioner(CarbonProvisioner):
                     getAttribute("value")
                 addr = socket.gethostbyname(hostname)
                 try:
-                    getattr(self.host, 'provider_params')['hostname'] = hostname.split('.')[0].encode('ascii', 'ignore')
+                    getattr(self.host, 'provider_params')['hostname'] = hostname.split('.')[0]
                 except Exception:
-                    getattr(self.host, 'provider_params')['hostname'] = hostname.encode('ascii', 'ignore')
+                    getattr(self.host, 'provider_params')['hostname'] = hostname
 
                 setattr(self.host, 'ip_address', addr)
 
@@ -803,7 +805,7 @@ class BeakerXML(object):
         self.xmldom = dom1
 
         # Output updated file
-        with open(xmlfile, "wb") as fp:
+        with open(xmlfile, "w+") as fp:
             self.xmldom.writexml(fp)
 
     @property
