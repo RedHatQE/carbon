@@ -32,7 +32,7 @@ from logging import Formatter, getLogger, StreamHandler, FileHandler, LoggerAdap
 from time import time
 
 from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError, \
-    CarbonProvisionerError
+    CarbonProvisionerError, CarbonImporterError
 from .helpers import get_core_tasks_classes
 from traceback import format_exc
 from sys import exc_info
@@ -586,18 +586,18 @@ class CarbonProvider(LoggerMixin, TimeMixin):
             if param in cdata:
                 self._credentials[param] = cdata[param]
 
-    def validate_req_params(self, host):
+    def validate_req_params(self, resource):
         """Validate the required parameters exists in the host resource.
 
         :param host: host resource
         :type host: object
         """
         for item in self.req_params:
-            name = getattr(host, 'name')
+            name = getattr(resource, 'name')
             param, param_type = item[0], item[1]
-            msg = "Host %s : required param '%s' " % (name, param)
+            msg = "Resource %s : required param '%s' " % (name, param)
             try:
-                param_value = getattr(host, 'provider_params')[param]
+                param_value = getattr(resource, 'provider_params')[param]
                 self.logger.info(msg + 'exists.')
 
                 if not type(param_value) in param_type:
@@ -606,25 +606,25 @@ class CarbonProvider(LoggerMixin, TimeMixin):
                         (type(param_value), param_type))
                     raise CarbonError(
                         'Error occurred while validating required provider '
-                        'parameters for host %s' % getattr(host, 'name')
+                        'parameters for resource %s' % getattr(resource, 'name')
                     )
             except KeyError:
-                msg = 'msg' + 'does not exist.'
+                msg = msg + 'does not exist.'
                 self.logger.error(msg)
                 raise CarbonError(msg)
 
-    def validate_opt_params(self, host):
+    def validate_opt_params(self, resource):
         """Validate the optional parameters exists in the host resource.
 
-        :param host: host resource
-        :type host: object
+        :param resource: host resource
+        :type resource: object
         """
         for item in self.opt_params:
-            name = getattr(host, 'name')
+            name = getattr(resource, 'name')
             param, param_type = item[0], item[1]
             msg = "Host %s : optional param '%s' " % (name, param)
             try:
-                param_value = getattr(host, 'provider_params')[param]
+                param_value = getattr(resource, 'provider_params')[param]
                 self.logger.info(msg + 'exists.')
 
                 if not type(param_value) in param_type:
@@ -633,23 +633,23 @@ class CarbonProvider(LoggerMixin, TimeMixin):
                         (type(param_value), param_type))
                     raise CarbonError(
                         'Error occurred while validating required provider '
-                        'parameters for host %s' % getattr(host, 'name')
+                        'parameters for resource %s' % getattr(resource, 'name')
                     )
             except KeyError:
-                self.logger.warning(msg + 'is undefined for host.')
+                self.logger.warning(msg + 'is undefined for resource.')
 
-    def validate_req_credential_params(self, host):
+    def validate_req_credential_params(self, resource):
         """Validate the required credential parameters exists in the host.
 
-        :param host: host resource
-        :type host: object
+        :param resource: host resource
+        :type resource: object
         """
         for item in self.req_credential_params:
-            name = getattr(host, 'name')
+            name = getattr(resource, 'name')
             param, param_type = item[0], item[1]
-            msg = "Host %s : required credential param '%s' " % (name, param)
+            msg = "Resource %s : required credential param '%s' " % (name, param)
             try:
-                provider = getattr(host, 'provider')
+                provider = getattr(resource, 'provider')
                 param_value = getattr(provider, 'credentials')[param]
                 self.logger.info(msg + 'exists.')
 
@@ -660,25 +660,25 @@ class CarbonProvider(LoggerMixin, TimeMixin):
                     )
                     raise CarbonError(
                         'Error occurred while validating required provider '
-                        'parameters for host %s' % getattr(host, 'name')
+                        'parameters for resource %s' % getattr(resource, 'name')
                     )
             except (AttributeError, KeyError):
                 msg = msg + 'does not exist.'
                 self.logger.error(msg)
                 raise CarbonError(msg)
 
-    def validate_opt_credential_params(self, host):
+    def validate_opt_credential_params(self, resources):
         """Validate the optional credential parameters exists in the host.
 
-        :param host: host resource
-        :type host: object
+        :param resources: host resource
+        :type resources: object
         """
         for item in self.opt_credential_params:
-            name = getattr(host, 'name')
+            name = getattr(resources, 'name')
             param, param_type = item[0], item[1]
-            msg = "Host %s : optional credential param '%s' " % (name, param)
+            msg = "Resource %s : optional credential param '%s' " % (name, param)
             try:
-                provider = getattr(host, 'provider')
+                provider = getattr(resources, 'provider')
                 param_value = getattr(provider, 'credentials')[param]
                 self.logger.info(msg + 'exists.')
 
@@ -689,7 +689,7 @@ class CarbonProvider(LoggerMixin, TimeMixin):
                     )
                     raise CarbonError(
                         'Error occurred while validating required provider '
-                        'parameters for host %s' % getattr(host, 'name')
+                        'parameters for resources %s' % getattr(resources, 'name')
                     )
             except (AttributeError, KeyError):
                 self.logger.warning(msg + 'does not exist.')
@@ -715,6 +715,14 @@ class PhysicalProvider(CarbonProvider):
     """Physical provider class."""
     def __init__(self):
         super(PhysicalProvider, self).__init__()
+        """Constructor."""
+        pass
+
+
+class ReportProvider(CarbonProvider):
+    """Report provider class."""
+    def __init__(self):
+        super(ReportProvider, self).__init__()
         """Constructor."""
         pass
 
@@ -843,10 +851,10 @@ class CarbonExecutor(LoggerMixin, TimeMixin):
     # execute types the executor offers
     _execute_types = []
 
-    def __init__(self):
+    def __init__(self, execute=None, host=None):
         """Constructor."""
-        self._execute = None
-        self._hosts = None
+        self._execute = execute
+        self._hosts = host
 
     def validate(self):
         raise NotImplementedError
@@ -943,6 +951,68 @@ class CarbonExecutor(LoggerMixin, TimeMixin):
         return profile
 
 
+class CarbonImporter(LoggerMixin, TimeMixin):
+
+    # set the importer name
+    __importer_name__ = None
+
+    def __init__(self, report):
+        """Constructor.
+
+        The reporter requires a carbon report resource. This resource
+        contains all the necessary elements that are needed to fulfill
+        the reporting request by the reporter of choice.
+
+        :param report: carbons report resource
+        :type report: object
+        """
+        self._report = report
+
+        # set commonly accessed data used by importers
+        self.data_folder = getattr(report, 'data_folder')
+        self.provider = getattr(getattr(report, 'provider'), 'name')
+        self.provider_params = getattr(report, 'provider_params', {})
+        self.provider_credentials = getattr(getattr(
+            report, 'provider'), 'credentials')
+        self.workspace = getattr(report, 'workspace')
+        self.config = getattr(report, 'config')
+
+        if not self.name and self.__class__.__name__ != 'CarbonImporter':
+            raise CarbonImporterError(
+                'Attribute __importer_name__ is None. Please set the '
+                'attribute and retry creating an object from the class.'
+            )
+
+    @property
+    def name(self):
+        """Return the name of the importer."""
+        return self.__importer_name__
+
+    @name.setter
+    def name(self, value):
+        raise AttributeError('You cannot set name for the importer.')
+
+    @property
+    def report(self):
+        return self._report
+
+    @report.setter
+    def report(self, value):
+        raise AttributeError('You cannot set the report to run.')
+
+    def import_artifacts(self):
+        raise NotImplementedError
+
+    def cleanup_artifacts(self):
+        raise NotImplementedError
+
+    def aggregate_artifacts(self):
+        raise NotImplementedError
+
+    def validate_artifacts(self):
+        raise NotImplementedError
+
+
 class CarbonPlugin(LoggerMixin, TimeMixin):
     """Carbon gateway class.
 
@@ -1025,7 +1095,7 @@ class ProvisionerPlugin(CarbonPlugin):
         raise NotImplementedError
 
 
-class ReporterPlugin(CarbonPlugin):
+class ImporterPlugin(CarbonPlugin):
     """Carbon reporter plugin class.
 
     Each reporter implementation added into carbon requires that they
@@ -1034,13 +1104,24 @@ class ReporterPlugin(CarbonPlugin):
     Additional support/helper methods can be added to this class.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, profile):
+
+        self.profile = profile
+
+        # set commonly accessed data used by the importer
+        self.data_folder = self.profile['data_folder']
+        self.provider = self.profile['provider']['name']
+        self.provider_params = self.profile['provider']
+        self.provider_credentials = self.profile['provider_credentials']
+        self.workspace = self.profile['workspace']
+        self.artifacts = self.profile['artifacts']
+        self.import_results = []
+        self.config_params = self.profile['config_params']
 
     def aggregate_artifacts(self):
         raise NotImplementedError
 
-    def push_artifacts(self):
+    def import_artifacts(self):
         raise NotImplementedError
 
     def cleanup_artifacts(self):

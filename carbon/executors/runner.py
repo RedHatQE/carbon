@@ -75,7 +75,7 @@ class RunnerExecutor(CarbonExecutor):
         :param package: execute resource
         :type package: object
         """
-        super(RunnerExecutor, self).__init__()
+        super(RunnerExecutor, self).__init__(execute=package)
 
         # set required attributes
         self._name = getattr(package, 'name')
@@ -552,8 +552,8 @@ class RunnerExecutor(CarbonExecutor):
         # Build Results
         sync_results = []
         for line in lines:
-            host, artifact, skipped, rc = ast.literal_eval(line)
-            sync_results.append({'host': host, 'artifact': artifact, 'skipped': skipped, 'rc': rc})
+            host, artifact, dest, skipped, rc = ast.literal_eval(line)
+            sync_results.append({'host': host, 'artifact': artifact, 'destination': dest, 'skipped': skipped, 'rc': rc})
 
         # remove Sync Results file
         os.remove('sync-results.txt')
@@ -565,9 +565,26 @@ class RunnerExecutor(CarbonExecutor):
                     self.logger.error('Failed to copy the artifact(s), %s, from %s' % (r['artifact'], r['host']))
             raise CarbonExecuteError('A failure occurred while trying to copy '
                                      'test artifacts.')
+        artifact_location = {}
         for r in sync_results:
             if r['rc'] == 0 and not r['skipped']:
-                self.logger.info('Copied the artifact(s), %s, from %s' % (r['artifact'], r['host']))
+                temp_list = r['artifact'].replace('[', '').replace(']', '').replace("'", "").split(',')
+                art_list = [a.replace('>f+++++++++', '') for a in temp_list if 'cd+' not in a]
+                self.logger.info('Copied the artifact(s), %s, from %s' % (art_list, r['host']))
+
+                # Update the execute resource with the location of artifacts
+                path = '/'.join(r['destination'].split('/')[-3:])
+                if path in artifact_location:
+                    current_list = artifact_location.get(path)
+                    # current_list.extend([b for a in art_list for b in a.split('/')[-1:]])
+                    current_list.extend(art_list)
+                    artifact_location.update({path: current_list})
+                else:
+                    # artifact_location[path] = [b for a in art_list for b in a.split('/')[-1:]]
+                    artifact_location[path] = art_list
+
+            self.execute.artifact_locations = artifact_location
+
             if r['skipped']:
                 self.logger.warning('Could not find artifact(s), %s, on %s. Make sure the file exists '
                                     'and defined properly in the definition file.' % (r['artifact'], r['host']))

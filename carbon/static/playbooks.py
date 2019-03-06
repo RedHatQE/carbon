@@ -61,7 +61,7 @@ SYNCHRONIZE_PLAYBOOK = '''
 
     - name: copy skipped artifacts results to file
       shell:
-        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', True, 0, )" \
+        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', '', True, 0, )" \
         | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
       delegate_to: localhost
       when: item is skipped
@@ -70,8 +70,9 @@ SYNCHRONIZE_PLAYBOOK = '''
 
     - name: copy passed artifacts results to file
       shell:
-        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', False, 0, )" \
-        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
+        echo -e "('{{ ansible_hostname }}', \'\'\'{{ item.stdout_lines | to_yaml \
+        | regex_replace('[\\t|\\n|\\r|\\s]', '') }}\'\'\', '{{ item.cmd.split(' ')[-1] }}', False, 0, )" \
+        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> sync-results.txt
       delegate_to: localhost
       when: item is success and item is not skipped
       with_items:
@@ -79,7 +80,7 @@ SYNCHRONIZE_PLAYBOOK = '''
 
     - name: copy failed artifacts results to file
       shell:
-        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', False, 1, )" \
+        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', '', False, 1, )" \
         | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
       delegate_to: localhost
       when: item is failure

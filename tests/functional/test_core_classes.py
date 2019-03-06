@@ -35,7 +35,7 @@ import pytest
 
 from carbon.core import CarbonOrchestrator, CarbonProvider, CarbonProvisioner, \
     CarbonResource, CarbonTask, LoggerMixin, TimeMixin, CarbonExecutor, \
-    CarbonPlugin, ProvisionerPlugin, ExecutorPlugin, ReporterPlugin, OrchestratorPlugin
+    CarbonPlugin, ProvisionerPlugin, ExecutorPlugin, ImporterPlugin, OrchestratorPlugin
 from carbon.exceptions import CarbonError, LoggerMixinError
 
 
@@ -87,6 +87,19 @@ def carbon_executor():
 def carbon_plugin():
     return CarbonPlugin()
 
+@pytest.fixture(scope='class')
+def report_profile():
+    profile = dict(name='test.xml',
+                   description='testing',
+                   importer='polarion',
+                   data_folder='/tmp',
+                   workspace='/tmp',
+                   artifacts=[],
+                   provider_credentials={},
+                   config_params={},
+                   provider={'name': 'test'})
+    return profile
+
 @pytest.fixture
 def provisioner_plugin(host):
     return ProvisionerPlugin(host)
@@ -96,8 +109,8 @@ def executor_plugin():
     return ExecutorPlugin()
 
 @pytest.fixture(scope='class')
-def reporter_plugin():
-    return ReporterPlugin()
+def importer_plugin(report_profile):
+    return ImporterPlugin(report_profile)
 
 @pytest.fixture(scope='class')
 def orchestrator_plugin():
@@ -512,8 +525,8 @@ class TestCarbonCorePlugins(object):
         assert isinstance(executor_plugin, ExecutorPlugin)
 
     @staticmethod
-    def test_constructor_reporter_gw(reporter_plugin):
-        assert isinstance(reporter_plugin, ReporterPlugin)
+    def test_constructor_reporter_gw(importer_plugin):
+        assert isinstance(importer_plugin, ImporterPlugin)
 
     @staticmethod
     def test_constructor_orchestrator_gw(orchestrator_plugin):
@@ -535,19 +548,19 @@ class TestCarbonCorePlugins(object):
             provisioner_plugin.authenticate()
 
     @staticmethod
-    def test_reporter_gw_aggregate(reporter_plugin):
+    def test_importer_gw_aggregate(importer_plugin):
         with pytest.raises(NotImplementedError):
-            reporter_plugin.aggregate_artifacts()
+            importer_plugin.aggregate_artifacts()
 
     @staticmethod
-    def test_reporter_gw_push(reporter_plugin):
+    def test_importer_gw_push(importer_plugin):
         with pytest.raises(NotImplementedError):
-            reporter_plugin.push_artifacts()
+            importer_plugin.import_artifacts()
 
     @staticmethod
-    def test_reporter_gw_cleanup(reporter_plugin):
+    def test_importer_gw_cleanup(importer_plugin):
         with pytest.raises(NotImplementedError):
-            reporter_plugin.cleanup_artifacts()
+            importer_plugin.cleanup_artifacts()
 
     @staticmethod
     def test_executor_gw_run(executor_plugin):

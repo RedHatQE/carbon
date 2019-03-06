@@ -28,7 +28,7 @@
 import mock
 import pytest
 
-from carbon.exceptions import CarbonOrchestratorError
+from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError
 from carbon.tasks import CleanupTask, ExecuteTask, OrchestrateTask, \
     ProvisionTask, ReportTask, ValidateTask
 
@@ -46,7 +46,9 @@ def validate_task():
 
 @pytest.fixture(scope='class')
 def report_task():
-    return ReportTask(msg='report task')
+    package = mock.MagicMock()
+    package.importer = mock.MagicMock()
+    return ReportTask(msg='report task', package=package, name='Test-Package')
 
 
 @pytest.fixture(scope='class')
@@ -105,6 +107,15 @@ class TestReportTask(object):
     @staticmethod
     def test_run(report_task):
         report_task.run()
+
+    @staticmethod
+    @mock.patch.object(ReportTask, 'get_formatted_traceback')
+    def test_run_orchestrate_failure(mock_method, report_task):
+        mock_method.return_value = 'Traceback'
+        mock_importer = mock.MagicMock(import_artifacts=mock.MagicMock(side_effect=CarbonImporterError('e')))
+        report_task.importer = mock_importer
+        with pytest.raises(CarbonImporterError):
+            report_task.run()
 
 
 class TestExecuteTask(object):

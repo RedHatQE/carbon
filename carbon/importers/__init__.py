@@ -17,14 +17,12 @@
 #
 
 """
-    carbon.providers
+    carbon.importers
 
-    Package containing carbon provider modules.
+    Package containing carbon importer module.
 
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
-from .beaker import BeakerProvider
-from .openstack import OpenstackProvider
-from .polarion import PolarionProvider
+from .artifact_importer import ArtifactImporter

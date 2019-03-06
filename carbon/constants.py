@@ -76,7 +76,10 @@ DEFAULT_CONFIG = {
 }
 
 # Default config sections
-DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator', 'feature_toggles']
+DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator', 'feature_toggles', 'importer']
 
 # options on how credentials can be set
 SET_CREDENTIALS_OPTIONS = ['config', 'scenario']
+
+# Default importer
+IMPORTER = 'artifact-importer'

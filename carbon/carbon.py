@@ -157,6 +157,7 @@ class Carbon(LoggerMixin, TimeMixin):
         # configure loggers
         self.create_logger(__carbon_name__, self.config)
         self.create_logger('blaster', self.config)
+        self.create_logger('polar', self.config)
         # pykwalify logging disabled for too much logging
         # self.create_logger('pykwalify.core', self.config)
 

@@ -30,7 +30,7 @@ from collections import namedtuple
 
 from ..constants import TASKLIST
 from ..exceptions import CarbonError
-from ..helpers import fetch_hosts, get_core_tasks_classes
+from ..helpers import fetch_hosts, get_core_tasks_classes, fetch_executes
 from ..tasks import CleanupTask
 
 
@@ -128,6 +128,7 @@ class PipelineBuilder(object):
         # report resource
         for report in getattr(scenario, 'reports'):
             for task in report.get_tasks():
+                task = fetch_executes(getattr(scenario, 'executes'), getattr(scenario, 'hosts'), task)
                 if task['task'].__task_name__ == self.name:
                     pipeline.tasks.append(task)
 

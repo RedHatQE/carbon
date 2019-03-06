@@ -121,9 +121,12 @@ def execute_resource():
 
 
 @pytest.fixture
-def report_resource():
-    params = dict(key='value')
-    return Report(parameters=params)
+def report_resource(config):
+    params = dict(description='description', executes='execute',
+                  provider=dict(name='polarion',
+                                credential='polarion'
+                                ))
+    return Report(name='text.xml', parameters=params, config=config)
 
 
 @pytest.fixture

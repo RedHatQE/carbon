@@ -1,11 +1,11 @@
 Credentials
 ===========
 
-For each resource that needs to be provisioned, credentials are required.
-These credentials will be set in the required `carbon.cfg file
-<../configuration.html#carbon-configuration>`_, and the credential name will be
-referenced in your scenario descriptor file in the provision section for each
-resource that is defined.
+For each resource that needs to be provisioned or artifact that needs to be 
+imported, credentials are required. These credentials will be set in the required 
+`carbon.cfg file <../configuration.html#carbon-configuration>`_, and the credential 
+name will be referenced in your scenario descriptor file in the provision section for each
+resource or artifact that is defined.
 
 Beaker Credentials
 ------------------
@@ -137,3 +137,50 @@ that references this credential:
 
 
 .. literalinclude:: ../../.examples/provision/openstack/scenario.yml
+
+
+Polarion Credentials
+---------------------
+
+For Polarion, the following table is a list of required keys for
+your credential section in your carbon.cfg file.
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Key
+        - Description
+        - Type
+        - Required
+
+    *   - polarion_url
+        - The URL you use to log into Polarion. Do not append the xunit-queue
+          to the end of it.
+        - String
+        - True
+
+    *   - username
+        - The username that has privileges to your Polarion project. It is 
+          recommended to have an automation user created with admin privileges
+        - String
+        - True
+
+    *   - password
+        - The password of your user to the Polarion project.
+        - String
+        - True
+
+.. code-block:: bash
+
+  [credentials:polarion-creds]
+  polarion_url=<polarion_url>
+  username=<username>
+  password=<password>
+
+The following is an example of a resource in the scenario descriptor file
+that references this credential:
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+    :lines: 1-8
+
