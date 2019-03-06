@@ -365,7 +365,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
             dom = parseString(xmldata)
         except Exception as ex:
             raise BeakerProvisionerError(
-                'Failed reading XML data: %s.' % ex.message
+                'Failed reading XML data: %s.' % ex
             )
 
         # check job status
@@ -406,7 +406,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
             dom = parseString(xmldata)
         except Exception as ex:
             raise BeakerProvisionerError(
-                'Failed reading XML data: %s.' % ex.message
+                'Failed reading XML data: %s.' % ex
             )
 
         tasklist = dom.getElementsByTagName('task')
@@ -443,7 +443,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
             os.chmod(private_key, stat.S_IRUSR | stat.S_IWUSR)
         except OSError as ex:
             raise BeakerProvisionerError(
-                'Error setting private key file permissions: %s' % ex.message
+                'Error setting private key file permissions: %s' % ex
             )
 
         self.logger.info('Generating SSH public key from private..')
@@ -473,11 +473,11 @@ class BeakerClientProvisioner(CarbonProvisioner):
             sftp.put(public_key, '/root/.ssh/authorized_keys')
         except paramiko.SSHException as ex:
             raise BeakerProvisionerError(
-                'Failed to connect to remote system: %s' % ex.message
+                'Failed to connect to remote system: %s' % ex
             )
         except IOError as ex:
             raise BeakerProvisionerError(
-                'Failed sending public key: %s' % ex.message
+                'Failed sending public key: %s' % ex
             )
         finally:
             ssh_con.close()

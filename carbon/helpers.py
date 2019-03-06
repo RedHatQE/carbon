@@ -48,7 +48,7 @@ from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
 
-from ._compat import string_types
+from ._compat import string_types, is_py2
 from .constants import PROVISIONERS, RULE_HOST_NAMING
 from .exceptions import CarbonError, HelpersError
 
@@ -665,7 +665,7 @@ def ssh_retry(obj):
                 except (BadHostKeyException, AuthenticationException,
                         SSHException, socket.error) as ex:
                     attempt = attempt + 1
-                    LOG.error(ex.message)
+                    LOG.error(ex.strerror)
                     LOG.error("Server %s - IP: %s is unreachable." % (group,
                                                                       server_ip))
                     if attempt <= MAX_ATTEMPTS:

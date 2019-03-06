@@ -21,12 +21,15 @@ Bug Fixes
   handling when it happens during the git or artifact step.
 
 Enhancement
-~~~~~~~~~~
+~~~~~~~~~~~
 
 * Support for assigning multiple roles to a host in the Provision phase.
 
 * Enhanced python 3 support for native Beaker provisioner so that resources
   can be provisioned and cleaned up in a python 3 environment.
+
+* Enhanced python 3 support modified non-carbon exception logging to
+  to no longer access the 'message' attribute of an exception
 
 
 Version 1.0.5 (2019-02-6)
@@ -53,7 +56,7 @@ Bug Fixes
   as to not leave stale resources behind.
 
 Enhancement
-~~~~~~~~~~
+~~~~~~~~~~~
 
 * Added to Beaker Credentials the optional parameter, ca_path, to allow a user to
   specify a path to a trusted CA file.
@@ -79,8 +82,8 @@ Bug Fixes
 
 * Do not attempt to attach a floating ip to an OpenStack instance if the floating_ip_pool parameter is not specified
 
-Enhancment
-~~~~~~~~~~
+Enhancement
+~~~~~~~~~~~
 
 * General provisioning support on the latest OpenStack Cloud environment  
 
