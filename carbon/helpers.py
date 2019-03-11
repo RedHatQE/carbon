@@ -48,7 +48,7 @@ from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
 
-from ._compat import string_types
+from ._compat import string_types, is_py2
 from .constants import PROVISIONERS, RULE_HOST_NAMING
 from .exceptions import CarbonError, HelpersError
 
@@ -418,7 +418,7 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
         elif file_ext in ['.yaml', '.yml']:
             # yaml
             with open(file_path, mode) as f_raw:
-                yaml.dump(content, f_raw, default_flow_style=False)
+                yaml.safe_dump(content, f_raw, default_flow_style=False)
         else:
             # text
             with open(file_path, mode) as f_raw:
@@ -470,8 +470,17 @@ def exec_local_cmd(cmd):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
-    output = proc.communicate()
-    return proc.returncode, output[0], output[1]
+    rc = proc.wait()
+    output = ""
+    err = ""
+    for l in proc.stdout.readlines():
+        output += l.decode('utf-8').strip()
+    for l in proc.stderr.readlines():
+        err += l.decode('utf-8').strip()
+    # LOG.debug(output)
+    return rc, output, err
+    # output = proc.communicate()
+    # return proc.returncode, output[0], output[1]
 
 
 def exec_local_cmd_pipe(cmd, logger):
@@ -572,8 +581,9 @@ def fetch_hosts(hosts, task, all_hosts=True):
                 continue
             if host.name in task[_type].hosts:
                 _hosts.append(host)
-            if host.role in task[_type].hosts:
-                _hosts.append(host)
+            for r in host.role:
+                if r in task[_type].hosts:
+                    _hosts.append(host)
     else:
         for host in hosts:
             if all_hosts:
@@ -655,7 +665,7 @@ def ssh_retry(obj):
                 except (BadHostKeyException, AuthenticationException,
                         SSHException, socket.error) as ex:
                     attempt = attempt + 1
-                    LOG.error(ex.message)
+                    LOG.error(ex.strerror)
                     LOG.error("Server %s - IP: %s is unreachable." % (group,
                                                                       server_ip))
                     if attempt <= MAX_ATTEMPTS:

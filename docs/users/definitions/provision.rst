@@ -41,8 +41,8 @@ required or optional:
         - True
 
     *   - role
-        - The name of the role for the node.
-        - String
+        - The names of the roles for the node.
+        - List
         - True
 
     *   - provisioner
@@ -68,6 +68,20 @@ required or optional:
         - Dict
         - True
 
+
+Role
+++++
+
+You can associate a number of roles to a host in a couple of different ways.
+First is to define your roles in a comma separated string
+
+.. literalinclude:: ../../../examples/docs-usage/provision.yml
+    :lines: 1-4
+
+You can also define your roles as a list.
+
+.. literalinclude:: ../../../examples/docs-usage/provision.yml
+    :lines: 7-11
 
 .. _beaker_provisioning:
 

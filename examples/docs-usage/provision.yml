@@ -1,0 +1,11 @@
+---
+- name: ci_test_client_b
+  role: client, vnc
+  provider: beaker
+
+---
+- name: ci_test_client_b
+  role:
+    - client
+    - vnc
+  provider: beaker

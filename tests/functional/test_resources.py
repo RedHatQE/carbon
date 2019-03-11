@@ -476,7 +476,7 @@ class TestHostResource(object):
                'is instantiated.' in ex.value.args
 
     def test_role_property(self, host):
-        assert host.role == 'client'
+        assert host.role[-1] == 'client'
 
     def test_role_setter(self, host):
         with pytest.raises(AttributeError) as ex:

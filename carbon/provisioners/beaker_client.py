@@ -24,6 +24,7 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+from __future__ import unicode_literals
 import socket
 import time
 from xml.dom.minidom import parse, parseString
@@ -185,6 +186,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
             self.data_folder, self.job_xml)
 
         self.logger.info('Submitting beaker job XML..')
+        self.logger.debug('Command to be run: %s' % _cmd)
 
         # submit beaker XML
         results = exec_local_cmd(_cmd)
@@ -199,7 +201,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
 
             # set the result as ascii instead of unicode
             job_id = mod_output[mod_output.find(
-                "[") + 2:mod_output.find("]") - 1].encode('ascii', 'ignore')
+                "[") + 2:mod_output.find("]") - 1]
             getattr(self.host, 'provider_params')['job_id'] = job_id
             job_url = os.path.join(self.url, 'jobs', job_id[2:])
             getattr(self.host, 'provider_params')['job_url'] = job_url
@@ -363,7 +365,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
             dom = parseString(xmldata)
         except Exception as ex:
             raise BeakerProvisionerError(
-                'Failed reading XML data: %s.' % ex.message
+                'Failed reading XML data: %s.' % ex
             )
 
         # check job status
@@ -404,7 +406,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
             dom = parseString(xmldata)
         except Exception as ex:
             raise BeakerProvisionerError(
-                'Failed reading XML data: %s.' % ex.message
+                'Failed reading XML data: %s.' % ex
             )
 
         tasklist = dom.getElementsByTagName('task')
@@ -415,7 +417,11 @@ class BeakerClientProvisioner(CarbonProvisioner):
                 hostname = task.getElementsByTagName('system')[0]. \
                     getAttribute("value")
                 addr = socket.gethostbyname(hostname)
-                self.host.bkr_hostname = hostname.encode('ascii', 'ignore')
+                try:
+                    getattr(self.host, 'provider_params')['hostname'] = hostname.split('.')[0]
+                except Exception:
+                    getattr(self.host, 'provider_params')['hostname'] = hostname
+
                 setattr(self.host, 'ip_address', addr)
 
     def copy_ssh_key(self):
@@ -427,7 +433,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
         ssh_key = getattr(self.host, 'provider_params')['ssh_key']
         username = getattr(self.host, 'provider_params')['username']
         password = getattr(self.host, 'provider_params')['password']
-        hostname = getattr(self.host, 'bkr_hostname')
+        hostname = getattr(self.host, 'provider_params')['hostname']
 
         # setup absolute path for private key
         private_key = os.path.join(self.workspace, ssh_key)
@@ -437,7 +443,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
             os.chmod(private_key, stat.S_IRUSR | stat.S_IWUSR)
         except OSError as ex:
             raise BeakerProvisionerError(
-                'Error setting private key file permissions: %s' % ex.message
+                'Error setting private key file permissions: %s' % ex
             )
 
         self.logger.info('Generating SSH public key from private..')
@@ -467,11 +473,11 @@ class BeakerClientProvisioner(CarbonProvisioner):
             sftp.put(public_key, '/root/.ssh/authorized_keys')
         except paramiko.SSHException as ex:
             raise BeakerProvisionerError(
-                'Failed to connect to remote system: %s' % ex.message
+                'Failed to connect to remote system: %s' % ex
             )
         except IOError as ex:
             raise BeakerProvisionerError(
-                'Failed sending public key: %s' % ex.message
+                'Failed sending public key: %s' % ex
             )
         finally:
             ssh_con.close()
@@ -799,7 +805,7 @@ class BeakerXML(object):
         self.xmldom = dom1
 
         # Output updated file
-        with open(xmlfile, "wb") as fp:
+        with open(xmlfile, "w+") as fp:
             self.xmldom.writexml(fp)
 
     @property

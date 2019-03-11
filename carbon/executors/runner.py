@@ -29,6 +29,7 @@ import ast
 import collections
 import copy
 import os.path
+import textwrap
 
 from ruamel.yaml import YAML
 
@@ -317,7 +318,7 @@ class RunnerExecutor(CarbonExecutor):
             # Build Results
             sh_results = []
             for line in lines:
-                host, rc, err = ast.literal_eval(line)
+                host, rc, err = ast.literal_eval(textwrap.dedent(line).strip())
                 sh_results.append({'host': host, 'rc': rc, 'err': err})
 
             # remove Shell Results file
@@ -402,7 +403,7 @@ class RunnerExecutor(CarbonExecutor):
             # Build Results
             script_results = []
             for line in lines:
-                host, rc, err = ast.literal_eval(line)
+                host, rc, err = ast.literal_eval(textwrap.dedent(line).strip())
                 script_results.append({'host': host, 'rc': rc, 'err': err})
 
             # remove Shell Results file
@@ -579,8 +580,9 @@ class RunnerExecutor(CarbonExecutor):
                 # generated. lets go ahead and archive these for debugging
                 # purposes
                 self.logger.error(ex.message)
-                self.logger.info('Fetching test generated artifacts')
-                self.__artifacts__()
+                if (attr != 'git' or attr != 'artifacts') and self.artifacts is not None:
+                    self.logger.info('Fetching test generated artifacts')
+                    self.__artifacts__()
 
                 if self.status:
                     raise CarbonExecuteError('Test execution failed to run '

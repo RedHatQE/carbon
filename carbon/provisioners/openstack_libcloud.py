@@ -118,7 +118,7 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
             self._driver.ex_list_networks()
         except InvalidCredsError as ex:
             raise OpenstackProviderError(
-                'Authentication failed: %s' % ex.message
+                'Authentication failed: %s' % ex
             )
 
     def unset_driver(self):
@@ -404,7 +404,7 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
                 self.logger.info('Successfully booted node %s.' % name)
                 return node
             except Exception as ex:
-                self.logger.error(ex.message)
+                self.logger.error(ex)
                 wait_time = random.randint(10, MAX_WAIT_TIME)
                 self.logger.info('Attempt %s of %s: retrying in %s seconds' %
                                  (attempt, MAX_ATTEMPTS, wait_time))
@@ -437,7 +437,7 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
                 self.logger.info('Successfully deleted node %s.' % node.name)
                 return
             except Exception as ex:
-                self.logger.error(ex.message)
+                self.logger.error(ex)
                 wait_time = random.randint(10, MAX_WAIT_TIME)
                 self.logger.info('Attempt %s of %s: retrying in %s seconds' %
                                  (attempt, MAX_ATTEMPTS, wait_time))
@@ -488,7 +488,7 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
         try:
             self.wait_for_building_finish(node)
         except Exception as ex:
-            self.logger.error(ex.message)
+            self.logger.error(ex)
             self.logger.error('Node %s did not finish building.' % node.name)
             self.delete_node(node)
             raise OpenstackProviderError('Node did not finish building.')
@@ -601,7 +601,7 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
             # attach ip to node
             self.driver.ex_attach_floating_ip_to_node(node, _ip)
         except Exception as ex:
-            self.logger.error(ex.message)
+            self.logger.error(ex)
             raise OpenstackProviderError('Unable to attach FIP to %s' % node)
         finally:
             self.unset_driver()
@@ -635,7 +635,7 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
         except OpenstackProviderError:
             self.logger.warning('Node %s does not have fip.' % node.name)
         except Exception as ex:
-            self.logger.error(ex.message)
+            self.logger.error(ex)
             raise OpenstackProviderError('Unable to detach FIP from %s' % node)
         finally:
             self.unset_driver()
