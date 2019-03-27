@@ -247,8 +247,15 @@ class RunnerExecutor(CarbonExecutor):
         extra_vars = copy.deepcopy(self.ans_extra_vars)
         extra_vars['gits'] = self.git
 
+        # build run options
+        run_options = self.build_run_options()
+        run_options_str = self.convert_run_options(run_options)
+
+        # update dynamic playbook git task with options
+        playbook_str = self._update_playbook_str(GIT_CLONE_PLAYBOOK, "{{ options }}", run_options_str)
+
         # create dynamic playbook
-        self._create_playbook(playbook, GIT_CLONE_PLAYBOOK)
+        self._create_playbook(playbook, playbook_str)
 
         # run playbook
         results = self.ans_controller.run_playbook(
@@ -516,8 +523,15 @@ class RunnerExecutor(CarbonExecutor):
         extra_vars['dest'] = destination
         extra_vars['artifacts'] = self.artifacts
 
+        # build run options
+        run_options = self.build_run_options()
+        run_options_str = self.convert_run_options(run_options)
+
+        # update dynamic playbook synchronize task with options
+        playbook_str = self._update_playbook_str(SYNCHRONIZE_PLAYBOOK, "{{ options }}", run_options_str)
+
         # create dynamic playbook
-        self._create_playbook(playbook, SYNCHRONIZE_PLAYBOOK)
+        self._create_playbook(playbook, playbook_str)
 
         # run playbook
         results = self.ans_controller.run_playbook(
