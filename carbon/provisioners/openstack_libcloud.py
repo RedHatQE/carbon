@@ -555,15 +555,20 @@ class OpenstackLibCloudProvisioner(CarbonProvisioner):
             state = getattr(node, 'state')
             msg = '%s. VM %s, STATE=%s' % (attempt, node.name, state)
 
-            if state.lower() != 'running':
-                self.logger.info('%s, rechecking in 20 seconds.', msg)
-                time.sleep(20)
-            else:
+            if state.lower() == 'error':
+                self.logger.info(msg)
+                self.logger.error('VM %s got an into an error state!' %
+                                  node.name)
+                break
+            elif state.lower() == 'running':
                 self.logger.info(msg)
                 self.logger.info('VM %s successfully finished building!' %
                                  node.name)
                 status = 1
                 break
+            else:
+                self.logger.info('%s, rechecking in 20 seconds.', msg)
+                time.sleep(20)
 
         self.unset_driver()
         if status:
