@@ -111,7 +111,8 @@ class RunnerExecutor(CarbonExecutor):
         self.inv = Inventory(
             self.hosts,
             self.all_hosts,
-            data_dir=self.config['DATA_FOLDER']
+            data_dir=self.config['DATA_FOLDER'],
+            static_inv_dir=self.config['INVENTORY_FOLDER']
         )
 
         self.ans_verbosity = get_ans_verbosity(self.logger, self.config)

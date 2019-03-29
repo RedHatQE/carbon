@@ -206,7 +206,7 @@ class Inventory(LoggerMixin):
     ansible inventory for the carbon ansible action.
     """
 
-    def __init__(self, hosts, all_hosts, data_dir):
+    def __init__(self, hosts, all_hosts, data_dir, static_inv_dir=None):
         """Constructor.
 
         :param hosts: list of hosts to create the inventory file
@@ -220,9 +220,14 @@ class Inventory(LoggerMixin):
         self.all_hosts = all_hosts
 
         # set & create the inventory directory
-        self.inv_dir = os.path.join(data_dir, 'inventory')
-        if not os.path.isdir(self.inv_dir):
-            os.makedirs(self.inv_dir)
+        if static_inv_dir:
+            self.inv_dir = os.path.expanduser(os.path.join(static_inv_dir, 'inventory'))
+            if not os.path.isdir(self.inv_dir):
+                os.makedirs(self.inv_dir)
+        else:
+            self.inv_dir = os.path.join(data_dir, 'inventory')
+            if not os.path.isdir(self.inv_dir):
+                os.makedirs(self.inv_dir)
 
         # set the master inventory
         self.master_inv = os.path.join(self.inv_dir, 'master')
@@ -389,7 +394,8 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.inv = Inventory(
             self.hosts,
             self.all_hosts,
-            data_dir=self.config['DATA_FOLDER']
+            data_dir=self.config['DATA_FOLDER'],
+            static_inv_dir=self.config['INVENTORY_FOLDER']
         )
 
     def validate(self):
