@@ -185,6 +185,9 @@ class AnsibleController(object):
                 elif key == "tags":
                     taglist = ','.join(run_options[key])
                     playbook_call += " --tags %s" % taglist
+                elif key == "skip_tags":
+                    taglist = ','.join(run_options[key])
+                    playbook_call += " --skip-tags %s" % taglist
                 else:
                     playbook_call += " --%s %s" % (key.replace('_', '-'), run_options[key])
 
@@ -566,6 +569,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
             if "tags" in self.options and self.options["tags"]:
                 run_options["tags"] = self.options["tags"]
+
+            if "skip_tags" in self.options and self.options["skip_tags"]:
+                run_options["skip_tags"] = self.options["skip_tags"]
 
             # override ansible options (user passed vals for specific action)
             for val in self.user_run_vals:
