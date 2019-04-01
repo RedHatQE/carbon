@@ -336,7 +336,7 @@ To see all script options see ansible's documentation `here
     :lines: 168-177
 
 Example 11
-~~~~~~~~~
+~~~~~~~~~~
 
 You have a playbook which needs to run against x number of hosts and requires
 skipping tasks with a tag set to ssh_auth and requires extra variables.
