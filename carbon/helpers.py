@@ -656,7 +656,7 @@ def ssh_retry(obj):
                 except (BadHostKeyException, AuthenticationException,
                         SSHException, socket.error) as ex:
                     attempt = attempt + 1
-                    LOG.error(ex.strerror)
+                    LOG.error(ex)
                     LOG.error("Server %s - IP: %s is unreachable." % (group,
                                                                       server_ip))
                     if attempt <= MAX_ATTEMPTS:

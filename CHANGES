@@ -15,6 +15,9 @@ Bug Fixes
   execute phase, a failure would occur during the artifact step because
   the escalated user was not being used.
 
+* When VM/resource ip is not reachable or wrong authentication key is provided
+  carbon exited without proper exception message
+
 Enhancement
 ~~~~~~~~~~~
 
