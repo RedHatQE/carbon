@@ -112,7 +112,12 @@ class Carbon(LoggerMixin, TimeMixin):
         # set the static inventory path if defined
         self.static_inv_dir = None
         if self.config['INVENTORY_FOLDER']:
-            self.static_inv_dir = os.path.abspath(os.path.expanduser(self.config['INVENTORY_FOLDER']))
+            inv_dir = os.path.abspath(
+                os.path.expanduser(os.path.expandvars(self.config['INVENTORY_FOLDER'])))
+            if 'inventory' in os.path.basename(inv_dir):
+                self.static_inv_dir = inv_dir
+            else:
+                self.static_inv_dir = os.path.join(inv_dir, 'inventory')
 
         # Why a results folder and a data folder? The data folder is a unique
         # folder that is created for each carbon execution. This folder will
@@ -132,6 +137,15 @@ class Carbon(LoggerMixin, TimeMixin):
             try:
                 if not os.path.exists(f):
                     os.makedirs(f)
+
+                # Let's create the inventory directory in the results folder
+                # if a static inventory folder is specified to avoid complexity
+                # copying the inventory directory data
+
+                if '.results' in f and self.static_inv_dir:
+                    res_inv_dir = os.path.join(f, 'inventory')
+                    if not os.path.exists(res_inv_dir):
+                        os.makedirs(res_inv_dir)
             except (OSError, IOError) as ex:
                 if ex.errno == errno.EACCES:
                     raise CarbonError("You don't have permission to create '"
@@ -403,9 +417,10 @@ class Carbon(LoggerMixin, TimeMixin):
             os.system('cp -r %s/* %s' % (self.data_folder, self.config[
                 'RESULTS_FOLDER']))
 
-            # also archive the inventory file if a separate directory file is specified
+            # also archive the inventory file if a static inventory directory is specified
             if self.static_inv_dir and os.path.exists(self.static_inv_dir):
-                os.system('cp -r %s/* %s' % (self.static_inv_dir, self.config[
-                    'RESULTS_FOLDER']))
+                if os.listdir(self.static_inv_dir):
+                    inv_results_dir = os.path.join(self.config['RESULTS_FOLDER'], 'inventory')
+                    os.system('cp -r %s/* %s' % (self.static_inv_dir, inv_results_dir))
 
             sys.exit(status)

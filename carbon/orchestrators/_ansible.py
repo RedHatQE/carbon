@@ -221,7 +221,15 @@ class Inventory(LoggerMixin):
 
         # set & create the inventory directory
         if static_inv_dir:
-            self.inv_dir = os.path.expanduser(os.path.join(static_inv_dir, 'inventory'))
+            if 'inventory' in (os.path.basename(static_inv_dir),
+                               os.path.basename(os.path.dirname(static_inv_dir))):
+                self.inv_dir = os.path.expandvars(
+                    os.path.expanduser(static_inv_dir)
+                )
+            else:
+                self.inv_dir = os.path.expandvars(
+                    os.path.expanduser(os.path.join(static_inv_dir, 'inventory'))
+                )
             if not os.path.isdir(self.inv_dir):
                 os.makedirs(self.inv_dir)
         else:
