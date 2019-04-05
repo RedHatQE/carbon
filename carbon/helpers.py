@@ -470,17 +470,8 @@ def exec_local_cmd(cmd):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
-    rc = proc.wait()
-    output = ""
-    err = ""
-    for l in proc.stdout.readlines():
-        output += l.decode('utf-8').strip()
-    for l in proc.stderr.readlines():
-        err += l.decode('utf-8').strip()
-    # LOG.debug(output)
-    return rc, output, err
-    # output = proc.communicate()
-    # return proc.returncode, output[0], output[1]
+    output = proc.communicate()
+    return proc.returncode, output[0].decode('utf-8'), output[1].decode('utf-8')
 
 
 def exec_local_cmd_pipe(cmd, logger):
@@ -665,7 +656,7 @@ def ssh_retry(obj):
                 except (BadHostKeyException, AuthenticationException,
                         SSHException, socket.error) as ex:
                     attempt = attempt + 1
-                    LOG.error(ex.strerror)
+                    LOG.error(ex)
                     LOG.error("Server %s - IP: %s is unreachable." % (group,
                                                                       server_ip))
                     if attempt <= MAX_ATTEMPTS:

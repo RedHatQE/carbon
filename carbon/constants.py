@@ -72,6 +72,7 @@ DEFAULT_CONFIG = {
     'DATA_FOLDER': tempfile.gettempdir(),
     'LOG_LEVEL': 'info',
     'RESOURCE_CHECK_ENDPOINT': '',
+    'INVENTORY_FOLDER': ''
 }
 
 # Default config sections

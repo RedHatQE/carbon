@@ -185,6 +185,9 @@ class AnsibleController(object):
                 elif key == "tags":
                     taglist = ','.join(run_options[key])
                     playbook_call += " --tags %s" % taglist
+                elif key == "skip_tags":
+                    taglist = ','.join(run_options[key])
+                    playbook_call += " --skip-tags %s" % taglist
                 else:
                     playbook_call += " --%s %s" % (key.replace('_', '-'), run_options[key])
 
@@ -203,7 +206,7 @@ class Inventory(LoggerMixin):
     ansible inventory for the carbon ansible action.
     """
 
-    def __init__(self, hosts, all_hosts, data_dir):
+    def __init__(self, hosts, all_hosts, data_dir, static_inv_dir=None):
         """Constructor.
 
         :param hosts: list of hosts to create the inventory file
@@ -217,9 +220,22 @@ class Inventory(LoggerMixin):
         self.all_hosts = all_hosts
 
         # set & create the inventory directory
-        self.inv_dir = os.path.join(data_dir, 'inventory')
-        if not os.path.isdir(self.inv_dir):
-            os.makedirs(self.inv_dir)
+        if static_inv_dir:
+            if 'inventory' in (os.path.basename(static_inv_dir),
+                               os.path.basename(os.path.dirname(static_inv_dir))):
+                self.inv_dir = os.path.expandvars(
+                    os.path.expanduser(static_inv_dir)
+                )
+            else:
+                self.inv_dir = os.path.expandvars(
+                    os.path.expanduser(os.path.join(static_inv_dir, 'inventory'))
+                )
+            if not os.path.isdir(self.inv_dir):
+                os.makedirs(self.inv_dir)
+        else:
+            self.inv_dir = os.path.join(data_dir, 'inventory')
+            if not os.path.isdir(self.inv_dir):
+                os.makedirs(self.inv_dir)
 
         # set the master inventory
         self.master_inv = os.path.join(self.inv_dir, 'master')
@@ -386,7 +402,8 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.inv = Inventory(
             self.hosts,
             self.all_hosts,
-            data_dir=self.config['DATA_FOLDER']
+            data_dir=self.config['DATA_FOLDER'],
+            static_inv_dir=self.config['INVENTORY_FOLDER']
         )
 
     def validate(self):
@@ -566,6 +583,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
             if "tags" in self.options and self.options["tags"]:
                 run_options["tags"] = self.options["tags"]
+
+            if "skip_tags" in self.options and self.options["skip_tags"]:
+                run_options["skip_tags"] = self.options["skip_tags"]
 
             # override ansible options (user passed vals for specific action)
             for val in self.user_run_vals:

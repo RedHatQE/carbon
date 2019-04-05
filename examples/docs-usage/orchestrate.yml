@@ -175,3 +175,17 @@ orchestrate:
     ansible_script: True
     hosts: host01
     orchestrator: ansible
+
+---
+- name: ansible/ssh_connect.yml
+    description: "setup key authentication between driver and clients"
+    orchestrator: ansible
+    hosts: driver
+    ansible_options:
+      skip_tags:
+        - ssh_auth
+      extra_vars:
+        username: root
+        password: redhat
+    ansible_galaxy_options:
+      role_file: roles.yml

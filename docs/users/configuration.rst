@@ -28,3 +28,16 @@ Configuration example (with all options):
 
     Many of the configuration options can be overridden by passing cli options when running
     carbon. See the options in the running carbon `example. <quickstart.html#run>`__
+
+inventory_folder
+~~~~~~~~~~~~~~~~
+
+The inventory_folder option is not a required option but it is important enough to note its usage.
+By default carbon will create an inventory directory containing ansible inventory files in its data
+directory. These are used during orchestration and execution. Refer to the `Carbon Output <output.html>`__
+page.
+
+Some times this is not desired behavior. This option allows a user to specify a static known directory
+that Carbon can use to place the ansible inventory files. If the specified directory does not exist,
+carbon will create it and place the ansible inventory files. If it does, carbon will only place the
+ansible files in the directory. Carbon will then use this static directory during orchestrate and execution.

@@ -44,6 +44,7 @@ SYNCHRONIZE_PLAYBOOK = '''
       with_items:
         - "{{ artifacts }}"
       register: found_artifacts
+      {{ options }}
 
     - name: fetch artifacts
       synchronize:
@@ -55,6 +56,7 @@ SYNCHRONIZE_PLAYBOOK = '''
         - "{{ inventory_hostname }}"
         - "{{ found_artifacts.results }}"
       register: sync_output
+      {{ options }}
       when: item[1].matched > 0
 
     - name: copy skipped artifacts results to file
@@ -101,6 +103,7 @@ GIT_CLONE_PLAYBOOK = '''
         repo: "{{ item.repo }}"
         version: "{{ item.version }}"
         dest: "{{ item.dest }}"
+      {{ options }}
       with_items:
         - "{{ gits }}"
 '''

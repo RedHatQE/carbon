@@ -1,3 +1,35 @@
+Version 1.0.7 (2019-04-01)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* A regression in python 3 support when provisioning Beaker resources using a
+  kickstart file. Spaces were inadvertently being removed when generating the
+  beaker job xml causing the kickstart file unparseable.
+
+* When provisioning OpenStack resources if a VM went into an error state it
+  would sit and loop until the provisioning timeout
+
+* When using the ansible Become options to raise user privileges during the
+  execute phase, a failure would occur during the artifact step because
+  the escalated user was not being used.
+
+* When VM/resource ip is not reachable or wrong authentication key is provided
+  carbon exited without proper exception message
+
+Enhancement
+~~~~~~~~~~~
+
+* Support for ansible --skip-tags options that can be used in the ansible
+  orchestrator by specifying the ansible option skip_tags and providing a
+  list of tags.
+
+* Support for defining a static inventory file directory in the carbon.cfg
+  that can be used by the orchestration and execute phase to store the
+  ansible inventory files.
+
+
 Version 1.0.6 (2019-03-6)
 --------------------------
 
