@@ -50,7 +50,6 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self.linchpin_api.setup_rundb()
         self._create_pinfile()
         self._load_credentials()
-        self.linchpin_api.validate_topology(self.pinfile['carbon']['topology'])
 
     def _init_context(self):
         context = LinchpinContext()
@@ -132,23 +131,25 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                 if key in ['distro', 'arch', 'variant', 'name',
                            'taskparam', 'priority']:
                     recipeset[key] = value
-                elif key is 'whiteboard':
+                elif key == 'whiteboard':
                     resource_def['whiteboard'] = value
-                elif key is 'jobgroup':
+                elif key == 'jobgroup':
                     resource_def['job_group'] = value
-                elif key is 'host_requires_options':
+                elif key == 'host_requires_options':
                     hostrequires = []
                     for hq in value:
                         hostrequires.append(
                             '{} {} {}'.format(hq['tag'], hq['op'], hq['value']))
                     recipeset['hostrequires'] = hostrequires
-                elif key is 'tags':
+                elif key == 'tags':
                     if value.size > 1:
-                        raise CarbonProviderError('Only one tag is supported')
+                        raise CarbonProviderError('Only one tag == supported')
                     else:
                         recipeset['tags'] = value[0]
-                elif key is 'node_id':
+                elif key == 'node_id':
                     recipeset['ids'] = value
+                elif key == 'ssh_key':
+                    recipeset['ssh_key'] = [value]
             resource_def['recipesets'] = [recipeset]
             resource_grp = {
                 'resource_group_name': 'carbon',
@@ -193,11 +194,11 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self._create_inventory(results)
         resource = results['carbon']['outputs']['resources']
         if self.provider == 'openstack':
-            os_server = resource['os_server_res'][0]['servers'][0]
+            os_server = resource[0]['servers'][0]
             _ip = os_server['interface_ip']
             _id = os_server['id']
         if self.provider == 'beaker':
-            bkr_server = resource['beaker_res'][0]
+            bkr_server = resource[0]
             _ip = bkr_server['system']
             _id = bkr_server['id']
             getattr(self.host, 'provider_params')['job_url'] = bkr_server['url']
