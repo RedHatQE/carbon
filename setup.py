@@ -53,8 +53,8 @@ setup(
         'ruamel.yaml>=0.15.64'
     ],
     extras_require={
-        'linchpin': ['linchpin==1.6.4'],
-        'linchpin-bkr': ['linchpin[beaker]==1.6.4']
+        'linchpin': ['linchpin==1.7.3'],
+        'linchpin-bkr': ['linchpin[beaker]==1.7.3']
     },
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
