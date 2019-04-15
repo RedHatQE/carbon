@@ -8,5 +8,6 @@ RUN yum install -y gcc python-devel \
  && pip install virtualenv
 #Carbon beaker requirements
 RUN curl -o /etc/yum.repos.d/bkr-client.repo https://beaker-project.org/yum/beaker-client-CentOS.repo \
- && yum install -y beaker-client
+ && yum install -y beaker-client \ 
+ && yum install -y krb5-workstation krb5-devel
 ENV LANG=en_US.utf8 LC_ALL=en_US.utf8
