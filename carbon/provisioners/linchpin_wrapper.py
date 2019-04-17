@@ -66,6 +66,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         context.set_evar('workspace', lws_path)
         context.set_cfg('lp', 'distill_data', True)
         context.set_evar('generate_resources', False)
+        context.set_evar('debug_mode', True)
         return(context)
 
     def _load_credentials(self):
@@ -78,13 +79,17 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             environ['OS_PASSWORD'] = self.provider_credentials['password']
             environ['OS_AUTH_URL'] = self.provider_credentials['auth_url']
             environ['OS_PROJECT_NAME'] = self.provider_credentials['tenant_name']
+            if 'domain_name' in self.provider_credentials:
+                environ['OS_DOMAIN_NAME'] = self.provider_credentials['domain_name']
         elif self.provider == 'beaker':
-            bkr_conf = path.join(self.data_folder, 'beaker.conf')
+            bkr_conf = path.join(path.abspath(self.data_folder), 'beaker.conf')
             environ['BEAKER_CONF'] = bkr_conf
             creds = self.provider_credentials
             with open(bkr_conf, 'w') as conf:
                 if 'hub_url' in self.provider_credentials:
                     conf.write('HUB_URL = "%s"\n' % creds['hub_url'])
+                if 'ca_path' in self.provider_credentials:
+                    conf.write('CA_CERT = "%s"\n' % creds['ca_path'])
                 if 'password' in self.provider_credentials:
                     conf.write('AUTH_METHOD = "password"\n')
                     conf.write('USERNAME = "%s"\n' % creds['username'])
@@ -93,6 +98,12 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                     conf.write('AUTH_METHOD = "krbv"\n')
                     conf.write('KRB_PRINCIPAL = "%s"\n' % creds['keytab_principal'])
                     conf.write('KRB_KEYTAB = "%s"\n' % creds['keytab'])
+                    if 'realm' in self.provider_credentials:
+                        conf.write('KRB_REALM = "%s"\n' % creds['realm'])
+                    if 'service' in self.provider_credentials:
+                        conf.write('KRB_SERVICE = "%s"\n' % creds['service'])
+                    if 'ccache' in self.provider_credentials:
+                        conf.write('KRB_CCACHE = "%s"\n' % creds['ccache'])
         else:
             raise CarbonProvisionerError('No credentials provided')
 
@@ -138,8 +149,11 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                 elif key == 'host_requires_options':
                     hostrequires = []
                     for hq in value:
-                        hostrequires.append(
-                            '{} {} {}'.format(hq['tag'], hq['op'], hq['value']))
+                        hostrequires.append({
+                            "tag": hq.split(" ")[0],
+                            "op": hq.split(" ")[1],
+                            "value": hq.split(" ")[2]
+                        })
                     recipeset['hostrequires'] = hostrequires
                 elif key == 'tags':
                     if value.size > 1:
