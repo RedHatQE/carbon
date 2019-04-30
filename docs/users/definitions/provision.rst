@@ -119,6 +119,7 @@ provisioning resource for Beaker:
           jobgroup: <group_id>
           tag: <tag>
           host_requires_options: [<list of host options>]
+          key_values: [<list of key/value pairs defining the host>]      
           distro_requires_options: [<list of distro options>]
           virtual_machine: <True or False>
           virt_capable: <True or False>
