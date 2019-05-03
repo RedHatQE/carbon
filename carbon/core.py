@@ -741,6 +741,7 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
         """Constructor."""
         self._action = None
         self._hosts = None
+        self._status = 0
 
     def validate(self):
         raise NotImplementedError
@@ -773,6 +774,14 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
     @hosts.setter
     def hosts(self, value):
         raise AttributeError('Hosts cannot be set once the object is created.')
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, value):
+        self._status = value
 
     @classmethod
     def _mandatory_parameters_set(cls):

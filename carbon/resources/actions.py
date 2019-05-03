@@ -121,6 +121,9 @@ class Action(CarbonResource):
         for p in getattr(self.orchestrator, 'get_all_parameters')():
             setattr(self, p, parameters.get(p, {}))
 
+        # set up status code
+        self._status = parameters.pop('status', 0)
+
         # ******** CLEANUP ACTIONS ******** #
         # check if the action requires any cleanup actions prior to host
         # deletion
@@ -160,6 +163,14 @@ class Action(CarbonResource):
         """Set orchestrator property."""
         raise AttributeError('Orchestrator class property cannot be set.')
 
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, value):
+        self._status = value
+
     def profile(self):
         """Builds a profile for the action resource.
 
@@ -175,7 +186,8 @@ class Action(CarbonResource):
             'description': self.description,
             'orchestrator': getattr(
                 self.orchestrator, '__orchestrator_name__'),
-            'cleanup': self.cleanup_def
+            'cleanup': self.cleanup_def,
+            'status': self.status
         })
 
         # set the action's hosts

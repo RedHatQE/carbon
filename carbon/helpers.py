@@ -60,6 +60,19 @@ LOG = getLogger(__name__)
 _missing = object()
 
 
+def get_actions_failed_status(action_list):
+    """
+    Go through the action_list and return actions with failed status.
+    If no action with failed status is found the original list is returned
+    :return: List of actions based on its status
+    """
+    for index, action_item in enumerate(action_list):
+        if action_item.status == 1:
+            new_list = action_list[index:]
+            return new_list
+    return action_list
+
+
 def get_core_tasks_classes():
     """
     Go through all modules within carbon.tasks package and return

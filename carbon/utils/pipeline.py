@@ -30,7 +30,7 @@ from collections import namedtuple
 
 from ..constants import TASKLIST
 from ..exceptions import CarbonError
-from ..helpers import fetch_hosts, get_core_tasks_classes, fetch_executes
+from ..helpers import fetch_hosts, get_core_tasks_classes, fetch_executes, get_actions_failed_status
 from ..tasks import CleanupTask
 
 
@@ -110,7 +110,8 @@ class PipelineBuilder(object):
                     pipeline.tasks.append(task)
 
         # action resource
-        for action in getattr(scenario, 'actions'):
+        # get action resource based on if its status
+        for action in get_actions_failed_status(getattr(scenario, 'actions')):
             for task in action.get_tasks():
                 if task['task'].__task_name__ == self.name:
                     # fetch & set hosts for the given action task
