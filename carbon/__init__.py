@@ -25,5 +25,5 @@
 """
 from .carbon import Carbon
 
-__version__ = '1.0.7'
+__version__ = '1.1.0'
 __author__ = 'Red Hat Inc.'

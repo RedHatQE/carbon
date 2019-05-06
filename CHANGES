@@ -1,3 +1,20 @@
+Version 1.1.0 (2019-05-06)
+--------------------------
+
+New Feature
+~~~~~~~~~~~
+
+Support for the Polarion xUnit Importer in the Report phase. 
+
+ * Can take an xUnit file collect during execute, modify it 
+   with the polarion tags, import the results to the xUnit 
+   importer and monitor for import completion
+
+ * Can take an xUnit file collected during execute and just 
+   import the results to the xUnit importer and monitor for
+   import completion 
+
+
 Version 1.0.7 (2019-04-01)
 --------------------------
 
