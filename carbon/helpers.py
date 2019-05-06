@@ -38,18 +38,20 @@ import sys
 import time
 import warnings
 from logging import getLogger
+import fnmatch
 
 import cachetclient.cachet as cachet
 import jinja2
 import requests
 import urllib3
 import yaml
+from glob import glob
 from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
 
-from ._compat import string_types, is_py2
-from .constants import PROVISIONERS, RULE_HOST_NAMING
+from ._compat import string_types
+from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER
 from .exceptions import CarbonError, HelpersError
 
 LOG = getLogger(__name__)
@@ -125,10 +127,10 @@ def get_provisioners_plugin_classes():
     :return: List of all provisioner gateway classes"""
 
     from .core import ProvisionerPlugin
-    from . import provisioners
+    from .provisioners import ext
 
     # all task classes must
-    prefix = provisioners.__name__ + "."
+    prefix = ext.__name__ + "."
 
     provisioners_list = []
 
@@ -136,7 +138,7 @@ def get_provisioners_plugin_classes():
     # classes that are subclass of CarbonTask but not CarbonTask itself.
     # When you import a class within a module, it becames a member of
     # that class
-    for importer, modname, ispkg in pkgutil.walk_packages(provisioners.__path__, prefix):
+    for importer, modname, ispkg in pkgutil.walk_packages(ext.__path__, prefix):
         if str(modname).endswith('.ext') or str(modname).endswith('.blueprint'):
             continue
         clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
@@ -354,6 +356,122 @@ def get_executors_list():
     """
     return [executor.__executor_name__ for executor in
             get_executors_classes()]
+
+
+def get_importers_classes():
+    """Go through all available importer modules and return all the
+    classes.
+
+    :return: importer classes
+    :rtype: list
+    """
+    from .core import CarbonImporter
+    from . import importers
+
+    prefix = importers.__name__ + '.'
+
+    reporters_list = []
+
+    for importer, modname, ispkg in pkgutil.iter_modules(importers.__path__, prefix):
+        if str(modname).endswith('.ext'):
+            continue
+        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
+        for clsname, clsmember in clsmembers:
+            if (clsmember is not CarbonImporter) and issubclass(clsmember, CarbonImporter):
+                reporters_list.append(clsmember)
+    return reporters_list
+
+
+def get_importer_class(name):
+    """Return the importer class based on the __importer_name__ set
+    within the class. See ~carbon.core.CarbonImporter for more information.
+
+    :param name: the name of the importer
+    :return: the importer class
+    """
+    for importer in get_importers_classes():
+        if importer.__importer_name__ == name:
+            return importer
+
+
+def get_importers_list():
+    """Return a list of available importer.
+
+    :return: importers
+    """
+    return [importer.__importer_name__ for importer in
+            get_importers_classes()]
+
+
+def get_importers_plugin_classes():
+    """Go through all modules within carbon.provisioners package and return
+    the list of all provisioner gateway classes within it. All provisioners within
+    the carbon.provisioners.ext package are considered valid provisioner gateway classes
+    to be used by Carbon framework.
+    :return: List of all provisioner gateway classes"""
+
+    from .core import ImporterPlugin
+    from .importers import ext
+
+    # all task classes must
+    prefix = ext.__name__ + "."
+
+    reporters_list = []
+
+    # Run through each module within tasks and take the list of
+    # classes that are subclass of CarbonTask but not CarbonTask itself.
+    # When you import a class within a module, it becames a member of
+    # that class
+    for importer, modname, ispkg in pkgutil.walk_packages(ext.__path__, prefix):
+        if str(modname).endswith('.ext'):
+            continue
+        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
+        for clsname, clsmember in clsmembers:
+            if (clsmember is not ImporterPlugin) and issubclass(clsmember, ImporterPlugin):
+                reporters_list.append(clsmember)
+
+    return reporters_list
+
+
+def get_importers_plugins_list():
+    """
+    Returns a list of all the valid reporter gateways.
+    :return: list of reporter plugins
+    """
+    valid_reporters = []
+    for reporter_plugin_class in get_importers_plugin_classes():
+        valid_reporters.append(reporter_plugin_class.__plugin_name__)
+    return valid_reporters
+
+
+def get_importer_plugin_class(name):
+    """Return the reporter gateway class based on the __reporter_name__ set
+    within the class. See ~carbon.core.CarbonPlugin for more information.
+    :param name: The name of the reporter
+    :return: The reporter plugin class
+    """
+    for reporter in get_importers_plugin_classes():
+        if reporter.__plugin_name__.startswith(name):
+            return reporter
+
+
+def get_default_importer():
+
+    return get_importer_class(IMPORTER)
+
+
+def get_default_importer_plugin(provider=None):
+    """
+    Given a provider, it will return the default reporter plugin
+    :param provider: the provider value
+    :return: the default reporter plugin
+    """
+    if provider is not None:
+        for plugin_class in get_importers_plugin_classes():
+            if plugin_class.__plugin_name__.startswith(provider.__provider_name__):
+                return plugin_class
+    else:
+        return get_importer_plugin_class('ccit-router')
 
 
 def gen_random_str(char_num=8):
@@ -586,6 +704,60 @@ def fetch_hosts(hosts, task, all_hosts=True):
 
     task[_type].hosts = _hosts
     task[_type].all_hosts = _all_hosts
+    return task
+
+
+def fetch_executes(executes, hosts, task):
+    """Set the executes for a task requiring executes.
+
+    This method is helpful for report resources. These resources
+    need the actual execute objects instead of the referenced string name for
+    the execute in the given scenario descriptor file.
+
+    It will fetch the correct execute if the execute for the given task are
+    either string or execute class type.
+
+    :param executes: scenario executes
+    :type executes: list
+    :param hosts: scenario hosts
+    :type hosts: list
+    :param task: task requiring executes
+    :type task: dict
+    :return: updated task object including execute objects
+    :rtype: dict
+    """
+
+    # placeholders
+    _executes = list()
+    _type = None
+
+    # determine the task attribute where hosts are stored
+    if 'resource' in task:
+        _type = 'resource'
+    elif 'package' in task:
+        _type = 'package'
+
+    # determine the task host data types
+    if all(isinstance(item, string_types) for item in task[_type].executes):
+        for e in executes:
+            if e.name in task[_type].executes:
+                # fetch hosts to be used later for data injection
+                dummy_task = dict()
+                dummy_task[_type] = e
+                dummy_task = fetch_hosts(hosts, dummy_task)
+                _executes.append(dummy_task[_type])
+    else:
+        for e in executes:
+            for task_execute in task[_type].executes:
+                if e.name == task_execute.name:
+                    # fetch hosts to be used later for data injection
+                    dummy_task = dict()
+                    dummy_task[_type] = e
+                    dummy_task = fetch_hosts(hosts, dummy_task)
+                    _executes.append(dummy_task[_type])
+                    break
+
+    task[_type].executes = _executes
     return task
 
 
@@ -900,3 +1072,88 @@ def is_host_localhost(host_ip):
     if host_ip not in ['127.0.0.1', 'localhost']:
         return False
     return True
+
+
+def find_artifacts_on_disk(data_folder, path_list, art_location_found=True):
+
+    # iterate the list of paths to confirm they exist locally
+    total_paths = len(path_list)
+
+    if art_location_found:
+
+        # Check the data_folder first
+        fnd_paths = [os.path.abspath(os.path.join(data_folder, p)) for p in path_list
+                     if check_path_exists(p, data_folder)]
+
+        # Check the the results folder
+        if not fnd_paths:
+            result_dir = os.path.join(os.path.dirname(data_folder), '.results')
+            fnd_paths = [os.path.abspath(os.path.join(result_dir, p))
+                         for p in path_list if check_path_exists(p, result_dir)]
+    else:
+        walked_list = walk_results_directory(data_folder)
+        for p in path_list:
+            regquery = build_artifact_regex_query(p)
+            matches = [regquery.search(p) for p in walked_list]
+            fnd_paths = [m.string for m in matches if m]
+
+    if fnd_paths:
+        for f in fnd_paths:
+            LOG.info('Artifact %s has been found!' % os.path.basename(f))
+            LOG.debug('Full path to artifact on disk: %s' % f)
+
+    if not fnd_paths:
+        LOG.error('Did not find any of the artifacts on local disk. '
+                    'Import cannot occur!')
+    elif len(fnd_paths) != total_paths:
+        LOG.warning('Found %s out of %s artifacts. Will still attempt to import the'
+                    ' artifacts that were found' % (len(fnd_paths), total_paths))
+    return fnd_paths
+
+
+def check_path_exists(element, dir):
+    # check if the path exists
+    return os.path.exists(os.path.abspath(os.path.join(dir, element)))
+
+
+def search_artifact_location_dict(art_locations, report_name):
+    # Search the artifact list in the execute object using the report name
+    artifacts_path = []
+
+    if art_locations:
+        regquery = build_artifact_regex_query(report_name)
+        full_path = [os.path.join(dir, f) for dir, file_list in art_locations.items() for f in file_list]
+        matches = [regquery.search(p) for p in full_path]
+        artifacts_path = [m.string for m in matches if m]
+
+        for fn in artifacts_path:
+            LOG.debug('Found the following artifact %s that matched %s' % (fn, report_name))
+
+    return artifacts_path
+
+
+def walk_results_directory(dir):
+
+    data_dir_list = []
+
+    # iterate over the data folder first
+    for root, dirs, files in os.walk(dir):
+        for f in files:
+            p = os.path.join(root, f)
+            data_dir_list.append(p)
+
+    # iterate over the results folder next
+    result_dir = os.path.join(os.path.dirname(dir), '.results')
+    for root, dirs, files in os.walk(result_dir):
+        for f in files:
+            p = os.path.join(root, f)
+            data_dir_list.append(p)
+
+    return data_dir_list
+
+
+def build_artifact_regex_query(name):
+
+    regex = fnmatch.translate(name)
+    regquery = re.compile(regex)
+    return regquery

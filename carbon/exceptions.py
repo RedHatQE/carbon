@@ -228,3 +228,27 @@ class ArchiveArtifactsError(CarbonError):
         :type message: str
         """
         super(ArchiveArtifactsError, self).__init__(message)
+
+
+class CarbonImporterError(CarbonError):
+    """Base class for the artifact importer execeptions."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: error message
+        :type message: str
+        """
+        super(CarbonImporterError, self).__init__(message)
+
+
+class PolarionImporterError(CarbonImporterError):
+    """Base class for the Polarion importer execeptions."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: error message
+        :type message: str
+        """
+        super(PolarionImporterError, self).__init__(message)

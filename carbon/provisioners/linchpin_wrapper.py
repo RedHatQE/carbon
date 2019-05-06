@@ -50,7 +50,6 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self.linchpin_api.setup_rundb()
         self._create_pinfile()
         self._load_credentials()
-        self.linchpin_api.validate_topology(self.pinfile['carbon']['topology'])
 
     def _init_context(self):
         context = LinchpinContext()
@@ -67,6 +66,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         context.set_evar('workspace', lws_path)
         context.set_cfg('lp', 'distill_data', True)
         context.set_evar('generate_resources', False)
+        context.set_evar('debug_mode', True)
         return(context)
 
     def _load_credentials(self):
@@ -79,13 +79,17 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             environ['OS_PASSWORD'] = self.provider_credentials['password']
             environ['OS_AUTH_URL'] = self.provider_credentials['auth_url']
             environ['OS_PROJECT_NAME'] = self.provider_credentials['tenant_name']
+            if 'domain_name' in self.provider_credentials:
+                environ['OS_DOMAIN_NAME'] = self.provider_credentials['domain_name']
         elif self.provider == 'beaker':
-            bkr_conf = path.join(self.data_folder, 'beaker.conf')
+            bkr_conf = path.join(path.abspath(self.data_folder), 'beaker.conf')
             environ['BEAKER_CONF'] = bkr_conf
             creds = self.provider_credentials
             with open(bkr_conf, 'w') as conf:
                 if 'hub_url' in self.provider_credentials:
                     conf.write('HUB_URL = "%s"\n' % creds['hub_url'])
+                if 'ca_path' in self.provider_credentials:
+                    conf.write('CA_CERT = "%s"\n' % creds['ca_path'])
                 if 'password' in self.provider_credentials:
                     conf.write('AUTH_METHOD = "password"\n')
                     conf.write('USERNAME = "%s"\n' % creds['username'])
@@ -94,6 +98,12 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                     conf.write('AUTH_METHOD = "krbv"\n')
                     conf.write('KRB_PRINCIPAL = "%s"\n' % creds['keytab_principal'])
                     conf.write('KRB_KEYTAB = "%s"\n' % creds['keytab'])
+                    if 'realm' in self.provider_credentials:
+                        conf.write('KRB_REALM = "%s"\n' % creds['realm'])
+                    if 'service' in self.provider_credentials:
+                        conf.write('KRB_SERVICE = "%s"\n' % creds['service'])
+                    if 'ccache' in self.provider_credentials:
+                        conf.write('KRB_CCACHE = "%s"\n' % creds['ccache'])
         else:
             raise CarbonProvisionerError('No credentials provided')
 
@@ -132,23 +142,28 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                 if key in ['distro', 'arch', 'variant', 'name',
                            'taskparam', 'priority']:
                     recipeset[key] = value
-                elif key is 'whiteboard':
+                elif key == 'whiteboard':
                     resource_def['whiteboard'] = value
-                elif key is 'jobgroup':
+                elif key == 'jobgroup':
                     resource_def['job_group'] = value
-                elif key is 'host_requires_options':
+                elif key == 'host_requires_options':
                     hostrequires = []
                     for hq in value:
-                        hostrequires.append(
-                            '{} {} {}'.format(hq['tag'], hq['op'], hq['value']))
+                        hostrequires.append({
+                            "tag": hq.split(" ")[0],
+                            "op": hq.split(" ")[1],
+                            "value": hq.split(" ")[2]
+                        })
                     recipeset['hostrequires'] = hostrequires
-                elif key is 'tags':
+                elif key == 'tags':
                     if value.size > 1:
-                        raise CarbonProviderError('Only one tag is supported')
+                        raise CarbonProviderError('Only one tag == supported')
                     else:
                         recipeset['tags'] = value[0]
-                elif key is 'node_id':
+                elif key == 'node_id':
                     recipeset['ids'] = value
+                elif key == 'ssh_key':
+                    recipeset['ssh_key'] = [value]
             resource_def['recipesets'] = [recipeset]
             resource_grp = {
                 'resource_group_name': 'carbon',
@@ -193,11 +208,11 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self._create_inventory(results)
         resource = results['carbon']['outputs']['resources']
         if self.provider == 'openstack':
-            os_server = resource['os_server_res'][0]['servers'][0]
+            os_server = resource[0]['servers'][0]
             _ip = os_server['interface_ip']
             _id = os_server['id']
         if self.provider == 'beaker':
-            bkr_server = resource['beaker_res'][0]
+            bkr_server = resource[0]
             _ip = bkr_server['system']
             _id = bkr_server['id']
             getattr(self.host, 'provider_params')['job_url'] = bkr_server['url']

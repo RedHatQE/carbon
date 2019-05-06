@@ -55,6 +55,7 @@ class Execute(CarbonResource):
         'git',
         'ignore_rc',
         'valid_rc',
+        'artifacts_location'
     ]
 
     def __init__(self,
@@ -120,6 +121,8 @@ class Execute(CarbonResource):
             if isinstance(self.artifacts, string_types):
                 self.artifacts = self.artifacts.replace(' ', '').split(',')
 
+        self.artifact_locations = parameters.pop('artifact_locations', None)
+
         # create the executor attributes in the execute object
         for p in getattr(self.executor, 'get_all_parameters')():
             setattr(self, p, parameters.get(p, {}))
@@ -178,6 +181,9 @@ class Execute(CarbonResource):
             profile.update(hosts=[host for host in self.hosts])
         else:
             profile.update(dict(hosts=[host.name for host in self.hosts]))
+
+        if self.artifact_locations:
+            profile.update({'artifact_locations': self.artifact_locations})
 
         return profile
 

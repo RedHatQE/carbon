@@ -1,0 +1,87 @@
+---
+report:
+- name: suite1_results.xml
+  description: import suite1 results to polarion
+  executes: pytest execution
+  provider:
+    credential: polarion-creds
+    name: polarion
+
+---
+report:
+- name: suite1_results.xml
+  description: import suite1 results to polarion
+  executes: pytest execution
+  provider:
+    credential: polarion-creds
+    name: polarion
+    project_id: Carbon1
+    testsuite_properties:
+      polarion-lookup-method: name
+      polarion-custom-os: RHEL 8
+      polarion-testrun-id: PolId-123
+      polarion-testrun-title: Sample Test Run
+
+---
+report:
+- name: suite1_results.xml
+  description: import suite1 results to polarion
+  executes: pytest execution
+  provider:
+    credential: polarion-creds
+    name: polarion
+    project_id: Carbon1
+    testsuite_properties:
+      polarion-custom-os: RHEL 8
+      polarion-testrun-id: PolId-123
+      polarion-testrun-title: Sample Test Run
+    testcase_properties:
+      test_sample.test_answer:
+        polarion-parameter-os: RHEL7
+        polarion-testcase-id: CARB1-225
+
+---
+report:
+- name: '{ sat_driver.ip_address }_results.xml'
+  description: import suite1 results to polarion
+  executes: pytest execution
+  provider:
+    credential: polarion-creds
+    name: polarion
+    project_id: Carbon1
+    testsuite_properties:
+      polarion-testrun-id: PolId-123
+      polarion-testrun-title: Sample Test Run
+
+---
+report:
+- name: '*.xml'
+  description: import suite1 results to polarion
+  executes: pytest execution
+  provider:
+    credential: polarion-creds
+    name: polarion
+
+---
+report:
+- name: client-a-*/suite1_results.xml
+  description: import suite1 results to polarion
+  executes: pytest execution
+  provider:
+    credential: polarion-creds
+    name: polarion
+
+---
+report:
+- name: suite1_results.xml
+  description: import suite1 results to polarion
+  executes: pytest execution
+  provider:
+    credential: polarion-creds
+    name: polarion
+    project_id: Carbon1
+    testsuite_properties:
+      polarion-lookup-method: custom
+      polarion-testrun-id: PolId-123
+      polarion-testrun-title: Sample Test Run
+    testcase_csv_file: polarion/workitems.csv

@@ -34,7 +34,7 @@ import pytest
 
 from carbon._compat import ConfigParser
 from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
-    ScenarioError, CarbonError
+    ScenarioError, CarbonError, CarbonReportError
 from carbon.executors import RunnerExecutor
 from carbon.orchestrators import AnsibleOrchestrator
 from carbon.providers import OpenstackProvider
@@ -42,6 +42,7 @@ from carbon.provisioners import OpenstackLibCloudProvisioner, HostProvisioner
 from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin, LinchpinWrapperProvisionerPlugin
 from carbon.resources import Action, Execute, Host, Report, Scenario
 from carbon.utils.config import Config
+
 
 @pytest.fixture(scope='class')
 def feature_toggle_config():
@@ -55,6 +56,15 @@ def feature_toggle_config():
     config = Config()
     config.load()
     return config
+
+
+@pytest.fixture
+def default_report_params():
+    params = dict(description='description', executes='execute',
+                  provider=dict(name='polarion',
+                                credential='polarion'
+                                ))
+    return params
 
 class TestActionResource(object):
     @staticmethod
@@ -153,6 +163,46 @@ class TestReportResource(object):
 
     @staticmethod
     def test_build_profile(report_resource):
+        assert isinstance(report_resource.profile(), dict)
+
+    @staticmethod
+    def test_create_report_with_name(default_report_params, config):
+        # params = dict(executes=['execute1'], key='value')
+        report = Report(name='test.xml', parameters=default_report_params, config=config)
+        assert isinstance(report, Report)
+
+    @staticmethod
+    def test_create_report_without_name():
+        with pytest.raises(CarbonReportError) as ex:
+            Report()
+        assert 'Unable to build report object. Name field missing!' in \
+               ex.value.args
+
+    @staticmethod
+    def test_create_report_without_executes(default_report_params, config):
+        # params = dict(executes=None, key='value')
+        default_report_params['executes'] = None
+        with pytest.raises(CarbonReportError) as ex:
+            Report(name='test.xml', parameters=default_report_params, config=config)
+        assert 'Unable to associate executes to report artifact:test.xml. No executes ' \
+               'defined!' in ex.value.args
+
+    @staticmethod
+    def test_create_report_with_executes_as_str(default_report_params, config):
+        # params = dict(description='description', executes='execute01, execute02')
+        default_report_params['executes'] = 'execute01, execute02'
+        report = Report(name='test.xml', parameters=default_report_params, config=config)
+        assert isinstance(report.executes, list)
+
+    @staticmethod
+    def test_build_report_profile_case_01(report_resource):
+        assert isinstance(report_resource.profile(), dict)
+
+    @staticmethod
+    def test_build_report_profile_case_02(report_resource):
+        execute = mock.MagicMock()
+        execute.name = 'execute02'
+        report_resource.executes = [execute]
         assert isinstance(report_resource.profile(), dict)
 
 

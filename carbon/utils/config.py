@@ -88,6 +88,20 @@ class Config(dict):
                     self.parser.get(section, option)
                 )
 
+    def __set_importer__(self):
+        """Set the importer configuration settings."""
+        for section in getattr(self.parser, '_sections'):
+            if not section.startswith('importer'):
+                continue
+
+            importer = section.split(':')[-1]
+
+            for option in self.parser.options(section):
+                self.__setitem__(
+                    (importer + '_' + option).upper(),
+                    self.parser.get(section, option)
+                )
+
     def __set_feature_toggles__(self):
         """Set the feature toggle configuration settings."""
         toggles = []

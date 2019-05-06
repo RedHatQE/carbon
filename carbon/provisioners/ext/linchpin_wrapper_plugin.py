@@ -31,8 +31,11 @@ import yaml
 from os import path, environ
 from carbon.core import CarbonProvisioner, ProvisionerPlugin
 from carbon.exceptions import CarbonProviderError
-from linchpin import LinchpinAPI
-from linchpin.context import LinchpinContext
+try:
+    from linchpin import LinchpinAPI
+    from linchpin.context import LinchpinContext
+except ImportError:
+    pass
 
 
 class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):

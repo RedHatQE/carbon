@@ -30,7 +30,7 @@ class ReportTask(CarbonTask):
     """Report task."""
     __task_name__ = 'report'
 
-    def __init__(self, msg, **kwargs):
+    def __init__(self, msg, package, **kwargs):
         """Constructor.
 
         :param msg: task message
@@ -41,9 +41,22 @@ class ReportTask(CarbonTask):
         super(ReportTask, self).__init__(**kwargs)
         self.msg = msg
 
+        # create the artifact importer and assign it the plugin class
+        self.importer = getattr(package, 'importer')(package)
+
     def run(self):
         """Run.
 
         This method is the main entry point to the task.
         """
         self.logger.debug(self.msg)
+
+        try:
+            # run the configuration with the given importer
+            self.importer.import_artifacts()
+        except Exception as ex:
+            self.logger.error('Failed to run report %s ' % self.name)
+            stackmsg = self.get_formatted_traceback()
+            self.logger.error(ex)
+            self.logger.error(stackmsg)
+            raise

@@ -174,11 +174,13 @@ class Scenario(CarbonResource):
 
         for task in tasks:
             for key, value in task.items():
-                if isinstance(value, Host) and count <= 0:
+                # Added report object in case we decide reporting
+                # should be done in parallel
+                if (isinstance(value, Host) or isinstance(value, Report)) and count <= 0:
                     self.initialize_resource(value)
                     self.add_resource(value)
                     count += 1
-                elif isinstance(value, Host) and count >= 1:
+                elif (isinstance(value, Host) or isinstance(value, Report)) and count >= 1:
                     self.add_resource(value)
 
     @property
@@ -302,7 +304,7 @@ class Scenario(CarbonResource):
         msg = 'validated scenario YAML file against the schema!'
 
         try:
-            c = Core(source_data=yaml.load(self.yaml_data),
+            c = Core(source_data=yaml.safe_load(self.yaml_data),
                      schema_files=[SCENARIO_SCHEMA],
                      extensions=[SCHEMA_EXT])
             c.validate(raise_exception=True)

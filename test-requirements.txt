@@ -8,5 +8,5 @@ pytest-cov>=2.5.1
 Sphinx==1.7.0
 sphinx-rtd-theme>=0.2.4
 tox>=2.7.0
-linchpin==1.6.4
+linchpin==1.7.3
 sphinxcontrib-confluencebuilder==1.1

@@ -48,70 +48,20 @@
                   "id":"3240848"
                 },
 
-            "resources":{
-                "ovirt_vms_res":[
-
-                ],
-                "rax_server_res":[
-
-                ],
-                "aws_ec2_res":[
-
-                ],
-                "os_server_res":[
-
-                ],
-                "os_keypair_res":[
-
-                ],
-                "aws_ec2_key_res":[
-
-                ],
-                "gcloud_gce_res":[
-
-                ],
-                "aws_s3_res":[
-
-                ],
-                "duffy_res":[
-
-                ],
-                "os_sg_res":[
-
-                ],
-                "dummy_res":[
-
-                ],
-                "beaker_res":[
-                  {
-                      "status":"Running",
-                      "name":"beaker",
-                      "family":"RedHatEnterpriseLinux7",
-                      "url":"https://beaker.engineering.redhat.com/jobs/3240848",
-                      "variant":"Server",
-                      "system":"10.0.58.5",
-                      "result":"Pass",
-                      "rid":"6313090",
-                      "arch":"x86_64",
-                      "id":"3240848",
-                      "distro":"RHEL-7.5"
-                  }],
-                "aws_cfn_res":[
-
-                ],
-                "os_heat_res":[
-
-                ],
-                "os_obj_res":[
-
-                ],
-                "libvirt_res":[
-
-                ],
-                "os_volume_res":[
-
-                ]
-            },
+            "resources":[{
+                "status":"Running",
+                "name":"beaker",
+                "family":"RedHatEnterpriseLinux7",
+                "url":"https://beaker.engineering.redhat.com/jobs/3240848",
+                "resource_type": "beaker_res",
+                "variant":"Server",
+                "system":"10.0.58.5",
+                "result":"Pass",
+                "rid":"6313090",
+                "arch":"x86_64",
+                "id":"3240848",
+                "distro":"RHEL-7.5"
+            }],
             "inventory_path":[
                 "/tmp/carbon_bkr_test/.carbon/.results/linchpin/inventories/carbon.inventory"
             ]

@@ -148,9 +148,10 @@ mapping:
       mapping:
         name:
           required: True
-          type: str
+          type: any
         description:
           type: str
-        reporter:
+        executes:
+          type: any
+          func: type_str_list
           required: True
-          type: str

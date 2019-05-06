@@ -50,11 +50,12 @@ setup(
         'Jinja2>=2.10',
         'pykwalify>=1.6.0',
         'python-cachetclient',
-        'ruamel.yaml>=0.15.64'
+        'ruamel.yaml>=0.15.64',
+        'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.0#egg=polar'
     ],
     extras_require={
-        'linchpin': ['linchpin==1.6.4'],
-        'linchpin-bkr': ['linchpin[beaker]==1.6.4']
+        'linchpin': ['linchpin==1.7.3'],
+        'linchpin-bkr': ['linchpin[beaker]==1.7.3']
     },
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
