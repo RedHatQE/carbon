@@ -44,8 +44,8 @@ import cachetclient.cachet as cachet
 import jinja2
 import requests
 import urllib3
-import yaml
 from glob import glob
+import oyaml as yaml
 from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException

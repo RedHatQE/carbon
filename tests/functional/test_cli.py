@@ -27,7 +27,7 @@
 
 import mock
 import pytest
-import yaml
+import oyaml as yaml
 from carbon import Carbon
 from carbon.cli import print_header, carbon
 from click.testing import CliRunner

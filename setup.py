@@ -51,7 +51,8 @@ setup(
         'pykwalify>=1.6.0',
         'python-cachetclient',
         'ruamel.yaml>=0.15.64',
-        'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.0#egg=polar'
+        'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.0#egg=polar',
+        'oyaml==0.9'
     ],
     extras_require={
         'linchpin': ['linchpin==1.7.3'],

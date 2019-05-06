@@ -27,7 +27,7 @@
 import errno
 import os
 
-import yaml
+import oyaml as yaml
 from pykwalify.core import Core
 from pykwalify.errors import CoreError, SchemaError
 
