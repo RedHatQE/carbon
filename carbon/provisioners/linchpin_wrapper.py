@@ -28,6 +28,7 @@
 """
 
 from os import path, environ, pardir, makedirs
+import sys
 import errno
 import yaml
 try:
@@ -38,6 +39,24 @@ except ImportError:
 from carbon.core import CarbonProvisioner
 from carbon.exceptions import CarbonProvisionerError
 import json
+
+
+class Logger(object):
+    # redirect stdout (and thus print() function) to logfile *and* terminal
+    # http://stackoverflow.com/a/616645
+    def __init__(self, logger):
+        self.stdout = sys.stdout
+        self.logger = logger
+        sys.stdout = self
+
+    def __del__(self):
+        sys.stdout = self.stdout
+
+    def write(self, message):
+        self.logger.info(message)
+
+    def flush(self):
+        pass
 
 
 class LinchpinWrapperProvisioner(CarbonProvisioner):
@@ -198,7 +217,9 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
 
     def _create(self):
         host = getattr(self.host, 'name', 'carbon-name')
+        Log = Logger(logger=self.logger)
         code, results = self.linchpin_api.do_action(self.pinfile, action='up')
+        del Log
         self.logger.debug(json.dumps(results))
         if code:
             raise CarbonProvisionerError("Failed to provision host %s" % host)
@@ -238,5 +259,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         """
         host = getattr(self.host, 'name')
         self.logger.info('Delete host %s in %s.' % (host, self.provider))
+        Log = Logger(logger=self.logger)
         self.linchpin_api.do_action(self.pinfile, action='destroy')
+        del Log
         self.logger.info('Successfully deleted host %s.' % host)
