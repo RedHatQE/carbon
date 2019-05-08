@@ -69,6 +69,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self.linchpin_api.setup_rundb()
         self._create_pinfile()
         self._load_credentials()
+        self._create_inv = False
 
     def _init_context(self):
         context = LinchpinContext()
@@ -151,6 +152,9 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             pindict['carbon']['topology']['resource_groups'] = [resource_grp]
             pindict['carbon']['layout']['inventory_layout']['vars'].update(
                 getattr(self.host, 'ansible_params'))
+            pindict['carbon']['layout']['inventory_layout']['vars']['hostname'] = getattr(self.host, 'name')
+            pindict['carbon']['layout']['inventory_layout']['hosts']['node']['host_groups'].extend(
+                getattr(self.host, 'role'))
             self.pinfile = pindict
         elif self.provider == 'beaker':
             resource_def = {
@@ -192,6 +196,9 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             pindict['carbon']['topology']['resource_groups'] = [resource_grp]
             pindict['carbon']['layout']['inventory_layout']['vars'].update(
                 getattr(self.host, 'ansible_params'))
+            pindict['carbon']['layout']['inventory_layout']['vars']['hostname'] = getattr(self.host, 'name')
+            pindict['carbon']['layout']['inventory_layout']['hosts']['node']['host_groups'].extend(
+                getattr(self.host, 'role'))
             self.pinfile = pindict
         else:
             raise CarbonProviderError("Unknown provider %s" % self.provider)
@@ -206,13 +213,14 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self.logger.debug(inv)
         inv_path = path.join(self.data_folder, 'inventory')
         try:
-            makedirs(path.dirname(inv_path))
+            makedirs(inv_path)
         except OSError as exc:
             if exc.errno == errno.EEXIST and path.isdir(path.dirname(inv_path)):
                 pass
             else:
                 raise
-        with open(inv_path, 'w+') as inv_file:
+        full_path = path.join(inv_path, 'carbon-%s.inventory' % (getattr(self.host, 'name')))
+        with open(full_path, 'w+') as inv_file:
             inv_file.write(inv)
 
     def _create(self):
@@ -226,7 +234,9 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self.logger.info('Successfully created host %s' % host)
         results = self.linchpin_api.get_run_data(
             list(results)[0], ('inputs', 'outputs'))
-        self._create_inventory(results)
+        # For now keeping this with carbon.
+        if self._create_inv:
+            self._create_inventory(results)
         resource = results['carbon']['outputs']['resources']
         if self.provider == 'openstack':
             os_server = resource[0]['servers'][0]
