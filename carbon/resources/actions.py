@@ -175,26 +175,24 @@ class Action(CarbonResource):
         """Builds a profile for the action resource.
 
         :return: the action profile
-        :rtype: dict
+        :rtype: OrderedDict
         """
         # initialize the profile with orchestrator properties
         profile = getattr(self.orchestrator, 'build_profile')(self)
 
-        # set additional action properties
-        profile.update({
-            'name': self.name,
-            'description': self.description,
-            'orchestrator': getattr(
-                self.orchestrator, '__orchestrator_name__'),
-            'cleanup': self.cleanup_def,
-            'status': self.status
-        })
+        profile.update({'name': self.name})
+        profile.update({'description': self.description})
+        profile.update({'orchestrator': getattr(
+                self.orchestrator, '__orchestrator_name__')})
 
         # set the action's hosts
         if all(isinstance(item, string_types) for item in self.hosts):
             profile.update(hosts=[host for host in self.hosts])
         else:
             profile.update(dict(hosts=[host.name for host in self.hosts]))
+
+        profile.update({'cleanup': self.cleanup_def})
+        profile.update({'status': self.status})
 
         return profile
 

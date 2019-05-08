@@ -28,8 +28,7 @@
 import os
 
 import click
-import oyaml as yaml
-
+import yaml
 from . import __version__
 from .carbon import Carbon
 from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES

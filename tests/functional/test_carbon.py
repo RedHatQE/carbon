@@ -31,7 +31,7 @@ import sys
 
 import mock
 import pytest
-import oyaml as yaml
+import yaml
 
 from carbon import Carbon
 from carbon.constants import RESULTS_FILE

@@ -26,8 +26,8 @@
 """
 import errno
 import os
-
-import oyaml as yaml
+import yaml
+from collections import OrderedDict
 from pykwalify.core import Core
 from pykwalify.errors import CoreError, SchemaError
 
@@ -326,17 +326,17 @@ class Scenario(CarbonResource):
         """Builds a profile which represents the scenario and its properties.
 
         :return: a dictionary representing the scenario
-        :rtype: dict
+        :rtype: OrderedDict
         """
-        profile = dict(
-            name=self.name,
-            description=self.description,
-            resource_check=self.resource_check,
-            provision=[host.profile() for host in self.hosts],
-            orchestrate=[action.profile() for action in self.actions],
-            execute=[execute.profile() for execute in self.executes],
-            report=[report.profile() for report in self.reports]
-        )
+        profile = OrderedDict()
+        profile['name'] = self.name
+        profile['description'] = self.description
+        profile['resource_check'] = self.resource_check
+        profile['provision'] = [host.profile() for host in self.hosts]
+        profile['orchestrate'] = [action.profile() for action in self.actions]
+        profile['execute'] = [execute.profile() for execute in self.executes]
+        profile['report'] = [report.profile() for report in self.reports]
+
         return profile
 
     def _construct_validate_task(self):

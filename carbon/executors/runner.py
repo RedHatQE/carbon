@@ -32,7 +32,6 @@ import os.path
 import textwrap
 
 from ruamel.yaml import YAML
-
 from ..core import CarbonExecutor
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError
 from ..helpers import DataInjector, get_ans_verbosity
@@ -193,7 +192,6 @@ class RunnerExecutor(CarbonExecutor):
         """
 
         extra_vars = {}
-
         if self.options and 'extra_vars' in self.options and self.options['extra_vars']:
             extra_vars.update(self.options['extra_vars'])
 

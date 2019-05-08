@@ -29,6 +29,7 @@ import re
 import fnmatch
 import glob
 from os import path
+from collections import OrderedDict
 
 from ..core import CarbonResource
 from ..tasks import ReportTask, ValidateTask
@@ -268,13 +269,14 @@ class Report(CarbonResource):
         """Builds a profile for the report resource.
 
         :return: the report profile
-        :rtype: dict
+        :rtype: OrderedDict
         """
-        profile = {'name': self.name,
-                   'description': self.description,
-                   'importer': getattr(
-                       self.importer_plugin, '__plugin_name__'),
-                   'provider': self.provider_params}
+        profile = OrderedDict()
+        profile['name'] = self.name
+        profile['description'] = self.description
+        profile['importer'] = getattr(
+                       self.importer_plugin, '__plugin_name__')
+        profile['provider'] = self.provider_params
 
         # set the report's executes
         if all(isinstance(item, string_types) for item in self.executes):

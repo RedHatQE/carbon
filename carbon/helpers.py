@@ -44,8 +44,9 @@ import cachetclient.cachet as cachet
 import jinja2
 import requests
 import urllib3
-from glob import glob
-import oyaml as yaml
+from ruamel.yaml.comments import CommentedMap as OrderedDict
+from collections import OrderedDict
+from ruamel.yaml import YAML
 from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
@@ -514,6 +515,10 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
     :type cfg_parser: bool
     :return: Data that was read from a file
     """
+    # to maintain the sequence in the results.yml file with ruamel
+    yaml = YAML()
+    yaml.default_flow_style = False
+    yaml.Representer.add_representer(OrderedDict, yaml.Representer.represent_dict)
 
     # Determine file extension
     file_ext = os.path.splitext(file_path)[-1]
@@ -549,7 +554,7 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
         elif file_ext in ['.yaml', '.yml']:
             # yaml
             with open(file_path, mode) as f_raw:
-                yaml.safe_dump(content, f_raw, default_flow_style=False)
+                yaml.dump(content, f_raw)
         else:
             # text
             with open(file_path, mode) as f_raw:

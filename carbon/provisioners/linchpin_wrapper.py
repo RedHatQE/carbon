@@ -37,7 +37,7 @@ try:
 except ImportError:
     pass
 from carbon.core import CarbonProvisioner
-from carbon.exceptions import CarbonProvisionerError
+from carbon.exceptions import CarbonProvisionerError, CarbonProviderError
 import json
 
 

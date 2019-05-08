@@ -35,6 +35,7 @@ from ..helpers import get_provisioners_list, filter_host_name
 from ..helpers import get_provisioners_plugins_list, get_provisioner_plugin_class, get_default_provisioner_plugin
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from .._compat import string_types
+from collections import OrderedDict
 
 
 class Host(CarbonResource):
@@ -345,17 +346,11 @@ class Host(CarbonResource):
         """Builds a profile for the host resource.
 
         :return: the host profile
-        :rtype: dict
+        :rtype: OrderedDict
         """
-        # initialize profile with default parameters
-        profile = {
-            'name': self.name,
-            'description': self.description,
-            'ansible_params': self.ansible_params,
-            'metadata': self.metadata,
-            'workspace': self.workspace,
-            'data_folder': self.data_folder
-        }
+        profile = OrderedDict()
+        profile['name'] = self.name
+        profile['description'] = self.description
 
         # set the hosts's roles
         if all(isinstance(item, string_types) for item in self.role):
@@ -363,24 +358,25 @@ class Host(CarbonResource):
 
         try:
             if getattr(self, 'provisioner_plugin')is not None:
-
-                profile.update({
-                    'provider': self.provider_params,
-                    'provisioner': getattr(
-                        self.provisioner_plugin, '__plugin_name__')
-                })
+                profile.update({'provisioner': getattr(
+                        self.provisioner_plugin, '__plugin_name__')})
+                profile.update({'provider': self.provider_params})
             else:
-                profile.update({
-                    'provider': self.provider_params,
-                    'provisioner': getattr(
-                        self.provisioner, '__provisioner_name__')
-                })
+                profile.update({'provisioner': getattr(self.provisioner,
+                                                       '__provisioner_name__')})
+                profile.update({'provider': self.provider_params})
+
         except AttributeError:
             self.logger.debug('Host is static, no need to profile provider '
                               'facts.')
         finally:
             if self.ip_address:
                 profile.update({'ip_address': self.ip_address})
+
+        profile['ansible_params'] = self.ansible_params
+        profile['metadata'] = self.metadata
+        profile['workspace'] = self.workspace
+        profile['data_folder'] = self.data_folder
 
         return profile
 
