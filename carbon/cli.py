@@ -28,7 +28,7 @@
 import os
 
 import click
-import yaml
+import oyaml as yaml
 
 from . import __version__
 from .carbon import Carbon

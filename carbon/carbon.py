@@ -28,8 +28,7 @@ import os
 import sys
 
 import blaster
-import yaml
-
+import oyaml as yaml
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, TimeMixin
@@ -226,7 +225,6 @@ class Carbon(LoggerMixin, TimeMixin):
         """
         self.scenario.yaml_data = filedata
         data = dict(yaml.safe_load(filedata))
-
         pro_items = data.pop('provision', None)
         orc_items = data.pop('orchestrate', None)
         exe_items = data.pop('execute', None)
