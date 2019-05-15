@@ -1,3 +1,24 @@
+Version 1.1.1 (2019-05-15)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+ * Resolve issues with a forked PIT tools repo dependency
+   by taking out in the CCIT polarion importer library, Polar.
+   Upgrade to Polar 1.1.1 
+   https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar
+
+ * Resolve an issue where the xUnit Importer would state the 
+   import was succesful but failed to generate a UMB Message
+   so the CCIT polarion importer library would fail the import
+   since it couldn't parse a message. Updated to Polar 1.1.1
+
+ * Modified carbon's setup file to include the following packages 
+   in install_requires paramiko 2.4.2, ansible >= 2.7, 
+   and requests>=2.20.1
+   
+
 Version 1.1.0 (2019-05-06)
 --------------------------
 
