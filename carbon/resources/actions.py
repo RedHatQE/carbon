@@ -34,6 +34,7 @@ from ..helpers import get_orchestrator_class, \
     get_orchestrators_list
 from ..exceptions import CarbonActionError
 from ..tasks import OrchestrateTask, ValidateTask, CleanupTask
+from collections import OrderedDict
 
 
 class Action(CarbonResource):
@@ -177,19 +178,20 @@ class Action(CarbonResource):
         :return: the action profile
         :rtype: OrderedDict
         """
-        # initialize the profile with orchestrator properties
-        profile = getattr(self.orchestrator, 'build_profile')(self)
-
-        profile.update({'name': self.name})
-        profile.update({'description': self.description})
-        profile.update({'orchestrator': getattr(
-                self.orchestrator, '__orchestrator_name__')})
+        profile = OrderedDict()
+        profile['name'] = self.name
+        profile['description'] = self.description
+        profile['orchestrator'] = getattr(
+                self.orchestrator, '__orchestrator_name__')
 
         # set the action's hosts
         if all(isinstance(item, string_types) for item in self.hosts):
             profile.update(hosts=[host for host in self.hosts])
         else:
             profile.update(dict(hosts=[host.name for host in self.hosts]))
+
+        # Update profile with all the parameters for the orchestrator
+        profile.update(getattr(self.orchestrator, 'build_profile')(self))
 
         profile.update({'cleanup': self.cleanup_def})
         profile.update({'status': self.status})
