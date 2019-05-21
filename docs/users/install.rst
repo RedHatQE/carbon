@@ -21,6 +21,10 @@ Your system requires the following packages to install carbon:
     # Recommend installation of virtualenv using pip
     $ sudo pip install virtualenv
 
+.. note::
+
+   To install Carbon version 1.1.0 and above, pip version 18.1 or higher is required
+
 Install
 +++++++
 
