@@ -25,6 +25,17 @@ Your system requires the following packages to install carbon:
 
    To install Carbon version 1.1.0 and above, pip version 18.1 or higher is required
 
+Linchpin
+~~~~~~~~
+
+As of 1.2.0, carbon will install Linchpin but Linchpin also needs certain requirements that need to be met.
+Please refer to the `minimum requirements <https://linchpin.readthedocs.io/en/latest/installation.html#minimal-software-requirements>`_
+section in the Linchpin Installation guide.
+
+.. note::
+
+   Linchpin python 3 support is still expiremental.
+
 Install
 +++++++
 
@@ -40,9 +51,9 @@ Install carbon from source:
 Post Install
 ++++++++++++
 
-If you require carbon to interface with beaker, you will need to enable the
-beaker client repository/install the beaker-client package. Carbon uses the
-beaker client package to provision physical machines in beaker.
+If you require carbon to interface with beaker using the bkr-client provisioner,
+you will need to enable the beaker client repository/install the beaker-client package.
+Carbon uses the beaker client package to provision physical machines in beaker.
 
 .. code-block:: bash
 

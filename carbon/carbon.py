@@ -332,7 +332,7 @@ class Carbon(LoggerMixin, TimeMixin):
                 )
 
                 # reload resource objects
-                self.scenario.reload_resources(data)
+                self.scenario.reload_resources(data, pipeline.type.__concurrent__)
 
                 # update list of passed tasks
                 passed_tasks.append(task)

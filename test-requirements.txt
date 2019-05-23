@@ -10,4 +10,3 @@ sphinx-rtd-theme>=0.2.4
 tox>=2.7.0
 linchpin==1.7.3
 sphinxcontrib-confluencebuilder==1.1
-oyaml==0.9

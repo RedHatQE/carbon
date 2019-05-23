@@ -46,7 +46,8 @@ def os_params():
             flavor='small',
             networks=['network'],
             keypair='key',
-            floating_ip_pool='pool'
+            floating_ip_pool='pool',
+            tx_id = 1
         )
     )
 
@@ -59,7 +60,8 @@ def beaker_params():
             arch='x86_64',
             distro='RHEL-7.5',
             variant='Server',
-            whiteboard='carbon beaker resource examples'
+            whiteboard='carbon beaker resource examples',
+            tx_id = 1
         )
     )
 

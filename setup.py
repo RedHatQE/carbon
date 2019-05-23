@@ -53,12 +53,10 @@ setup(
         'ruamel.yaml>=0.15.64',
         'paramiko==2.4.2',
         'requests>=2.20.1',
+        'linchpin>=1.6.4',
+	'linchpin[beaker]>=1.6.4',
         'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.1#egg=polar'
     ],
-    extras_require={
-        'linchpin': ['linchpin==1.7.3'],
-        'linchpin-bkr': ['linchpin[beaker]==1.7.3']
-    },
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

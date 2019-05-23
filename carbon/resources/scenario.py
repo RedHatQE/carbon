@@ -164,7 +164,7 @@ class Scenario(CarbonResource):
             raise ValueError('Resource must be of a valid Resource type.'
                              'Check the type of the given item: %s' % item)
 
-    def reload_resources(self, tasks):
+    def reload_resources(self, tasks, is_parallel=True):
         """Reload scenario resources.
 
         :param tasks: task data returned by blaster
@@ -172,16 +172,18 @@ class Scenario(CarbonResource):
         """
         count = 0
 
-        for task in tasks:
-            for key, value in task.items():
-                # Added report object in case we decide reporting
-                # should be done in parallel
-                if (isinstance(value, Host) or isinstance(value, Report)) and count <= 0:
-                    self.initialize_resource(value)
-                    self.add_resource(value)
-                    count += 1
-                elif (isinstance(value, Host) or isinstance(value, Report)) and count >= 1:
-                    self.add_resource(value)
+        if is_parallel:
+            for task in tasks:
+                for key, value in task.items():
+                    # Added report object in case we decide reporting
+                    # should be done in parallel
+                    if (isinstance(value, Host) or isinstance(value, Report)) and count <= 0:
+                        self.initialize_resource(value)
+                        self.add_resource(value)
+                        count += 1
+                    elif (isinstance(value, Host) or isinstance(value, Report)) and count >= 1:
+                        self.add_resource(value)
+        return
 
     @property
     def yaml_data(self):

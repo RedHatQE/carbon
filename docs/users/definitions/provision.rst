@@ -7,6 +7,9 @@ Overview
 The input for provisioning will depend upon the type of resource you are
 trying to provision. The current support for provisioning resources are:
 :ref:`Beaker<beaker_provisioning>` and :ref:`OpenStack<openstack_provisioning>`.
+The Beaker and OpenStack resources are provisioned with Carbon's native
+provisioners but as of 1.2.0, these resources can also be provisioned using
+the :ref:`Linchpin<linchpin_provisioning>` provisioner.
 
 Provision Resource
 ++++++++++++++++++
@@ -99,7 +102,7 @@ Beaker Resource
 +++++++++++++++
 
 The following shows all the possible keys for defining a
-provisioning resource for Beaker:
+provisioning resource for Beaker using the **bkr-client** provisioner:
 
 .. code-block:: yaml
 
@@ -300,7 +303,7 @@ OpenStack Resource
 ++++++++++++++++++
 
 The following shows all the possible keys for defining a provisioning
-resource for OpenStack:
+resource for OpenStack using the **openstack-libcloud** provisioner:
 
 .. code-block:: yaml
 
@@ -365,11 +368,224 @@ resource for OpenStack:
         - String
         - True
 
-
 Example
 +++++++
 
 .. literalinclude:: ../../.examples/provision/openstack/scenario.yml
+
+
+.. _linchpin_provisioning:
+
+Provisioning Systems with Linchpin
+----------------------------------
+
+The same Beaker and OpenStack resource can also be deployed using the Linchpin
+provisioner. To use the linchpin provisioner you must supply the **provisioner** key
+in your provision section.
+
+.. code-block:: yaml
+
+    provisioner: linchpin-wrapper
+
+Credentials
++++++++++++
+
+Nothing has changed with the authentication mechansim used by Carbon when using
+Linchpin. Please refer to the previous sections on the specific credentials for
+each resource.
+
+Beaker Resource
++++++++++++++++
+
+The Beaker Provider has been augmented to include all the Linchpin Beaker topology
+parameters except **count**. For a full list of Linchpin Beaker parameters please refer to
+the `Linchpin Beaker Provider <https://linchpin.readthedocs.io/en/latest/beaker.html>`_.
+
+Common Beaker Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+There is commonality between some of the bkr-client provisioner parameters and the
+Linchpin parameters. If a bkr-client parameter is used with Linchpin, it will be translated
+to the appropriate key name and value type supported by Linchpin . The table below highlights
+some of the common parameters shared by both provisioners
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Carbon Key
+        - Carbon Type
+        - Linchpin Key
+        - Linchpin Type
+
+    *   - name
+        - String
+        - name
+        - String
+
+    *   - arch
+        - String
+        - arch
+        - String
+
+    *   - variant
+        - String
+        - variant
+        - String
+
+    *   - family
+        - String
+        - family
+        - String
+
+    *   - distro
+        - String
+        - distro
+        - String
+
+    *   - whiteboard
+        - String
+        - whiteboard
+        - String
+
+    *   - jobgroup
+        - String
+        - job_group
+        - String
+
+    *   - tag
+        - String
+        - tags
+        - List
+
+    *   - host_requires_options
+        - List
+        - hostrequires
+        - List
+
+    *   - key_values
+        - List
+        - keyvalues
+        - List
+
+    *   - kernel_options
+        - List
+        - kernel_options
+        - String
+
+    *   - kernel_post_options
+        - List
+        - kernel_options_post
+        - String
+
+    *   - kickstart
+        - String
+        - kickstart
+        - String
+
+    *   - taskparam
+        - List
+        - taskparam
+        - List
+
+    *   - ksmeta
+        - List
+        - ks_meta
+        - List
+
+It is important to note the **ssh_key** parameter with the bkr-client
+provisioner was a string containing the private key path. From this key file
+a public key was generated and injected it into the Beaker host. Linchpin Beaker
+offers a couple different methods for public key injection. It's been
+decided to keep the single **ssh_key** parameter and transparently map them
+to the appropriate Linchpin parameters. The key file still needs to be in the
+Carbon workspace.
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Key
+        - Key Type Provided
+        - Linchpin Key Mapped To
+
+    *   - ssh_key
+        - List of public ssh keys
+        - ssh_key
+
+    *   - ssh_key
+        - List of private ssh key files
+        - ssh_keys_path and ssh_key_file
+
+    *   - ssh_key
+        - List of public ssh key files
+        - ssh_keys_path and ssh_key_file
+
+Example
+~~~~~~~
+
+.. literalinclude:: ../../.examples/provision/beaker/scenario_linchpin.yml
+
+
+OpenStack Resource
+++++++++++++++++++
+
+The OpenStack Provider has been augmented to include all the Linchpin OpenStack os_server topology
+parameters except **count**, **cacert**, and **cert**. For a full list of Linchpin OpenStack os_server
+parameters please refer to the `Linchpin OpenStack Provider <https://linchpin.readthedocs.io/en/latest/openstack.html>`_.
+
+Common OpenStack Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There is commonality between some of the openstack-libcloud provisioner parameters and the
+Linchpin parameters. If a openstack-libcloud parameter is used with Linchpin, it will be translated
+to the appropriate key name and value type supported by Linchpin. The table below
+highlights some of the common parameters shared by both provisioners
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Carbon Key
+        - Carbon Type
+        - Linchpin Key
+        - Linchpin Type
+
+    *   - name
+        - String
+        - name
+        - String
+
+    *   - image
+        - String
+        - image
+        - String
+
+    *   - flavor
+        - String
+        - flavor
+        - String
+
+    *   - networks
+        - List
+        - networks
+        - List
+
+    *   - floating_ip_pool
+        - String
+        - fip_pool
+        - String
+
+    *   - keypair
+        - String
+        - keypair
+        - String
+
+Example
+~~~~~~~
+
+.. literalinclude:: ../../.examples/provision/openstack/scenario_linchpin.yml
+
 
 Defining Static Machines
 ------------------------

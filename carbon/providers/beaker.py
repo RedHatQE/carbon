@@ -26,6 +26,7 @@
 """
 
 from ..core import PhysicalProvider
+from ..exceptions import CarbonProviderError
 
 
 class BeakerProvider(PhysicalProvider):
@@ -50,6 +51,62 @@ class BeakerProvider(PhysicalProvider):
             ('name', [str]),
             ('arch', [str]),
             ('variant', [str])
+        ]
+
+        self.comm_opt_params = [
+            ('distro', [str]),
+            ('family', [str]),
+            ('whiteboard', [str]),
+            ('kickstart', [str]),
+            ('taskparam', [list])
+
+        ]
+
+        self.linchpin_comm_opt_params = [
+            ('kernel_options', [str]),
+            ('kernel_options_post', [str]),
+            ('hostrequires', [list]),
+            ('tags', [list]),
+            ('ks_meta', [str]),
+            ('job_group', [str]),
+            ('keyvalue', [list]),
+            ('ssh_key', [list])
+        ]
+
+        self.linchpin_only_opt_params = [
+            ('max_attempts', [int]),
+            ('attempt_wait_time', [int]),
+            ('cancel_message', [str]),
+            ('ids', [list]),
+            ('reserve_duration', [int]),
+            ('repos', [list]),
+            ('install', [list]),
+            ('ks_append', [list]),
+            ('partitions', [list]),
+            ('tx_id', [int])
+        ]
+
+        self.carbon_comm_opt_params = [
+            ('kernel_options', [list]),
+            ('kernel_post_options', [list]),
+            ('host_requires_options', [list]),
+            ('tag', [str]),
+            ('ksmeta', [list]),
+            ('jobgroup', [str]),
+            ('key_values', [list]),
+            ('ssh_key', [str])
+        ]
+
+        self.carbon_only_opt_params = [
+            ('distro_requires_options', [list]),
+            ('virtual_machine', [bool]),
+            ('virt_capable', [bool]),
+            ('retention_tag', [str]),
+            ('priority', [str]),
+            ('timeout', [int]),
+            ('username', [str]),
+            ('password', [str]),
+            ('ignore_panic', [str])
         ]
 
         self.opt_params = [
@@ -94,3 +151,176 @@ class BeakerProvider(PhysicalProvider):
             ('service', [str]),
             ('ccache', [str])
         ]
+
+    def validate_opt_params(self, host):
+        """Validate the optional parameters exists in the host resource.
+
+        :param host: host resource
+        :type host: object
+        """
+        provisioner_name = getattr(host, 'provisioner').__provisioner_name__
+        name = getattr(host, 'name')
+        param_values = getattr(host, 'provider_params')
+        self.validate_common_opt_params(name, provisioner_name, param_values)
+        self.validate_opt_linchpin_params(name, provisioner_name, param_values)
+        self.validate_opt_carbon_params(name, provisioner_name, param_values)
+
+    def validate_common_opt_params(self, resource_name, provisioner_name, params):
+
+        for item in self.comm_opt_params:
+            param, param_type = item[0], item[1]
+            msg = "Resource %s : optional param '%s' " % (resource_name, param)
+            try:
+                param_value = params[param]
+                self.logger.info(msg + 'exists.')
+
+                if not type(param_value) in param_type:
+                    self.logger.error(
+                        '    - Type=%s, Optional Type=%s. (ERROR)' %
+                        (type(param_value), param_type))
+                    raise CarbonProviderError(
+                        'Error occurred while validating required provider '
+                        'parameters for resource %s' % resource_name
+                    )
+            except KeyError:
+                self.logger.warning(msg + 'is undefined for resource.')
+
+        for item in self.linchpin_comm_opt_params:
+            param, param_type = item[0], item[1]
+            msg = "Resource %s : optional param '%s' " % (resource_name, param)
+            err_msg = "Resource %s : optional param '%s' or it's value type is " \
+                      "not support by the bkr-client provisioner" % (resource_name, param)
+            try:
+                param_value = params[param]
+                if 'linchpin' not in provisioner_name:
+                    if param == 'kernel_options':
+                        self.logger.info(msg + 'exists.')
+                        if isinstance(param_value, str):
+                            self.logger.error(
+                                '    - Type Found=%s (ERROR)' %
+                                (type(param_value)))
+
+                            raise CarbonProviderError(err_msg)
+                        continue
+                    if param == 'ssh_key':
+                        self.logger.info(msg + 'exists.')
+                        if not isinstance(param_value, str) or 'ssh-rsa' in param_value:
+                            self.logger.error(
+                                '    - Type Found=%s (ERROR)' %
+                                (type(param_value)))
+
+                            raise CarbonProviderError(err_msg)
+                        continue
+
+                    self.logger.error(msg)
+                    raise CarbonProviderError(err_msg)
+                else:
+                    self.logger.info(msg + 'exists.')
+
+                if not type(param_value) in param_type:
+                    self.logger.error(
+                        '    - Type=%s, Optional Type=%s. (ERROR)' %
+                        (type(param_value), param_type))
+                    raise CarbonProviderError(
+                        'Error occurred while validating required provider '
+                        'parameters for resource %s' % resource_name
+                    )
+            except KeyError:
+                self.logger.warning(msg + 'is undefined for resource.')
+
+        for item in self.carbon_comm_opt_params:
+            param, param_type = item[0], item[1]
+            msg = "Resource %s : optional param '%s' " % (resource_name, param)
+            try:
+                param_value = params[param]
+                if 'linchpin' in provisioner_name:
+                    self.logger.warning(msg + 'is forward compatible '
+                                              'with the linchpin provisioner. It will be translated '
+                                              'to be in proper format for linchpin.')
+                    if not type(param_value) in param_type:
+                        self.logger.warning(
+                            '    - Type=%s, Optional Type=%s. (WARNING)' %
+                            (type(param_value), param_type))
+                else:
+                    self.logger.info(msg + 'exists.')
+
+                if 'linchpin' in provisioner_name:
+                    if not type(param_value) in param_type:
+                        self.logger.warning(
+                            '    - Type=%s, Optional Type=%s. (WARNING)' %
+                            (type(param_value), param_type))
+                else:
+
+                    if not type(param_value) in param_type:
+                        self.logger.error(
+                            '    - Type=%s, Optional Type=%s. (ERROR)' %
+                            (type(param_value), param_type))
+                        raise CarbonProviderError(
+                            'Error occurred while validating required provider '
+                            'parameters for resource %s' % resource_name
+                        )
+
+            except KeyError:
+                self.logger.warning(msg + 'is undefined for resource.')
+
+    def validate_opt_linchpin_params(self, resource_name, provisioner_name, params):
+
+        if 'linchpin' in provisioner_name:
+            for item in self.linchpin_only_opt_params:
+                param, param_type = item[0], item[1]
+                msg = "Resource %s : optional param '%s' " % (resource_name, param)
+                try:
+                    param_value = params[param]
+                    self.logger.info(msg + 'exists.')
+
+                    if not type(param_value) in param_type:
+                        self.logger.error(
+                            '    - Type=%s, Optional Type=%s. (ERROR)' %
+                            (type(param_value), param_type))
+                        raise CarbonProviderError(
+                            'Error occurred while validating required provider '
+                            'parameters for resource %s' % resource_name
+                        )
+                except KeyError:
+                    self.logger.warning(msg + 'is undefined for resource.')
+        else:
+            for item in self.linchpin_only_opt_params:
+                param, param_type = item[0], item[1]
+                msg = "Resource %s : optional param '%s' is " \
+                      "not support by the bkr-client provisioner" % (resource_name, param)
+                try:
+                    if params[param]:
+                        raise CarbonProviderError(msg)
+                except KeyError:
+                    pass
+
+    def validate_opt_carbon_params(self, resource_name, provisioner_name, params):
+
+        if 'linchpin' not in provisioner_name:
+            for item in self.carbon_only_opt_params:
+                param, param_type = item[0], item[1]
+                msg = "Resource %s : optional param '%s' " % (resource_name, param)
+                try:
+                    param_value = params[param]
+                    self.logger.info(msg + 'exists.')
+
+                    if not type(param_value) in param_type:
+                        self.logger.error(
+                            '    - Type=%s, Optional Type=%s. (ERROR)' %
+                            (type(param_value), param_type))
+                        raise CarbonProviderError(
+                            'Error occurred while validating required provider '
+                            'parameters for resource %s' % resource_name
+                        )
+                except KeyError:
+                    self.logger.warning(msg + 'is undefined for resource.')
+        else:
+            for item in self.carbon_only_opt_params:
+                param, param_type = item[0], item[1]
+                msg = "Resource %s : optional param '%s' is " \
+                      "not support by the linchpin-wrapper provisioner" % (resource_name, param)
+                try:
+                    if params[param]:
+                        raise CarbonProviderError(msg)
+                except KeyError:
+                    pass
