@@ -434,7 +434,7 @@ class TestHostResource(object):
         host = Host(parameters=params, config=config)
         assert 'hst' in host.name
 
-    def test_create_host_undefined_role(self, default_host_params):
+    def test_create_host_undefined_role_or_groups(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params.pop('role')
         with pytest.raises(SystemExit):
@@ -577,3 +577,10 @@ class TestHostResource(object):
         params['provisioner'] = 'null'
         with pytest.raises(SystemExit):
             Host(name='host01', parameters=params, config=feature_toggle_config)
+
+    def test_group_property(self, default_host_params, config):
+        params = self.__get_params_copy__(default_host_params)
+        params.pop('role')
+        params.update(dict(groups=['group1']))
+        host = Host(name='host01', parameters=params, config=config)
+        assert host.groups[-1] == 'group1'

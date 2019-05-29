@@ -274,6 +274,15 @@ class Inventory(LoggerMixin):
                         config.add_section(host_section)
                         config.set(host_section, host.name)
 
+            if host.groups:
+                for group in host.groups:
+                    host_section = group + ":children"
+                    if host_section in config.sections():
+                        config.set(host_section, host.name)
+                    else:
+                        config.add_section(host_section)
+                        config.set(host_section, host.name)
+
             # create section(s)
             for item in [section, section_vars]:
                 config.add_section(item)

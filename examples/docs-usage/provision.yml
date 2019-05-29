@@ -9,3 +9,10 @@
     - client
     - vnc
   provider: beaker
+
+---
+- name: ci_test_client_b
+  groups:
+  - client
+  - vnc
+  provider: beaker

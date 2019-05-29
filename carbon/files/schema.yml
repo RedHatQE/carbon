@@ -20,13 +20,14 @@ mapping:
     sequence:
       - type: map
         allowempty: True
+        matching-rule: all
         mapping:
           name:
             required: True
             type: str
           description:
             type: str
-          role:
+          regex;(role|groups):
             required: True
             type: any
             func: type_str_list

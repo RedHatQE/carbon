@@ -43,8 +43,10 @@ required or optional:
         - String
         - True
 
-    *   - role
-        - The names of the roles for the node.
+    *   - role/groups
+        - The names of the roles or groups for the node. Used to
+          assign host to groups when generating the Ansible
+          inventory files.
         - List
         - True
 
@@ -72,10 +74,16 @@ required or optional:
         - True
 
 
-Role
-++++
+Role/Groups
++++++++++++
 
-You can associate a number of roles to a host in a couple of different ways.
+Carbon roles are the equivalent of Ansible groups. As of 1.2.0, we've
+changed the schema from role to groups to better reflect what the purpose of this
+parameter is intended for. All scenario descriptor files written prior to 1.2.0
+using role will still be honored but it is considered deprecated and it is recommended to
+update all scenarios to use the new parameter.
+
+You can associate a number of roles or groups to a host in a couple of different ways.
 First is to define your roles in a comma separated string
 
 .. literalinclude:: ../../../examples/docs-usage/provision.yml
@@ -85,6 +93,10 @@ You can also define your roles as a list.
 
 .. literalinclude:: ../../../examples/docs-usage/provision.yml
     :lines: 7-11
+
+Here we have defined a list of groups.
+.. literalinclude:: ../../../examples/docs-usage/provision.yml
+    :lines: 14-18
 
 .. _beaker_provisioning:
 
