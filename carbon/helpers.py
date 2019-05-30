@@ -986,6 +986,9 @@ class DataInjector(object):
         # { host01.metadata.k1 }
         self.regexp = r"\{(.*?)\}"
 
+        # regex to check jsonpath strings
+        self.jsonpath_chk_str = r"^range|^[|.|$|@]"
+
     def host_exist(self, node):
         """Determine if the host defined in the string formatted var is valid.
 
@@ -1011,72 +1014,77 @@ class DataInjector(object):
         :return: updated command
         :rtype: str
         """
+
         variables = list(map(str.strip, re.findall(self.regexp, command)))
 
         if not variables.__len__():
             return command
 
         for variable in variables:
-            value = None
-            _vars = variable.split('.')
-            node = _vars.pop(0)
+            if re.match(self.jsonpath_chk_str, variable):
+                LOG.debug("JSONPath format was identified in the command %s." % variable)
+                continue
+            else:
+                value = None
+                _vars = variable.split('.')
+                node = _vars.pop(0)
 
-            # verify variable has a valid host set
-            host = self.host_exist(node)
+                # verify variable has a valid host set
+                host = self.host_exist(node)
 
-            for index, item in enumerate(_vars):
-                try:
-                    # is the item intended to be a position in a list, if so
-                    # get the key and position
-                    key = item.split('[')[0]
-                    pos = int(item.split('[')[1].split(']')[0])
-
-                    if value:
-                        # get the latest value from the dictionary
-                        value = value[key][pos]
-                    else:
-                        # get latest value from host
-                        if hasattr(host, key) and index <= 0:
-                            value = getattr(host, key)[pos]
-                            if isinstance(value, str):
-                                break
-
-                    # is the value a dict, if so keep going!
-                    if isinstance(value, dict):
-                        continue
-                except IndexError:
-                    # item is not intended to be a position in a list
-
-                    # check if the item is an attribute of the host
-                    if hasattr(host, item) and index <= 0:
-                        value = getattr(host, item)
-
-                        if isinstance(value, str):
-                            # we know the value has no further traversing to do
-                            break
-                        # value is either a list or dict, more traversing to do
-                        continue
-                    else:
-                        if value is None:
-                            raise AttributeError('%s not found in host %s!' %
-                                                 (item, getattr(host, 'name')))
-
-                    # check if the item's value is a dict and update the value
-                    # for further traversing to do
+                for index, item in enumerate(_vars):
                     try:
-                        if isinstance(value[item], dict):
-                            value = value[item]
+                        # is the item intended to be a position in a list, if so
+                        # get the key and position
+                        key = item.split('[')[0]
+                        pos = int(item.split('[')[1].split(']')[0])
+
+                        if value:
+                            # get the latest value from the dictionary
+                            value = value[key][pos]
+                        else:
+                            # get latest value from host
+                            if hasattr(host, key) and index <= 0:
+                                value = getattr(host, key)[pos]
+                                if isinstance(value, str):
+                                    break
+
+                        # is the value a dict, if so keep going!
+                        if isinstance(value, dict):
                             continue
+                    except IndexError:
+                        # item is not intended to be a position in a list
+
+                        # check if the item is an attribute of the host
+                        if hasattr(host, item) and index <= 0:
+                            value = getattr(host, item)
+
+                            if isinstance(value, str):
+                                # we know the value has no further traversing to do
+                                break
+                            # value is either a list or dict, more traversing to do
+                            continue
+                        else:
+                            if value is None:
+                                raise AttributeError('%s not found in host %s!' %
+                                                     (item, getattr(host, 'name')))
+
+                        # check if the item's value is a dict and update the value
+                        # for further traversing to do
+                        try:
+                            if isinstance(value[item], dict):
+                                value = value[item]
+                                continue
+                        except KeyError:
+                            raise CarbonError('%s not found in %s' % (item, value))
+
+                        # final check to get value no more traversing required
+                        if value:
+                            value = value[item]
                     except KeyError:
-                        raise CarbonError('%s not found in %s' % (item, value))
+                        raise CarbonError('Unable to locate item %s!' % item)
 
-                    # final check to get value no more traversing required
-                    if value:
-                        value = value[item]
-                except KeyError:
-                    raise CarbonError('Unable to locate item %s!' % item)
-
-            command = command.replace('{ %s }' % variable, value)
+                command = command.replace('{ %s }' % variable, value)
         return command
 
 
