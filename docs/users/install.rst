@@ -28,13 +28,14 @@ Your system requires the following packages to install carbon:
 Linchpin
 ~~~~~~~~
 
-As of 1.2.0, carbon will install Linchpin but Linchpin also needs certain requirements that need to be met.
+As of 1.2.0, carbon will install Linchpin and its  Beaker requirements but Linchpin also needs certain requirements that need to be met.
 Please refer to the `minimum requirements <https://linchpin.readthedocs.io/en/latest/installation.html#minimal-software-requirements>`_
 section in the Linchpin Installation guide.
 
 .. note::
 
-   Linchpin python 3 support is still expiremental.
+   Linchpin python 3 support is still expiremental and not fully compatible so it will not be installed in this environment. 
+   To take advantage of Linchpin you must be using python 2.7 environment.  
 
 Install
 +++++++

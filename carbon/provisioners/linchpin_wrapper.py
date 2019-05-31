@@ -161,7 +161,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             self.logger.error(results)
             raise CarbonProvisionerError('Linchpin failed to validate pinfile.')
 
-        self.logger.info('Generated PinFile:\n%s' % yaml.dump(pindict))
+        self.logger.debug('Generated PinFile:\n%s' % yaml.dump(pindict))
 
     def _create_inventory(self, results):
         inv = self.linchpin_api.generate_inventory(

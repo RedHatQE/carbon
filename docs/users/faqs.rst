@@ -39,13 +39,13 @@ Its recommended new users onbaording with carbon or new scenarios
 being developed to use the Linchpin provisioner. Its being adopted as
 the standard provisioning tool and supports a lot more resource providers
 that can be enabled in carbon. If you have a pre-existing scenario that is
-not using a carbon native provisioner specific parameter.
+not using a carbon native provisioner specific parameter is also a good
+candidate to migrate over to using the Linchpin provisioner.
 
-If the pre-existing scenarios use carbon native provisioner specific parameter
+If the pre-existing scenarios use carbon native provisioner specific parameters
 that Linchpin does not support you will need to continue to use those until Lincphin
-supports the parameter. Linchpin's python 3 support is still experimental, if you
-use python 3 you may or may not encounter issues. If you do, it might be best to
-continue to use the carbon native provisioners.
+supports the parameter. Linchpin's python 3 support is still experimental and not
+fully supported so Linchpin will not be installed by carbon in python 3 environments.
 
 ... know if my current scenarios will work with the new Linchpin provisioner?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
