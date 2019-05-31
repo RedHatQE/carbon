@@ -73,7 +73,7 @@ def create():
               help="Scenario workspace.")
 @click.option("--log-level",
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
-              default='info',
+              default=None,
               help="Select logging level. (default=info)")
 @click.pass_context
 def validate(ctx, scenario, data_folder, log_level, workspace):
@@ -124,7 +124,7 @@ def validate(ctx, scenario, data_folder, log_level, workspace):
               help="Scenario workspace.")
 @click.option("--log-level",
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
-              default='info',
+              default=None,
               help="Select logging level. (default=info)")
 @click.pass_context
 def run(ctx, task, scenario, log_level, data_folder, workspace):
