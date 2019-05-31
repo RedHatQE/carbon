@@ -147,8 +147,12 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         pindict['carbon']['layout']['inventory_layout']['vars'].update(
             getattr(self.host, 'ansible_params'))
         pindict['carbon']['layout']['inventory_layout']['vars']['hostname'] = getattr(self.host, 'name')
-        pindict['carbon']['layout']['inventory_layout']['hosts']['node']['host_groups'].extend(
-            getattr(self.host, 'role'))
+
+        host_groups = getattr(self.host, 'role')
+        if not host_groups:
+            host_groups = getattr(self.host, 'groups')
+
+        pindict['carbon']['layout']['inventory_layout']['hosts']['node']['host_groups'].extend(host_groups)
         self.pinfile = pindict
 
         code, results = self.linchpin_api.do_validation(self.pinfile)

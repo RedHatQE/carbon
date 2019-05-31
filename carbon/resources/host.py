@@ -102,7 +102,7 @@ class Host(CarbonResource):
             self._groups = parameters.pop('groups')
             if isinstance(self._groups, string_types):
                 self._groups = self._groups.replace(' ', '').split(',')
-            self._roles = None
+            self._role = None
         except KeyError:
             try:
                 # convert the roles into list format if roles defined as str format
