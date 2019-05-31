@@ -22,7 +22,7 @@ product scenarios.
 
     The advantage to a standard structure allows for other users to easily
     re-run & update a scenario in their environment with minimal effort.
-    It will also help will consistency in carbon's usage, making it easier
+    It will also help with consistency in carbon's usage, making it easier
     to understand someone's scenario.
 
 Below is a tree formatted scenario structure for a multi product scenario.
@@ -48,6 +48,7 @@ This references the scenario `template
     ├── Makefile
     ├── README.rst
     ├── scenario.yml
+    ├── common_scenario.yml
     └── tests
 
 
@@ -102,6 +103,10 @@ executing carbon.
         - The scenario.yml is your scenario descriptor file. This file
           describes your entire E2E multi product scenario.
         - Yes
+
+    *   - common_scenario.yml
+        - This is the scenario file used in the include section of the scenario.yml. 
+        - No
 
     *   - tests
         - This is a directory where all the tests that are run during the

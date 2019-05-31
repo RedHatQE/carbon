@@ -24,7 +24,7 @@ Results File
 
 Each time you call carbon, you supply it a scenario descriptor file. This file
 tells carbon exactly what it should do. After carbon finishes running the task
-it was supplied with. It needs to potentially update the scenario descriptor
+it was supplied with it needs to potentially update the scenario descriptor
 file with additional information from that given run. Instead of modifying the
 input file, carbon creates a new scenario descriptor file (an exact copy of the
 input one) just with additional information from the run. For example: the
@@ -57,6 +57,17 @@ scenario descriptor file after a successful provision task run:
   ip_address: 10.8.249.2
   ...
 
+Included Scenario Results File
+-----------------------------
+
+If *include* section is present in the scenario file and it has a valid scenario descriptor
+file, then on a carbon run there will be an additional results file for this included 
+scenario with its name in the prefix. e.g. common_results.yml will be the name of the results
+file for included scenario with name common. This allows the users to use this common_results.yml 
+file and include it in other scenarios as needed, reducing the execution time and code
+duplication. The included scenario results file is also located in the .results folder where 
+results.yml is stored
+
 Results Folder
 --------------
 
@@ -88,7 +99,9 @@ Lets go over some of the common ones you will see.
   ├── logs
   │   ├── ansible.log
   │   └── carbon_scenario.log
-  └── results.yml
+  ├── results.yml
+  └── <included_scenario_name>_results.yml
+
 
 .. list-table::
     :widths: auto
@@ -120,3 +133,11 @@ Lets go over some of the common ones you will see.
           run another task with this given file. It removes the need from
           starting a whole run over from the beginning.
         - File
+
+    *   - <included_scenario_name>_results.yml
+        - The updated scenario descriptor file for included scenario (created by carbon)
+          This allows the users to use this file to include it in other scenarios as needed
+          to eliminate common provisioning,orchestration,execute steps
+          [NOTE : This file is generated only when a scenario is present in the *include* section]
+        - File
+   

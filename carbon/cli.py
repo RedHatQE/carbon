@@ -32,7 +32,8 @@ import yaml
 from . import __version__
 from .carbon import Carbon
 from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES
-from .helpers import template_render
+from .helpers import template_render, validate_render_scenario
+from .exceptions import HelpersError, CarbonError
 
 
 def print_header():
@@ -85,10 +86,20 @@ def validate(ctx, scenario, data_folder, log_level, workspace):
         click.echo('You have to provide a valid scenario file.')
         ctx.exit()
 
-    # apply templating before loading the data
-    scenario_data = template_render(scenario, os.environ)
+    # Checking if include section is present and getting validated scenario stream/s
+    try:
+        scenario_stream = validate_render_scenario(scenario)
+    except yaml.YAMLError:
+        click.echo('Error loading updated scenario data!')
+        ctx.exit()
+    except HelpersError:
+        click.echo('Included File is invalid or Include section is empty .'
+                   'You have to provide valid scenario files to be included.')
+        ctx.exit()
+    except CarbonError:
+        click.echo('Error loading updated included scenario data!')
+        ctx.exit()
 
-    # Create a new carbon compound
     cbn = Carbon(
         __name__,
         log_level=log_level,
@@ -97,7 +108,7 @@ def validate(ctx, scenario, data_folder, log_level, workspace):
     )
 
     # This is the easiest way to configure a full scenario.
-    cbn.load_from_yaml(scenario_data)
+    cbn.load_from_yaml(scenario_stream)
 
     # The scenario will start the main pipeline and run through the ordered
     # list of pipelines. See :function:`~carbon.Carbon.run` for more details.
@@ -138,19 +149,19 @@ def run(ctx, task, scenario, log_level, data_folder, workspace):
         click.echo('You have to provide a valid scenario file.')
         ctx.exit()
 
-    # apply templating before loading the data
-    scenario_data = template_render(scenario, os.environ)
-
-    # Verify the updated data is valid
+    # Checking if include section is present and getting validated scenario stream/s
     try:
-        yaml.safe_load(scenario_data)
+        scenario_stream = validate_render_scenario(scenario)
     except yaml.YAMLError:
         click.echo('Error loading updated scenario data!')
         ctx.exit()
-
-    # set workspace to scenario directory if undefined
-    if workspace is None:
-        workspace = os.path.dirname(scenario)
+    except HelpersError:
+        click.echo('Included File is invalid or Include section is empty .'
+                   'You have to provide valid scenario files to be included.')
+        ctx.exit()
+    except CarbonError:
+        click.echo('Error loading updated included scenario data!')
+        ctx.exit()
 
     # Create a new carbon compound
     cbn = Carbon(
@@ -160,8 +171,8 @@ def run(ctx, task, scenario, log_level, data_folder, workspace):
         workspace=workspace
     )
 
-    # This is the easiest way to configure a full scenario.
-    cbn.load_from_yaml(scenario_data)
+    # Sending the list of scenario streams to the carbon object
+    cbn.load_from_yaml(scenario_stream)
 
     # Setup the list of tasks to run
     if not task:

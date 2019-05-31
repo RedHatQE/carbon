@@ -70,6 +70,16 @@ select. Below are the available run command options.
                                       Select logging level. (default=info)
       --help                          Show this message and exit.
 
+.. note::
+   
+   If 'Include' section is present in the scenario file, carbon will aggregate and execute
+   the selected tasks from both, main/parent and the included scenario file. e.g. 
+   if common.yml is the included scenario file, scenario.yml is the main scenario file
+   and task selected is provision,the provision pipeline is created with provision tasks 
+   from included scenario followed by the provision tasks from main scenario.
+
+----
+
 .. list-table::
     :widths: auto
     :header-rows: 1
@@ -124,7 +134,7 @@ To run your scenario executing all given tasks, run the following command:
     cbn = Carbon('carbon')
 
     with open('<scenario>, 'r') as f:
-        cbn.load_from_yaml(safe_load(f))
+        cbn.load_from_yaml(list(safe_load(f)))
 
     cbn.run()
 
@@ -148,7 +158,7 @@ following command:
     cbn = Carbon('carbon')
 
     with open('<scenario>, 'r') as f:
-        cbn.load_from_yaml(safe_load(f))
+        cbn.load_from_yaml(list(safe_load(f)))
 
     # individual task
     cbn.run(tasklist=['task'])

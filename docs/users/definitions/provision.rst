@@ -87,16 +87,17 @@ You can associate a number of roles or groups to a host in a couple of different
 First is to define your roles in a comma separated string
 
 .. literalinclude:: ../../../examples/docs-usage/provision.yml
-    :lines: 1-4
+    :lines: 1-5
 
 You can also define your roles as a list.
 
 .. literalinclude:: ../../../examples/docs-usage/provision.yml
-    :lines: 7-11
+    :lines: 7-13
 
 Here we have defined a list of groups.
+
 .. literalinclude:: ../../../examples/docs-usage/provision.yml
-    :lines: 14-18
+    :lines: 15-21
 
 .. _beaker_provisioning:
 

@@ -66,6 +66,7 @@ def default_report_params():
                                 ))
     return params
 
+
 class TestActionResource(object):
     @staticmethod
     def test_create_action_with_name():
@@ -416,6 +417,12 @@ class TestScenarioResource(object):
     def test_profile_uc01(scenario):
         profile = scenario.profile()
         assert isinstance(profile, dict)
+
+    @staticmethod
+    def test_child_scenario_property(master_child_scenario):
+        ch_sc = master_child_scenario.child_scenarios
+        assert isinstance(ch_sc, list)
+        assert isinstance(ch_sc[0], Scenario)
 
 
 class TestHostResource(object):

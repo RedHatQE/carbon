@@ -1,9 +1,11 @@
 ---
+provision:
 - name: ci_test_client_b
   role: client, vnc
   provider: beaker
 
 ---
+provision:
 - name: ci_test_client_b
   role:
     - client
@@ -11,6 +13,7 @@
   provider: beaker
 
 ---
+provision:
 - name: ci_test_client_b
   groups:
   - client

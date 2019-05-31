@@ -26,9 +26,10 @@
 """
 
 import pytest
-
-from carbon.exceptions import CarbonError
+import os
+from carbon.exceptions import CarbonError, HelpersError
 from carbon.helpers import DataInjector
+from carbon.helpers import validate_render_scenario
 
 
 @pytest.fixture(scope='class')
@@ -119,3 +120,26 @@ class TestDataInjector(object):
     def test_inject_jsonpath_support_uc4(self, data_injector):
         cmd = data_injector.inject('cmd { range. }')
         assert cmd == 'cmd { range. }'
+
+
+def test_validate_render_scenario_no_include():
+    result = validate_render_scenario(os.path.abspath('../assets/no_include.yml'))
+    assert len(result) == 1
+
+
+def test_validate_render_scenario_correct_include():
+    result = validate_render_scenario('../assets/correct_include_descriptor.yml')
+    assert len(result) == 2
+
+
+def test_validate_render_scenario_wrong_include():
+    with pytest.raises(HelpersError) as e:
+        validate_render_scenario('../assets/wrong_include_descriptor.yml')
+
+
+def test_validate_render_scenario_empty_include():
+    with pytest.raises(HelpersError) as e:
+        validate_render_scenario('../assets/descriptor.yml')
+
+
+

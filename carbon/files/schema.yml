@@ -14,9 +14,12 @@ mapping:
     type: seq
     sequence:
       - type: str
+  include:
+    required: False
+    type: any
 
   provision:
-    required: True
+    required: False
     sequence:
       - type: map
         allowempty: True

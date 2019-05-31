@@ -37,7 +37,7 @@ from carbon import Carbon
 from carbon.constants import RESULTS_FILE
 from carbon.exceptions import CarbonError
 from carbon.helpers import template_render
-from carbon.resources import Host
+from carbon.resources import Host, Scenario
 
 
 class TestCarbon(object):
@@ -89,24 +89,27 @@ class TestCarbon(object):
     def test_carbon_load_from_yaml_01(mock_method):
         mock_method.return_value = {}
         carbon = Carbon(data_folder='/tmp')
-        carbon.load_from_yaml('')
+        carbon.load_from_yaml([''])
 
     @staticmethod
     def test_carbon_load_from_yaml_02():
-        data = template_render('../assets/descriptor.yml', os.environ)
+        data = list()
+        data.append(template_render('../assets/descriptor.yml', os.environ))
         carbon = Carbon(data_folder='/tmp')
         carbon.load_from_yaml(data)
 
     @staticmethod
     def test_carbon_load_from_yaml_03():
-        data = template_render('../assets/descriptor.yml', os.environ)
+        data = list()
+        data.append(template_render('../assets/descriptor.yml', os.environ))
         carbon = Carbon(data_folder='/tmp')
         carbon.config['CREDENTIALS'] = [{'name': 'provider'}]
         carbon.load_from_yaml(data)
 
     @staticmethod
     def test_carbon_load_from_yaml_04():
-        data = template_render('../assets/descriptor.yml', os.environ)
+        data = list()
+        data.append(template_render('../assets/descriptor.yml', os.environ))
         carbon = Carbon(data_folder='/tmp')
         carbon.load_from_yaml(data)
 
@@ -126,9 +129,4 @@ class TestCarbon(object):
         carbon = Carbon(import_name='__main__', data_folder='/tmp')
         assert carbon.name == '__main__'
 
-    @staticmethod
-    def test_load_resource(default_host_params, config):
-        carbon = Carbon(data_folder='/tmp')
-        carbon.config = config
-        params = copy.deepcopy(default_host_params)
-        carbon._load_resources(Host, [params])
+

@@ -83,6 +83,8 @@ class Scenario(CarbonResource):
         # set the scenario name attribute
         if not name:
             self._name = gen_random_str(15)
+        else:
+            self._name = name
 
         # set the scenario description attribute
         self._description = parameters.pop('description', None)
@@ -96,6 +98,9 @@ class Scenario(CarbonResource):
         self._executes = list()
         self._reports = list()
         self._yaml_data = dict()
+        # Properties to take care of included scenarios
+        self._child_scenarios = list()
+        self._included_scenario_names = list()
 
         # set the carbon task classes for the scenario
         self._validate_task_cls = validate_task_cls
@@ -171,19 +176,41 @@ class Scenario(CarbonResource):
         :type tasks: list
         """
         count = 0
-
+        scenario_resource_list = list()
         if is_parallel:
             for task in tasks:
                 for key, value in task.items():
                     # Added report object in case we decide reporting
                     # should be done in parallel
-                    if (isinstance(value, Host) or isinstance(value, Report)) and count <= 0:
-                        self.initialize_resource(value)
-                        self.add_resource(value)
-                        count += 1
-                    elif (isinstance(value, Host) or isinstance(value, Report)) and count >= 1:
-                        self.add_resource(value)
+                    if isinstance(value, Host):
+                        for h in self.hosts:
+                            if value.name == h.name:
+                                scenario_resource_list.append(value)
+                    if isinstance(value, Report):
+                        for r in self.reports:
+                            if value.name == r.name:
+                                scenario_resource_list.append(value)
+
+            for res in scenario_resource_list:
+                if count == 0:
+                    self.initialize_resource(res)
+                    self.add_resource(res)
+                    count += 1
+                else:
+                    self.add_resource(res)
         return
+
+    @property
+    def name(self):
+        """Scenario object name
+        :return: scenario name
+        :rtype: basestring
+        """
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        raise ValueError("you cannot set name of the scenario")
 
     @property
     def yaml_data(self):
@@ -289,6 +316,50 @@ class Scenario(CarbonResource):
         raise ValueError('You can not set reports directly.'
                          'Use function ~Scenario.add_reports')
 
+    @property
+    def child_scenarios(self):
+        """
+        List of child scenarios for the master scenario
+        :rtype: List
+        """
+        return self._child_scenarios
+
+    @child_scenarios.setter
+    def child_scenarios(self, value):
+        """Set child_scenarios property."""
+        raise ValueError('You can not set child_scenarios directly.'
+                         'Use function ~Scenario.add_child_scenario')
+
+    def add_child_scenario(self, scenario):
+        """Add child/included scenarios to the master scenario resource.
+        :param scenario: scenario resource
+        :type scenario: object
+        """
+        if not isinstance(scenario, Scenario):
+            raise ValueError('scenario must be of type %s ' % type(Scenario))
+        self._child_scenarios.append(scenario)
+
+    @property
+    def included_scenario_names(self):
+        """
+        List of files which are put in the include section of the scenario
+        :return: list of files
+        :rtype: list
+        """
+        return self._included_scenario_names
+
+    @included_scenario_names.setter
+    def included_scenario_names(self, inc_name_list):
+        """Add included file names as list
+        :param inc_name_list: list of names
+        :type inc_name_list: list
+        """
+        if inc_name_list:
+            for item in inc_name_list:
+                self.included_scenario_names.append(item)
+        else:
+            raise ValueError("Included scenario list cannot be empty")
+
     def add_reports(self, report):
         """Add report resources to the scenario.
 
@@ -333,6 +404,8 @@ class Scenario(CarbonResource):
         profile = OrderedDict()
         profile['name'] = self.name
         profile['description'] = self.description
+        if self.child_scenarios:
+            profile['include'] = self.included_scenario_names
         profile['resource_check'] = self.resource_check
         profile['provision'] = [host.profile() for host in self.hosts]
         profile['orchestrate'] = [action.profile() for action in self.actions]
@@ -354,3 +427,31 @@ class Scenario(CarbonResource):
             'methods': self._req_tasks_methods
         }
         return task
+
+    def load_resources(self, res_type, res_list):
+        """
+        Load the resource in the scenario list of `res_type`.
+
+        The scenario holds a list of each resource type: hosts, actions,
+        reports, etc. This function takes what type of resource is in
+        list it calls ~self.scenario.add_resource for each item in the
+        list of the given resources.
+
+        For example, if we call load_resources(Host, hosts_list), the
+        function will go through each item in the list, create the
+        resource with Host(parameter=item) and load it within the list
+        ~self.hosts.
+
+        :param res_type: The type of resources the function will load into its
+            list
+        :param res_list: A list of resources dict
+        :return: None
+        """
+        # No resources defined, then exit
+        if not res_list:
+            return
+
+        for item in res_list:
+            self.add_resource(
+                res_type(config=self.config,
+                         parameters=item))

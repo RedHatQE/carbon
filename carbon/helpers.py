@@ -49,6 +49,7 @@ from paramiko import RSAKey
 from ruamel.yaml.comments import CommentedMap as OrderedDict
 from collections import OrderedDict
 from ruamel.yaml import YAML
+import yaml
 from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
@@ -1233,6 +1234,49 @@ def build_artifact_regex_query(name):
     regex = fnmatch.translate(name)
     regquery = re.compile(regex)
     return regquery
+
+
+def validate_render_scenario(scenario):
+    """
+    This method takes the absolute path of the scenario descriptor file and returns back a list of
+    data streams of scenario(s) after doing the following checks:
+    (1) Checks there is no yaml.safe_load error for the provided scenario file
+    (2) Checks for include section present in the scenario file
+    (3) Checks the include section has valid scenario file path and it is not empty
+    (4) Checks there is no yaml.safe_load error for scenario file in the include section
+    :param scenario: scenario file path
+    :type scenario: str
+    :return: scenario data stream(s)
+    :rtype: list of data streams
+    """
+    scenario_stream_list = list()
+    try:
+        data = yaml.safe_load(template_render(scenario, os.environ))
+        # adding master scenario as the first scenario data stream
+        scenario_stream_list.append(template_render(scenario, os.environ))
+        if 'include' in data.keys():
+            include_item = data['include']
+            include_template = list()
+            if include_item is not None:
+                for item in include_item:
+                    if os.path.isfile(item):
+                        item = os.path.abspath(item)
+                        # check to verify the data in included scenario is valid
+                        try:
+                            yaml.safe_load(template_render(item, os.environ))
+                            include_template.append(template_render(item, os.environ))
+                        except yaml.YAMLError:
+                            # raising Carbon error to differentiate the yaml issue is with included scenario
+                            raise CarbonError('Error loading updated included scenario data!')
+                    else:
+                        # raising HelperError if included file is invalid or included section is empty
+                        raise HelpersError('Included File is invalid or Include section is empty .'
+                                           'You have to provide valid scenario files to be included.')
+                scenario_stream_list.extend(include_template)
+    except yaml.YAMLError as e:
+        # here raising yaml error to differentiate yaml issue is with main scenario
+        raise e
+    return scenario_stream_list
 
 
 def ssh_key_file_generator(workspace, ssh_key_param):

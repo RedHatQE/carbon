@@ -137,3 +137,23 @@ def scenario(action_resource, host, execute_resource, report_resource,
     scenario_resource.add_executes(execute_resource)
     scenario_resource.add_reports(report_resource)
     return scenario_resource
+
+
+@pytest.fixture
+def master_child_scenario(action_resource, host, execute_resource, report_resource,
+                          scenario_resource, default_host_params, config):
+    child_scenario = Scenario(config=Config(), parameters={'k': 'v'})
+    host2 = Host(
+        name='host02',
+        config=config,
+        parameters=copy.deepcopy(default_host_params)
+    )
+    execute_res2 = Execute(name='execute02', parameters=dict(description='description', hosts='host02', executor='runner'))
+    child_scenario.add_hosts(host2)
+    child_scenario.add_executes(execute_res2)
+    scenario_resource.add_child_scenario(child_scenario)
+    scenario_resource.add_hosts(host)
+    scenario_resource.add_actions(action_resource)
+    scenario_resource.add_executes(execute_resource)
+    scenario_resource.add_reports(report_resource)
+    return scenario_resource

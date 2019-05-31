@@ -6,8 +6,7 @@ credentials:
   - name: provider
 
 include:
-  - ' '
-  - malformed_included_file.yml
+  - cdf.yml
 
 provision:
 

@@ -1,0 +1,39 @@
+---
+name: Include_example1
+description: Descriptor file with include section
+
+resource_check:
+
+include:
+   - provision.yml
+
+orchestrate:
+   .
+   .
+   .
+execute:
+   .
+   .
+   .
+report:
+   .
+   .
+   .     
+---
+name: Include_example2
+description: Descriptor file with include section
+
+include: 
+    - provision.yml
+    - orchestrate.yml
+
+execute:
+   .
+   .
+   .
+
+report:
+   .
+   .
+   .
+

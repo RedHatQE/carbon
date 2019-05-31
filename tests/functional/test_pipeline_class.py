@@ -83,7 +83,6 @@ class TestPipelineBuilder(object):
     def test_build_provision_task_pipeline(scenario):
         builder = PipelineBuilder(name='provision')
         pipeline = builder.build(scenario)
-
         assert getattr(pipeline, 'name') == 'provision'
         assert isinstance(getattr(pipeline, 'tasks'), list)
         assert getattr(pipeline, 'type') is ProvisionTask
@@ -120,3 +119,16 @@ class TestPipelineBuilder(object):
         assert isinstance(getattr(pipeline, 'tasks'), list)
         assert getattr(pipeline, 'type') is CleanupTask
 
+    @staticmethod
+    def test_multiple_scenario_pipeline_01(master_child_scenario):
+        builder = PipelineBuilder(name='provision')
+        pipeline = builder.build(master_child_scenario)
+        tasks = getattr(pipeline, 'tasks')
+        assert len(tasks) == 2
+
+    @staticmethod
+    def test_multiple_scenario_pipeline_02(master_child_scenario):
+        builder = PipelineBuilder(name='execute')
+        pipeline = builder.build(master_child_scenario)
+        tasks = getattr(pipeline, 'tasks')
+        assert len(tasks) == 2

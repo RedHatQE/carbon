@@ -203,6 +203,22 @@ class Carbon(LoggerMixin, TimeMixin):
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
 
+    def _populate_scenario_resources(self, scenario_obj, scenario_stream):
+
+        scenario_data = yaml.safe_load(scenario_stream)
+        pro_items = scenario_data.pop('provision', None)
+        orc_items = scenario_data.pop('orchestrate', None)
+        exe_items = scenario_data.pop('execute', None)
+        rpt_items = scenario_data.pop('report', None)
+        inc_items = scenario_data.pop('include', None)
+
+        scenario_obj.load(scenario_data)
+
+        scenario_obj.load_resources(Host, pro_items)
+        scenario_obj.load_resources(Action, orc_items)
+        scenario_obj.load_resources(Execute, exe_items)
+        scenario_obj.load_resources(Report, rpt_items)
+
     def load_from_yaml(self, filedata):
         """
         Given the YAML filename with the scenario description, this
@@ -212,58 +228,34 @@ class Carbon(LoggerMixin, TimeMixin):
         The main sections of the YAML descriptor (provision, orchestrate,
         execute and report) will be taken of the data in its respective
         data object. All the rest of the attributes within the YAML file
-        will be loaded into the ~self.scenario object. The additional
-        attributes within the file will be ignored by the Scenario
+        will be loaded into the ~self.scenario object.
+
+        If include section for included scenarios is present then they get
+        added as child scenario objects for the main scenario(~self.scenario).
+        These scenarios in turn go through the same process of taking out the
+        main sections from the data in its respective data object
+
+        The additional attributes within the file will be ignored by the Scenario
         resource.
 
         Once each data section is taken of the main descriptor, it will
         then be be loaded in each respective lists within the
         ~self.scenario object.
 
-        :param filedata: the full data object for the YAML file descriptor
+        :param filedata: list of full data object for the YAML file descriptor
         :return:
         """
-        self.scenario.yaml_data = filedata
-        data = yaml.safe_load(filedata)
-        pro_items = data.pop('provision', None)
-        orc_items = data.pop('orchestrate', None)
-        exe_items = data.pop('execute', None)
-        rpt_items = data.pop('report', None)
+        # setting up master scenario
+        self.scenario.yaml_data = filedata[0]
+        self._populate_scenario_resources(self.scenario, filedata[0])
 
-        self.scenario.load(data)
-
-        self._load_resources(Host, pro_items)
-        self._load_resources(Action, orc_items)
-        self._load_resources(Execute, exe_items)
-        self._load_resources(Report, rpt_items)
-
-    def _load_resources(self, res_type, res_list):
-        """
-        Load the resource in the scenario list of `res_type`.
-
-        The scenario holds a list of each resource type: hosts, actions,
-        reports, etc. This function takes what type of resource is in
-        list it calls ~self.scenario.add_resource for each item in the
-        list of the given resources.
-
-        For example, if we call _load_resources(Host, hosts_list), the
-        function will go through each item in the list, create the
-        resource with Host(parameter=item) and load it within the list
-        ~self.hosts.
-
-        :param res_type: The type of resources the function will load into its
-            list
-        :param res_list: A list of resources dict
-        :return: None
-        """
-        # No resources defined, then exit
-        if not res_list:
-            return
-
-        for item in res_list:
-            self.scenario.add_resource(
-                res_type(config=self.config,
-                         parameters=item))
+        # creating child scenario objects
+        if len(filedata) > 1:
+            for scenario_stream in filedata[1:]:
+                ch_scenario = Scenario(config=self.config)
+                ch_scenario.yaml_data = scenario_stream
+                self._populate_scenario_resources(ch_scenario, scenario_stream)
+                self.scenario.add_child_scenario(ch_scenario)
 
     def run(self, tasklist=TASKLIST):
         """
@@ -282,25 +274,31 @@ class Carbon(LoggerMixin, TimeMixin):
         # lists to control which tasks passed or failed
         passed_tasks = list()
         failed_tasks = list()
+        # list to collect the included scenario result files
+        child_result_list = list()
 
         # initialize overall status
         status = 0
 
+        # save start time
+        self.start()
+
         self.logger.info('\n')
         self.logger.info('CARBON RUN (START)'.center(79))
         self.logger.info('-' * 79)
-        self.logger.info(' * Scenario    : %s' % self.scenario.name)
-        self.logger.info(' * Tasks       : %s' % tasklist)
-        self.logger.info(' * Data Folder : %s' % self.data_folder)
-        self.logger.info(' * Workspace   : %s' % self.workspace)
-        self.logger.info(' * Log Level   : %s' % self.config['LOG_LEVEL'])
+        self.logger.info(' * Data Folder           : %s' % self.data_folder)
+        self.logger.info(' * Workspace             : %s' % self.workspace)
+        self.logger.info(' * Log Level             : %s' % self.config['LOG_LEVEL'])
+        self.logger.info(' * Tasks                 : %s' % tasklist)
+        self.logger.info(' * Scenario              : %s' % getattr(self.scenario, 'name'))
+        if self.scenario.child_scenarios:
+            self.logger.info(' * Included Scenario(s)  : %s' % [getattr(sc, 'name') for sc in
+                                                                self.scenario.child_scenarios])
         self.logger.info('-' * 79 + '\n')
 
         try:
-            # save start time
-            self.start()
-
             for task in tasklist:
+                self.logger.info(' * Task    : %s' % task)
 
                 # create a pipeline builder object
                 pipe_builder = PipelineBuilder(task)
@@ -325,7 +323,7 @@ class Carbon(LoggerMixin, TimeMixin):
                 # create blaster object with pipeline to run
                 blast = blaster.Blaster(pipeline.tasks)
 
-                # blast off the pipeline list of tasks
+                # blast off the pipeline list of tasks reload_resources
                 data = blast.blastoff(
                     serial=not pipeline.type.__concurrent__,
                     raise_on_failure=True
@@ -334,9 +332,11 @@ class Carbon(LoggerMixin, TimeMixin):
                 # reload resource objects
                 self.scenario.reload_resources(data, pipeline.type.__concurrent__)
 
+                if self.scenario.child_scenarios:
+                    [sc.reload_resources(data, pipeline.type.__concurrent__) for sc in self.scenario.child_scenarios]
+
                 # update list of passed tasks
                 passed_tasks.append(task)
-
                 self.logger.info("." * 50)
         except Exception as ex:
             # set overall status
@@ -349,6 +349,9 @@ class Carbon(LoggerMixin, TimeMixin):
 
             # reload resource objects
             self.scenario.reload_resources(ex.results)
+
+            if self.scenario.child_scenarios:
+                [sc.reload_resources(ex.results) for sc in self.scenario.child_scenarios]
 
             # roll back by cleaning up any resources that might have been provisioned
             if 'cleanup' in tasklist and [item for item in failed_tasks if item != 'cleanup']:
@@ -376,45 +379,58 @@ class Carbon(LoggerMixin, TimeMixin):
 
                         # reload resource objects
                         self.scenario.reload_resources(data)
+                        if self.scenario.child_scenarios:
+                            [sc.reload_resources(data) for sc in self.scenario.child_scenarios]
                         passed_tasks.append(task)
                     except Exception as ex:
                         self.logger.error(ex)
-                        self.logger.error("There was a problem running the cleanup task to roll back the resources. "
-                                          "You may need to manually cleanup any provisioned resources")
+                        self.logger.error("There was a problem running the cleanup task to roll back the "
+                                          "resources. You may need to manually cleanup any provisioned resources")
                         failed_tasks.append(task)
                         raise
-
         finally:
             # save end time
             self.end()
-
             # determine state
             state = 'FAILED' if status else 'PASSED'
 
-            # write the updated carbon definition file
+            # check if child scenario exist, update the new child_result and append to ch_result_list.
+            if self.scenario.child_scenarios:
+                for sc in self.scenario.child_scenarios:
+                    ch_result_file_name = sc.name + '_results.yml'
+                    ch_result_abs_name = os.path.join(self.data_folder, sc.name + '_results.yml')
+                    file_mgmt('w', ch_result_abs_name, sc.profile())
+                    file_mgmt('w', ch_result_abs_name, sc.profile())
+                    # Adding child_result_list with results file in the RESULTS_FOLDER instead of absolute path
+                    child_result_list.append(os.path.join(self.config['RESULTS_FOLDER'], ch_result_file_name))
+
+                # Add the child_result_list to the included_scenario_names property
+                self.scenario.__setattr__('included_scenario_names', child_result_list)
+
+            # Write the main scenario results
             file_mgmt('w', self.results_file, self.scenario.profile())
 
+            # archive everything from the data folder into the results folder
+            os.system('cp -r %s/* %s' % (self.data_folder, self.config['RESULTS_FOLDER']))
+
             self.logger.info('\n')
-            self.logger.info('CARBON RUN (END)'.center(79))
+            self.logger.info('SCENARIO RUN (END)'.center(79))
             self.logger.info('-' * 79)
-            self.logger.info(' * Duration                   : %dh:%dm:%ds' %
+            self.logger.info(' * Duration                       : %dh:%dm:%ds' %
                              (self.hours, self.minutes, self.seconds))
             if passed_tasks.__len__() > 0:
-                self.logger.info(' * Passed Tasks               : %s' %
+                self.logger.info(' * Passed Tasks                   : %s' %
                                  passed_tasks)
             if failed_tasks.__len__() > 0:
-                self.logger.info(' * Failed Tasks               : %s' %
+                self.logger.info(' * Failed Tasks                   : %s' %
                                  failed_tasks)
-            self.logger.info(' * Results Folder             : %s' %
+            self.logger.info(' * Results Folder                 : %s' %
                              self.config['RESULTS_FOLDER'])
-            self.logger.info(' * Latest Scenario Definition : %s' %
-                             self.results_file)
+            self.logger.info(' * Included Scenario Definition   : %s' % child_result_list)
+            self.logger.info(' * Final Scenario Definition      : %s' % os.path.join(self.config['RESULTS_FOLDER'],
+                                                                                     RESULTS_FILE))
             self.logger.info('-' * 79)
             self.logger.info('CARBON RUN (RESULT=%s)' % state)
-
-            # archive everything from the data folder into the results folder
-            os.system('cp -r %s/* %s' % (self.data_folder, self.config[
-                'RESULTS_FOLDER']))
 
             # also archive the inventory file if a static inventory directory is specified
             if self.static_inv_dir and os.path.exists(self.static_inv_dir):

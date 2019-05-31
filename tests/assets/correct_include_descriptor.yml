@@ -6,12 +6,7 @@ credentials:
   - name: provider
 
 include:
-  - ' '
-  - malformed_included_file.yml
-
-provision:
-
-orchestrate:
+  - ../assets/common.yml
 
 execute:
 

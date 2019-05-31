@@ -12,11 +12,17 @@ relates to a particular component within carbon. You can learn about this at
 the `architecture <../developers/architecture.html>`_ page. Below are sub pages which go
 into further detail explaining the different sections.
 
+Begining with Carbon version 1.3.0 ,the scenario descriptor file can have an additional
+*Include* section. This section can be used to include a common scenario file which can be reused 
+by multiple scenarios. More details are explained in the `Including Scenarios <./definitions/include.html>`_
+section.
+
 .. toctree::
     :maxdepth: 1
 
     definitions/resource_check
     definitions/credentials
+    definitions/include
     definitions/provision
     definitions/orchestrate
     definitions/execute

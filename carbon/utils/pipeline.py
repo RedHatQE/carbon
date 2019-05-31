@@ -86,9 +86,9 @@ class PipelineBuilder(object):
         """Build carbon pipeline.
 
         :param scenario: carbon scenario object containing all scenario
-            data.
-        :type scenario: object
-        :return: carbon pipeline to run for the given task.
+               data.
+        :type scenario: scenario object
+        :return: carbon pipeline to run for the given task for all the scenarios
         :rtype: namedtuple
         """
         # pipeline init
@@ -98,38 +98,61 @@ class PipelineBuilder(object):
             list()
         )
 
+        scenario_get_tasks = list()
+        scenario_hosts = list()
+        scenario_actions = list()
+        scenario_executes = list()
+        scenario_reports = list()
+
+        # Check if there are any child/included scenarios
+        if scenario.child_scenarios:
+            for sc in scenario.child_scenarios:
+                scenario_get_tasks.extend([item for item in getattr(sc, 'get_tasks')()])
+                scenario_hosts.extend([item for item in getattr(sc, 'hosts')])
+                scenario_actions.extend([item for item in getattr(sc, 'actions')])
+                scenario_executes.extend([item for item in getattr(sc, 'executes')])
+                scenario_reports.extend([item for item in getattr(sc, 'reports')])
+
+        # only master scenario no child scenarios
+        scenario_get_tasks.extend([item for item in getattr(scenario, 'get_tasks')()])
+        scenario_hosts.extend([item for item in getattr(scenario, 'hosts')])
+        scenario_actions.extend([item for item in getattr(scenario, 'actions')])
+        scenario_executes.extend([item for item in getattr(scenario, 'executes')])
+        scenario_reports.extend([item for item in getattr(scenario, 'reports')])
+
         # scenario resource
-        for task in getattr(scenario, 'get_tasks')():
+        for task in scenario_get_tasks:
             if task['task'].__task_name__ == self.name:
                 pipeline.tasks.append(task)
 
         # host resource
-        for host in getattr(scenario, 'hosts'):
+        for host in scenario_hosts:
             for task in host.get_tasks():
                 if task['task'].__task_name__ == self.name:
                     pipeline.tasks.append(task)
 
         # action resource
         # get action resource based on if its status
-        for action in get_actions_failed_status(getattr(scenario, 'actions')):
+        for action in get_actions_failed_status(scenario_actions):
             for task in action.get_tasks():
                 if task['task'].__task_name__ == self.name:
                     # fetch & set hosts for the given action task
-                    task = fetch_hosts(getattr(scenario, 'hosts'), task)
+                    task = fetch_hosts(scenario_hosts, task)
                     pipeline.tasks.append(task)
 
         # execute resource
-        for execute in getattr(scenario, 'executes'):
+        for execute in scenario_executes:
             for task in execute.get_tasks():
                 # fetch & set hosts for the given executes task
-                task = fetch_hosts(getattr(scenario, 'hosts'), task)
+                task = fetch_hosts(scenario_hosts, task)
                 if task['task'].__task_name__ == self.name:
                     pipeline.tasks.append(task)
 
         # report resource
-        for report in getattr(scenario, 'reports'):
+        for report in scenario_reports:
             for task in report.get_tasks():
-                task = fetch_executes(getattr(scenario, 'executes'), getattr(scenario, 'hosts'), task)
+                # fetch & set hosts and executes for the given reports task
+                task = fetch_executes(scenario_executes, scenario_hosts, task)
                 if task['task'].__task_name__ == self.name:
                     pipeline.tasks.append(task)
 

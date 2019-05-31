@@ -5,10 +5,6 @@ description: descriptor
 credentials:
   - name: provider
 
-include:
-  - ' '
-  - malformed_included_file.yml
-
 provision:
 
 orchestrate:

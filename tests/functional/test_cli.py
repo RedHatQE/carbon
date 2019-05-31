@@ -31,6 +31,7 @@ import yaml
 from carbon import Carbon
 from carbon.cli import print_header, carbon
 from click.testing import CliRunner
+from carbon.exceptions import CarbonError
 
 
 @pytest.fixture(scope='class')
@@ -95,3 +96,24 @@ class TestCli(object):
             carbon, ['run', '-s', '../assets/descriptor.yml', '-d', '/tmp']
         )
         assert 'Error loading updated scenario data!' in results.output
+
+    @staticmethod
+    @mock.patch.object(yaml, 'safe_load')
+    def test_invalid_run_malformed_include(mock_method, runner):
+        mock_method.side_effect = CarbonError('Error loading updated included scenario data!')
+        results = runner.invoke(
+            carbon, ['run', '-s', '../assets/descriptor.yml']
+        )
+        assert 'Error loading updated included scenario data!' in results.output
+
+    @staticmethod
+    def test_empty_include_section(runner):
+        results = runner.invoke(carbon, ['run', '-s', '../assets/descriptor.yml'])
+        assert 'Included File is invalid or Include section is empty .You have to provide valid scenario files ' \
+               'to be included.' in results.output
+
+    @staticmethod
+    def test_invalid_include_section(runner):
+        results = runner.invoke(carbon, ['run', '-s', '../assets/wrong_include_descriptor.yml'])
+        assert 'Included File is invalid or Include section is empty .You have to provide valid scenario files ' \
+               'to be included.' in results.output
