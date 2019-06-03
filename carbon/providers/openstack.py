@@ -72,7 +72,7 @@ class OpenstackProvider(CloudProvider):
             ('flavor_include', [str]),
             ('flavor_ram', [str]),
             ('floating_ips', [list]),
-            ('image_include', [str]),
+            ('image_exclude', [str]),
             ('interface', [str]),
             ('additional_volumes', [list]),
             ('tx_id', [int]),

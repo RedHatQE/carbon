@@ -1358,6 +1358,8 @@ class LinchpinResourceBuilder(object):
         if rs.get('ssh_key_file', None):
             key_dir = os.path.dirname(rs.get('ssh_key_file')[0])
             files = [os.path.basename(f) for f in rs.get('ssh_key_file')]
+            if os.path.dirname(key_dir) == '.':
+                key_dir = os.path.abspath(key_dir)
             rd['ssh_keys_path'] = key_dir
             rs['ssh_key_file'] = files
 
@@ -1415,12 +1417,17 @@ class LinchpinResourceBuilder(object):
             if k == 'whiteboard':
                 continue
             for item in provider.comm_opt_params:
+                if k == item[0] and k == 'kickstart':
+                    recipe_set[k] = os.path.abspath(os.path.join(host_params['workspace'], v))
+                    continue
                 if k == item[0]:
                     recipe_set[k] = v
 
         # Next add the linchpin common params that differ in name or type
         for k, v in params.items():
             if k == 'ssh_key':
+                continue
+            if k == 'job_group':
                 continue
             for lp, lt in provider.linchpin_comm_opt_params:
                 if k == lp:
@@ -1464,14 +1471,14 @@ class LinchpinResourceBuilder(object):
                                 hr = []
                                 for op in cls._bkr_op_list:
                                     for h in v:
-                                        if op in h:
-                                            hro, hrv = h.split(op)
-                                            if hro in ['force', 'rawxml']:
-                                                hr.append({hro: hrv})
+                                        if op in h.strip():
+                                            hrt, hrv = h.strip().split(op)
+                                            if hrt.strip() in ['force', 'rawxml']:
+                                                hr.append({hrt.strip(): hrv.strip()})
                                             else:
-                                                hr.append(dict(tag=hro,
+                                                hr.append(dict(tag=hrt.strip(),
                                                                op=op,
-                                                               value=hrv))
+                                                               value=hrv.strip()))
                                 recipe_set[lp] = hr
                             else:
                                 recipe_set[lp] = v

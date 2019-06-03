@@ -534,6 +534,19 @@ class TestHostResource(object):
         assert 'You cannot set the role after host class is instantiated.' in \
                ex.value.args
 
+    def test_group_property(self, default_host_params, config):
+        params = self.__get_params_copy__(default_host_params)
+        params.pop('role')
+        params.update(dict(groups=['group1']))
+        host = Host(name='host01', parameters=params, config=config)
+        assert host.groups[-1] == 'group1'
+
+    def test_group_setter(self, host):
+        with pytest.raises(AttributeError) as ex:
+            host.groups = 'test'
+        assert 'You cannot set the groups after host class is instantiated.' in \
+               ex.value.args
+
     def test_build_profile_uc01(self, host):
         assert isinstance(host.profile(), dict)
 
@@ -577,10 +590,3 @@ class TestHostResource(object):
         params['provisioner'] = 'null'
         with pytest.raises(SystemExit):
             Host(name='host01', parameters=params, config=feature_toggle_config)
-
-    def test_group_property(self, default_host_params, config):
-        params = self.__get_params_copy__(default_host_params)
-        params.pop('role')
-        params.update(dict(groups=['group1']))
-        host = Host(name='host01', parameters=params, config=config)
-        assert host.groups[-1] == 'group1'

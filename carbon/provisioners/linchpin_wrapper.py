@@ -153,6 +153,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             host_groups = getattr(self.host, 'groups')
 
         pindict['carbon']['layout']['inventory_layout']['hosts']['node']['host_groups'].extend(host_groups)
+        self.logger.debug('Generated PinFile:\n%s' % yaml.dump(pindict))
         self.pinfile = pindict
 
         code, results = self.linchpin_api.do_validation(self.pinfile)
@@ -160,8 +161,6 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             self.logger.error('linchpin topology rc: %s' % code)
             self.logger.error(results)
             raise CarbonProvisionerError('Linchpin failed to validate pinfile.')
-
-        self.logger.debug('Generated PinFile:\n%s' % yaml.dump(pindict))
 
     def _create_inventory(self, results):
         inv = self.linchpin_api.generate_inventory(
