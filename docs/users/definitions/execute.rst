@@ -148,6 +148,23 @@ performing the execution. Please see the following example for more details:
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 59-65
 
+Playbook Tests
+~~~~~~~~~~~~~~
+
+Using the playbook parameter to execute tests works like how playbooks
+are executed in the Orchestration phase. The only thing not supported is the
+ability to download roles using the *ansible_galaxy_option*. The following
+is an example of how run test playbooks.
+
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
+    :lines: 218-232
+
+
+.. note::
+   Unlike the shell or script parameter the test playbook executes locally
+   from where carbon is running. Which means the test playbook must be in
+   the workspace.
+
 Return Code for Test Execution
 ------------------------------
 

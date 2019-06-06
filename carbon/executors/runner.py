@@ -66,7 +66,7 @@ class RunnerExecutor(CarbonExecutor):
     ]
 
     user_run_vals = ["become", "become_method", "become_user", "remote_user",
-                     "connection", "forks", "tags"]
+                     "connection", "forks", "tags", 'skip_tags']
 
     def __init__(self, package):
         """Constructor.
@@ -459,7 +459,7 @@ class RunnerExecutor(CarbonExecutor):
 
             # run playbook
             results = self.ans_controller.run_playbook(
-                playbook,
+                playbook['name'],
                 logger=self.logger,
                 extra_vars=self.ans_extra_vars,
                 run_options=run_options,
