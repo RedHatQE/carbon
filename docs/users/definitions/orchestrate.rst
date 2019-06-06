@@ -81,7 +81,25 @@ format.
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
     :lines: 25-29
 
------
+Re-running Tasks and Status Code
+-------------------------------
+
+You may notice in your results.yml that each orchestrate block has a new parameter
+
+.. code-block:: yaml
+
+    status: 0
+
+When carbon runs any of the defined orchestration tasks successfully a status code of 0
+will be set. If an orchestration task fails, carbon will set the status to 1. The next time
+you re-run the Orchestration task carbon will check for any orchestration tasks with a failed
+status and start the orchestration process from there.
+
+This is useful when you have a long configuration process and you don't want to start over
+all the way from the beginning. If at some point you would rather have the orchestration process
+start from the beginning, you can modify the status code back 0.
+
+----
 
 Since carbons development model is plug and play. This means different
 orchestrator's could be used to execute configuration tasks declared. For the

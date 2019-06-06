@@ -1,3 +1,61 @@
+Version 1.2.0 (2019-06-06)
+--------------------------
+New Features
+~~~~~~~~~~~~
+
+Support for Linchpin (CID-3977).
+
+ * Can create and delete OpenStack instances. All parameters
+   except count, ca, cacert are supported.
+
+ * Can reserve and unreserve Beaker machines. All parameters
+   except count are supported.
+
+Enchancements
+~~~~~~~~~~~~~
+
+ * Orchestrate has a status parameter that is used to determine
+   whether to re-run the orchestration process from a failed task or
+   from the very beginning. (CID-3535)
+
+ * The results.yml file that carbon generates at the end of a run
+   will now be ordered to match the original input scenario.yml. (CID-3993)
+
+
+Bug Fixes
+~~~~~~~~~
+
+ * The role directive in Provision was confusing. Added a directive
+   called groups to make things clearer. The role directive is still backwards
+   compatible. (CID-4249)
+
+ * Setting the log_level in the carbon.cfg was not being honored due to a hard
+   coded value (CID-4250)
+
+ * The playbook directive in Execute was not properly passing the playbook to
+   ansible causing failures. (CID-4253)
+
+ * When using JSONPath expression in the Execute command directive, carbon was
+   mistakenly processing like its data pass-through meta characters. (CID-4293)
+
+ * Due to some dependency issues with Linchpin and Ansible. Pinned the Ansible
+   version to 2.7.9 until the Linchpin bug with Ansible 2.8 is resolved. Added and
+   pinned urllib3 to the install requirements. (CID-4304)
+
+
+Documentation
+~~~~~~~~~~~~~
+  * Added the 'key_value' to the Provision bkr-client provisioner parameters table. (CID-4085)
+
+  * Added to the installation page the requirement of pip to be 18.1 or higher to
+    install carbon 1.1.+ (CID-4273)
+
+  * Updated the Contacts page with the latest relevant information.
+
+  * Updated the FAQ with information on how and when to know you can use Linchpin
+    as a provisioner in your scenario.
+
+
 Version 1.1.1 (2019-05-15)
 --------------------------
 

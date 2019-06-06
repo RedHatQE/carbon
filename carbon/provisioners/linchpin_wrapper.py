@@ -51,7 +51,8 @@ class Logger(object):
         sys.stdout = self
 
     def __del__(self):
-        sys.stdout = self.stdout
+        # sys.stdout = self.stdout
+        pass
 
     def write(self, message):
         self.logger.info(message)

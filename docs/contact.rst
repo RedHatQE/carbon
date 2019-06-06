@@ -4,12 +4,15 @@ Contacts
 The Carbon Tool
 ---------------
 
-Framework updates
-~~~~~~~~~~~~~~~~~
+Framework Community
+~~~~~~~~~~~~~~~~~~~
 
-Information on framework updates can be found on the ci-infra-list.
-Please subscribe `here <http://post-office.corp.redhat.com/mailman/listinfo/ci-infra-list>`_.
+Information on framework updates can be found on the carbon-watchers list. Updates will also be on the ci-infra-list.
+If you have any questions, need help developing your scenarios, or how best to use carbon to fit your use case, we encourage
+you to reach out to the carbon-watchers list as we have a diverse community of users that can offer insight on some of these
+questions.
 
+Please subscribe `here <http://post-office.corp.redhat.com/mailman/listinfo/carbon-watchers>`_.
 
 Logging Issues with Carbon
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -24,32 +27,21 @@ options in `JIRA <https://projects.engineering.redhat.com/secure/CreateIssue!def
   * Project = CIDER(CID)
   * Component/s = Carbon
 
+When filing the jira take a look out our `Support and Release policy <Support+and+Release+Policy>`__. It provides some help information on what information
+to provide in the ticket and an SLA.
 
-Carbon Scenario Creation Consulting
------------------------------------
+Authors and Maintainers
+-----------------------
 
-If you have any issues, related to scenario creation, please contact one
-of the following people:
-
-.. literalinclude:: SCENARIO_CONSULTANTS
-
-IRC
-~~~
-Most of the scenario consultants can be found on the following channels.
-Feel free to come hang out there. Channels can be found on the following
-network (irc.lab.bos.redhat.com).
-
-.. code-block:: bash
-
-       - #PIT
-
-
-Authors
--------
-
-Please feel free to reach out to any of the developers of carbon if you have
+Please feel free to reach out to any of the developers of carbon, particularly the CCIT maintainers, if you have
 any questions.
 
+Creators
+~~~~~~~~
 .. literalinclude:: ../AUTHORS
+    :lines: 1-4
 
-
+Maintainers
+~~~~~~~~~~~
+.. literalinclude:: ../AUTHORS
+    :lines: 6-7
