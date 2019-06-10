@@ -28,6 +28,7 @@
 """
 
 from os import path, environ, pardir, makedirs
+import sys
 import errno
 import yaml
 try:
@@ -36,8 +37,28 @@ try:
 except ImportError:
     pass
 from carbon.core import CarbonProvisioner
-from carbon.exceptions import CarbonProvisionerError
+from carbon.exceptions import CarbonProvisionerError, CarbonProviderError
+from ..helpers import LinchpinResourceBuilder, lookup_ip_of_hostname
 import json
+
+
+class Logger(object):
+    # redirect stdout (and thus print() function) to logfile *and* terminal
+    # http://stackoverflow.com/a/616645
+    def __init__(self, logger):
+        self.stdout = sys.stdout
+        self.logger = logger
+        sys.stdout = self
+
+    def __del__(self):
+        # sys.stdout = self.stdout
+        pass
+
+    def write(self, message):
+        self.logger.info(message)
+
+    def flush(self):
+        pass
 
 
 class LinchpinWrapperProvisioner(CarbonProvisioner):
@@ -50,6 +71,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self.linchpin_api.setup_rundb()
         self._create_pinfile()
         self._load_credentials()
+        self._create_inv = False
 
     def _init_context(self):
         context = LinchpinContext()
@@ -111,72 +133,35 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         tpath = path.abspath(path.join(path.dirname(__file__), pardir, "files",
                                        "PinFile.yml"))
         with open(tpath, 'r') as template:
-            pindict = yaml.load(template)
-        if self.provider == 'openstack':
-            resource_def = {
-                'role': 'os_server',
-                'count': 1,
-                'verify': 'false',
-                'name': getattr(self.host, 'name', 'carbon-name'),
-            }
-            for key, value in self.provider_params.items():
-                if key in ['flavor', 'image', 'keypair', 'networks']:
-                    resource_def[key] = value
-                elif key is 'floating_ip_pool':
-                    resource_def['fip_pool'] = value
-            resource_grp = {
-                'resource_group_name': 'carbon',
-                'resource_group_type': 'openstack',
-                'resource_definitions': [resource_def]
-            }
-            pindict['carbon']['topology']['resource_groups'] = [resource_grp]
-            pindict['carbon']['layout']['inventory_layout']['vars'].update(
-                getattr(self.host, 'ansible_params'))
-            self.pinfile = pindict
-        elif self.provider == 'beaker':
-            resource_def = {
-                'role': 'bkr_server'
-            }
-            recipeset = {}
-            for key, value in self.provider_params.items():
-                if key in ['distro', 'arch', 'variant', 'name',
-                           'taskparam', 'priority']:
-                    recipeset[key] = value
-                elif key == 'whiteboard':
-                    resource_def['whiteboard'] = value
-                elif key == 'jobgroup':
-                    resource_def['job_group'] = value
-                elif key == 'host_requires_options':
-                    hostrequires = []
-                    for hq in value:
-                        hostrequires.append({
-                            "tag": hq.split(" ")[0],
-                            "op": hq.split(" ")[1],
-                            "value": hq.split(" ")[2]
-                        })
-                    recipeset['hostrequires'] = hostrequires
-                elif key == 'tags':
-                    if value.size > 1:
-                        raise CarbonProviderError('Only one tag == supported')
-                    else:
-                        recipeset['tags'] = value[0]
-                elif key == 'node_id':
-                    recipeset['ids'] = value
-                elif key == 'ssh_key':
-                    recipeset['ssh_key'] = [value]
-            resource_def['recipesets'] = [recipeset]
-            resource_grp = {
-                'resource_group_name': 'carbon',
-                'resource_group_type': 'beaker',
-                'resource_definitions': [resource_def]
-            }
-            pindict['carbon']['topology']['resource_groups'] = [resource_grp]
-            pindict['carbon']['layout']['inventory_layout']['vars'].update(
-                getattr(self.host, 'ansible_params'))
-            self.pinfile = pindict
-        else:
-            raise CarbonProviderError("Unknown provider %s" % self.provider)
-        self.logger.info('Generated PinFile:\n%s' % yaml.dump(pindict))
+            pindict = yaml.safe_load(template)
+
+        host_profile = self.host.profile()
+        resource_def = LinchpinResourceBuilder.build_linchpin_resource_definition(
+            getattr(self.host, 'provider'), host_profile)
+
+        resource_grp = {
+            'resource_group_name': 'carbon',
+            'resource_group_type': self.provider,
+            'resource_definitions': [resource_def]
+        }
+        pindict['carbon']['topology']['resource_groups'] = [resource_grp]
+        pindict['carbon']['layout']['inventory_layout']['vars'].update(
+            getattr(self.host, 'ansible_params'))
+        pindict['carbon']['layout']['inventory_layout']['vars']['hostname'] = getattr(self.host, 'name')
+
+        host_groups = getattr(self.host, 'role')
+        if not host_groups:
+            host_groups = getattr(self.host, 'groups')
+
+        pindict['carbon']['layout']['inventory_layout']['hosts']['node']['host_groups'].extend(host_groups)
+        self.logger.debug('Generated PinFile:\n%s' % yaml.dump(pindict))
+        self.pinfile = pindict
+
+        code, results = self.linchpin_api.do_validation(self.pinfile)
+        if code != 0:
+            self.logger.error('linchpin topology rc: %s' % code)
+            self.logger.error(results)
+            raise CarbonProvisionerError('Linchpin failed to validate pinfile.')
 
     def _create_inventory(self, results):
         inv = self.linchpin_api.generate_inventory(
@@ -187,35 +172,44 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self.logger.debug(inv)
         inv_path = path.join(self.data_folder, 'inventory')
         try:
-            makedirs(path.dirname(inv_path))
+            makedirs(inv_path)
         except OSError as exc:
             if exc.errno == errno.EEXIST and path.isdir(path.dirname(inv_path)):
                 pass
             else:
                 raise
-        with open(inv_path, 'w+') as inv_file:
+        full_path = path.join(inv_path, 'carbon-%s.inventory' % (getattr(self.host, 'name')))
+        with open(full_path, 'w+') as inv_file:
             inv_file.write(inv)
 
     def _create(self):
+        Log = Logger(logger=self.logger)
         host = getattr(self.host, 'name', 'carbon-name')
         code, results = self.linchpin_api.do_action(self.pinfile, action='up')
+        del Log
         self.logger.debug(json.dumps(results))
         if code:
             raise CarbonProvisionerError("Failed to provision host %s" % host)
         self.logger.info('Successfully created host %s' % host)
+        getattr(self.host, 'provider_params')['tx_id'] = list(results)[0]
         results = self.linchpin_api.get_run_data(
             list(results)[0], ('inputs', 'outputs'))
-        self._create_inventory(results)
+        # For now keeping this with carbon.
+        if self._create_inv:
+            self._create_inventory(results)
         resource = results['carbon']['outputs']['resources']
         if self.provider == 'openstack':
             os_server = resource[0]['servers'][0]
             _ip = os_server['interface_ip']
             _id = os_server['id']
+            getattr(self.host, 'provider_params')['hostname'] \
+                = os_server['name']
         if self.provider == 'beaker':
             bkr_server = resource[0]
-            _ip = bkr_server['system']
+            _ip = lookup_ip_of_hostname(bkr_server['system'])
             _id = bkr_server['id']
             getattr(self.host, 'provider_params')['job_url'] = bkr_server['url']
+            getattr(self.host, 'provider_params')['hostname'] = bkr_server['system'].split('.')[0]
 
         return _ip, _id
 
@@ -237,6 +231,15 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         Teardown the host supplied.
         """
         host = getattr(self.host, 'name')
+        try:
+            txid = getattr(self.host, 'provider_params')['tx_id']
+        except KeyError:
+            txid = None
+            self.logger.warning('No tx_id found for Host: %s, this could mean it was not successfully'
+                                ' provisioned. Attempting to perform the destroy without a tx_id'
+                                ' but this might not work, so you may need to manually cleanup resources.' % host)
         self.logger.info('Delete host %s in %s.' % (host, self.provider))
-        self.linchpin_api.do_action(self.pinfile, action='destroy')
+        Log = Logger(logger=self.logger)
+        self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=txid)
+        del Log
         self.logger.info('Successfully deleted host %s.' % host)

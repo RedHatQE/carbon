@@ -35,6 +35,7 @@ from ..helpers import get_provisioners_list, filter_host_name
 from ..helpers import get_provisioners_plugins_list, get_provisioner_plugin_class, get_default_provisioner_plugin
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from .._compat import string_types
+from collections import OrderedDict
 
 
 class Host(CarbonResource):
@@ -97,13 +98,23 @@ class Host(CarbonResource):
         # set description attribute
         self._description = parameters.pop('description', None)
         try:
-            # convert the roles into list format if roles defined as str format
-            self._role = parameters.pop('role')
-            if isinstance(self._role, string_types):
-                self._role = self._role.replace(' ', '').split(',')
+            # convert the groups into list format if groups defined as str format
+            self._groups = parameters.pop('groups')
+            if isinstance(self._groups, string_types):
+                self._groups = self._groups.replace(' ', '').split(',')
+            self._role = None
         except KeyError:
-            self.logger.error('A role must be set for host %s.' % self.name)
-            sys.exit(1)
+            try:
+                # convert the roles into list format if roles defined as str format
+                self._role = parameters.pop('role')
+                if isinstance(self._role, string_types):
+                    self._role = self._role.replace(' ', '').split(',')
+                self._groups = None
+                self.logger.warning('A role has been found. This parameter has been deprecated'
+                                    ' it is recommend to change over to groups.')
+            except KeyError:
+                self.logger.error('A group or a role must be set for host %s.' % self.name)
+                sys.exit(1)
 
         # set metadata attribute (data pass-through)
         self._metadata = parameters.pop('metadata', {})
@@ -341,46 +352,60 @@ class Host(CarbonResource):
         raise AttributeError('You cannot set the role after host class is '
                              'instantiated.')
 
+    @property
+    def groups(self):
+        """Groups property.
+
+        :return: groups the host belongs to.
+        :rtype: str
+        """
+        return self._groups
+
+    @groups.setter
+    def groups(self, value):
+        """Set groups property."""
+        raise AttributeError('You cannot set the groups after host class is '
+                             'instantiated.')
+
     def profile(self):
         """Builds a profile for the host resource.
 
         :return: the host profile
-        :rtype: dict
+        :rtype: OrderedDict
         """
-        # initialize profile with default parameters
-        profile = {
-            'name': self.name,
-            'description': self.description,
-            'ansible_params': self.ansible_params,
-            'metadata': self.metadata,
-            'workspace': self.workspace,
-            'data_folder': self.data_folder
-        }
+        profile = OrderedDict()
+        profile['name'] = self.name
+        profile['description'] = self.description
 
         # set the hosts's roles
-        if all(isinstance(item, string_types) for item in self.role):
-            profile.update(role=[role for role in self.role])
+        if self.role:
+            if all(isinstance(item, string_types) for item in self.role):
+                profile.update(role=[role for role in self.role])
+        else:
+            if all(isinstance(item, string_types) for item in self.groups):
+                profile.update(groups=[group for group in self.groups])
 
         try:
             if getattr(self, 'provisioner_plugin')is not None:
-
-                profile.update({
-                    'provider': self.provider_params,
-                    'provisioner': getattr(
-                        self.provisioner_plugin, '__plugin_name__')
-                })
+                profile.update({'provisioner': getattr(
+                        self.provisioner_plugin, '__plugin_name__')})
+                profile.update({'provider': self.provider_params})
             else:
-                profile.update({
-                    'provider': self.provider_params,
-                    'provisioner': getattr(
-                        self.provisioner, '__provisioner_name__')
-                })
+                profile.update({'provisioner': getattr(self.provisioner,
+                                                       '__provisioner_name__')})
+                profile.update({'provider': self.provider_params})
+
         except AttributeError:
             self.logger.debug('Host is static, no need to profile provider '
                               'facts.')
         finally:
             if self.ip_address:
                 profile.update({'ip_address': self.ip_address})
+
+        profile['ansible_params'] = self.ansible_params
+        profile['metadata'] = self.metadata
+        profile['workspace'] = self.workspace
+        profile['data_folder'] = self.data_folder
 
         return profile
 

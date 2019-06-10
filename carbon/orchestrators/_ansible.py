@@ -274,6 +274,15 @@ class Inventory(LoggerMixin):
                         config.add_section(host_section)
                         config.set(host_section, host.name)
 
+            if host.groups:
+                for group in host.groups:
+                    host_section = group + ":children"
+                    if host_section in config.sections():
+                        config.set(host_section, host.name)
+                    else:
+                        config.add_section(host_section)
+                        config.set(host_section, host.name)
+
             # create section(s)
             for item in [section, section_vars]:
                 config.add_section(item)
@@ -397,6 +406,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         self.all_hosts = getattr(package, 'all_hosts')
         self.workspace = self.config['WORKSPACE']
         self._action = os.path.join(self.workspace, getattr(package, 'name'))
+
+        # saving package to set status later
+        self.package = package
 
         # create inventory object for create/delete inventory file
         self.inv = Inventory(
@@ -602,6 +614,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
                 logger=self.logger
             )
 
+        setattr(self.package, 'status', 0)
         self.logger.info('Finished action: %s execution.' % self.action)
         self.logger.info('Status => %s.' % results[0])
 
@@ -613,6 +626,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
         # raise an exception if the ansible action failed
         if results[0] != 0:
+            setattr(self.package, 'status', 1)
             raise CarbonOrchestratorError(
                 'Ansible action did not return a valid return code!'
             )

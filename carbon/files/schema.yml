@@ -20,13 +20,26 @@ mapping:
     sequence:
       - type: map
         allowempty: True
+        matching-rule: any
         mapping:
           name:
             required: True
             type: str
           description:
             type: str
-          role:
+          provisioner:
+            type: str
+          provider:
+            allowempty: True
+            required: True
+            type: map
+          ansible_params:
+            type: map
+            allowempty: True
+          metadata:
+            allowempty: True
+            type: map
+          regex;(role|groups):
             required: True
             type: any
             func: type_str_list

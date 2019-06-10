@@ -32,7 +32,6 @@ import os.path
 import textwrap
 
 from ruamel.yaml import YAML
-
 from ..core import CarbonExecutor
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError
 from ..helpers import DataInjector, get_ans_verbosity
@@ -67,7 +66,7 @@ class RunnerExecutor(CarbonExecutor):
     ]
 
     user_run_vals = ["become", "become_method", "become_user", "remote_user",
-                     "connection", "forks", "tags"]
+                     "connection", "forks", "tags", 'skip_tags']
 
     def __init__(self, package):
         """Constructor.
@@ -193,7 +192,6 @@ class RunnerExecutor(CarbonExecutor):
         """
 
         extra_vars = {}
-
         if self.options and 'extra_vars' in self.options and self.options['extra_vars']:
             extra_vars.update(self.options['extra_vars'])
 
@@ -461,7 +459,7 @@ class RunnerExecutor(CarbonExecutor):
 
             # run playbook
             results = self.ans_controller.run_playbook(
-                playbook,
+                playbook['name'],
                 logger=self.logger,
                 extra_vars=self.ans_extra_vars,
                 run_options=run_options,

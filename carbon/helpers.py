@@ -39,13 +39,17 @@ import time
 import warnings
 from logging import getLogger
 import fnmatch
+import stat
+import socket
 
 import cachetclient.cachet as cachet
 import jinja2
 import requests
 import urllib3
-import yaml
-from glob import glob
+from paramiko import RSAKey
+from ruamel.yaml.comments import CommentedMap as OrderedDict
+from collections import OrderedDict
+from ruamel.yaml import YAML
 from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
@@ -58,6 +62,19 @@ LOG = getLogger(__name__)
 
 # sentinel
 _missing = object()
+
+
+def get_actions_failed_status(action_list):
+    """
+    Go through the action_list and return actions with failed status.
+    If no action with failed status is found the original list is returned
+    :return: List of actions based on its status
+    """
+    for index, action_item in enumerate(action_list):
+        if action_item.status == 1:
+            new_list = action_list[index:]
+            return new_list
+    return action_list
 
 
 def get_core_tasks_classes():
@@ -501,6 +518,10 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
     :type cfg_parser: bool
     :return: Data that was read from a file
     """
+    # to maintain the sequence in the results.yml file with ruamel
+    yaml = YAML()
+    yaml.default_flow_style = False
+    yaml.Representer.add_representer(OrderedDict, yaml.Representer.represent_dict)
 
     # Determine file extension
     file_ext = os.path.splitext(file_path)[-1]
@@ -536,7 +557,7 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
         elif file_ext in ['.yaml', '.yml']:
             # yaml
             with open(file_path, mode) as f_raw:
-                yaml.safe_dump(content, f_raw, default_flow_style=False)
+                yaml.dump(content, f_raw)
         else:
             # text
             with open(file_path, mode) as f_raw:
@@ -690,9 +711,14 @@ def fetch_hosts(hosts, task, all_hosts=True):
                 continue
             if host.name in task[_type].hosts:
                 _hosts.append(host)
-            for r in host.role:
-                if r in task[_type].hosts:
-                    _hosts.append(host)
+            if host.role:
+                for r in host.role:
+                    if r in task[_type].hosts:
+                        _hosts.append(host)
+            else:
+                for g in host.groups:
+                    if g in task[_type].hosts:
+                        _hosts.append(host)
     else:
         for host in hosts:
             if all_hosts:
@@ -960,6 +986,9 @@ class DataInjector(object):
         # { host01.metadata.k1 }
         self.regexp = r"\{(.*?)\}"
 
+        # regex to check jsonpath strings
+        self.jsonpath_chk_str = r"^range|^[|.|$|@]"
+
     def host_exist(self, node):
         """Determine if the host defined in the string formatted var is valid.
 
@@ -985,72 +1014,77 @@ class DataInjector(object):
         :return: updated command
         :rtype: str
         """
+
         variables = list(map(str.strip, re.findall(self.regexp, command)))
 
         if not variables.__len__():
             return command
 
         for variable in variables:
-            value = None
-            _vars = variable.split('.')
-            node = _vars.pop(0)
+            if re.match(self.jsonpath_chk_str, variable):
+                LOG.debug("JSONPath format was identified in the command %s." % variable)
+                continue
+            else:
+                value = None
+                _vars = variable.split('.')
+                node = _vars.pop(0)
 
-            # verify variable has a valid host set
-            host = self.host_exist(node)
+                # verify variable has a valid host set
+                host = self.host_exist(node)
 
-            for index, item in enumerate(_vars):
-                try:
-                    # is the item intended to be a position in a list, if so
-                    # get the key and position
-                    key = item.split('[')[0]
-                    pos = int(item.split('[')[1].split(']')[0])
-
-                    if value:
-                        # get the latest value from the dictionary
-                        value = value[key][pos]
-                    else:
-                        # get latest value from host
-                        if hasattr(host, key) and index <= 0:
-                            value = getattr(host, key)[pos]
-                            if isinstance(value, str):
-                                break
-
-                    # is the value a dict, if so keep going!
-                    if isinstance(value, dict):
-                        continue
-                except IndexError:
-                    # item is not intended to be a position in a list
-
-                    # check if the item is an attribute of the host
-                    if hasattr(host, item) and index <= 0:
-                        value = getattr(host, item)
-
-                        if isinstance(value, str):
-                            # we know the value has no further traversing to do
-                            break
-                        # value is either a list or dict, more traversing to do
-                        continue
-                    else:
-                        if value is None:
-                            raise AttributeError('%s not found in host %s!' %
-                                                 (item, getattr(host, 'name')))
-
-                    # check if the item's value is a dict and update the value
-                    # for further traversing to do
+                for index, item in enumerate(_vars):
                     try:
-                        if isinstance(value[item], dict):
-                            value = value[item]
+                        # is the item intended to be a position in a list, if so
+                        # get the key and position
+                        key = item.split('[')[0]
+                        pos = int(item.split('[')[1].split(']')[0])
+
+                        if value:
+                            # get the latest value from the dictionary
+                            value = value[key][pos]
+                        else:
+                            # get latest value from host
+                            if hasattr(host, key) and index <= 0:
+                                value = getattr(host, key)[pos]
+                                if isinstance(value, str):
+                                    break
+
+                        # is the value a dict, if so keep going!
+                        if isinstance(value, dict):
                             continue
+                    except IndexError:
+                        # item is not intended to be a position in a list
+
+                        # check if the item is an attribute of the host
+                        if hasattr(host, item) and index <= 0:
+                            value = getattr(host, item)
+
+                            if isinstance(value, str):
+                                # we know the value has no further traversing to do
+                                break
+                            # value is either a list or dict, more traversing to do
+                            continue
+                        else:
+                            if value is None:
+                                raise AttributeError('%s not found in host %s!' %
+                                                     (item, getattr(host, 'name')))
+
+                        # check if the item's value is a dict and update the value
+                        # for further traversing to do
+                        try:
+                            if isinstance(value[item], dict):
+                                value = value[item]
+                                continue
+                        except KeyError:
+                            raise CarbonError('%s not found in %s' % (item, value))
+
+                        # final check to get value no more traversing required
+                        if value:
+                            value = value[item]
                     except KeyError:
-                        raise CarbonError('%s not found in %s' % (item, value))
+                        raise CarbonError('Unable to locate item %s!' % item)
 
-                    # final check to get value no more traversing required
-                    if value:
-                        value = value[item]
-                except KeyError:
-                    raise CarbonError('Unable to locate item %s!' % item)
-
-            command = command.replace('{ %s }' % variable, value)
+                command = command.replace('{ %s }' % variable, value)
         return command
 
 
@@ -1075,6 +1109,23 @@ def is_host_localhost(host_ip):
 
 
 def find_artifacts_on_disk(data_folder, path_list, art_location_found=True):
+    """
+    Use by the Artifact Importer to search a list of paths in the data folder
+    to see if they exist. If the Execute collected artifacts, it will check the
+    current runs unique data_folder/artifacts and the .results/artifacts/ specifically
+    for the artifacts.
+
+    If the Execute did not collect artifacts, it will walk the data_folder and the .results
+    looking for the artifacts
+
+    :param data_folder: the unique data_folder id
+    :type data_folder: path as a string
+    :param path_list: The list of artifacts to look for
+    :type path_list: a list containing a string of paths
+    :param art_location_found: Whether the Executes object collected artifacts
+    :type art_location_found: Boolean
+    :return: a list of artifacts that were found to be imported.
+    """
 
     # iterate the list of paths to confirm they exist locally
     total_paths = len(path_list)
@@ -1117,7 +1168,16 @@ def check_path_exists(element, dir):
 
 
 def search_artifact_location_dict(art_locations, report_name):
-    # Search the artifact list in the execute object using the report name
+    """
+    Use by the Artifact Importer to search a list of collected
+    artifacts by the Execute phase using regex to search for the report name
+
+    :param art_locations: the list of files collected during Execute
+    :type art_locations: list of string paths
+    :param report_name: The artifact to look for
+    :type report_name: a string of an artifact name, can contain regex
+    :return: a list containing the artifacts found
+    """
     artifacts_path = []
 
     if art_locations:
@@ -1133,6 +1193,15 @@ def search_artifact_location_dict(art_locations, report_name):
 
 
 def walk_results_directory(dir):
+    """
+    Used to walk the data directory and .results directory
+    when the artifact in question is not in the list of
+    artifacts collected by Execute
+
+    :param dir: The data_folder dir
+    :type dir: string dir path
+    :return: a list containing all the paths from data_folder and .results
+    """
 
     data_dir_list = []
 
@@ -1153,7 +1222,405 @@ def walk_results_directory(dir):
 
 
 def build_artifact_regex_query(name):
+    """
+    Used to build a regex query from the artifact
+    name which could contain file matching pattern.
+
+    :param name: The artifact name
+    :type name: string
+    :return: a compiled regex query
+    """
 
     regex = fnmatch.translate(name)
     regquery = re.compile(regex)
     return regquery
+
+
+def ssh_key_file_generator(workspace, ssh_key_param):
+    """
+    A method to find if the ssh key value in a provider
+    param is a path to a public or private key. If it
+    is a public key, just return the key back. If it
+    is a private key, generate the public key from it
+    and return that back.
+
+    Right now this is only really used by Linchpin
+    in the LinchpinResourceBuilder class for Beaker
+    resources because they expect a public key and the
+    various ssh key options in their resource defintions
+
+    :param workspace: the Carbon workspace keys directory
+    :type workspace: path as a string
+    :param ssh_key_param: the ssh_key from the provider param
+    :type ssh_key_param: value of the ssh_key param either a path or an actual key
+    :return: a path to a public key
+    """
+
+    # setup absolute path for key
+    key = os.path.join(workspace, ssh_key_param)
+
+    # set permission of the key
+    try:
+        os.chmod(key, stat.S_IRUSR | stat.S_IWUSR)
+    except OSError as ex:
+        raise HelpersError(
+            'Error setting private key file permissions: %s' % ex
+        )
+
+    # Lets assume it's a private key file and try to load it
+    # and create a public key for it
+    try:
+        rsa_key = RSAKey.from_private_key_file(key)
+        # generate public key from private
+        public_key = os.path.join(
+            workspace, ssh_key_param + ".pub"
+        )
+        with open(public_key, 'w') as f:
+            f.write('%s %s\n' % (rsa_key.get_name(), rsa_key.get_base64()))
+        return public_key
+    except SSHException:
+        # Exception means the key file was invalid.
+        # Assume it's a public key and return it
+        return key
+
+
+def lookup_ip_of_hostname(host_name):
+    """
+    A method to find the ip of the hostname.
+    This is used by Linchpin specifically for Beaker
+    since 99% of the systems in beaker are by FQDN host name.
+    To make sure the IP address field in the carbon Host resource
+    is an actual IP address we need to look it up
+
+
+    :param host_name: the FQDN of the host
+    :type host_name: string
+    :return: return a string containing the ip
+    """
+    return socket.gethostbyname(host_name)
+
+
+class LinchpinResourceBuilder(object):
+
+    """
+    LinchpinResourceBuilder Class used by the Linchpin
+    provisioner plugin to be able to take the dictionary
+    parameters in a Carbon Provider and build a proper
+    Linchpin resource definition dictionary that can be used
+    to build the resource group
+
+    """
+
+    _bkr_op_list = ['like', '==', '!=', '<=', '>=', '=', '<', '>']
+
+    @classmethod
+    def build_linchpin_resource_definition(cls, provider, host_params):
+        """
+        main public method for Linchpin provisioner to interact with.
+
+        :param provider: the Carbon Provider to validate against
+        :type Object: Provider object
+        :param host_params: the Host Resource profile dictionary
+        :type dict: dictionary
+        :return: a Linchpin resource definition dictionary
+        """
+        provider_name = getattr(provider, '__provider_name__')
+        if provider_name == 'beaker':
+            return cls._build_beaker_resource_definition(provider, host_params)
+        elif provider_name == 'openstack':
+            return cls._build_openstack_resource_definition(provider, host_params)
+
+    @classmethod
+    def _build_beaker_resource_definition(cls, provider, host_params):
+        """
+        Private beaker specific method to build the resource definition. It
+        will call the sub methods to build the recipe set, the root
+        resource definition, and combine them.
+
+        :param provider: the Carbon Provider to validate against
+        :type Object: Provider object
+        :param host_params: the Host Resource profile dictionary
+        :type dict: dictionary
+        :return: a Linchpin resource definition dictionary
+        """
+
+        # Check that the provider params
+        cls._check_key_exist_in_provider(provider, host_params)
+
+        # Build the recipe set
+        rs = cls._build_beaker_recipe_set(provider, host_params)
+
+        # Build the resource def
+        rd = cls._build_beaker_resource(host_params)
+
+        # Update the recipe set and resource def with proper ssh params
+        # if ssh param is a key_file
+        if rs.get('ssh_key_file', None):
+            key_dir = os.path.dirname(rs.get('ssh_key_file')[0])
+            files = [os.path.basename(f) for f in rs.get('ssh_key_file')]
+            if os.path.dirname(key_dir) == '.':
+                key_dir = os.path.abspath(key_dir)
+            rd['ssh_keys_path'] = key_dir
+            rs['ssh_key_file'] = files
+
+        # Add the recipe set to resource def
+        rd.update(dict(recipesets=[rs]))
+
+        return rd
+
+    @classmethod
+    def _build_beaker_resource(cls, host_params):
+        """
+        Private beaker specific method to build the root resource definition.
+
+        :param host_params: the Host Resource profile dictionary
+        :return: a Linchpin resource definition dictionary
+        """
+
+        resource_def = dict(role='bkr_server')
+        params = host_params['provider']
+
+        # Add the resource def params
+        for k, v in params.items():
+            if k in ['whiteboard', 'max_attempts', 'attempt_wait_time',
+                     'cancel_message', 'job_group']:
+                resource_def[k] = v
+            if k == 'jobgroup':
+                resource_def['job_group'] = v
+
+        return resource_def
+
+    @classmethod
+    def _build_beaker_recipe_set(cls, provider, host_params):
+        """
+        Private beaker specific method to build the beaker
+        recipeset.
+
+        :param provider: the Carbon Provider to validate against
+        :type Object: Provider object
+        :param host_params: the Host Resource profile dictionary
+        :type dict: dictionary
+        :return: a Linchpin resource definition dictionary
+        """
+
+        recipe_set = dict(count=1)
+        params = host_params['provider']
+
+        # Build the recipe set with required parameters
+        for k, v in params.items():
+            for item in provider.req_params:
+                if k == item[0]:
+                    recipe_set[k] = v
+
+        # Next add the common parameters
+        for k, v in params.items():
+            if k == 'whiteboard':
+                continue
+            for item in provider.comm_opt_params:
+                if k == item[0] and k == 'kickstart':
+                    recipe_set[k] = os.path.abspath(os.path.join(host_params['workspace'], v))
+                    continue
+                if k == item[0]:
+                    recipe_set[k] = v
+
+        # Next add the linchpin common params that differ in name or type
+        for k, v in params.items():
+            if k == 'ssh_key':
+                continue
+            if k == 'job_group':
+                continue
+            for lp, lt in provider.linchpin_comm_opt_params:
+                if k == lp:
+                    recipe_set[k] = v
+
+        # Next add the carbon common params that differ in name or type
+        # but do the conversion to linchpin name or type.
+        for k, v in params.items():
+            for cp, ct in provider.carbon_comm_opt_params:
+                if k == cp and k == 'tag':
+                    for lp, lt in provider.linchpin_comm_opt_params:
+                        if lp == 'tags':
+                            if not isinstance(v, lt[0]):
+                                recipe_set[lp] = [v]
+                            else:
+                                recipe_set[lp] = v
+                if k == cp and k == 'kernel_options':
+                    for lp, lt in provider.linchpin_comm_opt_params:
+                        if lp == 'kernel_options':
+                            if not isinstance(v, lt[0]):
+                                ko = ""
+                                for i in v:
+                                    ko += "%s " % i
+                                recipe_set[lp] = ko.strip()
+                            else:
+                                recipe_set[lp] = v
+                if k == cp and k == 'kernel_post_options':
+                    for lp, lt in provider.linchpin_comm_opt_params:
+                        if lp == 'kernel_options_post':
+                            if not isinstance(v, lt[0]):
+                                kop = ""
+                                for i in v:
+                                    kop += "%s " % i
+                                recipe_set[lp] = kop.strip()
+                            else:
+                                recipe_set[lp] = v
+                if k == cp and k == 'host_requires_options':
+                    for lp, lt in provider.linchpin_comm_opt_params:
+                        if lp == 'hostrequires':
+                            if dict not in v:
+                                hr = []
+                                for op in cls._bkr_op_list:
+                                    for h in v:
+                                        if op in h.strip():
+                                            hrt, hrv = h.strip().split(op)
+                                            if hrt.strip() in ['force', 'rawxml']:
+                                                hr.append({hrt.strip(): hrv.strip()})
+                                            else:
+                                                hr.append(dict(tag=hrt.strip(),
+                                                               op=op,
+                                                               value=hrv.strip()))
+                                recipe_set[lp] = hr
+                            else:
+                                recipe_set[lp] = v
+                if k == cp and k == 'ksmeta':
+                    for lp, lt in provider.linchpin_comm_opt_params:
+                        if lp == 'ks_meta':
+                            if not isinstance(v, lt[0]):
+                                ksm = ""
+                                for i in v:
+                                    ksm += "%s " % i
+                                recipe_set[lp] = ksm.strip()
+                            else:
+                                recipe_set[lp] = v
+                if k == cp and k == 'key_values':
+                    for lp, lt in provider.linchpin_comm_opt_params:
+                        if lp == 'keyvalues':
+                            recipe_set[lp] = v
+
+                if k == cp and k == 'ssh_key':
+                    if not isinstance(v, str):
+                        keys = [key for key in v if 'ssh-rsa' in key]
+                        if len(keys) > 0:
+                            recipe_set[k] = keys
+                        key_files = [ssh_key_file_generator(host_params['workspace'], kf) for kf in v
+                                     if 'ssh-rsa' not in kf]
+                        if len(key_files) > 0:
+                            recipe_set['ssh_key_file'] = key_files
+                    else:
+                        recipe_set['ssh_key_file'] = [ssh_key_file_generator(host_params['workspace'], v)]
+
+        # Add only the linchpin specific optional parameters
+        for k, v in params.items():
+            for item in provider.linchpin_only_opt_params:
+                if item[0] == 'max_attempts':
+                    continue
+                if item[0] == 'attempt_wait_time':
+                    continue
+                if item[0] == 'cancel_message':
+                    continue
+                if item[0] == 'tx_id':
+                    continue
+                if k == item[0]:
+                    recipe_set[k] = v
+
+        # Add the node_id
+        if params.get('node_id', None):
+            if recipe_set.get('ids', None):
+                recipe_set['ids'].append(params.get('node_id'))
+            else:
+                recipe_set['ids'] = [params.get('node_id')]
+
+        # Finally, update the name with the real name
+        recipe_set['name'] = host_params['name']
+
+        return recipe_set
+
+    @classmethod
+    def _build_openstack_resource_definition(cls, provider, host_params):
+        """
+        Private openstack specific method to build the resource definition.
+
+        :param provider: the Carbon Provider to validate against
+        :type Object: Provider object
+        :param host_params: the Host Resource profile dictionary
+        :type dict: dictionary
+        :return: a Linchpin resource definition dictionary
+        """
+
+        resource_def = dict(role='os_server', count=1, verify='false')
+
+        params = host_params['provider']
+        creds = getattr(provider, 'credentials')
+
+        # Check that the provider params
+        cls._check_key_exist_in_provider(provider, host_params)
+
+        # Add any of the op cred params:
+        for key, value in creds.items():
+            for cp, ct in provider.opt_credential_params:
+                if key == cp and key == 'region':
+                    resource_def['region_name'] = value
+
+        # Add in all the required params
+        for key, value in params.items():
+            for cp, ct in provider.req_params:
+                if key == cp:
+                    resource_def[key] = value
+
+        # Next add in all the common params
+        for key, value in params.items():
+            for cp, ct in provider.comm_opt_params:
+                if key == cp:
+                    resource_def[key] = value
+
+        # Next add the common params that differ by    `
+        # name or by type
+        for key, value in params.items():
+            for cp, ct in provider.linchpin_comm_opt_params:
+                if key == cp:
+                    resource_def[key] = value
+
+        # Next add the linchpin only opt params
+        for key, value in params.items():
+            if key == 'tx_id':
+                continue
+            for cp, ct in provider.linchpin_only_opt_params:
+                if key == cp:
+                    resource_def[key] = value
+
+        # Finally, add the carbon specific common
+        # params that differ by name or type
+        for key, value in params.items():
+            for cp, ct in provider.carbon_comm_opt_params:
+                if key == cp and not resource_def.get('fip_pool'):
+                    resource_def['fip_pool'] = value
+
+        # Update name with real name of host resource
+        resource_def['name'] = host_params['name']
+
+        return resource_def
+
+    @classmethod
+    def _check_key_exist_in_provider(cls, provider, host_params):
+
+        provider_params = host_params['provider']
+
+        provider_keys = [k[0] for k in provider.req_params]
+        provider_keys.extend([k[0] for k in provider.comm_opt_params])
+        provider_keys.extend([k[0] for k in provider.linchpin_comm_opt_params])
+        provider_keys.extend([k[0] for k in provider.carbon_comm_opt_params])
+        provider_keys.extend([k[0] for k in provider.linchpin_only_opt_params])
+
+        # Openstack provider does not have carbon only options
+        try:
+            provider_keys.extend([k[0] for k in provider.carbon_only_opt_params])
+        except AttributeError:
+            pass
+
+        for key in provider_params:
+            if key in ['hostname', 'credential', 'node_id', 'job_url']:
+                continue
+            if key not in provider_keys:
+                LOG.warning('specified key: %s is not one supported by the carbon provider. '
+                            'It will be ignored. Please run carbon validate -s <scenario.yml> '
+                            'to make sure you have the proper parameters.' % key)

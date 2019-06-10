@@ -5,10 +5,9 @@ carbon:
     resource_groups: []
   layout:
     inventory_layout:
-      vars:
-        hostname: __IP__
+      vars: {}
       hosts:
         node:
           count: 1
           host_groups:
-            - carbon
+            - hosts

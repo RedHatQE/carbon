@@ -32,6 +32,7 @@ from ..helpers import get_executor_class, \
     get_executors_list
 from ..tasks import ExecuteTask, ValidateTask
 from ..exceptions import CarbonExecuteError
+from collections import OrderedDict
 
 
 class Execute(CarbonResource):
@@ -160,17 +161,12 @@ class Execute(CarbonResource):
         """Build a profile for the execute resource.
 
         :return: the execute profile
-        :rtype: dict
+        :rtype: OrderedDict
         """
-        # initialize the profile with executor properties
-        profile = getattr(self.executor, 'build_profile')(self)
-
-        # set additional execute properties
-        profile.update({
-            'name': self.name,
-            'description': self.description,
-            'executor': getattr(self.executor, '__executor_name__')
-        })
+        profile = OrderedDict()
+        profile.update({'name': self.name})
+        profile.update({'description': self.description})
+        profile.update({'executor': getattr(self.executor, '__executor_name__')})
 
         for item in getattr(self, '_fields'):
             if getattr(self, item, None):
@@ -181,6 +177,9 @@ class Execute(CarbonResource):
             profile.update(hosts=[host for host in self.hosts])
         else:
             profile.update(dict(hosts=[host.name for host in self.hosts]))
+
+        # update the profile with executor properties
+        profile.update(getattr(self.executor, 'build_profile')(self))
 
         if self.artifact_locations:
             profile.update({'artifact_locations': self.artifact_locations})

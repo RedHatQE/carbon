@@ -30,6 +30,7 @@ import os
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler, LoggerAdapter, Filter
 from time import time
+from collections import OrderedDict
 
 from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError, \
     CarbonProvisionerError, CarbonImporterError
@@ -741,6 +742,7 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
         """Constructor."""
         self._action = None
         self._hosts = None
+        self._status = 0
 
     def validate(self):
         raise NotImplementedError
@@ -773,6 +775,14 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
     @hosts.setter
     def hosts(self, value):
         raise AttributeError('Hosts cannot be set once the object is created.')
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, value):
+        self._status = value
 
     @classmethod
     def _mandatory_parameters_set(cls):
@@ -830,9 +840,9 @@ class CarbonOrchestrator(LoggerMixin, TimeMixin):
         :param action: action object
         :type action: object
         :return: dictionary with all orchestrator parameters
-        :rtype: dict
+        :rtype: OrderedDict
         """
-        profile = {}
+        profile = OrderedDict()
         for param in cls.get_all_parameters():
             profile.update({param: getattr(action, param, None)})
         return profile
@@ -943,9 +953,9 @@ class CarbonExecutor(LoggerMixin, TimeMixin):
         :param execute: execute object
         :type execute: object
         :return: dictionary with all executor parameters
-        :rtype: dict
+        :rtype: OrderedDict
         """
-        profile = {}
+        profile = OrderedDict()
         for param in cls.get_all_parameters():
             profile.update({param: getattr(execute, param, None)})
         return profile

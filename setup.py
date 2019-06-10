@@ -43,7 +43,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'ansible>=2.7.0',
+        'ansible==2.7.9',
         'apache-libcloud==2.2.0',
         'blaster>=0.1.8',
         'Click>=6.7',
@@ -53,12 +53,10 @@ setup(
         'ruamel.yaml>=0.15.64',
         'paramiko==2.4.2',
         'requests>=2.20.1',
+        'urllib3==1.24.3',
+	'linchpin[beaker]>=1.7.4.1;python_version<="2.7"',
         'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.1#egg=polar'
     ],
-    extras_require={
-        'linchpin': ['linchpin==1.7.3'],
-        'linchpin-bkr': ['linchpin[beaker]==1.7.3']
-    },
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

@@ -103,3 +103,19 @@ class TestDataInjector(object):
     def test_inject_uc10(self, data_injector):
         cmd = data_injector.inject('cmd')
         assert cmd == 'cmd'
+
+    def test_inject_jsonpath_support_uc1(self, data_injector):
+        cmd = data_injector.inject('cmd { .spec }')
+        assert cmd == 'cmd { .spec }'
+
+    def test_inject_jsonpath_support_uc2(self, data_injector):
+        cmd = data_injector.inject('cmd { $ }')
+        assert cmd == 'cmd { $ }'
+
+    def test_inject_jsonpath_support_uc3(self, data_injector):
+        cmd = data_injector.inject('cmd { @ }')
+        assert cmd == 'cmd { @ }'
+
+    def test_inject_jsonpath_support_uc4(self, data_injector):
+        cmd = data_injector.inject('cmd { range. }')
+        assert cmd == 'cmd { range. }'

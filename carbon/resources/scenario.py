@@ -26,8 +26,8 @@
 """
 import errno
 import os
-
 import yaml
+from collections import OrderedDict
 from pykwalify.core import Core
 from pykwalify.errors import CoreError, SchemaError
 
@@ -164,7 +164,7 @@ class Scenario(CarbonResource):
             raise ValueError('Resource must be of a valid Resource type.'
                              'Check the type of the given item: %s' % item)
 
-    def reload_resources(self, tasks):
+    def reload_resources(self, tasks, is_parallel=True):
         """Reload scenario resources.
 
         :param tasks: task data returned by blaster
@@ -172,16 +172,18 @@ class Scenario(CarbonResource):
         """
         count = 0
 
-        for task in tasks:
-            for key, value in task.items():
-                # Added report object in case we decide reporting
-                # should be done in parallel
-                if (isinstance(value, Host) or isinstance(value, Report)) and count <= 0:
-                    self.initialize_resource(value)
-                    self.add_resource(value)
-                    count += 1
-                elif (isinstance(value, Host) or isinstance(value, Report)) and count >= 1:
-                    self.add_resource(value)
+        if is_parallel:
+            for task in tasks:
+                for key, value in task.items():
+                    # Added report object in case we decide reporting
+                    # should be done in parallel
+                    if (isinstance(value, Host) or isinstance(value, Report)) and count <= 0:
+                        self.initialize_resource(value)
+                        self.add_resource(value)
+                        count += 1
+                    elif (isinstance(value, Host) or isinstance(value, Report)) and count >= 1:
+                        self.add_resource(value)
+        return
 
     @property
     def yaml_data(self):
@@ -326,17 +328,17 @@ class Scenario(CarbonResource):
         """Builds a profile which represents the scenario and its properties.
 
         :return: a dictionary representing the scenario
-        :rtype: dict
+        :rtype: OrderedDict
         """
-        profile = dict(
-            name=self.name,
-            description=self.description,
-            resource_check=self.resource_check,
-            provision=[host.profile() for host in self.hosts],
-            orchestrate=[action.profile() for action in self.actions],
-            execute=[execute.profile() for execute in self.executes],
-            report=[report.profile() for report in self.reports]
-        )
+        profile = OrderedDict()
+        profile['name'] = self.name
+        profile['description'] = self.description
+        profile['resource_check'] = self.resource_check
+        profile['provision'] = [host.profile() for host in self.hosts]
+        profile['orchestrate'] = [action.profile() for action in self.actions]
+        profile['execute'] = [execute.profile() for execute in self.executes]
+        profile['report'] = [report.profile() for report in self.reports]
+
         return profile
 
     def _construct_validate_task(self):

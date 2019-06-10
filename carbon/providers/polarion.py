@@ -28,6 +28,7 @@
 from ..core import ReportProvider
 from ..exceptions import CarbonError
 from string import Template
+from collections import OrderedDict
 
 
 class PolarionProvider(ReportProvider):
@@ -53,8 +54,8 @@ class PolarionProvider(ReportProvider):
         self.opt_params = [
             ('project_id', [str]),
             ('testcase_csv_file', [str]),
-            ('testsuite_properties', [dict]),
-            ('testcase_properties', [dict])
+            ('testsuite_properties', [OrderedDict, dict]),
+            ('testcase_properties', [OrderedDict, dict])
 
         ]
 
