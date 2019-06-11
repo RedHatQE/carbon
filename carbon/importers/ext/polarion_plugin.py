@@ -78,18 +78,19 @@ class PolarionImporterPlugin(ImporterPlugin):
         try:
             ts_props['polarion-project-id'] = params['project_id']
         except KeyError:
-            return json_props
+            self.logger.debug('Key "project_id" not specified')
 
         # Next check that any other testsuite properties specified
         try:
             ts_props.update(params['testsuite_properties'])
         except KeyError:
-            return json_props
+            self.logger.debug('Key "testsuite_properties" not specified')
 
         # Finally check if any testcase properties specified
         try:
             json_props = dict(properties=ts_props, casemap=params['testcase_properties'])
         except KeyError:
+            self.logger.debug('Key "testcase_properties" not specified')
             json_props = dict(properties=ts_props)
 
         self.logger.debug('Polarion Providers params translated to the following %s' % json_props)
