@@ -23,8 +23,7 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import CarbonTask
-import time
+from ..core import CarbonTask, Inventory
 
 
 class ProvisionTask(CarbonTask):
@@ -44,7 +43,12 @@ class ProvisionTask(CarbonTask):
         """
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
+        self.inv_msg = 'Populating master inventory file with host %s' % host.name
         self.provision = True
+        self.inv = Inventory(hosts=[host],
+                             all_hosts=[host],
+                             data_dir=getattr(host, 'config')['DATA_FOLDER'],
+                             static_inv_dir=getattr(host, 'config')['INVENTORY_FOLDER'])
 
         if not host.is_static:
             # create the provisioner object to create hosts
@@ -86,3 +90,9 @@ class ProvisionTask(CarbonTask):
                 self.logger.error(ex)
                 self.logger.error(stackmsg)
                 raise
+        try:
+            # create the master inventory
+            self.logger.info(self.inv_msg)
+            self.inv.create_master()
+        except Exception as ex:
+            raise

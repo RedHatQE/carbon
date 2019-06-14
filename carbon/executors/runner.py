@@ -32,10 +32,10 @@ import os.path
 import textwrap
 
 from ruamel.yaml import YAML
-from ..core import CarbonExecutor
+from ..core import CarbonExecutor, Inventory
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError
 from ..helpers import DataInjector, get_ans_verbosity
-from ..orchestrators._ansible import Inventory, AnsibleController
+from ..orchestrators._ansible import AnsibleController
 from ..static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK,\
     ADHOC_SHELL_PLAYBOOK, ADHOC_SCRIPT_PLAYBOOK
 
@@ -599,8 +599,9 @@ class RunnerExecutor(CarbonExecutor):
             if not getattr(self, attr):
                 continue
 
-            # create inventory files
-            self.inv.create()
+            # create inventory files. Only create unique, provision handles
+            # the master.
+            self.inv.create_unique()
 
             # call the method associated to the execute resource attribute
             try:

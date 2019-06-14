@@ -40,7 +40,6 @@ import warnings
 from logging import getLogger
 import fnmatch
 import stat
-import socket
 
 import cachetclient.cachet as cachet
 import jinja2

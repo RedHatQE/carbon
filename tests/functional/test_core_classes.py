@@ -29,13 +29,17 @@ import copy
 import random
 import time
 import types
+import os
+import glob
 
 import mock
 import pytest
 
 from carbon.core import CarbonOrchestrator, CarbonProvider, CarbonProvisioner, \
     CarbonResource, CarbonTask, LoggerMixin, TimeMixin, CarbonExecutor, \
-    CarbonPlugin, ProvisionerPlugin, ExecutorPlugin, ImporterPlugin, OrchestratorPlugin
+    CarbonPlugin, ProvisionerPlugin, ExecutorPlugin, ImporterPlugin, OrchestratorPlugin, FileLockMixin, \
+    Inventory
+from carbon.resources import Host
 from carbon.exceptions import CarbonError, LoggerMixinError
 
 
@@ -115,6 +119,106 @@ def importer_plugin(report_profile):
 @pytest.fixture(scope='class')
 def orchestrator_plugin():
     return OrchestratorPlugin()
+
+
+@pytest.fixture(scope='class')
+def lock_mixin():
+    return FileLockMixin()
+
+
+@pytest.fixture(scope='function')
+def create_dummy_lock_file():
+    open('/tmp/cbn_xyz.lock', 'w').close()
+
+
+@pytest.fixture(scope='function')
+def cleanup_lock(request):
+    def cleanup():
+        os.remove('/tmp/cbn_test.lock')
+    request.addfinalizer(cleanup)
+
+
+@pytest.fixture(scope='function')
+def cleanup_unique_inv(request):
+    def cleanup_unique():
+        for u in glob.glob('/tmp/.results/inventory/unique*'):
+            os.remove(u)
+    request.addfinalizer(cleanup_unique)
+
+
+@pytest.fixture(scope='function')
+def cleanup_master(request):
+    def cleanup_master():
+        os.remove('/tmp/.results/inventory/master-xyz')
+    request.addfinalizer(cleanup_master)
+
+
+@pytest.fixture
+def inv_host(default_host_params, config):
+    config['RESULTS_FOLDER'] = '/tmp/.results'
+    return Host(
+        name='host01',
+        config=config,
+        parameters=copy.deepcopy(default_host_params)
+    )
+
+
+@pytest.fixture
+def inventory(inv_host):
+    return Inventory(hosts=[inv_host], all_hosts=[inv_host], data_dir='/tmp/xyz')
+
+
+class TestFileLockMixin(object):
+    @staticmethod
+    def test_default_lock_file(lock_mixin):
+        assert getattr(lock_mixin, 'lock_file') == '/tmp/cbn.lock'
+
+    @staticmethod
+    def test_default_lock_timeout(lock_mixin):
+        assert getattr(lock_mixin, 'lock_timeout') == 120
+
+    @staticmethod
+    def test_default_lock_sleep(lock_mixin):
+        assert getattr(lock_mixin, 'lock_sleep') == 5
+
+    @staticmethod
+    def test_setting_lock_file(lock_mixin):
+        setattr(lock_mixin, 'lock_file', '/tmp/cbn_test.lock')
+        assert getattr(lock_mixin, 'lock_file') == '/tmp/cbn_test.lock'
+
+
+    @staticmethod
+    def test_setting_lock_timeout(lock_mixin):
+        setattr(lock_mixin, 'lock_timeout', 2)
+        assert getattr(lock_mixin, 'lock_timeout') == 2
+
+    @staticmethod
+    def test_setting_lock_sleep(lock_mixin):
+        setattr(lock_mixin, 'lock_sleep', 1)
+        assert getattr(lock_mixin, 'lock_sleep') == 1
+
+    @staticmethod
+    def test_default_lock_cleanup(create_dummy_lock_file, lock_mixin):
+        create_dummy_lock_file
+        lock_mixin.cleanup_locks()
+        assert not os.path.exists('/tmp/cbn_xyz.lock')
+
+    @staticmethod
+    def test_lock_aqcuire(lock_mixin):
+        lock_mixin.acquire()
+        assert os.path.exists('/tmp/cbn_test.lock')
+
+    @staticmethod
+    def test_lock_release(lock_mixin):
+        lock_mixin.release()
+        assert not os.path.exists('/tmp/cbn_test.lock')
+
+    @staticmethod
+    def test_lock_timeout(cleanup_lock, lock_mixin):
+        lock_mixin.acquire()
+        with pytest.raises(CarbonError):
+            lock_mixin._check_and_sleep()
+        cleanup_lock
 
 
 class TestTimeMixin(object):
@@ -571,3 +675,75 @@ class TestCarbonCorePlugins(object):
     def test_orchestrator_gw_run(orchestrator_plugin):
         with pytest.raises(NotImplementedError):
             orchestrator_plugin.run()
+
+class TestInventory(object):
+
+    @staticmethod
+    def test_inventory(inventory):
+        assert isinstance(inventory, Inventory)
+
+    @staticmethod
+    def test_create_master_inv(inventory):
+        inventory.create_master()
+        assert os.path.exists('/tmp/.results/inventory/master-xyz')
+
+    @staticmethod
+    def test_delete_master_inv(inventory):
+        inventory.delete_master()
+        assert not os.path.exists('/tmp/.results/inventory/master-xyz')
+
+    @staticmethod
+    def test_create_unique_inv(inventory, cleanup_unique_inv):
+        inventory.create_unique()
+        assert glob.glob('/tmp/.results/inventory/unique-*')
+        cleanup_unique_inv
+
+    @staticmethod
+    def test_delete_unique_inv(inventory):
+        inventory.create_unique()
+        inventory.delete_unique()
+        assert not glob.glob('/tmp/.results/inventory/unique-*')
+
+    @staticmethod
+    def test_create_all_inv(inventory, cleanup_unique_inv):
+        inventory.create()
+        assert glob.glob('/tmp/.results/inventory/unique-*')
+        assert os.path.exists('/tmp/.results/inventory/master-xyz')
+        inventory.delete_master()
+        cleanup_unique_inv
+
+    @staticmethod
+    def test_delete_all_inv(inventory):
+        inventory.create()
+        inventory.delete()
+        assert not os.path.exists('/tmp/.results/inventory/master-xyz')
+        assert not glob.glob('/tmp/.results/inventory/unique-*')
+
+    @staticmethod
+    def test_create_master_inv_err(inventory, cleanup_master):
+        inventory.create_master()
+        with pytest.raises(Exception):
+            inventory.create_master()
+        cleanup_master
+
+    @staticmethod
+    def test_create_master_inv_warn(inventory):
+        inventory.delete_master()
+
+    @staticmethod
+    def test_create_unique_inv_warn(inventory):
+        inventory.delete_unique()
+
+    @staticmethod
+    def test_static_dir_create_master_inv(inv_host):
+        inv = Inventory(hosts=[inv_host], all_hosts=[inv_host],
+                        data_dir='/tmp/xyz', static_inv_dir='/tmp/inv')
+        inv.create_master()
+        assert os.path.exists('/tmp/inv/inventory/master-xyz')
+
+    @staticmethod
+    def test_static_dir_delete_master_inv(inv_host):
+        inv = Inventory(hosts=[inv_host], all_hosts=[inv_host],
+                        data_dir='/tmp/xyz', static_inv_dir='/tmp/inv')
+        inv.delete_master()
+        assert not os.path.exists('/tmp/inv/inventory/master-xyz')

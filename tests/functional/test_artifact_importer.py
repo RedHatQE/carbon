@@ -70,6 +70,7 @@ def default_report_params(execute):
                                 ))
     return params
 
+
 @pytest.fixture(scope='class')
 def default_profile_params():
     params = dict(data_folder='/tmp/.results',

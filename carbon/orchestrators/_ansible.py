@@ -39,7 +39,7 @@ from ansible.parsing.dataloader import DataLoader
 from ansible.vars.manager import VariableManager
 
 from .._compat import RawConfigParser, string_types
-from ..core import CarbonOrchestrator, LoggerMixin
+from ..core import CarbonOrchestrator, Inventory
 from ..exceptions import CarbonOrchestratorError
 from ..helpers import ssh_retry, exec_local_cmd_pipe, is_host_localhost, get_ans_verbosity
 
@@ -197,178 +197,6 @@ class AnsibleController(object):
         logger.debug(playbook_call)
         output = exec_local_cmd_pipe(playbook_call, logger)
         return output
-
-
-class Inventory(LoggerMixin):
-    """Inventory.
-
-    This class primary responsibility is handling creating/deleting the
-    ansible inventory for the carbon ansible action.
-    """
-
-    def __init__(self, hosts, all_hosts, data_dir, static_inv_dir=None):
-        """Constructor.
-
-        :param hosts: list of hosts to create the inventory file
-        :type hosts: list
-        :param all_hosts: list of all hosts in the given scenario
-        :type all_hosts: list
-        :param data_dir: data directory where the inventory directory resides
-        :type data_dir: str
-        """
-        self.hosts = hosts
-        self.all_hosts = all_hosts
-
-        # set & create the inventory directory
-        if static_inv_dir:
-            if 'inventory' in (os.path.basename(static_inv_dir),
-                               os.path.basename(os.path.dirname(static_inv_dir))):
-                self.inv_dir = os.path.expandvars(
-                    os.path.expanduser(static_inv_dir)
-                )
-            else:
-                self.inv_dir = os.path.expandvars(
-                    os.path.expanduser(os.path.join(static_inv_dir, 'inventory'))
-                )
-            if not os.path.isdir(self.inv_dir):
-                os.makedirs(self.inv_dir)
-        else:
-            self.inv_dir = os.path.join(data_dir, 'inventory')
-            if not os.path.isdir(self.inv_dir):
-                os.makedirs(self.inv_dir)
-
-        # set the master inventory
-        self.master_inv = os.path.join(self.inv_dir, 'master')
-
-        # set the unique inventory
-        self.unique_inv = os.path.join(self.inv_dir, 'unique-%s' % uuid4())
-
-        # defines the custom group to run the play against
-        self.group = 'hosts'
-
-    def create_master(self):
-        """Create the master ansible inventory.
-
-        This method will create a master inventory which contains all the
-        hosts in the given scenario. Each host will have a group/group:vars.
-        """
-        # do not create master inventory if already exists
-        if os.path.exists(self.master_inv):
-            return
-
-        # create parser object, raw config parser allows keys with no values
-        config = RawConfigParser(allow_no_value=True)
-        # disable default behavior to set values to lower case
-        config.optionxform = str
-
-        for host in self.all_hosts:
-            section = host.name
-            section_vars = '%s:vars' % section
-
-            if host.role:
-                for role in host.role:
-                    host_section = role + ":children"
-                    if host_section in config.sections():
-                        config.set(host_section, host.name)
-                    else:
-                        config.add_section(host_section)
-                        config.set(host_section, host.name)
-
-            if host.groups:
-                for group in host.groups:
-                    host_section = group + ":children"
-                    if host_section in config.sections():
-                        config.set(host_section, host.name)
-                    else:
-                        config.add_section(host_section)
-                        config.set(host_section, host.name)
-
-            # create section(s)
-            for item in [section, section_vars]:
-                config.add_section(item)
-
-            # add ip address to group
-            if isinstance(host.ip_address, list):
-                for item in host.ip_address:
-                    config.set(section, item)
-            elif isinstance(host.ip_address, str):
-                config.set(section, host.ip_address)
-
-            # add host vars
-            for k, v in host.ansible_params.items():
-                if k in ['ansible_ssh_private_key_file']:
-                    v = os.path.join(getattr(host, 'workspace'), v)
-                config.set(section_vars, k, v)
-
-        # write the inventory
-        with open(self.master_inv, 'w') as f:
-            config.write(f)
-
-        self.logger.debug("Master inventory content")
-        self.log_inventory_content(config)
-
-    def create_unique(self):
-        """Create the unique ansible inventory.
-
-        This method will create a unique inventory which contains placeholders
-        for all hosts in the scenario. Along with a child group containing
-        all the hosts for the action to run on.
-        """
-        # create parser object, raw config parser allows keys with no values
-        config = RawConfigParser(allow_no_value=True)
-        # disable default behavior to set values to lower case
-        config.optionxform = str
-        main_section = self.group + ":children"
-        config.add_section(main_section)
-
-        # add place holders for all hosts
-        for host in self.all_hosts:
-            config.add_section(host.name)
-
-        # add specific hosts to the group to run the action against
-        for host in self.hosts:
-            config.set(main_section, host.name)
-
-        # write the inventory
-        with open(self.unique_inv, 'w') as f:
-            config.write(f)
-
-        self.logger.debug("Unique inventory content")
-        self.log_inventory_content(config)
-
-    def create(self):
-        """Create the inventory."""
-        self.create_master()
-        self.create_unique()
-
-    def delete_master(self):
-        """Delete the master inventory file generated."""
-        try:
-            os.remove(self.master_inv)
-        except OSError as ex:
-            self.logger.warning(ex)
-
-    def delete_unique(self):
-        """Delete the unique inventory file generated."""
-        try:
-            os.remove(self.unique_inv)
-        except OSError as ex:
-            self.logger.warning(ex)
-            self.logger.warning('You may experience problems with future '
-                                'ansible calls due to additional inventory '
-                                'files in the same inventory directory.')
-
-    def delete(self):
-        """Delete all ansible inventory files."""
-        self.delete_unique()
-        self.delete_master()
-
-    def log_inventory_content(self, parser):
-        # log the inventory file content
-        for section in parser.sections():
-            self.logger.debug('Section-> %s' % section)
-            for item in parser.items(section):
-                self.logger.debug(item)
 
 
 class AnsibleOrchestrator(CarbonOrchestrator):
@@ -536,8 +364,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         """
 
         # lets create the ansible inventory file to run the given action on
-        # its associated hosts
-        self.inv.create()
+        # its associated hosts. Only creating unique, provision handles the
+        # the master
+        self.inv.create_unique()
 
         # create an ansible controller object
         obj = AnsibleController(self.inv.inv_dir)

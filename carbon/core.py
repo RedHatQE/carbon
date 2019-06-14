@@ -27,15 +27,18 @@
 import errno
 import inspect
 import os
+from glob import glob
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler, LoggerAdapter, Filter
-from time import time
+from time import time, sleep
 from collections import OrderedDict
 
 from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError, \
     CarbonProvisionerError, CarbonImporterError
 from .helpers import get_core_tasks_classes
 from traceback import format_exc
+from ._compat import RawConfigParser
+from uuid import uuid4
 from sys import exc_info
 
 
@@ -248,6 +251,72 @@ class TimeMixin(object):
         :type value: int
         """
         self._secounds = value
+
+
+class FileLockMixin(object):
+    """
+    The FileLockMixin is designed to
+    use file locks to be able to read/write
+    to a file when multipleprocesses need to
+    access the same file.
+    """
+    _lock_file = '/tmp/cbn.lock'
+    _lock_sleep = 5
+    _lock_timeout = 120
+
+    @property
+    def lock_file(self):
+        return self._lock_file
+
+    @lock_file.setter
+    def lock_file(self, value):
+        self._lock_file = value
+
+    @property
+    def lock_sleep(self):
+        return self._lock_sleep
+
+    @lock_sleep.setter
+    def lock_sleep(self, value):
+        self._lock_sleep = value
+
+    @property
+    def lock_timeout(self):
+        return self._lock_timeout
+
+    @lock_timeout.setter
+    def lock_timeout(self, value):
+        self._lock_timeout = value
+
+    def acquire(self):
+        self.cleanup_locks()
+        if self._check_and_sleep():
+            open(self._lock_file, 'w').close()
+
+    def release(self):
+        try:
+            os.remove(self._lock_file)
+        except OSError:
+            raise
+
+    def _check_and_sleep(self):
+
+        attempts = 0
+        total_attempts = self.lock_timeout / self.lock_sleep
+
+        while os.path.exists(self.lock_file):
+            if attempts < total_attempts:
+                sleep(self.lock_sleep)
+                attempts += 1
+            else:
+                raise CarbonError('Timed out waiting for the lock to release')
+        return True
+
+    def cleanup_locks(self):
+        if glob(os.path.join(os.path.dirname(self.lock_file), 'cbn*')):
+            for f in glob(os.path.join(os.path.dirname(self.lock_file), 'cbn*')):
+                if f != self.lock_file:
+                    os.remove(f)
 
 
 class CarbonTask(LoggerMixin, TimeMixin):
@@ -1168,3 +1237,208 @@ class ExecutorPlugin(CarbonPlugin):
 
     def run(self):
         raise NotImplementedError
+
+
+class Inventory(LoggerMixin, FileLockMixin):
+    """Inventory.
+
+    This class primary responsibility is handling creating/deleting the
+    ansible inventory for the carbon ansible action.
+    """
+
+    def __init__(self, hosts, all_hosts, data_dir, static_inv_dir=None):
+        """Constructor.
+
+        :param hosts: list of hosts to create the inventory file
+        :type hosts: list
+        :param all_hosts: list of all hosts in the given scenario
+        :type all_hosts: list
+        :param data_dir: data directory where the inventory directory resides
+        :type data_dir: str
+        """
+        self.hosts = hosts
+        self.all_hosts = all_hosts
+        self.lock_file = '/tmp/cbn_%s.lock' % os.path.basename(data_dir)
+
+        # set & create the inventory directory
+        if static_inv_dir:
+            if 'inventory' in (os.path.basename(static_inv_dir),
+                               os.path.basename(os.path.dirname(static_inv_dir))):
+                self.inv_dir = os.path.expandvars(
+                    os.path.expanduser(static_inv_dir)
+                )
+            else:
+                self.inv_dir = os.path.expandvars(
+                    os.path.expanduser(os.path.join(static_inv_dir, 'inventory'))
+                )
+            if not os.path.isdir(self.inv_dir):
+                os.makedirs(self.inv_dir)
+        else:
+            self.inv_dir = os.path.join(getattr(self.hosts[-1], 'config')['RESULTS_FOLDER'],
+                                        'inventory')
+            if not os.path.isdir(self.inv_dir):
+                os.makedirs(self.inv_dir)
+
+        # set the master inventory
+        self.master_inv = os.path.join(self.inv_dir, 'master-%s' % os.path.basename(data_dir))
+
+        # set the unique inventory
+        self.unique_inv = os.path.join(self.inv_dir, 'unique-%s' % uuid4())
+
+        # defines the custom group to run the play against
+        self.group = 'hosts'
+
+    def create_master(self):
+        """Create the master ansible inventory.
+
+        This method will create a master inventory which contains all the
+        hosts in the given scenario. Each host will have a group/group:vars.
+        """
+        try:
+            # create parser object, raw config parser allows keys with no values
+            config = RawConfigParser(allow_no_value=True)
+            # disable default behavior to set values to lower case
+            config.optionxform = str
+
+            # get the lock
+            self.acquire()
+
+            # check for any old master inventories and delete them.
+            # This is specifically for those using the static
+            # inventory feature
+            if glob(os.path.join(self.inv_dir, 'master*')):
+                for f in glob(os.path.join(self.inv_dir, 'master*')):
+                    if f != self.master_inv:
+                        os.remove(f)
+
+            # do not create master inventory if already exists
+            # load it and keep building upon it
+            if os.path.exists(self.master_inv):
+                with open(self.master_inv) as f:
+                    config.readfp(f)
+
+            for host in self.all_hosts:
+                section = host.name
+                section_vars = '%s:vars' % section
+
+                if host.role:
+                    for role in host.role:
+                        host_section = role + ":children"
+                        if host_section in config.sections():
+                            config.set(host_section, host.name)
+                        else:
+                            config.add_section(host_section)
+                            config.set(host_section, host.name)
+
+                if host.groups:
+                    for group in host.groups:
+                        host_section = group + ":children"
+                        if host_section in config.sections():
+                            config.set(host_section, host.name)
+                        else:
+                            config.add_section(host_section)
+                            config.set(host_section, host.name)
+
+                # create section(s)
+                for item in [section, section_vars]:
+                    config.add_section(item)
+
+                # add ip address to group
+                if isinstance(host.ip_address, list):
+                    for item in host.ip_address:
+                        config.set(section, item)
+                elif isinstance(host.ip_address, str):
+                    config.set(section, host.ip_address)
+
+                # add host vars
+                for k, v in host.ansible_params.items():
+                    if k in ['ansible_ssh_private_key_file']:
+                        v = os.path.join(getattr(host, 'workspace'), v)
+                    config.set(section_vars, k, v)
+
+            # write the inventory
+            with open(self.master_inv, 'w') as f:
+                config.write(f)
+
+            # release the lock
+            self.release()
+        except Exception as ex:
+            self.release()
+            raise ex
+
+        self.logger.debug("Master inventory content")
+        self.log_inventory_content(config)
+
+    def create_unique(self):
+        """Create the unique ansible inventory.
+
+        This method will create a unique inventory which contains placeholders
+        for all hosts in the scenario. Along with a child group containing
+        all the hosts for the action to run on.
+        """
+        # create parser object, raw config parser allows keys with no values
+        config = RawConfigParser(allow_no_value=True)
+        # disable default behavior to set values to lower case
+        config.optionxform = str
+        main_section = self.group + ":children"
+        config.add_section(main_section)
+
+        # add place holders for all hosts
+        for host in self.all_hosts:
+            config.add_section(host.name)
+
+        # add specific hosts to the group to run the action against
+        for host in self.hosts:
+            config.set(main_section, host.name)
+
+        # write the inventory
+        with open(self.unique_inv, 'w') as f:
+            config.write(f)
+
+        self.logger.debug("Unique inventory content")
+        self.log_inventory_content(config)
+
+    def create(self):
+        """Create the inventory."""
+        self.create_master()
+        self.create_unique()
+
+    def delete_master(self):
+        """Delete the master inventory file generated."""
+        try:
+            os.remove(self.master_inv)
+        except OSError as ex:
+            self.logger.warning(ex)
+
+    def delete_unique(self):
+        """Delete the unique inventory file generated."""
+        try:
+            os.remove(self.unique_inv)
+        except OSError as ex:
+            self.logger.warning(ex)
+            self.logger.warning('You may experience problems with future '
+                                'ansible calls due to additional inventory '
+                                'files in the same inventory directory.')
+
+    def delete(self):
+        """Delete all ansible inventory files."""
+        self.delete_unique()
+        self.delete_master()
+
+    def log_inventory_content(self, parser):
+        # log the inventory file content
+        cfg_str = ''
+        new_section = False
+        for section in parser.sections():
+            if new_section:
+                cfg_str += '\n'
+            cfg_str += '[' + section.strip() + ']' + '\n'
+            new_section = False
+            for k, v in parser.items(section):
+                if v:
+                    cfg_str += k + '=' + v
+                else:
+                    cfg_str += k
+                cfg_str += '\n'
+            new_section = True
+        self.logger.debug('\n' + cfg_str)
