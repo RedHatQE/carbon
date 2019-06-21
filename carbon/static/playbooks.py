@@ -30,11 +30,17 @@ SYNCHRONIZE_PLAYBOOK = '''
   hosts: "{{ hosts }}"
 
   tasks:
+    - name: check if rsync package is installed
+      command: 'rpm -q rsync'
+      failed_when: false
+      register: rsync_installed
+
     - name: install rsync
       package:
         name: rsync
         state: present
       become: true
+      when: rsync_installed.rc != 0
 
     - name: find artifacts
       find:
@@ -93,11 +99,17 @@ GIT_CLONE_PLAYBOOK = '''
   hosts: "{{ hosts }}"
 
   tasks:
+    - name: check if git package is installed
+      command: 'rpm -q git'
+      failed_when: false
+      register: git_installed
+
     - name: install git
       package:
         name: git
         state: present
       become: true
+      when: git_installed.rc != 0
 
     - name: clone gits
       git:
