@@ -34,7 +34,7 @@ import textwrap
 from ruamel.yaml import YAML
 from ..core import CarbonExecutor, Inventory
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError
-from ..helpers import DataInjector, get_ans_verbosity
+from ..helpers import DataInjector, get_ans_verbosity, find_artifacts_on_disk, exec_local_cmd
 from ..orchestrators._ansible import AnsibleController
 from ..static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK,\
     ADHOC_SHELL_PLAYBOOK, ADHOC_SCRIPT_PLAYBOOK
@@ -510,6 +510,8 @@ class RunnerExecutor(CarbonExecutor):
 
         self.logger.info('Fetching test artifacts @ %s' % destination)
 
+        artifact_location = {}
+
         # settings required by synchronize module
         os.environ['ANSIBLE_LOCAL_TEMP'] = '$HOME/.ansible/tmp'
         os.environ['ANSIBLE_REMOTE_TEMP'] = '$HOME/.ansible/tmp'
@@ -521,6 +523,11 @@ class RunnerExecutor(CarbonExecutor):
         extra_vars = copy.deepcopy(self.ans_extra_vars)
         extra_vars['dest'] = destination
         extra_vars['artifacts'] = self.artifacts
+
+        # check for localhost
+        for h in self._hosts:
+            if 'localhost' in h.name:
+                extra_vars['localhost'] = True
 
         # build run options
         run_options = self.build_run_options()
@@ -543,42 +550,52 @@ class RunnerExecutor(CarbonExecutor):
         # remove dynamic playbook
         os.remove(playbook)
 
+        if results[0] != 0:
+            self.logger.error(results[1])
+            raise CarbonExecuteError('A failure occurred while trying to copy '
+                                     'test artifacts.')
+
         # Get results from file
-        with open('sync-results.txt') as fp:
-            lines = fp.read().splitlines()
+        try:
+            with open('sync-results.txt') as fp:
+                lines = fp.read().splitlines()
+        except (IOError, OSError) as ex:
+            self.logger.error(ex)
+            raise CarbonExecuteError('Failed to find the sync-results.txt file '
+                                     'which means there was an uncaught failure running '
+                                     'the synchronization playbook. Please enable verbose Ansible '
+                                     'logging in the carbon.cfg file and try again.')
 
         # Build Results
         sync_results = []
         for line in lines:
-            host, artifact, dest, skipped, rc = ast.literal_eval(line)
+            host, artifact, dest, skipped, rc = ast.literal_eval(textwrap.dedent(line).strip())
             sync_results.append({'host': host, 'artifact': artifact, 'destination': dest, 'skipped': skipped, 'rc': rc})
 
         # remove Sync Results file
         os.remove('sync-results.txt')
 
-        if results[0] != 0:
-            self.logger.error(results[1])
-            for r in sync_results:
-                if r['rc'] != 0 and not r['skipped']:
-                    self.logger.error('Failed to copy the artifact(s), %s, from %s' % (r['artifact'], r['host']))
-            raise CarbonExecuteError('A failure occurred while trying to copy '
-                                     'test artifacts.')
-        artifact_location = {}
         for r in sync_results:
+            if r['rc'] != 0 and not r['skipped']:
+                self.logger.error('Failed to copy the artifact(s), %s, from %s' % (r['artifact'], r['host']))
             if r['rc'] == 0 and not r['skipped']:
                 temp_list = r['artifact'].replace('[', '').replace(']', '').replace("'", "").split(',')
-                art_list = [a.replace('>f+++++++++', '') for a in temp_list if 'cd+' not in a]
+                if not extra_vars['localhost']:
+                    art_list = [a.replace('>f+++++++++', '') for a in temp_list if 'cd+' not in a]
+                    path = '/'.join(r['destination'].split('/')[-3:])
+                else:
+                    path = '/'.join(r['destination'].split('/')[2:-1])
+                    art_list = ['/'.join(a.split('->')[-1].split('/')[4:]) for a in temp_list]
+
                 self.logger.info('Copied the artifact(s), %s, from %s' % (art_list, r['host']))
 
                 # Update the execute resource with the location of artifacts
-                path = '/'.join(r['destination'].split('/')[-3:])
+
                 if path in artifact_location:
                     current_list = artifact_location.get(path)
-                    # current_list.extend([b for a in art_list for b in a.split('/')[-1:]])
                     current_list.extend(art_list)
                     artifact_location.update({path: current_list})
                 else:
-                    # artifact_location[path] = [b for a in art_list for b in a.split('/')[-1:]]
                     artifact_location[path] = art_list
 
             self.execute.artifact_locations = artifact_location

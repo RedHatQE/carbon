@@ -783,6 +783,9 @@ def fetch_executes(executes, hosts, task):
                     _executes.append(dummy_task[_type])
                     break
 
+    if not _executes:
+        LOG.error('The specified execute was not found.')
+        raise HelpersError('The execute does not look to exist in the scenario. Make sure to specify one that exists.')
     task[_type].executes = _executes
     return task
 
@@ -1183,6 +1186,8 @@ def search_artifact_location_dict(art_locations, report_name):
     if art_locations:
         regquery = build_artifact_regex_query(report_name)
         full_path = [os.path.join(dir, f) for dir, file_list in art_locations.items() for f in file_list]
+        for f in full_path:
+            LOG.debug('These are artifact_locations in the execute: %s' % f)
         matches = [regquery.search(p) for p in full_path]
         artifacts_path = [m.string for m in matches if m]
 

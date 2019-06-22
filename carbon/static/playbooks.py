@@ -30,18 +30,6 @@ SYNCHRONIZE_PLAYBOOK = '''
   hosts: "{{ hosts }}"
 
   tasks:
-    - name: check if rsync package is installed
-      command: 'rpm -q rsync'
-      failed_when: false
-      register: rsync_installed
-
-    - name: install rsync
-      package:
-        name: rsync
-        state: present
-      become: true
-      when: rsync_installed.rc != 0
-
     - name: find artifacts
       find:
         path: "{{ (item | regex_replace('/$', '')).split('/')[:-1] | join('/') }}"
@@ -52,46 +40,122 @@ SYNCHRONIZE_PLAYBOOK = '''
       register: found_artifacts
       {{ options }}
 
-    - name: fetch artifacts
-      synchronize:
-        src: "{{ item[1].item }}"
-        dest: "{{ dest }}/{{ hostvars[item[0]]['ansible_hostname'] }}/"
-        mode: pull
-        recursive: yes
-      with_nested:
-        - "{{ inventory_hostname }}"
-        - "{{ found_artifacts.results }}"
-      register: sync_output
-      {{ options }}
-      when: item[1].matched > 0
+    - block:
+        - name: setup artifacts_found list
+          set_fact:
+            artifacts_found: []
 
-    - name: copy skipped artifacts results to file
-      shell:
-        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', '', True, 0, )" \
-        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
-      delegate_to: localhost
-      when: item is skipped
-      with_items:
-        - "{{ sync_output.results }}"
+        - name: populate artifacts_found list
+          set_fact:
+            artifacts_found: "{{ artifacts_found + item.files }}"
+          loop: "{{ found_artifacts.results }}"
+          when: item.matched > 0
 
-    - name: copy passed artifacts results to file
-      shell:
-        echo -e "('{{ ansible_hostname }}', \'\'\'{{ item.stdout_lines | to_yaml \
-        | regex_replace('[\\t|\\n|\\r|\\s]', '') }}\'\'\', '{{ item.cmd.split(' ')[-1] }}', False, 0, )" \
-        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> sync-results.txt
-      delegate_to: localhost
-      when: item is success and item is not skipped
-      with_items:
-        - "{{ sync_output.results }}"
+        - debug:
+           msg: "{{ artifacts_found | length }}"
 
-    - name: copy failed artifacts results to file
-      shell:
-        echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', '', False, 1, )" \
-        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
-      delegate_to: localhost
-      when: item is failure
-      with_items:
-        - "{{ sync_output.results }}"
+        - name: create localhost artifact directory
+          file:
+            path: "{{ dest }}/localhost/"
+            state: directory
+          delegate_to: localhost
+          when: artifacts_found | length > 0
+
+        - name: fetch local artifacts
+          command:
+            argv:
+              - cp
+              - -r
+              - -v
+              - "{{ item.path }}"
+              - "{{ dest }}/localhost/"
+          register: local_sync_output
+          delegate_to: localhost
+          loop: "{{ artifacts_found }}"
+          when: artifacts_found | length > 0
+
+        - name: copy skipped local artifacts results to file
+          shell:
+            echo -e "('{{ ansible_hostname }}', '{{ item.item }}', '', True, 0, )" \
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
+          delegate_to: localhost
+          loop: "{{ found_artifacts.results }}"
+          when: artifacts_found | length == 0  or item.matched == 0
+
+        - name: copy passed local artifacts results to file
+          shell:
+            echo -e "('{{ ansible_hostname }}', \'\'\'{{ item.stdout_lines | to_yaml \
+            | regex_replace('[\\t|\\n|\\r|\\s]', '') | regex_replace("\\'", '') }}\'\'\', \
+            '{{ item.cmd[-1] }}', False, 0, )" \
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> sync-results.txt
+          delegate_to: localhost
+          when: item is success and item is not skipped
+          with_items:
+            - "{{ local_sync_output.results }}"
+      rescue:
+        - name: copy failed local artifacts results to file
+          shell:
+            echo -e "('{{ ansible_hostname }}', '{{ item.item.path | to_yaml  \
+            | regex_replace('[\\t|\\n|\\r|\\s]', '') }}', '', False, 1, )" \
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> sync-results.txt
+          loop: "{{ local_sync_output.results }}"
+          delegate_to: localhost
+      when: localhost
+
+    - block:
+        - name: check if rsync package is installed
+          command: 'rpm -q rsync'
+          failed_when: false
+          register: rsync_installed
+
+        - name: install rsync
+          package:
+            name: rsync
+            state: present
+          become: true
+          when: rsync_installed.rc != 0
+
+        - name: fetch artifacts
+          synchronize:
+            src: "{{ item[1].item }}"
+            dest: "{{ dest }}/{{ hostvars[item[0]]['ansible_hostname'] }}/"
+            mode: pull
+            recursive: yes
+          with_nested:
+            - "{{ inventory_hostname }}"
+            - "{{ found_artifacts.results }}"
+          register: sync_output
+          {{ options }}
+          when: item[1].matched > 0
+
+        - name: copy skipped artifacts results to file
+          shell:
+            echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', '', True, 0, )" \
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
+          delegate_to: localhost
+          when: item is skipped
+          with_items:
+            - "{{ sync_output.results }}"
+
+        - name: copy passed artifacts results to file
+          shell:
+            echo -e "('{{ ansible_hostname }}', \'\'\'{{ item.stdout_lines | to_yaml \
+            | regex_replace('[\\t|\\n|\\r|\\s]', '') }}\'\'\', '{{ item.cmd.split(' ')[-1] }}', False, 0, )" \
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> sync-results.txt
+          delegate_to: localhost
+          when: item is success and item is not skipped
+          with_items:
+            - "{{ sync_output.results }}"
+
+      rescue:
+        - name: copy failed artifacts results to file
+          shell:
+            echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', '', False, 1, )" \
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r'>> sync-results.txt
+          delegate_to: localhost
+          with_items:
+            - "{{ sync_output.results }}"
+      when: not localhost
 '''
 
 GIT_CLONE_PLAYBOOK = '''
