@@ -30,11 +30,14 @@ mapping:
             type: str
           description:
             type: str
+          ip_address:
+            required: False
+            type: any
           provisioner:
             type: str
           provider:
             allowempty: True
-            required: True
+            required: False
             type: map
           ansible_params:
             type: map
