@@ -34,7 +34,7 @@ import textwrap
 from ruamel.yaml import YAML
 from ..core import CarbonExecutor, Inventory
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError
-from ..helpers import DataInjector, get_ans_verbosity, find_artifacts_on_disk, exec_local_cmd
+from ..helpers import DataInjector, get_ans_verbosity, is_host_localhost
 from ..orchestrators._ansible import AnsibleController
 from ..static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK,\
     ADHOC_SHELL_PLAYBOOK, ADHOC_SCRIPT_PLAYBOOK
@@ -526,7 +526,7 @@ class RunnerExecutor(CarbonExecutor):
 
         # check for localhost
         for h in self._hosts:
-            if 'localhost' in h.name:
+            if is_host_localhost(h.ip_address):
                 extra_vars['localhost'] = True
 
         # build run options
