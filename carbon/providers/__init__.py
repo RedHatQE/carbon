@@ -28,3 +28,4 @@
 from .beaker import BeakerProvider
 from .openstack import OpenstackProvider
 from .polarion import PolarionProvider
+from .libvirt import LibvirtProvider

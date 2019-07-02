@@ -10,4 +10,6 @@ RUN yum install -y gcc python-devel \
 RUN curl -o /etc/yum.repos.d/bkr-client.repo https://beaker-project.org/yum/beaker-client-CentOS.repo \
  && yum install -y beaker-client \ 
  && yum install -y krb5-workstation krb5-devel
+#Carbon Linchpin libvirt requirements
+RUN yum install -y libvirt-devel libguestfs-tools python-libguestfs
 ENV LANG=en_US.utf8 LC_ALL=en_US.utf8

@@ -139,6 +139,54 @@ that references this credential:
 .. literalinclude:: ../../.examples/provision/openstack/scenario.yml
 
 
+Libvirt Credentials
+---------------------
+
+For Linchpin Libvirt, the following table is a list of required and optional keys for
+your credential section in your carbon.cfg file.
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Key
+        - Description
+        - Type
+        - Required
+
+    *   - create_creds
+        - This is to determine if carbon should create credentials for the scenario. If set to **True** carbon
+          will create a client configuration file with the username and password provided. If set to **False** carbon will
+          not create a configuration file. This is to accommodate users who already have some form of pre-existing
+          credentials setup with the libvirt daemon. Refer `here <https://libvirt.org/auth.html>`_ for the different
+          Libvirt authentication options.
+        - String
+        - True
+
+    *   - username
+        - The username that has privileges with the Libvirt daemon.
+        - String
+        - False
+
+    *   - password
+        - The password of your user to be used with the Libvirt daemon.
+        - String
+        - False
+
+.. code-block:: bash
+
+  [credentials:libvirt-creds]
+  create_creds=<True/False>
+  username=<username>
+  password=<password>
+
+The following is an example of a resource in the scenario descriptor file
+that references this credential:
+
+.. literalinclude:: ../../.examples/provision/linchpin/libvirt_scenario_linchpin.yml
+    :lines: 1-8
+
+
 Polarion Credentials
 ---------------------
 

@@ -400,27 +400,35 @@ in your provision section.
 
     provisioner: linchpin-wrapper
 
-Credentials
-+++++++++++
 
-Nothing has changed with the authentication mechansim used by Carbon when using
-Linchpin. Please refer to the previous sections on the specific credentials for
-each resource.
+.. note::
+
+    When provisioning resources of different types that have some inter-dependency
+    with each other on the same Provider it is recommended to use the
+    `task_concurrency <../configuration.html#carbon-configuration>`__
+    setting in the carbon.cfg to switch the task execution model to be sequential.
+
 
 Beaker Resource
 +++++++++++++++
 
-The Beaker Provider has been augmented to include all the Linchpin Beaker topology
+The Beaker Provider has been augmented to include all the Linchpin bkr_server resource type and topology
 parameters except **count**. For a full list of Linchpin Beaker parameters please refer to
 the `Linchpin Beaker Provider <https://linchpin.readthedocs.io/en/latest/beaker.html>`_.
+
+Credentials
+~~~~~~~~~~~
+
+Nothing has changed with the authentication mechanism used by Carbon when using
+Linchpin. Please refer to the previous Beaker section for the specific credential.
 
 Common Beaker Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 There is commonality between some of the bkr-client provisioner parameters and the
 Linchpin parameters. If a bkr-client parameter is used with Linchpin, it will be translated
-to the appropriate key name and value type supported by Linchpin . The table below highlights
-some of the common parameters shared by both provisioners
+to the appropriate key name and value type supported by Linchpin. The table below highlights
+some of the common parameters shared by both provisioners.
 
 .. list-table::
     :widths: auto
@@ -506,13 +514,18 @@ some of the common parameters shared by both provisioners
         - ks_meta
         - List
 
+
+SSH Keys
+~~~~~~~~
+
 It is important to note the **ssh_key** parameter with the bkr-client
 provisioner was a string containing the private key path. From this key file
-a public key was generated and injected it into the Beaker host. Linchpin Beaker
-offers a couple different methods for public key injection. It's been
+a public key was generated and injected it into the Beaker host.
+
+Linchpin Beaker offers a couple different methods for public key injection. It's been
 decided to keep the single **ssh_key** parameter and transparently map them
 to the appropriate Linchpin parameters. The key file still needs to be in the
-Carbon workspace.
+Scenario workspace.
 
 .. list-table::
     :widths: auto
@@ -537,15 +550,21 @@ Carbon workspace.
 Example
 ~~~~~~~
 
-.. literalinclude:: ../../.examples/provision/beaker/scenario_linchpin.yml
+.. literalinclude:: ../../.examples/provision/linchpin/beaker_scenario_linchpin.yml
 
 
 OpenStack Resource
 ++++++++++++++++++
 
-The OpenStack Provider has been augmented to include all the Linchpin OpenStack os_server topology
+The OpenStack Provider has been augmented to include all the Linchpin OpenStack os_server resource type and topology
 parameters except **count**, **cacert**, and **cert**. For a full list of Linchpin OpenStack os_server
 parameters please refer to the `Linchpin OpenStack Provider <https://linchpin.readthedocs.io/en/latest/openstack.html>`_.
+
+Credentials
+~~~~~~~~~~~
+
+Nothing has changed with the authentication mechanism used by Carbon when using
+Linchpin. Please refer to the previous OpenStack section for the specific credential.
 
 Common OpenStack Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -597,7 +616,42 @@ highlights some of the common parameters shared by both provisioners
 Example
 ~~~~~~~
 
-.. literalinclude:: ../../.examples/provision/openstack/scenario_linchpin.yml
+.. literalinclude:: ../../.examples/provision/linchpin/openstack_scenario_linchpin.yml
+
+
+Libvirt Resource
+++++++++++++++++++
+
+A Libvirt Provider has been added that supports all the resource types and their respective parameters, except **count**.
+
+Libvirt Parameters
+~~~~~~~~~~~~~~~~~~
+The most important provider parameter is **role**. This defines the resource type being provisioned to Linchpin.
+Carbon will know which provider parameters that need to be validated and how to put together the pinfile for Linchpin
+based on this parameter. For a full list of Linchpin Libvirt parameters please refer to the
+`Linchpin Libvirt Provider <https://linchpin.readthedocs.io/en/latest/libvirt.html>`_.
+
+The Libvirt provider also has some configuration evars that affect how Linchpin provisions Libvirt resources.
+
+    * The `image management keys <https://linchpin.readthedocs.io/en/latest/libvirt.html#copying-images>`_ can be
+      directly specified in the providers dictionary in the scenario descriptor file.
+
+    * The **default_ssh_key_path** defaults to *~/.ssh* and is used by Linchpin to find the ssh keys to be used or
+      created when provisioning resources. Carbon overrides this key to point to the Scenario workspace *keys* directory.
+
+
+Libvirt Credentials
+~~~~~~~~~~~~~~~~~~~
+
+To authenticate with Libvirt, you will need to have a Libvirt credentials
+in your carbon.cfg file, see `Libvirt Credentials
+<credentials.html#libvirt-credentials>`_ for more details.
+
+
+Example
+~~~~~~~
+
+.. literalinclude:: ../../.examples/provision/linchpin/libvirt_scenario_linchpin.yml
 
 
 Defining Static Machines

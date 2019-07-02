@@ -25,16 +25,22 @@ Your system requires the following packages to install carbon:
 
    To install Carbon version 1.1.0 and above, pip version 18.1 or higher is required
 
-Linchpin
-~~~~~~~~
+Linchpin Requirements
+~~~~~~~~~~~~~~~~~~~~~
 
-As of 1.2.0, carbon will install Linchpin and its  Beaker requirements but Linchpin also needs certain requirements that need to be met.
-Please refer to the `minimum requirements <https://linchpin.readthedocs.io/en/latest/installation.html#minimal-software-requirements>`_
-section in the Linchpin Installation guide.
+As of 1.2.0, carbon will install Linchpin and Linchpin's Beaker & Libvirt python dependencies but Linchpin also needs certain requirements that need to be met
+so that this can be installed correctly.
+
+
+     * Please refer to the `minimum requirements <https://linchpin.readthedocs.io/en/latest/installation.html#minimal-software-requirements>`_
+       section in the Linchpin Installation guide.
+
+     * Please refer to the `additional dependencies <https://linchpin.readthedocs.io/en/latest/libvirt.html#additional-dependencies>`_ section
+       of the Libvirt provider page for the necessary requirements to support Libvirt.
 
 .. note::
 
-   Linchpin python 3 support is still expiremental and not fully compatible so it will not be installed in this environment. 
+   Linchpin python 3 support is still experimental and not fully compatible so it will not be installed in this environment.
    To take advantage of Linchpin you must be using python 2.7 environment.  
 
 Install

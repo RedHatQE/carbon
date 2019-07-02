@@ -65,7 +65,27 @@ def beaker_params():
         )
     )
 
-@pytest.fixture(params=['os', 'beaker'])
+def libvirt_params():
+    return dict(
+        role='client',
+        provider=dict(
+            name='libvirt',
+            credential='libvirt-creds',
+            role='libvirt_node',
+            vcpus=2,
+            memory=1024,
+            uri='qemu:///system',
+            image_src='http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2',
+            ssh_key='carbon',
+            libvirt_become='no',
+            libvirt_image_path='~/libvirt/images/',
+            libvirt_user='dbaez',
+            tx_id=1,
+            networks=[dict(name='db2_libvirt_net')]
+        )
+    )
+
+@pytest.fixture(params=['os', 'beaker', 'libvirt'])
 def host(request, config):
     return Host(
         name='host01',

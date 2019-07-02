@@ -32,7 +32,7 @@ Configuration example (with all options):
 inventory_folder
 ~~~~~~~~~~~~~~~~
 
-The inventory_folder option is not a required option but it is important enough to note its usage.
+The **inventory_folder** option is not a required option but it is important enough to note its usage.
 By default carbon will create an inventory directory containing ansible inventory files in its data
 directory. These are used during orchestration and execution. Refer to the `Carbon Output <output.html>`__
 page.
@@ -41,3 +41,19 @@ Some times this is not desired behavior. This option allows a user to specify a 
 that Carbon can use to place the ansible inventory files. If the specified directory does not exist,
 carbon will create it and place the ansible inventory files. If it does, carbon will only place the
 ansible files in the directory. Carbon will then use this static directory during orchestrate and execution.
+
+task_concurrency
+~~~~~~~~~~~~~~~~
+
+The **task_concurrency** option is used to control how tasks are executed by Carbon. Whether it should be sequential or in
+parallel/concurrent. Right now this is used to control only the execution of the Provision task.
+
+By default Provision tasks will execute concurrently/parallel independent of each other. There are cases
+when provisioning resources of different types that there might be an inter-dependency so executing the tasks in
+parallel will not suffice. In that case, set the **provision=False** and arrange the resources defined in the scenario
+descriptor file in the proper sequential order.
+
+A valid example is when you want to provision a virtual network and you want to provision a VM attached to that
+network. Arrange the resource definition so that the virtual network is provisioned first, and then the VM is
+provisioned afterwards.
+

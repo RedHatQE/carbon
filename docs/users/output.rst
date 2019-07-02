@@ -58,7 +58,7 @@ scenario descriptor file after a successful provision task run:
   ...
 
 Included Scenario Results File
------------------------------
+------------------------------
 
 If *include* section is present in the scenario file and it has a valid scenario descriptor
 file, then on a carbon run there will be an additional results file for this included 

@@ -176,7 +176,11 @@ def get_default_provisioner(provider=None):
     if provider is None:
         provisioner_name = PROVISIONERS['host']
     else:
-        provisioner_name = PROVISIONERS[provider.__provider_name__]
+        try:
+            provisioner_name = PROVISIONERS[provider.__provider_name__]
+        except KeyError:
+            provisioner_name = 'linchpin-wrapper'
+
     return get_provisioner_class(provisioner_name)
 
 
@@ -1377,6 +1381,8 @@ class LinchpinResourceBuilder(object):
             return cls._build_beaker_resource_definition(provider, host_params)
         elif provider_name == 'openstack':
             return cls._build_openstack_resource_definition(provider, host_params)
+        elif provider_name == 'libvirt':
+            return cls._build_libvirt_resource_defintion(provider, host_params)
 
     @classmethod
     def _build_beaker_resource_definition(cls, provider, host_params):
@@ -1645,6 +1651,45 @@ class LinchpinResourceBuilder(object):
 
         # Update name with real name of host resource
         resource_def['name'] = host_params['name']
+
+        return resource_def
+
+    @classmethod
+    def _build_libvirt_resource_defintion(cls, provider, host_params):
+
+        resource_def = dict()
+        params = host_params['provider']
+        roles = getattr(provider, '_supported_roles')
+
+        for p in provider.req_params:
+            if p[0] in params:
+                if params[p[0]] and params[p[0]] in roles:
+                    for k, v in params.items():
+                        if k in ['credential', 'hostname', 'tx_id']:
+                            continue
+                        resource_def[k] = v
+                else:
+                    LOG.error('The specified role type is not one of the supported types.')
+                    raise HelpersError('One of the following roles must be specified %s.' % roles)
+
+            else:
+                LOG.error('Could not find the role key in the provider parameters.')
+                raise HelpersError('The key, role, must be specified to build the resource definition properly.')
+
+        # Update with the real host name
+        resource_def['name'] = host_params['name']
+
+        # Update with host specific keys
+        if resource_def['role'].find('node') != -1:
+
+            # remove the libvirt_evars if any were specified since they don't belong in the
+            # toppology file. Those get set as evars in the linchpin cfg.
+            del resource_def['libvirt_image_path']
+            del resource_def['libvirt_user']
+            del resource_def['libvirt_become']
+
+            # update count for a host resource
+            resource_def.update(dict(count=1))
 
         return resource_def
 

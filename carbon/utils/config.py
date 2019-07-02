@@ -27,7 +27,7 @@
 import os
 
 from .._compat import RawConfigParser
-from ..constants import DEFAULT_CONFIG, DEFAULT_CONFIG_SECTIONS
+from ..constants import DEFAULT_CONFIG, DEFAULT_CONFIG_SECTIONS, DEFAULT_TASK_CONCURRENCY
 
 
 class Config(dict):
@@ -119,6 +119,20 @@ class Config(dict):
             toggles.append(_toggles)
 
         self.__setitem__('TOGGLES', toggles)
+
+    def __set_task_concurrency__(self):
+        """Set the task if it should be executed concurrently."""
+
+        _concurrency_settings = DEFAULT_TASK_CONCURRENCY
+
+        for section in getattr(self.parser, '_sections'):
+            if not section.startswith('task_concurrency'):
+                continue
+
+            for option in self.parser.options(section):
+                _concurrency_settings.update({option.upper(): self.parser.get(section, option)})
+
+        self.__setitem__('TASK_CONCURRENCY', _concurrency_settings)
 
     def load(self):
         """Load configuration settings.
