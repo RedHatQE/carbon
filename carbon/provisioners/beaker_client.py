@@ -384,7 +384,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
 
         for task in tasklist:
             cname = task.getAttribute('name')
-            if cname == '/distribution/install':
+            if cname == '/distribution/install' or cname == '/distribution/check-install':
                 mydict["install_result"] = task.getAttribute('result')
                 mydict["install_status"] = task.getAttribute('status')
 
@@ -413,7 +413,7 @@ class BeakerClientProvisioner(CarbonProvisioner):
         for task in tasklist:
             cname = task.getAttribute('name')
 
-            if cname == '/distribution/install':
+            if cname == '/distribution/install' or cname == '/distribution/check-install':
                 hostname = task.getElementsByTagName('system')[0]. \
                     getAttribute("value")
                 addr = socket.gethostbyname(hostname)
