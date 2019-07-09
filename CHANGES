@@ -1,3 +1,31 @@
+Version 1.3.0 (2019-07-09)
+--------------------------
+New Features
+~~~~~~~~~~~~
+
+* Option to include other scenario files into your main scenario file. When you do this carbon pulls any defined
+  tasks into the master scenario's task list and runs through them as one big scenario. (CID-4223 CID-4224)
+
+Enhancements
+~~~~~~~~~~~~
+
+* Modify ansible orchestrator and executor to generate only unique inventories (CID-3915)
+* Create the ansible inventory file after the provision task completes (CID-3651)
+* Polarion Importer don't return fast and evaluate all polarion provider params (CID-4369)
+
+Bug fixes
+~~~~~~~~~
+
+* Using artifacts causes install rsync task to fail on localhost (CID-4303)
+* Carbon does not overwrite the existing master inventory when using'inventory_folder' in carbon.cfg (CID-4329)
+* Carbon 1.2.0 doesn't accept ip_address as a valid key when provisioning static machine (CID-4367)
+* When xunit file uses testsuites tag and has more then one testsuite carbon fails to tag the testcases
+  with polarion-id (CID-4368)
+* Running Carbon as non-privileged user that doesn't have sudo permissions fails (CID-4372)
+* Running execute with ansible_options fails to parse and generate the sync playbook (CID-4423)
+* Ansible 2.8+ is not installed in python 3 environments (CID-4424)
+
+
 Version 1.2.0 (2019-06-06)
 --------------------------
 New Features
