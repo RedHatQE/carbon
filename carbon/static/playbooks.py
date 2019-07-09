@@ -72,6 +72,7 @@ SYNCHRONIZE_PLAYBOOK = '''
           register: local_sync_output
           delegate_to: localhost
           loop: "{{ artifacts_found }}"
+          {{ block_options }}
           when: artifacts_found | length > 0
 
         - name: copy skipped local artifacts results to file
@@ -125,7 +126,7 @@ SYNCHRONIZE_PLAYBOOK = '''
             - "{{ inventory_hostname }}"
             - "{{ found_artifacts.results }}"
           register: sync_output
-          {{ options }}
+          {{ block_options }}
           when: item[1].matched > 0
 
         - name: copy skipped artifacts results to file

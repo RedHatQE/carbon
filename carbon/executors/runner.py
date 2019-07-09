@@ -30,6 +30,7 @@ import collections
 import copy
 import os.path
 import textwrap
+import re
 
 from ruamel.yaml import YAML
 from ..core import CarbonExecutor, Inventory
@@ -163,11 +164,13 @@ class RunnerExecutor(CarbonExecutor):
 
         return run_options
 
-    def convert_run_options(self, run_options):
+    def convert_run_options(self, run_options, block_options=False):
         """Convert run options dict to string for task in playbook.
 
         :param run_options: run options dictionary
         :type run_options: dict
+        :param block_options: whether building options in an ansible block
+        :type block_options: bool
         :return: run options string
         :rtype: str
 
@@ -180,7 +183,10 @@ class RunnerExecutor(CarbonExecutor):
                 run_options_str += '%s: %s\n' % (opt, run_options[opt])
                 first = False
             else:
-                run_options_str += '      %s: %s\n' % (opt, run_options[opt])
+                if block_options:
+                    run_options_str += '          %s: %s\n' % (opt, run_options[opt])
+                else:
+                    run_options_str += '      %s: %s\n' % (opt, run_options[opt])
 
         return run_options_str
 
@@ -532,9 +538,13 @@ class RunnerExecutor(CarbonExecutor):
         # build run options
         run_options = self.build_run_options()
         run_options_str = self.convert_run_options(run_options)
+        run_block_options_str = self.convert_run_options(run_options, block_options=True)
 
         # update dynamic playbook synchronize task with options
         playbook_str = self._update_playbook_str(SYNCHRONIZE_PLAYBOOK, "{{ options }}", run_options_str)
+
+        # update dynamic playbook synchronize task with options in the block
+        playbook_str = self._update_playbook_str(playbook_str, "{{ block_options }}", run_block_options_str)
 
         # create dynamic playbook
         self._create_playbook(playbook, playbook_str)
