@@ -165,7 +165,8 @@ def inv_host(default_host_params, config):
 
 @pytest.fixture
 def inventory(inv_host):
-    return Inventory(hosts=[inv_host], all_hosts=[inv_host], data_dir='/tmp/xyz')
+    return Inventory(hosts=[inv_host], all_hosts=[inv_host],
+                     data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'])
 
 
 class TestFileLockMixin(object):
@@ -737,13 +738,15 @@ class TestInventory(object):
     @staticmethod
     def test_static_dir_create_master_inv(inv_host):
         inv = Inventory(hosts=[inv_host], all_hosts=[inv_host],
-                        data_dir='/tmp/xyz', static_inv_dir='/tmp/inv')
+                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
+                        static_inv_dir='/tmp/inv')
         inv.create_master()
         assert os.path.exists('/tmp/inv/inventory/master-xyz')
 
     @staticmethod
     def test_static_dir_delete_master_inv(inv_host):
         inv = Inventory(hosts=[inv_host], all_hosts=[inv_host],
-                        data_dir='/tmp/xyz', static_inv_dir='/tmp/inv')
+                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
+                        static_inv_dir='/tmp/inv')
         inv.delete_master()
         assert not os.path.exists('/tmp/inv/inventory/master-xyz')

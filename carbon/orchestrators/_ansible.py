@@ -31,7 +31,6 @@ import logging
 import os
 from collections import namedtuple
 from shutil import copyfile
-from uuid import uuid4
 
 from ansible.config.manager import ConfigManager
 from ansible.inventory.manager import InventoryManager
@@ -243,6 +242,7 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             self.hosts,
             self.all_hosts,
             data_dir=self.config['DATA_FOLDER'],
+            results_dir=self.config['RESULTS_FOLDER'],
             static_inv_dir=self.config['INVENTORY_FOLDER']
         )
 

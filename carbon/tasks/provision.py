@@ -48,6 +48,7 @@ class ProvisionTask(CarbonTask):
         self.inv = Inventory(hosts=[host],
                              all_hosts=[host],
                              data_dir=getattr(host, 'config')['DATA_FOLDER'],
+                             results_dir=getattr(host, 'config')['RESULTS_FOLDER'],
                              static_inv_dir=getattr(host, 'config')['INVENTORY_FOLDER'])
 
         if not host.is_static:

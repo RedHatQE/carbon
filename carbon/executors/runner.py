@@ -112,6 +112,7 @@ class RunnerExecutor(CarbonExecutor):
             self.hosts,
             self.all_hosts,
             data_dir=self.config['DATA_FOLDER'],
+            results_dir=self.config['RESULTS_FOLDER'],
             static_inv_dir=self.config['INVENTORY_FOLDER']
         )
 
@@ -591,7 +592,7 @@ class RunnerExecutor(CarbonExecutor):
             if r['rc'] == 0 and not r['skipped']:
                 temp_list = r['artifact'].replace('[', '').replace(']', '').replace("'", "").split(',')
                 if not extra_vars['localhost']:
-                    art_list = [a.replace('>f+++++++++', '') for a in temp_list if 'cd+' not in a]
+                    art_list = [a[11:] for a in temp_list if 'cd+' not in a]
                     path = '/'.join(r['destination'].split('/')[-3:])
                 else:
                     path = '/'.join(r['destination'].split('/')[2:-1])

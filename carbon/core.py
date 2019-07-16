@@ -1246,7 +1246,7 @@ class Inventory(LoggerMixin, FileLockMixin):
     ansible inventory for the carbon ansible action.
     """
 
-    def __init__(self, hosts, all_hosts, data_dir, static_inv_dir=None):
+    def __init__(self, hosts, all_hosts, data_dir, results_dir, static_inv_dir=None):
         """Constructor.
 
         :param hosts: list of hosts to create the inventory file
@@ -1274,7 +1274,7 @@ class Inventory(LoggerMixin, FileLockMixin):
             if not os.path.isdir(self.inv_dir):
                 os.makedirs(self.inv_dir)
         else:
-            self.inv_dir = os.path.join(getattr(self.hosts[-1], 'config')['RESULTS_FOLDER'],
+            self.inv_dir = os.path.join(results_dir,
                                         'inventory')
             if not os.path.isdir(self.inv_dir):
                 os.makedirs(self.inv_dir)

@@ -31,6 +31,7 @@ import tempfile
 CARBON_ROOT = os.path.join("/".join(os.path.dirname(__file__).split('/')[0:-2]))
 SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "files", "schema.yml")
 SCHEMA_EXT = os.path.join(os.path.dirname(__file__), 'files/extensions.py')
+DATA_FOLDER = tempfile.gettempdir()
 
 TASKLIST = [
     "validate",
@@ -69,10 +70,11 @@ EXECUTOR = 'runner'
 # Default config
 DEFAULT_CONFIG = {
     'ANSIBLE_LOG_REMOVE': True,
-    'DATA_FOLDER': tempfile.gettempdir(),
+    'DATA_FOLDER': DATA_FOLDER,
     'LOG_LEVEL': 'info',
     'RESOURCE_CHECK_ENDPOINT': '',
-    'INVENTORY_FOLDER': ''
+    'INVENTORY_FOLDER': '',
+    'RESULTS_FOLDER': os.path.join(DATA_FOLDER, '.results')
 }
 
 # Default config sections
