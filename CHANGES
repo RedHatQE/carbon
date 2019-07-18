@@ -1,3 +1,13 @@
+Version 1.3.1 (2019-07-18)
+--------------------------
+
+Bug fixes
+~~~~~~~~~
+
+* Ansible 2.8+ is now installed in all python environments now that Linchpin 1.7.6 has been released
+* Validation was failing if a localhost was referenced in an Orchestrate task but was not an actual Host resource
+
+
 Version 1.3.0 (2019-07-09)
 --------------------------
 New Features
