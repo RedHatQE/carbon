@@ -23,7 +23,7 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-from ..core import CarbonTask, Inventory
+from ..core import CarbonTask
 
 
 class ProvisionTask(CarbonTask):
@@ -43,14 +43,7 @@ class ProvisionTask(CarbonTask):
         """
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
-        self.inv_msg = 'Populating master inventory file with asset %s' % asset.name
         self.provision = True
-        self.inv = Inventory(hosts=[asset],
-                             all_hosts=[asset],
-                             data_dir=getattr(asset, 'config')['DATA_FOLDER'],
-                             results_dir=getattr(asset, 'config')['RESULTS_FOLDER'],
-                             static_inv_dir=getattr(asset, 'config')['INVENTORY_FOLDER'])
-
         if not asset.is_static:
             # create the provisioner object to create assets
             try:
@@ -84,16 +77,10 @@ class ProvisionTask(CarbonTask):
         if self.provision:
             self.logger.info(self.msg)
             try:
-                self.provisioner.create()
+                return self.provisioner.create()
             except Exception as ex:
                 self.logger.error('Failed to provision node %s' % self.name)
                 stackmsg = self.get_formatted_traceback()
                 self.logger.error(ex)
                 self.logger.error(stackmsg)
                 raise
-        try:
-            # create the master inventory
-            self.logger.info(self.inv_msg)
-            self.inv.create_master()
-        except Exception as ex:
-            raise

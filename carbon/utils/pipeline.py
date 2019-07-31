@@ -86,6 +86,11 @@ class PipelineBuilder(object):
     def build(self, scenario):
         """Build carbon pipeline.
 
+        This method first collects scenario tasks and resources for each scenario(child and master)
+        Then for each of the resource/scenario task the method checks if that resource/scenario tasks has any tasks
+        with name matching the name for self.task(the task for which the pipeline is getting built). If it has then that
+        tasks gets added to the pipeline and that gets returned
+
         :param scenario: carbon scenario object containing all scenario
                data.
         :type scenario: scenario object
@@ -144,17 +149,17 @@ class PipelineBuilder(object):
         # execute resource
         for execute in scenario_executes:
             for task in execute.get_tasks():
-                # fetch & set hosts for the given executes task
-                task = fetch_assets(scenario_assets, task)
                 if task['task'].__task_name__ == self.name:
+                    # fetch & set hosts for the given executes task
+                    task = fetch_assets(scenario_assets, task)
                     pipeline.tasks.append(task)
 
         # report resource
         for report in scenario_reports:
             for task in report.get_tasks():
-                # fetch & set hosts and executes for the given reports task
-                task = fetch_executes(scenario_executes, scenario_assets, task)
                 if task['task'].__task_name__ == self.name:
+                    # fetch & set hosts and executes for the given reports task
+                    task = fetch_executes(scenario_executes, scenario_assets, task)
                     pipeline.tasks.append(task)
 
         # reverse the order of the tasks to be executed for cleanup task

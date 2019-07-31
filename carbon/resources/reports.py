@@ -91,7 +91,7 @@ class Report(CarbonResource):
                                      '%s. No executes defined!' % self._name)
 
         # convert the executes into list format if executes defined as str format
-        if isinstance(self.executes, string_types) and ',' in self.executes:
+        if isinstance(self.executes, string_types):
             self.executes = self.executes.replace(' ', '').split(',')
 
         # report needs to be imported, get the provider parameters

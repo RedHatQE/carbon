@@ -76,7 +76,8 @@ class OpenstackProvider(CloudProvider):
             ('interface', [str]),
             ('additional_volumes', [list]),
             ('tx_id', [int]),
-            ('unique', [bool])
+            ('unique', [bool]),
+            ('count', [int])
         ]
 
         self.req_credential_params = [
@@ -97,7 +98,10 @@ class OpenstackProvider(CloudProvider):
         :param host: host resource
         :type host: object
         """
-        provisioner_name = getattr(host, 'provisioner').__provisioner_name__
+        if getattr(host, 'provisioner_plugin') is not None:
+            provisioner_name = getattr(host, 'provisioner_plugin').__plugin_name__
+        else:
+            provisioner_name = getattr(host, 'provisioner').__provisioner_name__
         name = getattr(host, 'name')
         param_values = getattr(host, 'provider_params')
         self.validate_common_opt_params(name, provisioner_name, param_values)

@@ -67,6 +67,58 @@ def default_report_params():
     return params
 
 
+@pytest.fixture
+def host1(default_host_params, config):
+    host1 = Asset(name='host01', config=config, parameters=copy.deepcopy(default_host_params))
+    return host1
+
+@pytest.fixture
+def report1(default_report_params, config):
+    return Report(name='SampleTest.xml', parameters=default_report_params, config=config)
+
+
+@pytest.fixture
+def scenario_res1(config, host1, report1):
+    scenario1 = Scenario(config=config, parameters={'k': 'v'})
+    scenario1.add_assets(host1)
+    scenario1.add_reports(report1)
+    return scenario1
+
+@pytest.fixture
+def task_list_host(host1):
+
+    param1 = copy.deepcopy(host1.profile())
+    param1.update(name='host1_0')
+    param2 = copy.deepcopy(host1.profile())
+    param2.update(name='host1_1')
+
+    task_result_list = [
+                         {'status': 0,
+                          'task': 'carbontaskobj',
+                          'methods': [{'status': 0, 'rvalue': [param1, param2], 'name':'run'}],
+                          'bid': 123,
+                          'asset': host1,
+                          'msg': 'hostcreation'
+                         }
+                        ]
+    return task_result_list
+
+
+@pytest.fixture
+def task_list_report(report1):
+
+    task_result_list = [
+                         {'status': 0,
+                          'task': 'ReportTask',
+                          'methods': [{'status': 0, 'rvalue': None, 'name': 'run'}],
+                          'package': report1,
+                          'bid': 234,
+                          'msg': 'reporting SampleTest.xml', 'name': 'SampleTest.xml'
+                         }
+                        ]
+    return task_result_list
+
+
 class TestActionResource(object):
     @staticmethod
     def test_create_action_with_name():
@@ -423,6 +475,12 @@ class TestScenarioResource(object):
         ch_sc = master_child_scenario.child_scenarios
         assert isinstance(ch_sc, list)
         assert isinstance(ch_sc[0], Scenario)
+
+    @staticmethod
+    def test_reload_method01(task_list_host, scenario_res1):
+        scenario_res1.reload_resources(task_list_host)
+        assert len(scenario_res1.assets) > 1
+
 
 
 class TestAssetResource(object):

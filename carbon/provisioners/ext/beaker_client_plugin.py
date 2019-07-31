@@ -24,6 +24,7 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
+from __future__ import unicode_literals
 import socket
 import time
 from xml.dom.minidom import parse, parseString
@@ -93,6 +94,11 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
 
         conf_obj.write('HUB_URL = "%s"\n' % self.url)
 
+        # write the path to beaker trusted ssl certs if specified.
+        if 'ca_path' in credentials and credentials['ca_path']:
+            self.logger.debug('ca_path was provided %s' % credentials['ca_path'])
+            conf_obj.write('CA_PATH = "%s"\n' % credentials['ca_path'])
+
         if 'username' in credentials and credentials['username'] \
                 and 'password' in credentials and credentials['password']:
             self.logger.debug('Authentication by username/password.')
@@ -146,6 +152,10 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
             bkr_xml_file, kickstart_path=self.workspace, savefile=True
         )
 
+        if 'force' in self.bkr_xml.hrname:
+            self.logger.warning('Force was specified as a host_require_option.'
+                                'Any other host_require_options will be ignored since '
+                                'force is a mutually exclusive option in beaker.')
         # format beaker client command to run
         # Latest version of beaker client fails to generate xml with this
         # replacement
@@ -163,7 +173,6 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
 
         # generate complete beaker job XML
         self.bkr_xml.generate_xml_dom(bkr_xml_file, output, savefile=True)
-
         self.logger.info('Successfully generated beaker job XML!')
 
     def submit_bkr_xml(self):
@@ -177,6 +186,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
             self.data_folder, self.job_xml)
 
         self.logger.info('Submitting beaker job XML..')
+        self.logger.debug('Command to be run: %s' % _cmd)
 
         # submit beaker XML
         results = exec_local_cmd(_cmd)
@@ -191,7 +201,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
 
             # set the result as ascii instead of unicode
             job_id = mod_output[mod_output.find(
-                "[") + 2:mod_output.find("]") - 1].encode('ascii', 'ignore')
+                "[") + 2:mod_output.find("]") - 1]
             getattr(self.host, 'provider_params')['job_id'] = job_id
             job_url = os.path.join(self.url, 'jobs', job_id[2:])
             getattr(self.host, 'provider_params')['job_url'] = job_url
@@ -355,7 +365,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
             dom = parseString(xmldata)
         except Exception as ex:
             raise BeakerProvisionerError(
-                'Failed reading XML data: %s.' % ex.message
+                'Failed reading XML data: %s.' % ex
             )
 
         # check job status
@@ -374,7 +384,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
 
         for task in tasklist:
             cname = task.getAttribute('name')
-            if cname == '/distribution/install':
+            if cname == '/distribution/install' or cname == '/distribution/check-install':
                 mydict["install_result"] = task.getAttribute('result')
                 mydict["install_status"] = task.getAttribute('status')
 
@@ -396,18 +406,22 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
             dom = parseString(xmldata)
         except Exception as ex:
             raise BeakerProvisionerError(
-                'Failed reading XML data: %s.' % ex.message
+                'Failed reading XML data: %s.' % ex
             )
 
         tasklist = dom.getElementsByTagName('task')
         for task in tasklist:
             cname = task.getAttribute('name')
 
-            if cname == '/distribution/install':
+            if cname == '/distribution/install' or cname == '/distribution/check-install':
                 hostname = task.getElementsByTagName('system')[0]. \
                     getAttribute("value")
                 addr = socket.gethostbyname(hostname)
-                self.host.bkr_hostname = hostname.encode('ascii', 'ignore')
+                try:
+                    getattr(self.host, 'provider_params')['hostname'] = hostname.split('.')[0]
+                except Exception:
+                    getattr(self.host, 'provider_params')['hostname'] = hostname
+
                 setattr(self.host, 'ip_address', addr)
 
     def copy_ssh_key(self):
@@ -419,7 +433,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         ssh_key = getattr(self.host, 'provider_params')['ssh_key']
         username = getattr(self.host, 'provider_params')['username']
         password = getattr(self.host, 'provider_params')['password']
-        hostname = getattr(self.host, 'bkr_hostname')
+        hostname = getattr(self.host, 'provider_params')['hostname']
 
         # setup absolute path for private key
         private_key = os.path.join(self.workspace, ssh_key)
@@ -429,7 +443,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
             os.chmod(private_key, stat.S_IRUSR | stat.S_IWUSR)
         except OSError as ex:
             raise BeakerProvisionerError(
-                'Error setting private key file permissions: %s' % ex.message
+                'Error setting private key file permissions: %s' % ex
             )
 
         self.logger.info('Generating SSH public key from private..')
@@ -459,11 +473,11 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
             sftp.put(public_key, '/root/.ssh/authorized_keys')
         except paramiko.SSHException as ex:
             raise BeakerProvisionerError(
-                'Failed to connect to remote system: %s' % ex.message
+                'Failed to connect to remote system: %s' % ex
             )
         except IOError as ex:
             raise BeakerProvisionerError(
-                'Failed sending public key: %s' % ex.message
+                'Failed sending public key: %s' % ex
             )
         finally:
             ssh_con.close()
@@ -725,7 +739,7 @@ class BeakerXML(object):
         # Create host requires  elementi
         if len(dom1.getElementsByTagName('and')) > 1:
             hre_parent = dom1.getElementsByTagName('and')[1]
-        else:
+        elif 'force' not in self.hrname:
             temp_parent = dom1.getElementsByTagName('hostRequires')[0]
             # print temp_parent
             temp_parent.appendChild(dom1.createElement('and'))
@@ -736,17 +750,22 @@ class BeakerXML(object):
 
         # should check for an empty host requires first
         if self.hrname:
-            for index, value in enumerate(self.hrname):
-                # parse the value hostrequires key, first is op the rest is the value
-                # print str(self.hrname[index])
-                # print str(self.hrop[index])
-                # print str(self.hrvalue[index])
-                # Add all host requires here
-                hre = dom1.createElement(str(self.hrname[index]))
-                hre.attributes['op'] = str(self.hrop[index])
-                hre.attributes['value'] = str(self.hrvalue[index])
+            if 'force' in self.hrname:
+                index = self.hrname.index('force')
+                hre = dom1.getElementsByTagName('hostRequires')[0]
+                hre.attributes[str(self.hrname[index])] = str(self.hrvalue[index])
+            else:
+                for index, value in enumerate(self.hrname):
+                    # parse the value hostrequires key, first is op the rest is the value
+                    # print str(self.hrname[index])
+                    # print str(self.hrop[index])
+                    # print str(self.hrvalue[index])
+                    # Add all host requires here
+                    hre = dom1.createElement(str(self.hrname[index]))
+                    hre.attributes['op'] = str(self.hrop[index])
+                    hre.attributes['value'] = str(self.hrvalue[index])
 
-                hre_parent.appendChild(hre)
+                    hre_parent.appendChild(hre)
 
         # should check for an empty distro requires first
         if self.drname:
@@ -786,7 +805,7 @@ class BeakerXML(object):
         self.xmldom = dom1
 
         # Output updated file
-        with open(xmlfile, "wb") as fp:
+        with open(xmlfile, "w+") as fp:
             self.xmldom.writexml(fp)
 
     @property

@@ -185,6 +185,16 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         with open(tpath, 'r') as template:
             pindict = yaml.safe_load(template)
 
+        # warning message if count > 1 is used with linchpin-wrapper (only supported when using
+        # linchpin-wrapper plugin)
+        try:
+            if getattr(self.host, 'provider_params')['count'] > 1:
+                self.logger.warn('To use Linchpin count functionality use [feature_toggle:host] in carbon.cfg and '
+                                 'set plugin_implementation=True . For this run only single resource will be created')
+                getattr(self.host, 'provider_params')['count'] = 1
+        except KeyError:
+            pass
+
         host_profile = self.host.profile()
         resource_def = LinchpinResourceBuilder.build_linchpin_resource_definition(
             getattr(self.host, 'provider'), host_profile)

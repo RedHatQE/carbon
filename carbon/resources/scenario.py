@@ -125,6 +125,42 @@ class Scenario(CarbonResource):
         if parameters:
             self.load(parameters)
 
+    def get_all_hosts(self):
+        if self.child_scenarios:
+            all_hosts = list()
+            for sc in self.child_scenarios:
+                all_hosts.extend([item for item in getattr(sc, 'assets')])
+            all_hosts.extend([item for item in getattr(self, 'assets')])
+            return all_hosts
+        return getattr(self, 'assets')
+
+    def get_all_actions(self):
+        if self.child_scenarios:
+            all_actions = list()
+            for sc in self.child_scenarios:
+                all_actions.extend([item for item in getattr(sc, 'actions')])
+            all_actions.extend([item for item in getattr(self, 'actions')])
+            return all_actions
+        return getattr(self, 'actions')
+
+    def get_all_executes(self):
+        if self.child_scenarios:
+            all_executes = list()
+            for sc in self.child_scenarios:
+                all_executes.extend([item for item in getattr(sc, 'executes')])
+            all_executes.extend([item for item in getattr(self, 'executes')])
+            return all_executes
+        return getattr(self, 'executes')
+
+    def get_all_reports(self):
+        if self.child_scenarios:
+            all_reports = list()
+            for sc in self.child_scenarios:
+                all_reports.extend([item for item in getattr(sc, 'reports')])
+            all_reports.extend([item for item in getattr(self, 'reports')])
+            return all_reports
+        return getattr(self, 'reports')
+
     def add_resource(self, item):
         """Add a scenario resource to its corresponding list.
 
@@ -169,35 +205,50 @@ class Scenario(CarbonResource):
             raise ValueError('Resource must be of a valid Resource type.'
                              'Check the type of the given item: %s' % item)
 
-    def reload_resources(self, tasks, is_parallel=True):
+    def reload_resources(self, tasks):
         """Reload scenario resources.
+        This method is used to reload host and report resources after they have been provisioned or imported
+        Here the method checks if the task data is of host resource and has rvalue which holds more than one host
+        resource. If rvalue is present then linchpin count feature was used and that many new host resources will be
+        created. If rvalue is not present then linchpin count was not used and a single resource is provisioned.
+
+        In case the task is not host resource then it is checked if it is of report type and then reinitialized and
+        added to the scenario
+
+        Prior to adding teh host/report resource to the scenario, the method checks if the resource belongs to that
+        scenario by comparing the names
 
         :param tasks: task data returned by blaster
         :type tasks: list
         """
         count = 0
         scenario_resource_list = list()
-        if is_parallel:
-            for task in tasks:
-                for key, value in task.items():
-                    # Added report object in case we decide reporting
-                    # should be done in parallel
-                    if isinstance(value, Asset):
-                        for h in self.assets:
-                            if value.name == h.name:
-                                scenario_resource_list.append(value)
-                    if isinstance(value, Report):
-                        for r in self.reports:
-                            if value.name == r.name:
-                                scenario_resource_list.append(value)
+        for task in tasks:
+            if task.get('asset') and getattr(task.get('asset'), 'name') in [h.name for h in self.assets]:
+                for item in task.get('methods'):
+                    if item['rvalue'] is not None:
+                        if count == 0:
+                            # initialize the host resource list to remove any previous host resources
+                            self.initialize_resource(task.get('asset'))
+                            # load the new host resources using the parameters from item['rvalue']
+                            self.load_resources(Asset, item['rvalue'])
+                            count += 1
+                        else:
+                            self.load_resources(Asset, item['rvalue'])
+                    else:
+                        scenario_resource_list.append(task.get('asset'))
 
-            for res in scenario_resource_list:
-                if count == 0:
-                    self.initialize_resource(res)
-                    self.add_resource(res)
-                    count += 1
-                else:
-                    self.add_resource(res)
+            elif isinstance(task.get('package'), Report) and getattr(task.get('package'), 'name') \
+                    in [r.name for r in self.reports]:
+                scenario_resource_list.append(task.get('package'))
+
+        for res in scenario_resource_list:
+            if count == 0:
+                self.initialize_resource(res)
+                self.add_resource(res)
+                count += 1
+            else:
+                self.add_resource(res)
         return
 
     @property

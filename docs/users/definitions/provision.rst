@@ -424,12 +424,51 @@ the **provisioner** key in your provision section.
     will take the name of the defined carbon resource in the provision
     section and use that as the name parameter for the resource defintion.
 
+Using Linchpin Count
+++++++++++++++++++++
+
+Carbon supports Linchpin's count feature to create multiple resources using
+Beaker, Openstack, Libvirt and AWS providers. For this *count* key has to be added 
+to the provider section in the scenario descriptor file.
+
+Example
+~~~~~~~
+To create 2 resources in openstack **count: 2** is added to the provider 
+section. 
+Resources created using count will be suffixed with a digit starting at 0
+upto the number of resources. This example will provision 2 resources
+*openstack-node_0* and *openstack-node_1*
+By default count value is 1.
+
+.. code-block:: yaml
+   
+    provision:
+    - name: openstack-node
+      role: node
+      provisioner: linchpin-wrapper
+      provider: 
+        name: openstack
+        credential: openstack-creds
+        image: rhel-7.5-server-x86_64-released
+        flavor: m1.small
+        networks:
+         - '{{ network }}'
+        count: 2
+
+To enable the use of count feature while using linchpin set the feature toggle to
+true in the carbon.cfg file
+
+.. code-block:: yaml
+
+   [feature_toggles:host]
+   plugin_implementation=True
+
 
 Beaker Resource
 +++++++++++++++
 
 The Beaker Provider has been augmented to include all the Linchpin roles and
-parameters except **count**. For a full list of Linchpin Beaker parameters
+parameters. For a full list of Linchpin Beaker parameters
 please refer to
 the `Linchpin Beaker Provider <https://linchpin.readthedocs.io/en/latest/beaker.html>`_.
 
@@ -532,6 +571,7 @@ some of the common parameters shared by both provisioners.
         - List
 
 
+
 SSH Keys
 ~~~~~~~~
 
@@ -575,7 +615,7 @@ OpenStack Resource
 
 The OpenStack Provider has been augmented to include all the Linchpin
 OpenStack os_server resource type and topology parameters except
-**count**, **cacert**, and **cert**. For a full list of Linchpin OpenStack
+ **cacert**, and **cert**. For a full list of Linchpin OpenStack
 os_server parameters please refer to the
 `Linchpin OpenStack Provider <https://linchpin.readthedocs.io/en/latest/openstack.html>`_.
 
@@ -631,6 +671,7 @@ highlights some of the common parameters shared by both provisioners
         - String
         - keypair
         - String
+
 
 Example
 ~~~~~~~

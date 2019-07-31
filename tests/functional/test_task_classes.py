@@ -28,7 +28,7 @@
 import mock
 import pytest
 
-from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError
+from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError, CarbonProvisionerError
 from carbon.tasks import CleanupTask, ExecuteTask, OrchestrateTask, \
     ProvisionTask, ReportTask, ValidateTask
 
@@ -72,11 +72,9 @@ def orchestrate_task():
 # patching the __init__ for some reason patching out the Inventory
 # class as a whole was not working in py 2 but works in py3
 @pytest.fixture(scope='class')
-@mock.patch('carbon.core.Inventory.__init__')
-def provision_task(mock_inv):
+def provision_task():
     asset = mock.MagicMock()
     asset.provisioner = mock.MagicMock()
-    mock_inv.return_value = None
     return ProvisionTask(msg='provision task', asset=asset, name='Test-Asset')
 
 
@@ -144,6 +142,7 @@ class TestExecuteTask(object):
         with pytest.raises(CarbonOrchestratorError):
             execute_task.run()
 
+
 class TestOrchestrateTask(object):
     @staticmethod
     def test_constructor(orchestrate_task):
@@ -168,21 +167,20 @@ class TestProvisionTask(object):
     def test_constructor(provision_task):
         assert isinstance(provision_task, ProvisionTask)
 
-    # Need to replace the inventory object here
-    # because I'm patching the Inventory __init__ in the
-    # fixture
     @staticmethod
-    def test_run(provision_task, inventory):
-        provision_task.inv = inventory
-        provision_task.run()
+    def test_run(provision_task):
+        host_res = provision_task.run()
+        assert host_res is None
 
     @staticmethod
     def test_run_with_provisioner(provision_task):
-        mock_provisioner = mock.MagicMock(spec=CarbonProvisioner, create=mock.MagicMock(return_value='Test Create Success'))
+        mock_provisioner = mock.MagicMock(spec=CarbonProvisioner,
+                                          create=mock.MagicMock(return_value='Test Create Success'))
         provision_task.provision = True
         provision_task.provisioner = mock_provisioner
-        provision_task.run()
+        host_res = provision_task.run()
         mock_provisioner.create.assert_called()
+        assert host_res is 'Test Create Success'
 
     @staticmethod
     def test_create_with_provisioner_no_plugin():
@@ -195,8 +193,8 @@ class TestProvisionTask(object):
 
     @staticmethod
     def test_create_with_provisioner_plugin():
-        asset = mock.MagicMock(spec=Asset, is_static=False, provisioner_plugin=ProvisionerPlugin, provisioner=AssetProvisioner,
-                              provider_params='test-provider-param')
+        asset = mock.MagicMock(spec=Asset, is_static=False, provisioner_plugin=ProvisionerPlugin,
+                               provisioner=AssetProvisioner, provider_params='test-provider-param')
         with mock.patch('carbon.core.Inventory.__init__') as mock_inv:
             mock_inv.return_value = None
             pt = ProvisionTask('provision task', asset=asset)
@@ -212,18 +210,6 @@ class TestProvisionTask(object):
         with pytest.raises(CarbonOrchestratorError):
             provision_task.run()
 
-    @staticmethod
-    def test_run_create_inventory_failure(host, inventory):
-        inventory.create_master.side_effect = OSError('Failed to get permissions on the file')
-        mock_provisioner = mock.MagicMock(spec=CarbonProvisioner, create=mock.MagicMock(return_value='Test Create Success'))
-        with mock.patch('carbon.core.Inventory.__init__') as mock_inv:
-            mock_inv.return_value = None
-            pt = ProvisionTask(msg='Test Provision Task', asset=host)
-            pt.provision = True
-            pt.provisioner = mock_provisioner
-            pt.inv = inventory
-            with pytest.raises(OSError):
-                pt.run()
 
 class TestCleanupTask(object):
     @staticmethod

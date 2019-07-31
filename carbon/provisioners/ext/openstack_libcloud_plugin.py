@@ -94,16 +94,24 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
         except KeyError:
             credentials['region'] = 'regionOne'
 
+        # determine domain
+        try:
+            if not credentials['domain_name']:
+                # set the default domain if no domain is defined
+                credentials['domain_name'] = 'default'
+        except KeyError:
+            credentials['domain_name'] = 'default'
+
         # create libcloud driver object
         self._driver = get_driver(Provider.OPENSTACK)(
             credentials['username'],
             credentials['password'],
             ex_tenant_name=credentials['tenant_name'],
             ex_force_auth_url=credentials['auth_url'].split('/v')[0],
-            ex_force_auth_version='2.0_password',
+            ex_force_auth_version='3.x_password',
+            ex_domain_name=credentials['domain_name'],
             ex_force_service_region=credentials['region']
         )
-
         # test authentication
         try:
             self._driver.ex_list_networks()
@@ -469,7 +477,11 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
         self.logger.info('Provisioning node %s.' % name)
 
         # create node
-        node = self.create_node(name, image, size, network, key_pair)
+        try:
+            node = self.create_node(name, image, size, network, key_pair)
+        except Exception:
+            self.logger.error("Failed to create node %s " % name)
+            raise
 
         # wait for node to complete building
         try:
@@ -491,6 +503,11 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
 
         self.logger.info('Successfully provisioned node %s.' % name)
 
+        # if no floating ip is assigned get updated node details and look for private_ip
+        # TODO: This might need more logic if we support a use case for more than one network specified
+        if ip is None:
+            node = self.driver.ex_get_node_details(node.id)
+            ip = node.private_ips[-1]
         return ip, node.id
 
     def _delete(self, name):
@@ -536,15 +553,20 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
             state = getattr(node, 'state')
             msg = '%s. VM %s, STATE=%s' % (attempt, node.name, state)
 
-            if state.lower() != 'running':
-                self.logger.info('%s, rechecking in 20 seconds.', msg)
-                time.sleep(20)
-            else:
+            if state.lower() == 'error':
+                self.logger.info(msg)
+                self.logger.error('VM %s got an into an error state!' %
+                                  node.name)
+                break
+            elif state.lower() == 'running':
                 self.logger.info(msg)
                 self.logger.info('VM %s successfully finished building!' %
                                  node.name)
                 status = 1
                 break
+            else:
+                self.logger.info('%s, rechecking in 20 seconds.', msg)
+                time.sleep(20)
 
         self.unset_driver()
         if status:
@@ -582,7 +604,7 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
             # attach ip to node
             self.driver.ex_attach_floating_ip_to_node(node, _ip)
         except Exception as ex:
-            self.logger.error(ex.message)
+            self.logger.error(ex)
             raise OpenstackProviderError('Unable to attach FIP to %s' % node)
         finally:
             self.unset_driver()
@@ -616,7 +638,7 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
         except OpenstackProviderError:
             self.logger.warning('Node %s does not have fip.' % node.name)
         except Exception as ex:
-            self.logger.error(ex.message)
+            self.logger.error(ex)
             raise OpenstackProviderError('Unable to detach FIP from %s' % node)
         finally:
             self.unset_driver()
@@ -629,16 +651,29 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
         """
         self.logger.info('Provisioning machines from %s', self.__class__)
 
+        # Check if floating ip pool was provided as part of scenario
+        try:
+            fip = getattr(self.host, 'provider_params')['floating_ip_pool']
+        except KeyError:
+            fip = None
+
+        # ignore if count is given as provider parameter
+        try:
+            if getattr(self.host, 'provider_params')['count']:
+                self.logger.warn('Count parameter is found for host %s '
+                                 'Count is not supported with openstack_libcloud as provisioner and will be ignored.'
+                                 % getattr(self.host, 'provider_params')['hostname'])
+        except KeyError:
+            pass
+
         _ip, _id = self._create(
             getattr(self.host, 'provider_params')['hostname'],
             getattr(self.host, 'provider_params')['image'],
             getattr(self.host, 'provider_params')['flavor'],
             getattr(self.host, 'provider_params')['networks'],
             getattr(self.host, 'provider_params')['keypair'],
-            getattr(self.host, 'provider_params')['floating_ip_pool'],
+            fip
         )
-
-        # set new attributes in host object
         setattr(self.host, 'ip_address', str(_ip))
         getattr(self.host, 'provider_params')['node_id'] = str(_id)
 

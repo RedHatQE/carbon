@@ -78,6 +78,10 @@ def default_host_params():
 def scenario_resource():
     return Scenario(config=Config(), parameters={'k': 'v'})
 
+@pytest.fixture
+def scenario_resource1(config):
+    return Scenario(config=config, parameters={'k': 'v'})
+
 
 @pytest.fixture
 def action_resource():
@@ -116,6 +120,66 @@ def host(default_host_params, config):
         config=config,
         parameters=copy.deepcopy(default_host_params)
     )
+
+
+@pytest.fixture
+def asset1(default_host_params, config):
+    return Asset(
+        name='host_0',
+        config=config,
+        parameters=copy.deepcopy(default_host_params)
+    )
+
+@pytest.fixture
+def asset2(default_host_params, config):
+    param =copy.deepcopy(default_host_params)
+    param.update(role='test')
+    return Asset(
+        name='host_1',
+        config=config,
+        parameters=param
+    )
+
+@pytest.fixture
+def asset3(default_host_params, config):
+    param =copy.deepcopy(default_host_params)
+    param.pop('role')
+    param.update(groups='group_test')
+    return Asset(
+        name='host_3',
+        config=config,
+        parameters=param
+    )
+
+@pytest.fixture
+def action1():
+    return Action(
+        name='action',
+        parameters=dict(
+            description='description',
+            hosts=['host'],
+            orchestrator='ansible'
+        )
+    )
+
+
+@pytest.fixture
+def execute1():
+    params = dict(description='description', hosts='test', executor='runner')
+    return Execute(name='execute1', parameters=params)
+
+@pytest.fixture
+def execute2():
+    params = dict(description='description', hosts='group_test', executor='runner')
+    return Execute(name='execute2', parameters=params)
+
+
+@pytest.fixture
+def scenario1(asset1, action1, scenario_resource1, execute1):
+    scenario_resource1.add_assets(asset1)
+    scenario_resource1.add_actions(action1)
+    scenario_resource1.add_executes(execute1)
+    return scenario_resource1
 
 
 @pytest.fixture

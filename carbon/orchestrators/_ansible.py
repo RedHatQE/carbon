@@ -239,11 +239,12 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
         # create inventory object for create/delete inventory file
         self.inv = Inventory(
-            self.hosts,
-            self.all_hosts,
+            hosts=self.hosts,
+            all_hosts=self.all_hosts,
             data_dir=self.config['DATA_FOLDER'],
             results_dir=self.config['RESULTS_FOLDER'],
             static_inv_dir=self.config['INVENTORY_FOLDER']
+
         )
 
     def validate(self):

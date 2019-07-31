@@ -1,0 +1,944 @@
+{
+        "carbon": {
+            "inputs": [
+                {
+                    "topology_data": {
+                        "resource_groups": [
+                            {
+                                "resource_definitions": [
+                                    {
+                                        "count": 2,
+                                        "flavor": "m1.small",
+                                        "image": "rhel-7.4-server-x86_64-released",
+                                        "keypair": "carbon-test-key",
+                                        "name": "db2_ci_test_client_a",
+                                        "networks": [
+                                            "provider_net_cci_5"
+                                        ],
+                                        "role": "os_server",
+                                        "verify": "false"
+                                    }
+                                ],
+                                "resource_group_name": "carbon",
+                                "resource_group_type": "openstack"
+                            }
+                        ],
+                        "topology_name": "carbon"
+                    }
+                },
+                {
+                    "layout_data": {
+                        "inventory_layout": {
+                            "hosts": [
+                                {
+                                    "count": 1,
+                                    "host_groups": [
+                                        "hosts",
+                                        "client",
+                                        "test_driver"
+                                    ],
+                                    "name": "node"
+                                }
+                            ],
+                            "vars": {
+                                "ansible_ssh_private_key_file": "keys/carbon-test-key",
+                                "ansible_user": "cloud-user",
+                                "hostname": "db2_ci_test_client_a"
+                            }
+                        }
+                    }
+                }
+            ],
+            "outputs":
+                {
+                    "resources": [
+                        {
+                            "ids": [
+                                "af457d84-b79f-4728-a33e-9164ff1ad890",
+                                "6a0c3371-9265-4318-94f8-d21681ed6a0a"
+                            ],
+                            "openstack": [
+                                {
+                                    "OS-DCF:diskConfig": "MANUAL",
+                                    "OS-EXT-AZ:availability_zone": "nova",
+                                    "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+                                    "OS-EXT-SRV-ATTR:instance_name": null,
+                                    "OS-EXT-SRV-ATTR:user_data": null,
+                                    "OS-EXT-STS:power_state": 1,
+                                    "OS-EXT-STS:task_state": null,
+                                    "OS-EXT-STS:vm_state": "active",
+                                    "OS-SCH-HNT:scheduler_hints": null,
+                                    "OS-SRV-USG:launched_at": "2019-08-20T05:51:32.000000",
+                                    "OS-SRV-USG:terminated_at": null,
+                                    "accessIPv4": "10.0.151.56",
+                                    "accessIPv6": "",
+                                    "addresses": {
+                                        "provider_net_cci_5": [
+                                            {
+                                                "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:19:a7:ce",
+                                                "OS-EXT-IPS:type": "fixed",
+                                                "addr": "10.0.151.56",
+                                                "version": 4
+                                            }
+                                        ]
+                                    },
+                                    "adminPass": "Eowf8bQXgeVP",
+                                    "az": "nova",
+                                    "block_device_mapping": null,
+                                    "cloud": "envvars",
+                                    "config_drive": "",
+                                    "created": "2019-08-20T05:51:15Z",
+                                    "created_at": "2019-08-20T05:51:15Z",
+                                    "disk_config": "MANUAL",
+                                    "flavor": {
+                                        "id": "b23c29c8-b888-4eff-b839-7a0d4e59fec0",
+                                        "name": "m1.small"
+                                    },
+                                    "has_config_drive": false,
+                                    "hostId": "719087af150d079364195cb9a7d469675e481173c38384beb3c8872b",
+                                    "host_id": "719087af150d079364195cb9a7d469675e481173c38384beb3c8872b",
+                                    "hypervisor_hostname": null,
+                                    "id": "af457d84-b79f-4728-a33e-9164ff1ad890",
+                                    "image": {
+                                        "id": "97e01560-3555-44b6-a489-823d4c72d529",
+                                        "name": "rhel-7.4-server-x86_64-released"
+                                    },
+                                    "instance_name": null,
+                                    "interface_ip": "10.0.151.56",
+                                    "key_name": "carbon-test-key",
+                                    "launched_at": "2019-08-20T05:51:32.000000",
+                                    "location": {
+                                        "cloud": "envvars",
+                                        "project": {
+                                            "domain_id": null,
+                                            "domain_name": "redhat.com",
+                                            "id": "5bbb577246d64aef876cca799f149661",
+                                            "name": "ops-qe-testing"
+                                        },
+                                        "region_name": "",
+                                        "zone": "nova"
+                                    },
+                                    "metadata": {},
+                                    "name": "db2_ci_test_client_a_0",
+                                    "networks": {},
+                                    "os-extended-volumes:volumes_attached": [],
+                                    "personality": null,
+                                    "power_state": 1,
+                                    "private_v4": "",
+                                    "progress": 0,
+                                    "project_id": "5bbb577246d64aef876cca799f149661",
+                                    "properties": {
+                                        "OS-DCF:diskConfig": "MANUAL",
+                                        "OS-EXT-AZ:availability_zone": "nova",
+                                        "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+                                        "OS-EXT-SRV-ATTR:instance_name": null,
+                                        "OS-EXT-SRV-ATTR:user_data": null,
+                                        "OS-EXT-STS:power_state": 1,
+                                        "OS-EXT-STS:task_state": null,
+                                        "OS-EXT-STS:vm_state": "active",
+                                        "OS-SCH-HNT:scheduler_hints": null,
+                                        "OS-SRV-USG:launched_at": "2019-08-20T05:51:32.000000",
+                                        "OS-SRV-USG:terminated_at": null,
+                                        "os-extended-volumes:volumes_attached": []
+                                    },
+                                    "public_v4": "10.0.151.56",
+                                    "public_v6": "",
+                                    "region": "",
+                                    "scheduler_hints": null,
+                                    "security_groups": [
+                                        {
+                                            "description": "Default security group",
+                                            "id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                            "location": {
+                                                "cloud": "envvars",
+                                                "project": {
+                                                    "domain_id": null,
+                                                    "domain_name": "redhat.com",
+                                                    "id": "5bbb577246d64aef876cca799f149661",
+                                                    "name": "ops-qe-testing"
+                                                },
+                                                "region_name": "",
+                                                "zone": null
+                                            },
+                                            "name": "default",
+                                            "project_id": "5bbb577246d64aef876cca799f149661",
+                                            "properties": {},
+                                            "security_group_rules": [
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {},
+                                                    "id": "0f3ff2ba-df45-4b24-926d-e61a90dd1ab7",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": 22,
+                                                    "port_range_min": 22,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {}
+                                                    },
+                                                    "protocol": "tcp",
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": "0.0.0.0/0",
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                },
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {
+                                                        "name": "default",
+                                                        "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                    },
+                                                    "id": "358b21a9-d958-477c-a6bb-3d41a937dd86",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": null,
+                                                    "port_range_min": null,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {
+                                                            "name": "default",
+                                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                        }
+                                                    },
+                                                    "protocol": null,
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": null,
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                },
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {
+                                                        "name": "default",
+                                                        "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                    },
+                                                    "id": "4eeda907-fe85-4aab-a888-a2d19eaa0732",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": null,
+                                                    "port_range_min": null,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {
+                                                            "name": "default",
+                                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                        }
+                                                    },
+                                                    "protocol": null,
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": null,
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                }
+                                            ],
+                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                        }
+                                    ],
+                                    "status": "ACTIVE",
+                                    "tags": [],
+                                    "task_state": null,
+                                    "tenant_id": "5bbb577246d64aef876cca799f149661",
+                                    "terminated_at": null,
+                                    "updated": "2019-08-20T05:51:32Z",
+                                    "user_data": null,
+                                    "user_id": "78ba674dfbe94d4a85ae895a7bc612dbca0b1b2086a2f1b602bb412854086092",
+                                    "vm_state": "active",
+                                    "volumes": []
+                                },
+                                {
+                                    "OS-DCF:diskConfig": "MANUAL",
+                                    "OS-EXT-AZ:availability_zone": "nova",
+                                    "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+                                    "OS-EXT-SRV-ATTR:instance_name": null,
+                                    "OS-EXT-SRV-ATTR:user_data": null,
+                                    "OS-EXT-STS:power_state": 1,
+                                    "OS-EXT-STS:task_state": null,
+                                    "OS-EXT-STS:vm_state": "active",
+                                    "OS-SCH-HNT:scheduler_hints": null,
+                                    "OS-SRV-USG:launched_at": "2019-08-20T05:53:22.000000",
+                                    "OS-SRV-USG:terminated_at": null,
+                                    "accessIPv4": "10.0.150.117",
+                                    "accessIPv6": "",
+                                    "addresses": {
+                                        "provider_net_cci_5": [
+                                            {
+                                                "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:21:e7:7b",
+                                                "OS-EXT-IPS:type": "fixed",
+                                                "addr": "10.0.150.117",
+                                                "version": 4
+                                            }
+                                        ]
+                                    },
+                                    "adminPass": "5WfaJcNoVK2R",
+                                    "az": "nova",
+                                    "block_device_mapping": null,
+                                    "cloud": "envvars",
+                                    "config_drive": "",
+                                    "created": "2019-08-20T05:53:09Z",
+                                    "created_at": "2019-08-20T05:53:09Z",
+                                    "disk_config": "MANUAL",
+                                    "flavor": {
+                                        "id": "b23c29c8-b888-4eff-b839-7a0d4e59fec0",
+                                        "name": "m1.small"
+                                    },
+                                    "has_config_drive": false,
+                                    "hostId": "719087af150d079364195cb9a7d469675e481173c38384beb3c8872b",
+                                    "host_id": "719087af150d079364195cb9a7d469675e481173c38384beb3c8872b",
+                                    "hypervisor_hostname": null,
+                                    "id": "6a0c3371-9265-4318-94f8-d21681ed6a0a",
+                                    "image": {
+                                        "id": "97e01560-3555-44b6-a489-823d4c72d529",
+                                        "name": "rhel-7.4-server-x86_64-released"
+                                    },
+                                    "instance_name": null,
+                                    "interface_ip": "10.0.150.117",
+                                    "key_name": "carbon-test-key",
+                                    "launched_at": "2019-08-20T05:53:22.000000",
+                                    "location": {
+                                        "cloud": "envvars",
+                                        "project": {
+                                            "domain_id": null,
+                                            "domain_name": "redhat.com",
+                                            "id": "5bbb577246d64aef876cca799f149661",
+                                            "name": "ops-qe-testing"
+                                        },
+                                        "region_name": "",
+                                        "zone": "nova"
+                                    },
+                                    "metadata": {},
+                                    "name": "db2_ci_test_client_a_1",
+                                    "networks": {},
+                                    "os-extended-volumes:volumes_attached": [],
+                                    "personality": null,
+                                    "power_state": 1,
+                                    "private_v4": "",
+                                    "progress": 0,
+                                    "project_id": "5bbb577246d64aef876cca799f149661",
+                                    "properties": {
+                                        "OS-DCF:diskConfig": "MANUAL",
+                                        "OS-EXT-AZ:availability_zone": "nova",
+                                        "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+                                        "OS-EXT-SRV-ATTR:instance_name": null,
+                                        "OS-EXT-SRV-ATTR:user_data": null,
+                                        "OS-EXT-STS:power_state": 1,
+                                        "OS-EXT-STS:task_state": null,
+                                        "OS-EXT-STS:vm_state": "active",
+                                        "OS-SCH-HNT:scheduler_hints": null,
+                                        "OS-SRV-USG:launched_at": "2019-08-20T05:53:22.000000",
+                                        "OS-SRV-USG:terminated_at": null,
+                                        "os-extended-volumes:volumes_attached": []
+                                    },
+                                    "public_v4": "10.0.150.117",
+                                    "public_v6": "",
+                                    "region": "",
+                                    "scheduler_hints": null,
+                                    "security_groups": [
+                                        {
+                                            "description": "Default security group",
+                                            "id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                            "location": {
+                                                "cloud": "envvars",
+                                                "project": {
+                                                    "domain_id": null,
+                                                    "domain_name": "redhat.com",
+                                                    "id": "5bbb577246d64aef876cca799f149661",
+                                                    "name": "ops-qe-testing"
+                                                },
+                                                "region_name": "",
+                                                "zone": null
+                                            },
+                                            "name": "default",
+                                            "project_id": "5bbb577246d64aef876cca799f149661",
+                                            "properties": {},
+                                            "security_group_rules": [
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {},
+                                                    "id": "0f3ff2ba-df45-4b24-926d-e61a90dd1ab7",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": 22,
+                                                    "port_range_min": 22,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {}
+                                                    },
+                                                    "protocol": "tcp",
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": "0.0.0.0/0",
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                },
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {
+                                                        "name": "default",
+                                                        "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                    },
+                                                    "id": "358b21a9-d958-477c-a6bb-3d41a937dd86",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": null,
+                                                    "port_range_min": null,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {
+                                                            "name": "default",
+                                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                        }
+                                                    },
+                                                    "protocol": null,
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": null,
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                },
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {
+                                                        "name": "default",
+                                                        "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                    },
+                                                    "id": "4eeda907-fe85-4aab-a888-a2d19eaa0732",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": null,
+                                                    "port_range_min": null,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {
+                                                            "name": "default",
+                                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                        }
+                                                    },
+                                                    "protocol": null,
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": null,
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                }
+                                            ],
+                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                        }
+                                    ],
+                                    "status": "ACTIVE",
+                                    "tags": [],
+                                    "task_state": null,
+                                    "tenant_id": "5bbb577246d64aef876cca799f149661",
+                                    "terminated_at": null,
+                                    "updated": "2019-08-20T05:53:22Z",
+                                    "user_data": null,
+                                    "user_id": "78ba674dfbe94d4a85ae895a7bc612dbca0b1b2086a2f1b602bb412854086092",
+                                    "vm_state": "active",
+                                    "volumes": []
+                                }
+                            ],
+                            "resource_type": "os_server_res",
+                            "servers": [
+                                {
+                                    "OS-DCF:diskConfig": "MANUAL",
+                                    "OS-EXT-AZ:availability_zone": "nova",
+                                    "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+                                    "OS-EXT-SRV-ATTR:instance_name": null,
+                                    "OS-EXT-SRV-ATTR:user_data": null,
+                                    "OS-EXT-STS:power_state": 1,
+                                    "OS-EXT-STS:task_state": null,
+                                    "OS-EXT-STS:vm_state": "active",
+                                    "OS-SCH-HNT:scheduler_hints": null,
+                                    "OS-SRV-USG:launched_at": "2019-08-20T05:51:32.000000",
+                                    "OS-SRV-USG:terminated_at": null,
+                                    "accessIPv4": "10.0.151.56",
+                                    "accessIPv6": "",
+                                    "addresses": {
+                                        "provider_net_cci_5": [
+                                            {
+                                                "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:19:a7:ce",
+                                                "OS-EXT-IPS:type": "fixed",
+                                                "addr": "10.0.151.56",
+                                                "version": 4
+                                            }
+                                        ]
+                                    },
+                                    "adminPass": "Eowf8bQXgeVP",
+                                    "az": "nova",
+                                    "block_device_mapping": null,
+                                    "cloud": "envvars",
+                                    "config_drive": "",
+                                    "created": "2019-08-20T05:51:15Z",
+                                    "created_at": "2019-08-20T05:51:15Z",
+                                    "disk_config": "MANUAL",
+                                    "flavor": {
+                                        "id": "b23c29c8-b888-4eff-b839-7a0d4e59fec0",
+                                        "name": "m1.small"
+                                    },
+                                    "has_config_drive": false,
+                                    "hostId": "719087af150d079364195cb9a7d469675e481173c38384beb3c8872b",
+                                    "host_id": "719087af150d079364195cb9a7d469675e481173c38384beb3c8872b",
+                                    "hypervisor_hostname": null,
+                                    "id": "af457d84-b79f-4728-a33e-9164ff1ad890",
+                                    "image": {
+                                        "id": "97e01560-3555-44b6-a489-823d4c72d529",
+                                        "name": "rhel-7.4-server-x86_64-released"
+                                    },
+                                    "instance_name": null,
+                                    "interface_ip": "10.0.151.56",
+                                    "key_name": "carbon-test-key",
+                                    "launched_at": "2019-08-20T05:51:32.000000",
+                                    "location": {
+                                        "cloud": "envvars",
+                                        "project": {
+                                            "domain_id": null,
+                                            "domain_name": "redhat.com",
+                                            "id": "5bbb577246d64aef876cca799f149661",
+                                            "name": "ops-qe-testing"
+                                        },
+                                        "region_name": "",
+                                        "zone": "nova"
+                                    },
+                                    "metadata": {},
+                                    "name": "db2_ci_test_client_a_0",
+                                    "networks": {},
+                                    "os-extended-volumes:volumes_attached": [],
+                                    "personality": null,
+                                    "power_state": 1,
+                                    "private_v4": "",
+                                    "progress": 0,
+                                    "project_id": "5bbb577246d64aef876cca799f149661",
+                                    "properties": {
+                                        "OS-DCF:diskConfig": "MANUAL",
+                                        "OS-EXT-AZ:availability_zone": "nova",
+                                        "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+                                        "OS-EXT-SRV-ATTR:instance_name": null,
+                                        "OS-EXT-SRV-ATTR:user_data": null,
+                                        "OS-EXT-STS:power_state": 1,
+                                        "OS-EXT-STS:task_state": null,
+                                        "OS-EXT-STS:vm_state": "active",
+                                        "OS-SCH-HNT:scheduler_hints": null,
+                                        "OS-SRV-USG:launched_at": "2019-08-20T05:51:32.000000",
+                                        "OS-SRV-USG:terminated_at": null,
+                                        "os-extended-volumes:volumes_attached": []
+                                    },
+                                    "public_v4": "10.0.151.56",
+                                    "public_v6": "",
+                                    "region": "",
+                                    "scheduler_hints": null,
+                                    "security_groups": [
+                                        {
+                                            "description": "Default security group",
+                                            "id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                            "location": {
+                                                "cloud": "envvars",
+                                                "project": {
+                                                    "domain_id": null,
+                                                    "domain_name": "redhat.com",
+                                                    "id": "5bbb577246d64aef876cca799f149661",
+                                                    "name": "ops-qe-testing"
+                                                },
+                                                "region_name": "",
+                                                "zone": null
+                                            },
+                                            "name": "default",
+                                            "project_id": "5bbb577246d64aef876cca799f149661",
+                                            "properties": {},
+                                            "security_group_rules": [
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {},
+                                                    "id": "0f3ff2ba-df45-4b24-926d-e61a90dd1ab7",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": 22,
+                                                    "port_range_min": 22,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {}
+                                                    },
+                                                    "protocol": "tcp",
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": "0.0.0.0/0",
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                },
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {
+                                                        "name": "default",
+                                                        "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                    },
+                                                    "id": "358b21a9-d958-477c-a6bb-3d41a937dd86",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": null,
+                                                    "port_range_min": null,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {
+                                                            "name": "default",
+                                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                        }
+                                                    },
+                                                    "protocol": null,
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": null,
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                },
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {
+                                                        "name": "default",
+                                                        "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                    },
+                                                    "id": "4eeda907-fe85-4aab-a888-a2d19eaa0732",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": null,
+                                                    "port_range_min": null,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {
+                                                            "name": "default",
+                                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                        }
+                                                    },
+                                                    "protocol": null,
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": null,
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                }
+                                            ],
+                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                        }
+                                    ],
+                                    "status": "ACTIVE",
+                                    "tags": [],
+                                    "task_state": null,
+                                    "tenant_id": "5bbb577246d64aef876cca799f149661",
+                                    "terminated_at": null,
+                                    "updated": "2019-08-20T05:51:32Z",
+                                    "user_data": null,
+                                    "user_id": "78ba674dfbe94d4a85ae895a7bc612dbca0b1b2086a2f1b602bb412854086092",
+                                    "vm_state": "active",
+                                    "volumes": []
+                                },
+                                {
+                                    "OS-DCF:diskConfig": "MANUAL",
+                                    "OS-EXT-AZ:availability_zone": "nova",
+                                    "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+                                    "OS-EXT-SRV-ATTR:instance_name": null,
+                                    "OS-EXT-SRV-ATTR:user_data": null,
+                                    "OS-EXT-STS:power_state": 1,
+                                    "OS-EXT-STS:task_state": null,
+                                    "OS-EXT-STS:vm_state": "active",
+                                    "OS-SCH-HNT:scheduler_hints": null,
+                                    "OS-SRV-USG:launched_at": "2019-08-20T05:53:22.000000",
+                                    "OS-SRV-USG:terminated_at": null,
+                                    "accessIPv4": "10.0.150.117",
+                                    "accessIPv6": "",
+                                    "addresses": {
+                                        "provider_net_cci_5": [
+                                            {
+                                                "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:21:e7:7b",
+                                                "OS-EXT-IPS:type": "fixed",
+                                                "addr": "10.0.150.117",
+                                                "version": 4
+                                            }
+                                        ]
+                                    },
+                                    "adminPass": "5WfaJcNoVK2R",
+                                    "az": "nova",
+                                    "block_device_mapping": null,
+                                    "cloud": "envvars",
+                                    "config_drive": "",
+                                    "created": "2019-08-20T05:53:09Z",
+                                    "created_at": "2019-08-20T05:53:09Z",
+                                    "disk_config": "MANUAL",
+                                    "flavor": {
+                                        "id": "b23c29c8-b888-4eff-b839-7a0d4e59fec0",
+                                        "name": "m1.small"
+                                    },
+                                    "has_config_drive": false,
+                                    "hostId": "719087af150d079364195cb9a7d469675e481173c38384beb3c8872b",
+                                    "host_id": "719087af150d079364195cb9a7d469675e481173c38384beb3c8872b",
+                                    "hypervisor_hostname": null,
+                                    "id": "6a0c3371-9265-4318-94f8-d21681ed6a0a",
+                                    "image": {
+                                        "id": "97e01560-3555-44b6-a489-823d4c72d529",
+                                        "name": "rhel-7.4-server-x86_64-released"
+                                    },
+                                    "instance_name": null,
+                                    "interface_ip": "10.0.150.117",
+                                    "key_name": "carbon-test-key",
+                                    "launched_at": "2019-08-20T05:53:22.000000",
+                                    "location": {
+                                        "cloud": "envvars",
+                                        "project": {
+                                            "domain_id": null,
+                                            "domain_name": "redhat.com",
+                                            "id": "5bbb577246d64aef876cca799f149661",
+                                            "name": "ops-qe-testing"
+                                        },
+                                        "region_name": "",
+                                        "zone": "nova"
+                                    },
+                                    "metadata": {},
+                                    "name": "db2_ci_test_client_a_1",
+                                    "networks": {},
+                                    "os-extended-volumes:volumes_attached": [],
+                                    "personality": null,
+                                    "power_state": 1,
+                                    "private_v4": "",
+                                    "progress": 0,
+                                    "project_id": "5bbb577246d64aef876cca799f149661",
+                                    "properties": {
+                                        "OS-DCF:diskConfig": "MANUAL",
+                                        "OS-EXT-AZ:availability_zone": "nova",
+                                        "OS-EXT-SRV-ATTR:hypervisor_hostname": null,
+                                        "OS-EXT-SRV-ATTR:instance_name": null,
+                                        "OS-EXT-SRV-ATTR:user_data": null,
+                                        "OS-EXT-STS:power_state": 1,
+                                        "OS-EXT-STS:task_state": null,
+                                        "OS-EXT-STS:vm_state": "active",
+                                        "OS-SCH-HNT:scheduler_hints": null,
+                                        "OS-SRV-USG:launched_at": "2019-08-20T05:53:22.000000",
+                                        "OS-SRV-USG:terminated_at": null,
+                                        "os-extended-volumes:volumes_attached": []
+                                    },
+                                    "public_v4": "10.0.150.117",
+                                    "public_v6": "",
+                                    "region": "",
+                                    "scheduler_hints": null,
+                                    "security_groups": [
+                                        {
+                                            "description": "Default security group",
+                                            "id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                            "location": {
+                                                "cloud": "envvars",
+                                                "project": {
+                                                    "domain_id": null,
+                                                    "domain_name": "redhat.com",
+                                                    "id": "5bbb577246d64aef876cca799f149661",
+                                                    "name": "ops-qe-testing"
+                                                },
+                                                "region_name": "",
+                                                "zone": null
+                                            },
+                                            "name": "default",
+                                            "project_id": "5bbb577246d64aef876cca799f149661",
+                                            "properties": {},
+                                            "security_group_rules": [
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {},
+                                                    "id": "0f3ff2ba-df45-4b24-926d-e61a90dd1ab7",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": 22,
+                                                    "port_range_min": 22,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {}
+                                                    },
+                                                    "protocol": "tcp",
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": "0.0.0.0/0",
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                },
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {
+                                                        "name": "default",
+                                                        "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                    },
+                                                    "id": "358b21a9-d958-477c-a6bb-3d41a937dd86",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": null,
+                                                    "port_range_min": null,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {
+                                                            "name": "default",
+                                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                        }
+                                                    },
+                                                    "protocol": null,
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": null,
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                },
+                                                {
+                                                    "direction": "ingress",
+                                                    "ethertype": "IPv4",
+                                                    "group": {
+                                                        "name": "default",
+                                                        "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                    },
+                                                    "id": "4eeda907-fe85-4aab-a888-a2d19eaa0732",
+                                                    "location": {
+                                                        "cloud": "envvars",
+                                                        "project": {
+                                                            "domain_id": null,
+                                                            "domain_name": "redhat.com",
+                                                            "id": "5bbb577246d64aef876cca799f149661",
+                                                            "name": "ops-qe-testing"
+                                                        },
+                                                        "region_name": "",
+                                                        "zone": null
+                                                    },
+                                                    "port_range_max": null,
+                                                    "port_range_min": null,
+                                                    "project_id": "",
+                                                    "properties": {
+                                                        "group": {
+                                                            "name": "default",
+                                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                                        }
+                                                    },
+                                                    "protocol": null,
+                                                    "remote_group_id": null,
+                                                    "remote_ip_prefix": null,
+                                                    "security_group_id": "b05a62f7-07ad-4720-8865-2f909c25db46",
+                                                    "tenant_id": ""
+                                                }
+                                            ],
+                                            "tenant_id": "5bbb577246d64aef876cca799f149661"
+                                        }
+                                    ],
+                                    "status": "ACTIVE",
+                                    "tags": [],
+                                    "task_state": null,
+                                    "tenant_id": "5bbb577246d64aef876cca799f149661",
+                                    "terminated_at": null,
+                                    "updated": "2019-08-20T05:53:22Z",
+                                    "user_data": null,
+                                    "user_id": "78ba674dfbe94d4a85ae895a7bc612dbca0b1b2086a2f1b602bb412854086092",
+                                    "vm_state": "active",
+                                    "volumes": []
+                                }
+                            ]
+                        }
+                    ],
+
+
+                    "inventory_path": [
+                        "/home/rushinde/carbon_py2_work/e2e-acceptance-tests/.carbon/.results/linchpin/inventories/carbon.inventory"
+                    ]
+                }
+
+        }
+
+}

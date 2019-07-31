@@ -1,0 +1,83 @@
+{
+    "carbon": {
+
+          "action": "up",
+          "cfgs": [],
+          "end": "1568296343.65",
+          "hooks": [],
+          "inputs": [
+              {
+                  "topology_data": {
+                      "resource_groups": [
+                          {
+                              "resource_definitions": [
+                                  {
+                                      "count": 2,
+                                      "image_src": "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2",
+                                      "memory": 1024,
+                                      "name": "test_libvirt_vm",
+                                      "networks": [
+                                          {
+                                              "name": "default"
+                                          }
+                                      ],
+                                      "role": "libvirt_node",
+                                      "ssh_key": "carbon",
+                                      "uri": "qemu:///system",
+                                      "vcpus": 2
+                                  }
+                              ],
+                              "resource_group_name": "carbon",
+                              "resource_group_type": "libvirt"
+                          }
+                      ],
+                      "topology_name": "carbon"
+                  }
+              },
+              {
+                  "layout_data": {
+                      "inventory_layout": {
+                          "hosts": [
+                              {
+                                  "count": 1,
+                                  "host_groups": [
+                                      "hosts",
+                                      "client"
+                                  ],
+                                  "name": "node"
+                              }
+                          ],
+                          "vars": {
+                              "ansible_ssh_private_key_file": "keys/carbon",
+                              "ansible_user": "centos",
+                              "hostname": "test_libvirt_vm"
+                          }
+                      }
+                  }
+              }
+          ],
+          "outputs": {
+            "resources": [
+              {
+                "ip": "10.0.151.56",
+                "ip_type": "private",
+                "name": "test_libvirt_vm_0",
+                "resource_type": "libvirt_res"
+              },
+              {
+                "ip": "10.0.150.117",
+                "ip_type": "private",
+                "name": "test_libvirt_vm_1",
+                "resource_type": "libvirt_res"
+              }
+            ],
+            "inventory_path": [
+              "/home/rushinde/carbon_py2_work/e2e-acceptance-tests_temp/.carbon/.results/linchpin/inventories/carbon.inventory"
+            ]
+          },
+          "rc": 0,
+          "start": "1568296305.81",
+          "uhash": "e743de"
+
+    }
+}

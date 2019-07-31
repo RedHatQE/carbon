@@ -29,6 +29,7 @@
 from pprint import pformat
 
 from carbon.core import CarbonProvisioner
+import copy
 
 
 class AssetProvisioner(CarbonProvisioner):
@@ -132,8 +133,38 @@ class AssetProvisioner(CarbonProvisioner):
         self.logger.info('Provisioning host %s in %s.' % (host, self.provider))
         self.print_commonly_used_attributes()
         try:
-            self.plugin.create()
-            self.logger.info('Successfully provisioned host %s.' % host)
+            res = self.plugin.create()
+            if res is None or len(res) == 0:
+                # Plugin used is either beaker_client_plugin or openstack_libcloud_plugin
+                # or empty res is libvirt_network was fals or resources other than hosts
+                # are provisioned . Here no operation is done
+                return
+            # If res is greater than one , multiple resources have been provisioned
+            if len(res) > 1:
+                res_profile_list = list()
+                for i in range(0, len(res)):
+                    host_profile = copy.deepcopy(self.host.profile())
+                    if 'beaker' or 'aws' in host_profile['provider']['name']:
+                        host_profile['name'] = host_profile['name'] + '_' + str(i)
+                    else:
+                        host_profile['name'] = res[i]['hostname']
+                    # converting ip to str since it is returned as unicode
+                    # this is for creating master inv as it checks for ip to be a string or list
+                    host_profile['ip_address'] = str(res[i].pop('ip'))
+                    host_profile.get('provider').update(res[i])
+                    host_profile.get('provider').update(dict(count=1))
+                    res_profile_list.append(host_profile)
+                self.logger.info('Successfully provisioned %s host(s) %s :' % (len(res_profile_list),
+                                                                               [res_profile_list[i]['name']
+                                                                                for i in range(0, len(res))]))
+                return res_profile_list
+            else:
+                # Single resource has been provisioned
+                setattr(self.host, 'ip_address', str(res[-1].pop('ip')))
+                getattr(self.host, 'provider_params').update(res[-1])
+                self.logger.info('Successfully provisioned host %s.' % host)
+                return
+
         except Exception as ex:
             self.logger.error(ex)
             raise

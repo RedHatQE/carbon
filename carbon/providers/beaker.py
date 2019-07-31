@@ -84,7 +84,8 @@ class BeakerProvider(PhysicalProvider):
             ('install', [list]),
             ('ks_append', [list]),
             ('partitions', [list]),
-            ('tx_id', [int])
+            ('tx_id', [int]),
+            ('count', [int])
         ]
 
         self.carbon_comm_opt_params = [
@@ -159,7 +160,12 @@ class BeakerProvider(PhysicalProvider):
         :param host: host resource
         :type host: object
         """
-        provisioner_name = getattr(host, 'provisioner').__provisioner_name__
+
+        if getattr(host, 'provisioner_plugin') is not None:
+            provisioner_name = getattr(host, 'provisioner_plugin').__plugin_name__
+        else:
+            provisioner_name = getattr(host, 'provisioner').__provisioner_name__
+
         name = getattr(host, 'name')
         param_values = getattr(host, 'provider_params')
         self.validate_common_opt_params(name, provisioner_name, param_values)

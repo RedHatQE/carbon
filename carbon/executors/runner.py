@@ -109,11 +109,12 @@ class RunnerExecutor(CarbonExecutor):
         """Set commonly used class attributes for ansible."""
         # create inventory object for create/delete inventory file
         self.inv = Inventory(
-            self.hosts,
-            self.all_hosts,
+            hosts=self.hosts,
+            all_hosts=self.all_hosts,
             data_dir=self.config['DATA_FOLDER'],
             results_dir=self.config['RESULTS_FOLDER'],
             static_inv_dir=self.config['INVENTORY_FOLDER']
+
         )
 
         self.ans_verbosity = get_ans_verbosity(self.logger, self.config)
@@ -325,8 +326,15 @@ class RunnerExecutor(CarbonExecutor):
             os.remove(playbook)
 
             # Get results from file
-            with open('shell-results.txt') as fp:
-                lines = fp.read().splitlines()
+            try:
+                with open('shell-results.txt') as fp:
+                    lines = fp.read().splitlines()
+            except (IOError, OSError) as ex:
+                self.logger.error(ex)
+                raise CarbonExecuteError('Failed to find the shell-results.txt file '
+                                         'which means there was an uncaught failure running '
+                                         'the dynamic playbook. Please enable verbose Ansible '
+                                         'logging in the carbon.cfg file and try again.')
 
             # Build Results
             sh_results = []

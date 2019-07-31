@@ -32,16 +32,19 @@ from carbon.resources import Asset
 from carbon.core import ProvisionerPlugin, CarbonProvisioner
 from carbon.provisioners import AssetProvisioner
 
+
 @pytest.fixture(scope='class')
 def host():
     host = mock.MagicMock(spec=Asset, name='Test-Asset', provider_params='Test Provider Params', provider_credentials='Test Cred Params')
     return host
+
 
 @pytest.fixture(scope='class')
 def plugin():
     pg = mock.MagicMock(spec=ProvisionerPlugin, create=mock.MagicMock('Test Asset-Provisioner Create Success'),
                         delete=mock.MagicMock('Test Asset-Provisioner Delete Success'))
     return pg
+
 
 @pytest.fixture(scope='class')
 def host_provisioner(host, plugin):

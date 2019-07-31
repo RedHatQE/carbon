@@ -1382,6 +1382,14 @@ class Inventory(LoggerMixin, FileLockMixin):
         for host in self.hosts:
             config.set(main_section, host.name)
 
+        # check for any old/stale unique inventories and delete them.
+        # This is incase unique inventories from previous runs were left
+        # Stale unique inventories can cause issues while creating new unique ones
+        if glob(os.path.join(self.inv_dir, 'unique*')):
+            for f in glob(os.path.join(self.inv_dir, 'unique*')):
+                self.logger.debug("Found stale unique inv %s. Deleting this file" % f)
+                os.remove(f)
+
         # write the inventory
         with open(self.unique_inv, 'w') as f:
             config.write(f)

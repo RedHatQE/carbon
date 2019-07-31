@@ -209,7 +209,7 @@ class Asset(CarbonResource):
         try:
             self.provider_params = parameters.pop('provider')
         except KeyError:
-            self.logger.error('Provider parameter is required for hosts being'
+            self.logger.error('Provider parameter is required for assets being'
                               ' provisioned.')
             sys.exit(1)
 
@@ -244,6 +244,14 @@ class Asset(CarbonResource):
                 filter_host_name(self.name) + '_%s' % gen_random_str(5)
 
         return parameters
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        raise AttributeError("Cannot set name of the asset resource")
 
     @property
     def ip_address(self):

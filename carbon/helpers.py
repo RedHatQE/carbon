@@ -713,8 +713,9 @@ def fetch_assets(hosts, task, all_hosts=True):
             if 'all' in task[_type].hosts:
                 _hosts.append(host)
                 continue
-            if host.name in task[_type].hosts or [h for h in task[_type].hosts if host.name in h]:
+            if host.name in task[_type].hosts or [h for h in task[_type].hosts if h in host.name]:
                 _hosts.append(host)
+                continue
             if hasattr(host, 'role'):
                 for r in host.role:
                     if r in task[_type].hosts:
@@ -728,7 +729,9 @@ def fetch_assets(hosts, task, all_hosts=True):
             if all_hosts:
                 _all_hosts.append(host)
             for task_host in task[_type].hosts:
-                if host.name == task_host.name:
+                # additional check task_host.name in host.name was put in case when linchpin count was
+                # used and there are host resources with names matching original resource name
+                if host.name == task_host.name or task_host.name in host.name:
                     _hosts.append(host)
                     break
 
@@ -1686,7 +1689,7 @@ class LinchpinResourceBuilder(object):
             if p[0] in params:
                 if params[p[0]] and params[p[0]] in roles:
                     for k, v in params.items():
-                        if k in ['credential', 'hostname', 'tx_id']:
+                        if k in ['credential', 'hostname', 'tx_id', 'node_id']:
                             continue
                         resource_def[k] = v
                 else:
@@ -1704,13 +1707,13 @@ class LinchpinResourceBuilder(object):
         if resource_def['role'].find('node') != -1:
 
             # remove the libvirt_evars if any were specified since they don't belong in the
-            # toppology file. Those get set as evars in the linchpin cfg.
-            del resource_def['libvirt_image_path']
-            del resource_def['libvirt_user']
-            del resource_def['libvirt_become']
+            # topology file. Those get set as evars in the linchpin cfg.
+            for evar in ['libvirt_image_path', 'libvirt_user', 'libvirt_become']:
+                resource_def.pop(evar, None)
 
             # update count for a host resource
-            resource_def.update(dict(count=1))
+            if not resource_def.get('count', False):
+                resource_def.update(dict(count=1))
 
         return resource_def
 
@@ -1742,7 +1745,8 @@ class LinchpinResourceBuilder(object):
         # Update with host specific keys
         if resource_def['role'].find('ec2') != -1 and len(resource_def['role']) == 7:
             # update count for a host resource
-            resource_def.update(dict(count=1))
+            if not resource_def.get('count', False):
+                resource_def.update(dict(count=1))
 
         # Update the specific params that deal with relative file path to be
         # abs pathes in the scenario workspace

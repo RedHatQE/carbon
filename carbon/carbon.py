@@ -31,7 +31,7 @@ import blaster
 import yaml
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, RESULTS_FILE
-from .core import CarbonError, LoggerMixin, TimeMixin
+from .core import CarbonError, LoggerMixin, TimeMixin, Inventory
 from .helpers import file_mgmt, gen_random_str
 from .resources import Scenario, Asset, Action, Report, Execute
 from .utils.config import Config
@@ -328,12 +328,27 @@ class Carbon(LoggerMixin, TimeMixin):
                     serial=not pipeline.type.__concurrent__,
                     raise_on_failure=True
                 )
-
                 # reload resource objects
-                self.scenario.reload_resources(data, pipeline.type.__concurrent__)
+                self.scenario.reload_resources(data)
 
                 if self.scenario.child_scenarios:
-                    [sc.reload_resources(data, pipeline.type.__concurrent__) for sc in self.scenario.child_scenarios]
+                    [sc.reload_resources(data) for sc in self.scenario.child_scenarios]
+
+                # Creating inventory only when task is provision
+                if task == 'provision':
+                    inv = Inventory(hosts=list(),
+                                    all_hosts=self.scenario.get_all_hosts(),
+                                    data_dir=self.config['DATA_FOLDER'],
+                                    results_dir=self.config['RESULTS_FOLDER'],
+                                    static_inv_dir=self.config['INVENTORY_FOLDER']
+                                    )
+                    try:
+                        # create the master inventory
+                        self.logger.info('Populating master inventory file with host(s) %s'
+                                         % [getattr(h, 'name') for h in self.scenario.get_all_hosts()])
+                        inv.create_master()
+                    except Exception as ex:
+                        raise CarbonError("Error while creating the master inventory %s" % ex)
 
                 # update list of passed tasks
                 passed_tasks.append(task)
@@ -399,7 +414,6 @@ class Carbon(LoggerMixin, TimeMixin):
                 for sc in self.scenario.child_scenarios:
                     ch_result_file_name = sc.name + '_results.yml'
                     ch_result_abs_name = os.path.join(self.data_folder, sc.name + '_results.yml')
-                    file_mgmt('w', ch_result_abs_name, sc.profile())
                     file_mgmt('w', ch_result_abs_name, sc.profile())
                     # Adding child_result_list with results file in the RESULTS_FOLDER instead of absolute path
                     child_result_list.append(os.path.join(self.config['RESULTS_FOLDER'], ch_result_file_name))

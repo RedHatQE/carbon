@@ -1,0 +1,193 @@
+{
+    "carbon": {
+      "inputs": [
+        {
+          "topology_data": {
+            "resource_groups": [
+              {
+                "resource_definitions": [
+                  {
+                    "count": 3,
+                    "flavor": "t2.nano",
+                    "image": "ami-0200c593f80612761",
+                    "keypair": "test_aws_key_pair",
+                    "name": "rujuta_client",
+                    "region": "us-east-2",
+                    "role": "aws_ec2"
+                  }
+                ],
+                "resource_group_name": "carbon",
+                "resource_group_type": "aws"
+              }
+            ],
+            "topology_name": "carbon"
+          }
+        },
+        {
+          "layout_data": {
+            "inventory_layout": {
+              "hosts": [
+                {
+                  "count": 1,
+                  "host_groups": [
+                    "hosts",
+                    "client",
+                    "test_driver"
+                  ],
+                  "name": "node"
+                }
+              ],
+              "vars": {
+                "ansible_ssh_private_key_file": "keys/test_aws_key_pair.pem",
+                "ansible_user": "centos",
+                "hostname": "rujuta_client"
+              }
+            }
+          }
+        }
+      ],
+      "outputs":
+       {
+      "resources": [
+    {
+      "changed": true,
+      "failed": false,
+      "instance_ids": [
+        "i-052fb91bbcee70519",
+        "i-06fb515bf18fc8cf4",
+        "i-08f9d6549f8f2db53"
+      ],
+      "instances": [
+        {
+          "ami_launch_index": "0",
+          "architecture": "x86_64",
+          "block_device_mapping": {
+            "/dev/sda1": {
+              "delete_on_termination": false,
+              "status": "attached",
+              "volume_id": "vol-0265b50ce996363ce"
+            }
+          },
+          "dns_name": "ec2-18-219-54-175.us-east-2.compute.amazonaws.com",
+          "ebs_optimized": false,
+          "groups": {
+            "sg-b34384d8": "default"
+          },
+          "hypervisor": "xen",
+          "id": "i-052fb91bbcee70519",
+          "image_id": "ami-0200c593f80612761",
+          "instance_type": "t2.nano",
+          "kernel": null,
+          "key_name": "test_aws_key_pair",
+          "launch_time": "2019-08-21T23:50:47.000Z",
+          "placement": "us-east-2c",
+          "private_dns_name": "ip-172-31-38-40.us-east-2.compute.internal",
+          "private_ip": "172.31.38.40",
+          "public_dns_name": "ec2-18-219-54-175.us-east-2.compute.amazonaws.com",
+          "public_ip": "10.0.151.56",
+          "ramdisk": null,
+          "region": "us-east-2",
+          "root_device_name": "/dev/sda1",
+          "root_device_type": "ebs",
+          "state": "running",
+          "state_code": 16,
+          "tags": {
+            "name": "rujuta_client",
+            "resource_group_name": "carbon"
+          },
+          "tenancy": "default",
+          "virtualization_type": "hvm"
+        },
+        {
+          "ami_launch_index": "1",
+          "architecture": "x86_64",
+          "block_device_mapping": {
+            "/dev/sda1": {
+              "delete_on_termination": false,
+              "status": "attached",
+              "volume_id": "vol-0591dc6fde53d9fc7"
+            }
+          },
+          "dns_name": "ec2-18-221-46-124.us-east-2.compute.amazonaws.com",
+          "ebs_optimized": false,
+          "groups": {
+            "sg-b34384d8": "default"
+          },
+          "hypervisor": "xen",
+          "id": "i-06fb515bf18fc8cf4",
+          "image_id": "ami-0200c593f80612761",
+          "instance_type": "t2.nano",
+          "kernel": null,
+          "key_name": "test_aws_key_pair",
+          "launch_time": "2019-08-21T23:50:47.000Z",
+          "placement": "us-east-2c",
+          "private_dns_name": "ip-172-31-45-219.us-east-2.compute.internal",
+          "private_ip": "172.31.45.219",
+          "public_dns_name": "ec2-18-221-46-124.us-east-2.compute.amazonaws.com",
+          "public_ip": "10.0.150.117",
+          "ramdisk": null,
+          "region": "us-east-2",
+          "root_device_name": "/dev/sda1",
+          "root_device_type": "ebs",
+          "state": "running",
+          "state_code": 16,
+          "tags": {
+            "name": "rujuta_client",
+            "resource_group_name": "carbon"
+          },
+          "tenancy": "default",
+          "virtualization_type": "hvm"
+        },
+        {
+          "ami_launch_index": "2",
+          "architecture": "x86_64",
+          "block_device_mapping": {
+            "/dev/sda1": {
+              "delete_on_termination": false,
+              "status": "attached",
+              "volume_id": "vol-0f4a5cdb0405296a6"
+            }
+          },
+          "dns_name": "ec2-3-19-71-93.us-east-2.compute.amazonaws.com",
+          "ebs_optimized": false,
+          "groups": {
+            "sg-b34384d8": "default"
+          },
+          "hypervisor": "xen",
+          "id": "i-08f9d6549f8f2db53",
+          "image_id": "ami-0200c593f80612761",
+          "instance_type": "t2.nano",
+          "kernel": null,
+          "key_name": "test_aws_key_pair",
+          "launch_time": "2019-08-21T23:50:47.000Z",
+          "placement": "us-east-2c",
+          "private_dns_name": "ip-172-31-41-47.us-east-2.compute.internal",
+          "private_ip": "172.31.41.47",
+          "public_dns_name": "ec2-3-19-71-93.us-east-2.compute.amazonaws.com",
+          "public_ip": "3.19.71.93",
+          "ramdisk": null,
+          "region": "us-east-2",
+          "root_device_name": "/dev/sda1",
+          "root_device_type": "ebs",
+          "state": "running",
+          "state_code": 16,
+          "tags": {
+            "name": "rujuta_client",
+            "resource_group_name": "carbon"
+          },
+          "tenancy": "default",
+          "virtualization_type": "hvm"
+        }
+      ],
+      "resource_type": "aws_ec2_res",
+      "tagged_instances": []
+    }
+  ],
+
+      "inventory_path": [
+        "/home/rushinde/carbon_py2_work/e2e-acceptance-tests_temp/.carbon/.results/linchpin/inventories/carbon.inventory"
+        ]
+
+      }
+    }
+}
