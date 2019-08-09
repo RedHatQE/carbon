@@ -51,6 +51,7 @@ def os_params():
         )
     )
 
+
 def beaker_params():
     return dict(
         role='client',
@@ -64,6 +65,7 @@ def beaker_params():
             tx_id = 1
         )
     )
+
 
 def libvirt_params():
     return dict(
@@ -79,13 +81,28 @@ def libvirt_params():
             ssh_key='carbon',
             libvirt_become='no',
             libvirt_image_path='~/libvirt/images/',
-            libvirt_user='dbaez',
+            libvirt_user='test',
             tx_id=1,
-            networks=[dict(name='db2_libvirt_net')]
+            networks=[dict(name='test_libvirt_net')]
         )
     )
 
-@pytest.fixture(params=['os', 'beaker', 'libvirt'])
+def aws_params():
+    return dict(
+        role='client',
+        provider=dict(
+            name='aws',
+            credential='aws-creds',
+            role='aws_ec2',
+            flavor='t2.nano',
+            image='ami-0200c593f80612761',
+            region='us-east-2',
+            tx_id=1
+        )
+    )
+
+
+@pytest.fixture(params=['os', 'beaker', 'libvirt', 'aws'])
 def host(request, config):
     return Host(
         name='host01',

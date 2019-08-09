@@ -1383,6 +1383,8 @@ class LinchpinResourceBuilder(object):
             return cls._build_openstack_resource_definition(provider, host_params)
         elif provider_name == 'libvirt':
             return cls._build_libvirt_resource_defintion(provider, host_params)
+        elif provider_name == 'aws':
+            return cls._build_aws_resource_defintion(provider, host_params)
 
     @classmethod
     def _build_beaker_resource_definition(cls, provider, host_params):
@@ -1690,6 +1692,46 @@ class LinchpinResourceBuilder(object):
 
             # update count for a host resource
             resource_def.update(dict(count=1))
+
+        return resource_def
+
+    @classmethod
+    def _build_aws_resource_defintion(cls, provider, host_params):
+
+        resource_def = dict()
+        params = host_params['provider']
+        roles = getattr(provider, '_supported_roles')
+
+        for p in provider.req_params:
+            if p[0] in params:
+                if params[p[0]] and params[p[0]] in roles:
+                    for k, v in params.items():
+                        if k in ['credential', 'hostname', 'tx_id', 'node_id']:
+                            continue
+                        resource_def[k] = v
+                else:
+                    LOG.error('The specified role type is not one of the supported types.')
+                    raise HelpersError('One of the following roles must be specified %s.' % roles)
+
+            else:
+                LOG.error('Could not find the role key in the provider parameters.')
+                raise HelpersError('The key, role, must be specified to build the resource definition properly.')
+
+        # Update with the real host name
+        resource_def['name'] = host_params['name']
+
+        # Update with host specific keys
+        if resource_def['role'].find('ec2') != -1 and len(resource_def['role']) == 7:
+            # update count for a host resource
+            resource_def.update(dict(count=1))
+
+        # Update the specific params that deal with relative file path to be
+        # abs pathes in the scenario workspace
+        for key in resource_def:
+            if key in ['policy_file', 'template_path']:
+                if not os.path.isabs(key):
+                    ws_abs = os.path.join(host_params.get('workspace'), key)
+                    resource_def[key] = ws_abs
 
         return resource_def
 

@@ -42,6 +42,7 @@ from carbon.exceptions import CarbonProvisionerError, CarbonProviderError
 from ..helpers import LinchpinResourceBuilder, lookup_ip_of_hostname
 from .._compat import ConfigParser
 import json
+import stat
 
 
 class Logger(object):
@@ -99,8 +100,8 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             if self.provider_params.get('libvirt_user', False):
                 context.set_evar('libvirt_user', self.provider_params.get('libvirt_user'))
 
-            # setup the default_ssh_key_location to be the scenario workspace
-            context.set_evar('default_ssh_key_path', os.path.join(getattr(self.host, 'workspace'), 'keys'))
+        # setup the default_ssh_key_location to be the scenario workspace
+        context.set_evar('default_ssh_key_path', os.path.join(getattr(self.host, 'workspace'), 'keys'))
         return(context)
 
     def _load_credentials(self):
@@ -156,7 +157,25 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                     config.write(cfg)
             else:
                 self.logger.info('skipping creating libvirt credentials.')
-
+        elif self.provider == 'aws':
+            creds = self.provider_credentials
+            if creds.setdefault('create_creds', False) and \
+                    (creds.get('aws_access_key_id', False) and creds.get('aws_secret_access_key', False)):
+                if not path.exists(path.expanduser('~/.aws/')):
+                    os.makedirs(path.expanduser('~/.aws/'))
+                aws_auth = path.join(path.expanduser('~/.aws/'), 'credentials')
+                environ['AWS_PROFILE'] = 'Credentials'
+                if path.exists(aws_auth):
+                    os.remove(aws_auth)
+                config = ConfigParser()
+                config.add_section('Credentials')
+                for k, v in creds.items():
+                    if k != 'create_creds':
+                        config.set('Credentials', k, v)
+                with open(aws_auth, 'w') as cfg:
+                    config.write(cfg)
+            else:
+                self.logger.info('skipping creating aws credentials.')
         else:
             raise CarbonProvisionerError('No credentials provided')
 
@@ -214,8 +233,6 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             inv_file.write(inv)
 
     def _create(self):
-        _ip = None
-        _id = None
         Log = Logger(logger=self.logger)
         host = getattr(self.host, 'name', 'carbon-name')
         code, results = self.linchpin_api.do_action(self.pinfile, action='up')
@@ -233,25 +250,46 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         resource = results['carbon']['outputs']['resources']
         if self.provider == 'openstack':
             os_server = resource[0]['servers'][0]
-            _ip = os_server['interface_ip']
-            _id = os_server['id']
+            setattr(self.host, 'ip_address', str(os_server['interface_ip']))
+            getattr(self.host, 'provider_params')['node_id'] = str(os_server['id'])
             getattr(self.host, 'provider_params')['hostname'] \
                 = os_server['name']
         if self.provider == 'beaker':
             bkr_server = resource[0]
-            _ip = lookup_ip_of_hostname(bkr_server['system'])
-            _id = bkr_server['id']
+            setattr(self.host, 'ip_address', lookup_ip_of_hostname(bkr_server['system']))
+            getattr(self.host, 'provider_params')['node_id'] = str(bkr_server['id'])
             getattr(self.host, 'provider_params')['job_url'] = bkr_server['url']
             getattr(self.host, 'provider_params')['hostname'] = bkr_server['system'].split('.')[0]
         if self.provider == 'libvirt':
-            if self.provider_params.get('role', False) == 'libvirt_node':
+            if self.provider_params.get('role', False) != 'libvirt_node':
+                del getattr(self.host, 'provider_params')['hostname']
+            else:
                 lib_vm = resource[0]
-                _ip = lib_vm['ip']
+                setattr(self.host, 'ip_address', str(lib_vm['ip']))
                 getattr(self.host, 'provider_params')['hostname'] = lib_vm['name']
-            if self.provider_params.get('libvirt_network', False):
+        if self.provider == 'aws':
+            aws_res = resource[0]
+            if self.provider_params.get('role', False) != 'aws_ec2':
                 del getattr(self.host, 'provider_params')['hostname']
 
-        return _ip, _id
+            elif self.provider_params.get('role', False) == 'aws_ec2_key':
+                # the Linchpin resource generates the private key and dumps to the box
+                # but it doesn't change the permissions on it so it will fail when used
+                # later on during orchestrate/execute
+                key = os.path.join(os.path.join(getattr(self.host, 'workspace'), 'keys'),
+                                        aws_res.get('key').get('name'))
+                if os.path.exists(key):
+                    # set permission of the key
+                    try:
+                        os.chmod(key, stat.S_IRUSR | stat.S_IWUSR)
+                    except OSError as ex:
+                        raise CarbonProvisionerError(
+                            'Error setting private key file permissions: %s' % ex
+                        )
+            else:
+                setattr(self.host, 'ip_address', str(aws_res.get('instances')[-1].get('public_ip')))
+                getattr(self.host, 'provider_params')['hostname'] = aws_res.get('instances')[-1].get('private_dns_name')
+                getattr(self.host, 'provider_params')['node_id'] = str(aws_res.get('instances')[-1].get('id'))
 
     def create(self):
         """Create method. (must implement!)
@@ -260,11 +298,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         """
         host = getattr(self.host, 'name')
         self.logger.info('Provisioning host %s in %s.' % (host, self.provider))
-        _ip, _id = self._create()
-        if _ip is not None:
-            setattr(self.host, 'ip_address', str(_ip))
-        if _id is not None:
-            getattr(self.host, 'provider_params')['node_id'] = str(_id)
+        self._create()
         self.logger.info('Successfully provisioned host %s.' % host)
 
     def delete(self):

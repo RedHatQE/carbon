@@ -14,10 +14,10 @@
                     "count": 1,
                     "image_src": "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2",
                     "memory": 1024,
-                    "name": "db2_libvirt_vm",
+                    "name": "test_libvirt_vm",
                     "networks": [
                       {
-                        "name": "db2_libvirt_net"
+                        "name": "test_libvirt_net"
                       }
                     ],
                     "role": "libvirt_node",
@@ -49,7 +49,7 @@
               "vars": {
                 "ansible_ssh_private_key_file": "keys/carbon",
                 "ansible_user": "centos",
-                "hostname": "db2_libvirt_vm"
+                "hostname": "test_libvirt_vm"
               }
             }
           }
@@ -60,7 +60,7 @@
           "resources": [
             {
               "ip": "10.0.58.5",
-              "name": "db2_libvirt_vm_0",
+              "name": "test_libvirt_vm_0",
               "resource_type": "libvirt_res"
             }
           ],

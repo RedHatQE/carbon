@@ -392,9 +392,9 @@ Example
 Provisioning Systems with Linchpin
 ----------------------------------
 
-The same Beaker and OpenStack resource can also be deployed using the Linchpin
-provisioner. To use the linchpin provisioner you must supply the **provisioner** key
-in your provision section.
+The Beaker, OpenStack, Libvirt, and AWS resources can also be deployed using the
+Linchpin provisioner. To use the linchpin provisioner you must supply
+the **provisioner** key in your provision section.
 
 .. code-block:: yaml
 
@@ -403,17 +403,28 @@ in your provision section.
 
 .. note::
 
-    When provisioning resources of different types that have some inter-dependency
-    with each other on the same Provider it is recommended to use the
+    When provisioning resources of different types, from the same Provider,
+    that have some inter-dependency with each other it is recommended to use the
     `task_concurrency <../configuration.html#carbon-configuration>`__
-    setting in the carbon.cfg to switch the task execution model to be sequential.
+    setting in the carbon.cfg to switch the provision task execution
+    to be sequential.
+
+.. note::
+
+    You may notice that name in the provider parameters is different than
+    name used in Linchpin pinfiles. For carbon, name is the name of the provider,
+    i.e. libvirt, so carbon knows which provider to use and how to build the
+    resource definitions. When building the resource defintion for Linchpin, Carbon
+    will take the name of the defined carbon resource in the provision
+    section and use that as the name parameter for the resource defintion.
 
 
 Beaker Resource
 +++++++++++++++
 
-The Beaker Provider has been augmented to include all the Linchpin bkr_server resource type and topology
-parameters except **count**. For a full list of Linchpin Beaker parameters please refer to
+The Beaker Provider has been augmented to include all the Linchpin roles and
+parameters except **count**. For a full list of Linchpin Beaker parameters
+please refer to
 the `Linchpin Beaker Provider <https://linchpin.readthedocs.io/en/latest/beaker.html>`_.
 
 Credentials
@@ -556,9 +567,11 @@ Example
 OpenStack Resource
 ++++++++++++++++++
 
-The OpenStack Provider has been augmented to include all the Linchpin OpenStack os_server resource type and topology
-parameters except **count**, **cacert**, and **cert**. For a full list of Linchpin OpenStack os_server
-parameters please refer to the `Linchpin OpenStack Provider <https://linchpin.readthedocs.io/en/latest/openstack.html>`_.
+The OpenStack Provider has been augmented to include all the Linchpin
+OpenStack os_server resource type and topology parameters except
+**count**, **cacert**, and **cert**. For a full list of Linchpin OpenStack
+os_server parameters please refer to the
+`Linchpin OpenStack Provider <https://linchpin.readthedocs.io/en/latest/openstack.html>`_.
 
 Credentials
 ~~~~~~~~~~~
@@ -620,24 +633,28 @@ Example
 
 
 Libvirt Resource
-++++++++++++++++++
+++++++++++++++++
 
-A Libvirt Provider has been added that supports all the resource types and their respective parameters, except **count**.
+A Libvirt Provider has been added that supports all the resource types and
+their respective parameters, except **count**.
 
 Libvirt Parameters
 ~~~~~~~~~~~~~~~~~~
-The most important provider parameter is **role**. This defines the resource type being provisioned to Linchpin.
-Carbon will know which provider parameters that need to be validated and how to put together the pinfile for Linchpin
-based on this parameter. For a full list of Linchpin Libvirt parameters please refer to the
+The most important provider parameter is **role**. This defines the resource type being
+provisioned to Linchpin. Carbon will know which provider parameters that need to be
+validated and how to put together the pinfile for Linchpin based on this parameter.
+For a full list of Linchpin Libvirt parameters please refer to the
 `Linchpin Libvirt Provider <https://linchpin.readthedocs.io/en/latest/libvirt.html>`_.
 
-The Libvirt provider also has some configuration evars that affect how Linchpin provisions Libvirt resources.
+The Libvirt provider also has some configuration evars that affect how Linchpin
+provisions Libvirt resources.
 
-    * The `image management keys <https://linchpin.readthedocs.io/en/latest/libvirt.html#copying-images>`_ can be
-      directly specified in the providers dictionary in the scenario descriptor file.
+    * The `image management keys <https://linchpin.readthedocs.io/en/latest/libvirt.html#copying-images>`_
+      can be directly specified in the providers dictionary in the scenario descriptor file.
 
-    * The **default_ssh_key_path** defaults to *~/.ssh* and is used by Linchpin to find the ssh keys to be used or
-      created when provisioning resources. Carbon overrides this key to point to the Scenario workspace *keys* directory.
+    * The **default_ssh_key_path** defaults to *~/.ssh* and is used by Linchpin
+      to find the ssh keys to be used or created when provisioning resources.
+      Carbon overrides this key to point to the Scenario workspace *keys* directory.
 
 
 Libvirt Credentials
@@ -653,6 +670,46 @@ Example
 
 .. literalinclude:: ../../.examples/provision/linchpin/libvirt_scenario_linchpin.yml
 
+
+AWS Resource
+++++++++++++
+
+An AWS Provider has been added that supports all the resource types and
+their respective parameters, except **count**.
+
+AWS Parameters
+~~~~~~~~~~~~~~
+The most important provider parameter is **role**. This defines the resource type being
+provisioned to Linchpin. Carbon will know which provider parameters that need to be
+validated and how to put together the pinfile for Linchpin based on this parameter.
+For a full list of Linchpin AWS parameters please refer to the
+`Linchpin AWS Provider <https://linchpin.readthedocs.io/en/latest/aws.html>`_.
+
+The AWS provider also has some configuration evars and parameters that affect how Linchpin
+provisions AWS resources.
+
+    * The **default_ssh_key_path** evar defaults to *~/.ssh* and is used by Linchpin
+      to find the ssh keys to be used or created when provisioning resources.
+      Carbon overrides this key to point to the Scenario workspace *keys* directory.
+
+    * Certain parameters will require a path to some type of file like **policy_file**
+      or **template_path**. These will need to be stored in the Scenario workspace
+      and specified as a relative file path.
+
+
+
+AWS Credentials
+~~~~~~~~~~~~~~~
+
+To authenticate with AWS, you will need to have an AWS credentials
+in your carbon.cfg file, see `AWS Credentials
+<credentials.html#aws-credentials>`_ for more details.
+
+
+Example
+~~~~~~~
+
+.. literalinclude:: ../../.examples/provision/linchpin/aws_scenario_linchpin.yml
 
 Defining Static Machines
 ------------------------
