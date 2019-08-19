@@ -147,7 +147,7 @@ class CarbonExecuteError(CarbonResourceError):
 
 
 class CarbonHostError(CarbonResourceError):
-    """Host's base exception class."""
+    """Asset's base exception class."""
 
     def __init__(self, message):
         """Constructor.

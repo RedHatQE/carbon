@@ -31,8 +31,8 @@ from pprint import pformat
 from carbon.core import CarbonProvisioner
 
 
-class HostProvisioner(CarbonProvisioner):
-    """HostProvisioner provisioner class.
+class AssetProvisioner(CarbonProvisioner):
+    """AssetProvisioner provisioner class.
 
     This class demonstrates how you can add a new provisioner into carbon.
 
@@ -70,7 +70,7 @@ class HostProvisioner(CarbonProvisioner):
     Without properly setting the provisioner key, carbon may not call the
     correct provisioner you want to use.
     """
-    __provisioner_name__ = 'host-provisioner'
+    __provisioner_name__ = 'asset-provisioner'
 
     def __init__(self, host, plugin):
         """Constructor.
@@ -113,7 +113,7 @@ class HostProvisioner(CarbonProvisioner):
         :param host: carbon host resource
         :type host: object
         """
-        super(HostProvisioner, self).__init__(host)
+        super(AssetProvisioner, self).__init__(host)
         self.plugin = plugin
 
     def print_commonly_used_attributes(self):

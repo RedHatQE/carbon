@@ -30,7 +30,7 @@ from collections import namedtuple
 
 from ..constants import TASKLIST
 from ..exceptions import CarbonError
-from ..helpers import fetch_hosts, get_core_tasks_classes, fetch_executes, get_actions_failed_status, \
+from ..helpers import fetch_assets, get_core_tasks_classes, fetch_executes, get_actions_failed_status, \
     set_task_class_concurrency
 from ..tasks import CleanupTask
 
@@ -100,7 +100,7 @@ class PipelineBuilder(object):
         )
 
         scenario_get_tasks = list()
-        scenario_hosts = list()
+        scenario_assets = list()
         scenario_actions = list()
         scenario_executes = list()
         scenario_reports = list()
@@ -109,14 +109,14 @@ class PipelineBuilder(object):
         if scenario.child_scenarios:
             for sc in scenario.child_scenarios:
                 scenario_get_tasks.extend([item for item in getattr(sc, 'get_tasks')()])
-                scenario_hosts.extend([item for item in getattr(sc, 'hosts')])
+                scenario_assets.extend([item for item in getattr(sc, 'assets')])
                 scenario_actions.extend([item for item in getattr(sc, 'actions')])
                 scenario_executes.extend([item for item in getattr(sc, 'executes')])
                 scenario_reports.extend([item for item in getattr(sc, 'reports')])
 
         # only master scenario no child scenarios
         scenario_get_tasks.extend([item for item in getattr(scenario, 'get_tasks')()])
-        scenario_hosts.extend([item for item in getattr(scenario, 'hosts')])
+        scenario_assets.extend([item for item in getattr(scenario, 'assets')])
         scenario_actions.extend([item for item in getattr(scenario, 'actions')])
         scenario_executes.extend([item for item in getattr(scenario, 'executes')])
         scenario_reports.extend([item for item in getattr(scenario, 'reports')])
@@ -126,11 +126,11 @@ class PipelineBuilder(object):
             if task['task'].__task_name__ == self.name:
                 pipeline.tasks.append(task)
 
-        # host resource
-        for host in scenario_hosts:
-            for task in host.get_tasks():
+        # asset resource
+        for asset in scenario_assets:
+            for task in asset.get_tasks():
                 if task['task'].__task_name__ == self.name:
-                    pipeline.tasks.append(set_task_class_concurrency(task, host))
+                    pipeline.tasks.append(set_task_class_concurrency(task, asset))
 
         # action resource
         # get action resource based on if its status
@@ -138,14 +138,14 @@ class PipelineBuilder(object):
             for task in action.get_tasks():
                 if task['task'].__task_name__ == self.name:
                     # fetch & set hosts for the given action task
-                    task = fetch_hosts(scenario_hosts, task)
+                    task = fetch_assets(scenario_assets, task)
                     pipeline.tasks.append(task)
 
         # execute resource
         for execute in scenario_executes:
             for task in execute.get_tasks():
                 # fetch & set hosts for the given executes task
-                task = fetch_hosts(scenario_hosts, task)
+                task = fetch_assets(scenario_assets, task)
                 if task['task'].__task_name__ == self.name:
                     pipeline.tasks.append(task)
 
@@ -153,7 +153,7 @@ class PipelineBuilder(object):
         for report in scenario_reports:
             for task in report.get_tasks():
                 # fetch & set hosts and executes for the given reports task
-                task = fetch_executes(scenario_executes, scenario_hosts, task)
+                task = fetch_executes(scenario_executes, scenario_assets, task)
                 if task['task'].__task_name__ == self.name:
                     pipeline.tasks.append(task)
 

@@ -31,56 +31,56 @@ class ProvisionTask(CarbonTask):
     __task_name__ = 'provision'
     __concurrent__ = True
 
-    def __init__(self, msg, host, **kwargs):
+    def __init__(self, msg, asset, **kwargs):
         """Constructor.
 
         :param msg: task message
         :type msg: str
-        :param host: host reference
-        :type host: str
+        :param asset: asset reference
+        :type asset: str
         :param kwargs: additional keyword arguments
         :type kwargs: dict
         """
         super(ProvisionTask, self).__init__(**kwargs)
         self.msg = msg
-        self.inv_msg = 'Populating master inventory file with host %s' % host.name
+        self.inv_msg = 'Populating master inventory file with asset %s' % asset.name
         self.provision = True
-        self.inv = Inventory(hosts=[host],
-                             all_hosts=[host],
-                             data_dir=getattr(host, 'config')['DATA_FOLDER'],
-                             results_dir=getattr(host, 'config')['RESULTS_FOLDER'],
-                             static_inv_dir=getattr(host, 'config')['INVENTORY_FOLDER'])
+        self.inv = Inventory(hosts=[asset],
+                             all_hosts=[asset],
+                             data_dir=getattr(asset, 'config')['DATA_FOLDER'],
+                             results_dir=getattr(asset, 'config')['RESULTS_FOLDER'],
+                             static_inv_dir=getattr(asset, 'config')['INVENTORY_FOLDER'])
 
-        if not host.is_static:
-            # create the provisioner object to create hosts
+        if not asset.is_static:
+            # create the provisioner object to create assets
             try:
-                # TODO We should move this code out into the Host Resource to instantiate there?
+                # TODO We should move this code out into the Asset Resource to instantiate there?
                 # let's try to create the provisioner gateway implementation first
-                if getattr(host, 'provisioner_plugin') is not None:
-                    plugin = getattr(host, 'provisioner_plugin')(host)
-                    self.logger.debug('Host loaded the following provisioner plugin: %s'
+                if getattr(asset, 'provisioner_plugin') is not None:
+                    plugin = getattr(asset, 'provisioner_plugin')(asset)
+                    self.logger.debug('Asset loaded the following provisioner plugin: %s'
                                       % plugin.__plugin_name__)
-                    self.provisioner = getattr(host, 'provisioner')(host, plugin)
-                    self.logger.debug('Host loaded the following provisioner interface: %s'
+                    self.provisioner = getattr(asset, 'provisioner')(asset, plugin)
+                    self.logger.debug('Asset loaded the following provisioner interface: %s'
                                       % self.provisioner.__provisioner_name__)
                 else:
-                    self.provisioner = getattr(host, 'provisioner')(host)
-                    self.logger.debug('Host loaded the following provisioner interface: %s'
+                    self.provisioner = getattr(asset, 'provisioner')(asset)
+                    self.logger.debug('Asset loaded the following provisioner interface: %s'
                                       % self.provisioner.__provisioner_name__)
             except AttributeError as ex:
                 self.logger.error(ex)
                 raise
         else:
             self.provision = False
-            self.logger.warning('Host %s is static, provision will be '
-                                'skipped.' % getattr(host, 'name'))
+            self.logger.warning('Asset %s is static, provision will be '
+                                'skipped.' % getattr(asset, 'name'))
 
     def run(self):
         """Run.
 
         This method is the main entry point to the task.
         """
-        # provision the host given in their declared provider
+        # provision the asset given in their declared provider
         if self.provision:
             self.logger.info(self.msg)
             try:

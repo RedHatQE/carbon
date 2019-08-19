@@ -33,9 +33,9 @@ from carbon.tasks import CleanupTask, ExecuteTask, OrchestrateTask, \
     ProvisionTask, ReportTask, ValidateTask
 
 from carbon.core import CarbonProvisioner, ProvisionerPlugin, Inventory
-from carbon.provisioners import HostProvisioner, OpenstackLibCloudProvisioner
+from carbon.provisioners import AssetProvisioner, OpenstackLibCloudProvisioner
 from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin
-from carbon.resources import Host
+from carbon.resources import Asset
 
 
 
@@ -74,17 +74,17 @@ def orchestrate_task():
 @pytest.fixture(scope='class')
 @mock.patch('carbon.core.Inventory.__init__')
 def provision_task(mock_inv):
-    host = mock.MagicMock()
-    host.provisioner = mock.MagicMock()
+    asset = mock.MagicMock()
+    asset.provisioner = mock.MagicMock()
     mock_inv.return_value = None
-    return ProvisionTask(msg='provision task', host=host, name='Test-Host')
+    return ProvisionTask(msg='provision task', asset=asset, name='Test-Asset')
 
 
 @pytest.fixture(scope='class')
 def cleanup_task():
-    host = mock.MagicMock()
+    asset = mock.MagicMock()
     package = mock.MagicMock()
-    return CleanupTask(msg='cleanup task', host=host, package=package)
+    return CleanupTask(msg='cleanup task', asset=asset, package=package)
 
 
 class TestValidateTask(object):
@@ -186,20 +186,20 @@ class TestProvisionTask(object):
 
     @staticmethod
     def test_create_with_provisioner_no_plugin():
-        host = mock.MagicMock(spec=Host, is_static=False, provisioner_plugin=None, provisioner=CarbonProvisioner,
+        asset = mock.MagicMock(spec=Asset, is_static=False, provisioner_plugin=None, provisioner=CarbonProvisioner,
                               provider_params='test-provider-param')
         with mock.patch('carbon.core.Inventory.__init__') as mock_inv:
             mock_inv.return_value = None
-            pt = ProvisionTask('provision task', host=host)
+            pt = ProvisionTask('provision task', asset=asset)
             assert pt.provision
 
     @staticmethod
     def test_create_with_provisioner_plugin():
-        host = mock.MagicMock(spec=Host, is_static=False, provisioner_plugin=ProvisionerPlugin, provisioner=HostProvisioner,
+        asset = mock.MagicMock(spec=Asset, is_static=False, provisioner_plugin=ProvisionerPlugin, provisioner=AssetProvisioner,
                               provider_params='test-provider-param')
         with mock.patch('carbon.core.Inventory.__init__') as mock_inv:
             mock_inv.return_value = None
-            pt = ProvisionTask('provision task', host=host)
+            pt = ProvisionTask('provision task', asset=asset)
             assert pt.provision
 
     @staticmethod
@@ -218,7 +218,7 @@ class TestProvisionTask(object):
         mock_provisioner = mock.MagicMock(spec=CarbonProvisioner, create=mock.MagicMock(return_value='Test Create Success'))
         with mock.patch('carbon.core.Inventory.__init__') as mock_inv:
             mock_inv.return_value = None
-            pt = ProvisionTask(msg='Test Provision Task', host=host)
+            pt = ProvisionTask(msg='Test Provision Task', asset=host)
             pt.provision = True
             pt.provisioner = mock_provisioner
             pt.inv = inventory
@@ -232,7 +232,7 @@ class TestCleanupTask(object):
 
     @staticmethod
     def test_run(cleanup_task):
-        cleanup_task.host.provisioner = mock.MagicMock()
+        cleanup_task.asset.provisioner = mock.MagicMock()
         cleanup_task.run()
 
     @staticmethod
@@ -245,20 +245,20 @@ class TestCleanupTask(object):
 
     @staticmethod
     @mock.patch.object(CarbonProvisioner, 'delete')
-    def test_run_cleanup_with_host_provisioner(mock_method, cleanup_task):
-        host = mock.MagicMock(spec=Host, provisioner_plugin=None, provisioner=CarbonProvisioner,
+    def test_run_cleanup_with_asset_provisioner(mock_method, cleanup_task):
+        asset = mock.MagicMock(spec=Asset, provisioner_plugin=None, provisioner=CarbonProvisioner,
                               provider_params='test-provider-param')
-        cleanup_task.host = host
+        cleanup_task.asset = asset
         mock_method.return_value = mock.MagicMock('Test Delete Success')
         cleanup_task.run()
         mock_method.assert_called()
 
     @staticmethod
-    @mock.patch.object(HostProvisioner, 'delete')
-    def test_run_cleanup_with_host_provisioner_plugin(mock_method, cleanup_task):
-        host = mock.MagicMock(spec=Host, provisioner_plugin=ProvisionerPlugin, provisioner=HostProvisioner,
+    @mock.patch.object(AssetProvisioner, 'delete')
+    def test_run_cleanup_with_asset_provisioner_plugin(mock_method, cleanup_task):
+        asset = mock.MagicMock(spec=Asset, provisioner_plugin=ProvisionerPlugin, provisioner=AssetProvisioner,
                               provider_params='test-provider-param')
-        cleanup_task.host = host
+        cleanup_task.asset = asset
         mock_method.return_value = mock.MagicMock('Test Delete Success')
         cleanup_task.run()
         mock_method.assert_called()

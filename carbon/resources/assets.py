@@ -38,9 +38,10 @@ from .._compat import string_types
 from collections import OrderedDict
 
 
-class Host(CarbonResource):
+class Asset(CarbonResource):
     """
-    The host resource class. The carbon compound can contain x amount of hosts.
+    The asset resource class. The carbon compound can contain x amount of hosts or
+    other asset types (i.e. virtual networks, storage, etc.).
     Their primary responsibility is to define details about the system resource
     to be created in their declared provider. Along with saving information
     such as (ip addresses, etc) for use by the action or execute compounds of
@@ -85,7 +86,7 @@ class Host(CarbonResource):
         :param kwargs: additional key:value(s)
         :type kwargs: dict
         """
-        super(Host, self).__init__(config=config, name=name, **kwargs)
+        super(Asset, self).__init__(config=config, name=name, **kwargs)
 
         # set name attribute & apply filter
         if name is None:
@@ -97,24 +98,28 @@ class Host(CarbonResource):
 
         # set description attribute
         self._description = parameters.pop('description', None)
+
+        # preset role/groups attribute
+        self._role = None
+        self._groups = None
         try:
             # convert the groups into list format if groups defined as str format
             self._groups = parameters.pop('groups')
             if isinstance(self._groups, string_types):
                 self._groups = self._groups.replace(' ', '').split(',')
-            self._role = None
+            del self.role
         except KeyError:
             try:
                 # convert the roles into list format if roles defined as str format
                 self._role = parameters.pop('role')
                 if isinstance(self._role, string_types):
                     self._role = self._role.replace(' ', '').split(',')
-                self._groups = None
-                self.logger.warning('A role has been found. This parameter has been deprecated'
+                self.logger.warning('A role has been found. This parameter will be deprecated'
                                     ' it is recommend to change over to groups.')
+                del self.groups
             except KeyError:
-                self.logger.error('A group or a role must be set for host %s.' % self.name)
-                sys.exit(1)
+                self.logger.warning('A group or a role was not set for asset %s.' % self.name)
+                del self.role, self.groups
 
         # set metadata attribute (data pass-through)
         self._metadata = parameters.pop('metadata', {})
@@ -267,7 +272,7 @@ class Host(CarbonResource):
     def metadata(self, value):
         """Set metadata property."""
         raise AttributeError('You cannot set metadata directly. '
-                             'Use function ~Host.set_metadata')
+                             'Use function ~Asset.set_metadata')
 
     def set_metadata(self):
         """Set host metadata.
@@ -304,7 +309,7 @@ class Host(CarbonResource):
     @provider.setter
     def provider(self, value):
         """Set provider property."""
-        raise AttributeError('You cannot set the host provider after host '
+        raise AttributeError('You cannot set the asset provider after asset '
                              'class is instantiated.')
 
     @property
@@ -319,7 +324,7 @@ class Host(CarbonResource):
     @provisioner.setter
     def provisioner(self, value):
         """Set provisioner property."""
-        raise AttributeError('You cannot set the host provisioner after host '
+        raise AttributeError('You cannot set the asset provisioner after asset '
                              'class is instantiated.')
 
     @property
@@ -334,7 +339,7 @@ class Host(CarbonResource):
     @provisioner_plugin.setter
     def provisioner_plugin(self, value):
         """Set provisioner plugin property."""
-        raise AttributeError('You cannot set the host provisioner plugin after host '
+        raise AttributeError('You cannot set the asset provisioner plugin after asset '
                              'class is instantiated.')
 
     @property
@@ -349,8 +354,16 @@ class Host(CarbonResource):
     @role.setter
     def role(self, value):
         """Set role property."""
-        raise AttributeError('You cannot set the role after host class is '
+        raise AttributeError('You cannot set the role after asset class is '
                              'instantiated.')
+
+    @role.deleter
+    def role(self):
+        """
+        delete the role property
+        :return:
+        """
+        del self._role
 
     @property
     def groups(self):
@@ -364,8 +377,16 @@ class Host(CarbonResource):
     @groups.setter
     def groups(self, value):
         """Set groups property."""
-        raise AttributeError('You cannot set the groups after host class is '
+        raise AttributeError('You cannot set the groups after asset class is '
                              'instantiated.')
+
+    @groups.deleter
+    def groups(self):
+        """
+        delete the role property
+        :return:
+        """
+        del self._groups
 
     def profile(self):
         """Builds a profile for the host resource.
@@ -378,10 +399,10 @@ class Host(CarbonResource):
         profile['description'] = self.description
 
         # set the hosts's roles
-        if self.role:
+        if hasattr(self, 'role'):
             if all(isinstance(item, string_types) for item in self.role):
                 profile.update(role=[role for role in self.role])
-        else:
+        elif hasattr(self, 'groups'):
             if all(isinstance(item, string_types) for item in self.groups):
                 profile.update(groups=[group for group in self.groups])
 
@@ -396,7 +417,7 @@ class Host(CarbonResource):
                 profile.update({'provider': self.provider_params})
 
         except AttributeError:
-            self.logger.debug('Host is static, no need to profile provider '
+            self.logger.debug('Asset is static, no need to profile provider '
                               'facts.')
         finally:
             if self.ip_address:
@@ -415,19 +436,19 @@ class Host(CarbonResource):
             self.logger.debug('Validation is not required for static hosts!')
             return
 
-        self.logger.info('Validating host %s provider required parameters.' %
+        self.logger.info('Validating asset %s provider required parameters.' %
                          self.name)
         getattr(self.provider, 'validate_req_params')(self)
 
-        self.logger.info('Validating host %s provider optional parameters.' %
+        self.logger.info('Validating asset %s provider optional parameters.' %
                          self.name)
         getattr(self.provider, 'validate_opt_params')(self)
 
-        self.logger.info('Validating host %s provider required credential '
+        self.logger.info('Validating asset %s provider required credential '
                          'parameters.' % self.name)
         getattr(self.provider, 'validate_req_credential_params')(self)
 
-        self.logger.info('Validating host %s provider optional credential '
+        self.logger.info('Validating asset %s provider optional credential '
                          'parameters.' % self.name)
         getattr(self.provider, 'validate_opt_credential_params')(self)
 
@@ -454,7 +475,7 @@ class Host(CarbonResource):
         task = {
             'task': self._provision_task_cls,
             'name': str(self.name),
-            'host': self,
+            'asset': self,
             'msg': '   provisioning host %s' % self.name,
             'methods': self._req_tasks_methods
         }
@@ -469,7 +490,7 @@ class Host(CarbonResource):
         task = {
             'task': self._cleanup_task_cls,
             'name': str(self.name),
-            'host': self,
+            'asset': self,
             'msg': '   cleanup host %s' % self.name,
             'methods': self._req_tasks_methods
         }

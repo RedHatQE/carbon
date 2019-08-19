@@ -51,7 +51,7 @@ PROVISIONERS = {
     "beaker": "beaker-client",
     "openstack": "openstack-libcloud",
     "linchpin": "linchpin-wrapper",
-    "host": "host-provisioner"
+    "asset": "asset-provisioner"
 }
 
 HOST_UPDATE_FIELDS = ["app_name", "routes", "ip_address", "hostname"]

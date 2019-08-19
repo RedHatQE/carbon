@@ -33,7 +33,7 @@ from pykwalify.errors import CoreError, SchemaError
 
 from .actions import Action
 from .executes import Execute
-from .host import Host
+from .assets import Asset
 from .reports import Report
 from ..constants import SCENARIO_SCHEMA, SCHEMA_EXT, \
     SET_CREDENTIALS_OPTIONS
@@ -93,7 +93,7 @@ class Scenario(CarbonResource):
         self.resource_check = ""
 
         # set resource attributes
-        self._hosts = list()
+        self._assets = list()
         self._actions = list()
         self._executes = list()
         self._reports = list()
@@ -131,8 +131,8 @@ class Scenario(CarbonResource):
         :param item: resource data
         :type item: object
         """
-        if isinstance(item, Host):
-            self._hosts.append(item)
+        if isinstance(item, Asset):
+            self._assets.append(item)
         elif isinstance(item, Action):
             self._actions.append(item)
         elif isinstance(item, Execute):
@@ -157,8 +157,8 @@ class Scenario(CarbonResource):
         :param item: resource data
         :type item: object
         """
-        if isinstance(item, Host):
-            self._hosts = list()
+        if isinstance(item, Asset):
+            self._assets = list()
         elif isinstance(item, Action):
             self._actions = list()
         elif isinstance(item, Execute):
@@ -182,7 +182,7 @@ class Scenario(CarbonResource):
                 for key, value in task.items():
                     # Added report object in case we decide reporting
                     # should be done in parallel
-                    if isinstance(value, Host):
+                    if isinstance(value, Asset):
                         for h in self.hosts:
                             if value.name == h.name:
                                 scenario_resource_list.append(value)
@@ -227,29 +227,29 @@ class Scenario(CarbonResource):
         self._yaml_data = value
 
     @property
-    def hosts(self):
+    def assets(self):
         """Hosts property
 
         :return: host resources associated to the scenario
         :rtype: list
         """
-        return self._hosts
+        return self._assets
 
-    @hosts.setter
-    def hosts(self, value):
+    @assets.setter
+    def assets(self, value):
         """Set hosts property."""
-        raise ValueError('You can not set hosts directly.'
-                         'Use function ~Scenario.add_hosts')
+        raise ValueError('You can not set assets directly.'
+                         'Use function ~Scenario.add_assets')
 
-    def add_hosts(self, host):
+    def add_assets(self, host):
         """Add host resources to the scenario.
 
         :param host: host resource
         :type host: object
         """
-        if not isinstance(host, Host):
-            raise ValueError('Host must be of type %s ' % type(Host))
-        self._hosts.append(host)
+        if not isinstance(host, Asset):
+            raise ValueError('Asset must be of type %s ' % type(Asset))
+        self._assets.append(host)
 
     @property
     def actions(self):
@@ -407,7 +407,7 @@ class Scenario(CarbonResource):
         if self.child_scenarios:
             profile['include'] = self.included_scenario_names
         profile['resource_check'] = self.resource_check
-        profile['provision'] = [host.profile() for host in self.hosts]
+        profile['provision'] = [asset.profile() for asset in self.assets]
         profile['orchestrate'] = [action.profile() for action in self.actions]
         profile['execute'] = [execute.profile() for execute in self.executes]
         profile['report'] = [report.profile() for report in self.reports]
@@ -437,9 +437,9 @@ class Scenario(CarbonResource):
         list it calls ~self.scenario.add_resource for each item in the
         list of the given resources.
 
-        For example, if we call load_resources(Host, hosts_list), the
+        For example, if we call load_resources(Asset, hosts_list), the
         function will go through each item in the list, create the
-        resource with Host(parameter=item) and load it within the list
+        resource with Asset(parameter=item) and load it within the list
         ~self.hosts.
 
         :param res_type: The type of resources the function will load into its

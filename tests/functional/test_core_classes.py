@@ -39,7 +39,7 @@ from carbon.core import CarbonOrchestrator, CarbonProvider, CarbonProvisioner, \
     CarbonResource, CarbonTask, LoggerMixin, TimeMixin, CarbonExecutor, \
     CarbonPlugin, ProvisionerPlugin, ExecutorPlugin, ImporterPlugin, OrchestratorPlugin, FileLockMixin, \
     Inventory
-from carbon.resources import Host
+from carbon.resources import Asset
 from carbon.exceptions import CarbonError, LoggerMixinError
 
 
@@ -155,11 +155,15 @@ def cleanup_master(request):
 
 @pytest.fixture
 def inv_host(default_host_params, config):
+    params = copy.deepcopy(default_host_params)
+    params.update(dict(ansible_params=dict(ansible_connection='local',
+                                           ansible_ssh_private_key='keys/demo'),
+                       ip_address=dict(public='10.10.10.10', private='192.168.10.10')))
     config['RESULTS_FOLDER'] = '/tmp/.results'
-    return Host(
+    return Asset(
         name='host01',
         config=config,
-        parameters=copy.deepcopy(default_host_params)
+        parameters=params
     )
 
 
@@ -615,6 +619,7 @@ class TestCarbonExecutor(object):
         profile = carbon_executor.build_profile(execute)
         assert isinstance(profile, dict)
 
+
 class TestCarbonCorePlugins(object):
 
     @staticmethod
@@ -676,6 +681,7 @@ class TestCarbonCorePlugins(object):
     def test_orchestrator_gw_run(orchestrator_plugin):
         with pytest.raises(NotImplementedError):
             orchestrator_plugin.run()
+
 
 class TestInventory(object):
 

@@ -32,13 +32,13 @@ class CleanupTask(CarbonTask):
     __concurrent__ = False
     __task_name__ = 'cleanup'
 
-    def __init__(self, msg, host=None, package=None, **kwargs):
+    def __init__(self, msg, asset=None, package=None, **kwargs):
         """Constructor.
 
         :param msg: task message
         :type msg: str
-        :param host: host reference
-        :type host: object
+        :param asset: asset reference
+        :type asset: object
         :param package: package reference
         :type package: object
         :param kwargs: additional keyword arguments
@@ -48,7 +48,7 @@ class CleanupTask(CarbonTask):
 
         # set attributes
         self.msg = msg
-        self.host = host
+        self.asset = asset
         self.package = package
 
     def _get_orchestrator_instance(self):
@@ -57,10 +57,10 @@ class CleanupTask(CarbonTask):
         :return: orchestrator class instance
         :rtype: object
         """
-        # set package attributes to get actual host objects over strings
+        # set package attributes to get actual asset objects over strings
         cleanup = getattr(self.package, 'cleanup')
-        setattr(cleanup, 'all_hosts', getattr(self.package, 'all_hosts'))
-        setattr(cleanup, 'hosts', getattr(self.package, 'hosts'))
+        setattr(cleanup, 'all_assets', getattr(self.package, 'all_assets'))
+        setattr(cleanup, 'assets', getattr(self.package, 'assets'))
 
         # create the orchestrator object
         return getattr(self.package, 'orchestrator')(cleanup)
@@ -88,24 +88,24 @@ class CleanupTask(CarbonTask):
                 )
 
         # **** TASKS BELOW ONLY SHOULD BE RELATED TO THE PROVISIONER ****
-        if self.host:
+        if self.asset:
             try:
 
                 # let's try to create the provisioner gateway implementation first
-                if getattr(self.host, 'provisioner_plugin') is not None:
-                    plugin = getattr(self.host, 'provisioner_plugin')(self.host)
-                    self.logger.debug('Host loaded the following provisioner plugin: %s' % plugin.__plugin_name__)
-                    provisioner = getattr(self.host, 'provisioner')(self.host, plugin)
-                    self.logger.debug('Host loaded the following provisioner interface: %s'
+                if getattr(self.asset, 'provisioner_plugin') is not None:
+                    plugin = getattr(self.asset, 'provisioner_plugin')(self.asset)
+                    self.logger.debug('Asset loaded the following provisioner plugin: %s' % plugin.__plugin_name__)
+                    provisioner = getattr(self.asset, 'provisioner')(self.asset, plugin)
+                    self.logger.debug('Asset loaded the following provisioner interface: %s'
                                       % provisioner.__provisioner_name__)
                 else:
                     # create the provisioner object
-                    provisioner = getattr(self.host, 'provisioner')(self.host)
-                    self.logger.debug('Host loaded the following provisioner interface: %s'
+                    provisioner = getattr(self.asset, 'provisioner')(self.asset)
+                    self.logger.debug('Asset loaded the following provisioner interface: %s'
                                       % provisioner.__provisioner_name__)
 
-                # teardown the host
+                # teardown the asset
                 getattr(provisioner, 'delete')()
             except AttributeError:
-                self.logger.warning('Host %s is static, skipping teardown.' %
-                                    getattr(self.host, 'name'))
+                self.logger.warning('Asset %s is static, skipping teardown.' %
+                                    getattr(self.asset, 'name'))

@@ -34,10 +34,11 @@ import pytest
 import yaml
 
 from carbon import Carbon
-from carbon.constants import RESULTS_FILE
+from carbon._compat import ConfigParser
+from carbon.constants import RESULTS_FILE, DEFAULT_CONFIG
 from carbon.exceptions import CarbonError
 from carbon.helpers import template_render
-from carbon.resources import Host, Scenario
+from carbon.resources import Asset, Scenario
 
 
 class TestCarbon(object):
@@ -114,6 +115,15 @@ class TestCarbon(object):
         carbon.load_from_yaml(data)
 
     @staticmethod
+    def test_carbon_load_from_yaml_05():
+        data = list()
+        data.append(template_render('../assets/correct_include_descriptor.yml', os.environ))
+        data.append(template_render('../assets/common.yml', os.environ))
+        carbon = Carbon(data_folder='/tmp')
+        carbon.load_from_yaml(data)
+        assert carbon.scenario.child_scenarios
+
+    @staticmethod
     def test_name_property_01():
         carbon = Carbon(data_folder='/tmp')
         assert carbon.name == 'carbon'
@@ -128,5 +138,13 @@ class TestCarbon(object):
         sys.modules['__main__'].__file__ = None
         carbon = Carbon(import_name='__main__', data_folder='/tmp')
         assert carbon.name == '__main__'
+
+    @staticmethod
+    def test_static_inventory_folder():
+        carbon = Carbon(import_name='__main__', data_folder='/tmp')
+        assert carbon.static_inv_dir == '/tmp/inventory'
+
+
+
 
 

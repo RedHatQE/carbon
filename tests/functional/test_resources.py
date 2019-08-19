@@ -38,9 +38,9 @@ from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
 from carbon.executors import RunnerExecutor
 from carbon.orchestrators import AnsibleOrchestrator
 from carbon.providers import OpenstackProvider
-from carbon.provisioners import OpenstackLibCloudProvisioner, HostProvisioner
+from carbon.provisioners import OpenstackLibCloudProvisioner, AssetProvisioner
 from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin, LinchpinWrapperProvisionerPlugin
-from carbon.resources import Action, Execute, Host, Report, Scenario
+from carbon.resources import Action, Execute, Asset, Report, Scenario
 from carbon.utils.config import Config
 
 
@@ -335,7 +335,7 @@ class TestScenarioResource(object):
     @staticmethod
     def test_initialize_host_resource(scenario_resource, host):
         scenario_resource.initialize_resource(host)
-        assert scenario_resource.hosts.__len__() == 0
+        assert scenario_resource.assets.__len__() == 0
 
     @staticmethod
     def test_initialize_action_resource(scenario_resource, action_resource):
@@ -359,17 +359,17 @@ class TestScenarioResource(object):
 
     @staticmethod
     def test_hosts_property(scenario_resource):
-        assert isinstance(scenario_resource.hosts, list)
+        assert isinstance(scenario_resource.assets, list)
 
     @staticmethod
     def test_hosts_setter(scenario_resource):
         with pytest.raises(ValueError):
-            scenario_resource.hosts = ['host']
+            scenario_resource.assets = ['host']
 
     @staticmethod
     def test_add_invalid_hosts(scenario_resource):
         with pytest.raises(ValueError):
-            scenario_resource.add_hosts(mock.MagicMock())
+            scenario_resource.add_assets(mock.MagicMock())
 
     @staticmethod
     def test_actions_property(scenario_resource):
@@ -425,65 +425,65 @@ class TestScenarioResource(object):
         assert isinstance(ch_sc[0], Scenario)
 
 
-class TestHostResource(object):
+class TestAssetResource(object):
     @staticmethod
     def __get_params_copy__(params):
         return copy.deepcopy(params)
 
     def test_create_host_with_name(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
-        host = Host(name='host01', config=config, parameters=params)
-        assert isinstance(host, Host)
+        host = Asset(name='host01', config=config, parameters=params)
+        assert isinstance(host, Asset)
         assert host.name == 'host01'
 
     def test_create_host_without_name(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
-        host = Host(parameters=params, config=config)
+        host = Asset(parameters=params, config=config)
         assert 'hst' in host.name
 
-    def test_create_host_undefined_role_or_groups(self, default_host_params):
+    def test_create_host_undefined_role_or_groups(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params.pop('role')
-        with pytest.raises(SystemExit):
-            Host(name='host01', parameters=params)
+        asset = Asset(name='host01', config=config, parameters=params)
+        assert hasattr(asset, 'role') is False
 
     def test_create_host_undefined_provider(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params.pop('provider')
         with pytest.raises(SystemExit):
-            Host(name='host01', parameters=params)
+            Asset(name='host01', parameters=params)
 
     def test_create_host_invalid_provider(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params['provider']['name'] = 'null'
         with pytest.raises(SystemExit):
-            Host(name='host01', parameters=params)
+            Asset(name='host01', parameters=params)
 
     def test_create_host_invalid_provisioner(
             self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'null'
         with pytest.raises(SystemExit):
-            Host(name='host01', parameters=params, config=config)
+            Asset(name='host01', parameters=params, config=config)
 
     def test_create_host_with_provisioner_set(
             self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'openstack-libcloud'
-        host = Host(name='host01', parameters=params, config=config)
+        host = Asset(name='host01', parameters=params, config=config)
         assert host.provisioner is OpenstackLibCloudProvisioner
 
     def test_create_host_undefined_credential(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params['provider'].pop('credential')
         with pytest.raises(SystemExit):
-            Host(name='host01', parameters=params)
+            Asset(name='host01', parameters=params)
 
     def test_create_host_provider_static(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params.pop('provider')
         params['ip_address'] = '127.0.0.1'
-        Host(name='host01', parameters=params)
+        Asset(name='host01', parameters=params)
 
     def test_ip_address_property(self, host):
         assert host.ip_address is None
@@ -499,7 +499,7 @@ class TestHostResource(object):
         with pytest.raises(AttributeError) as ex:
             host.metadata = {'k': 'v'}
         assert 'You cannot set metadata directly. Use function ' \
-               '~Host.set_metadata' in ex.value.args
+               '~Asset.set_metadata' in ex.value.args
 
     def test_set_metadata(self, host):
         with pytest.raises(NotImplementedError):
@@ -520,7 +520,7 @@ class TestHostResource(object):
     def test_provider_setter(self, host):
         with pytest.raises(AttributeError) as ex:
             host.provider = 'null'
-        assert 'You cannot set the host provider after host class is ' \
+        assert 'You cannot set the asset provider after asset class is ' \
                'instantiated.' in ex.value.args
 
     def test_provisioner_property(self, host):
@@ -529,7 +529,7 @@ class TestHostResource(object):
     def test_provisioner_setter(self, host):
         with pytest.raises(AttributeError) as ex:
             host.provisioner = 'null'
-        assert 'You cannot set the host provisioner after host class ' \
+        assert 'You cannot set the asset provisioner after asset class ' \
                'is instantiated.' in ex.value.args
 
     def test_role_property(self, host):
@@ -538,20 +538,20 @@ class TestHostResource(object):
     def test_role_setter(self, host):
         with pytest.raises(AttributeError) as ex:
             host.role = 'null'
-        assert 'You cannot set the role after host class is instantiated.' in \
+        assert 'You cannot set the role after asset class is instantiated.' in \
                ex.value.args
 
     def test_group_property(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params.pop('role')
         params.update(dict(groups=['group1']))
-        host = Host(name='host01', parameters=params, config=config)
+        host = Asset(name='host01', parameters=params, config=config)
         assert host.groups[-1] == 'group1'
 
     def test_group_setter(self, host):
         with pytest.raises(AttributeError) as ex:
             host.groups = 'test'
-        assert 'You cannot set the groups after host class is instantiated.' in \
+        assert 'You cannot set the groups after asset class is instantiated.' in \
                ex.value.args
 
     def test_build_profile_uc01(self, host):
@@ -567,28 +567,28 @@ class TestHostResource(object):
 
     def test_provisioner_plugin_property(self, default_host_params, feature_toggle_config):
         params = self.__get_params_copy__(default_host_params)
-        host = Host(name='host01', parameters=params, config=feature_toggle_config)
+        host = Asset(name='host01', parameters=params, config=feature_toggle_config)
         assert host.provisioner_plugin is LinchpinWrapperProvisionerPlugin
 
     def test_provisioner_plugin_setter(self, default_host_params, feature_toggle_config):
         params = self.__get_params_copy__(default_host_params)
-        host = Host(name='host01', parameters=params, config=feature_toggle_config)
+        host = Asset(name='host01', parameters=params, config=feature_toggle_config)
         with pytest.raises(AttributeError) as ex:
             host.provisioner_plugin = 'null'
-        assert 'You cannot set the host provisioner plugin after host class ' \
+        assert 'You cannot set the asset provisioner plugin after asset class ' \
                'is instantiated.' in ex.value.args
 
     def test_create_host_that_loads_host_provisioner_interface(
             self, default_host_params, feature_toggle_config):
         params = self.__get_params_copy__(default_host_params)
-        host = Host(name='host01', parameters=params, config=feature_toggle_config)
-        assert host.provisioner is HostProvisioner
+        host = Asset(name='host01', parameters=params, config=feature_toggle_config)
+        assert host.provisioner is AssetProvisioner
 
     def test_create_host_with_provisioner_set_loads_provisioner_plugin(
             self, default_host_params, feature_toggle_config):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'openstack-libcloud'
-        host = Host(name='host01', parameters=params, config=feature_toggle_config)
+        host = Asset(name='host01', parameters=params, config=feature_toggle_config)
         assert host.provisioner_plugin is OpenstackLibCloudProvisionerPlugin
 
     def test_create_host_invalid_provisioner_plugin(
@@ -596,4 +596,4 @@ class TestHostResource(object):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'null'
         with pytest.raises(SystemExit):
-            Host(name='host01', parameters=params, config=feature_toggle_config)
+            Asset(name='host01', parameters=params, config=feature_toggle_config)

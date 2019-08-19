@@ -33,7 +33,7 @@ from . import __name__ as __carbon_name__
 from .constants import TASKLIST, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, TimeMixin
 from .helpers import file_mgmt, gen_random_str
-from .resources import Scenario, Host, Action, Report, Execute
+from .resources import Scenario, Asset, Action, Report, Execute
 from .utils.config import Config
 from .utils.pipeline import PipelineBuilder
 
@@ -214,7 +214,7 @@ class Carbon(LoggerMixin, TimeMixin):
 
         scenario_obj.load(scenario_data)
 
-        scenario_obj.load_resources(Host, pro_items)
+        scenario_obj.load_resources(Asset, pro_items)
         scenario_obj.load_resources(Action, orc_items)
         scenario_obj.load_resources(Execute, exe_items)
         scenario_obj.load_resources(Report, rpt_items)

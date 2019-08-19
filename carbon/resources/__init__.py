@@ -26,6 +26,6 @@
 
 from .actions import Action
 from .executes import Execute
-from .host import Host
+from .assets import Asset
 from .reports import Report
 from .scenario import Scenario

@@ -27,7 +27,7 @@
 
 import pytest
 import os
-from carbon.resources.host import Host
+from carbon.resources.assets import Asset
 from carbon._compat import ConfigParser
 from carbon.utils.config import Config
 from carbon.exceptions import CarbonError, HelpersError
@@ -69,7 +69,7 @@ def task_concurrency_config():
 def task_host(task_concurrency_config):
     params=dict(groups='test_group',
                 ip_address='1.2.3.4')
-    host = Host(name='Host01',
+    host = Asset(name='Host01',
          config=task_concurrency_config,
          parameters=params)
     return host

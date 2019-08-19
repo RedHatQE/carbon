@@ -174,7 +174,7 @@ def get_default_provisioner(provider=None):
     """
 
     if provider is None:
-        provisioner_name = PROVISIONERS['host']
+        provisioner_name = PROVISIONERS['asset']
     else:
         try:
             provisioner_name = PROVISIONERS[provider.__provider_name__]
@@ -673,7 +673,7 @@ class CustomDict(dict):
         self.__setitem__(key, value)
 
 
-def fetch_hosts(hosts, task, all_hosts=True):
+def fetch_assets(hosts, task, all_hosts=True):
     """Set the hosts for a task requiring hosts.
 
     This method is helpful for action/execute resources. These resources
@@ -713,13 +713,13 @@ def fetch_hosts(hosts, task, all_hosts=True):
             if 'all' in task[_type].hosts:
                 _hosts.append(host)
                 continue
-            if host.name in task[_type].hosts:
+            if host.name in task[_type].hosts or [h for h in task[_type].hosts if host.name in h]:
                 _hosts.append(host)
-            if host.role:
+            if hasattr(host, 'role'):
                 for r in host.role:
                     if r in task[_type].hosts:
                         _hosts.append(host)
-            else:
+            elif hasattr(host, 'groups'):
                 for g in host.groups:
                     if g in task[_type].hosts:
                         _hosts.append(host)
@@ -774,7 +774,7 @@ def fetch_executes(executes, hosts, task):
                 # fetch hosts to be used later for data injection
                 dummy_task = dict()
                 dummy_task[_type] = e
-                dummy_task = fetch_hosts(hosts, dummy_task)
+                dummy_task = fetch_assets(hosts, dummy_task)
                 _executes.append(dummy_task[_type])
     else:
         for e in executes:
@@ -783,7 +783,7 @@ def fetch_executes(executes, hosts, task):
                     # fetch hosts to be used later for data injection
                     dummy_task = dict()
                     dummy_task[_type] = e
-                    dummy_task = fetch_hosts(hosts, dummy_task)
+                    dummy_task = fetch_assets(hosts, dummy_task)
                     _executes.append(dummy_task[_type])
                     break
 
@@ -1341,7 +1341,7 @@ def lookup_ip_of_hostname(host_name):
     A method to find the ip of the hostname.
     This is used by Linchpin specifically for Beaker
     since 99% of the systems in beaker are by FQDN host name.
-    To make sure the IP address field in the carbon Host resource
+    To make sure the IP address field in the carbon Asset resource
     is an actual IP address we need to look it up
 
 
@@ -1391,7 +1391,7 @@ class LinchpinResourceBuilder(object):
 
         :param provider: the Carbon Provider to validate against
         :type Object: Provider object
-        :param host_params: the Host Resource profile dictionary
+        :param host_params: the Asset Resource profile dictionary
         :type dict: dictionary
         :return: a Linchpin resource definition dictionary
         """
@@ -1414,7 +1414,7 @@ class LinchpinResourceBuilder(object):
 
         :param provider: the Carbon Provider to validate against
         :type Object: Provider object
-        :param host_params: the Host Resource profile dictionary
+        :param host_params: the Asset Resource profile dictionary
         :type dict: dictionary
         :return: a Linchpin resource definition dictionary
         """
@@ -1448,7 +1448,7 @@ class LinchpinResourceBuilder(object):
         """
         Private beaker specific method to build the root resource definition.
 
-        :param host_params: the Host Resource profile dictionary
+        :param host_params: the Asset Resource profile dictionary
         :return: a Linchpin resource definition dictionary
         """
 
@@ -1473,7 +1473,7 @@ class LinchpinResourceBuilder(object):
 
         :param provider: the Carbon Provider to validate against
         :type Object: Provider object
-        :param host_params: the Host Resource profile dictionary
+        :param host_params: the Asset Resource profile dictionary
         :type dict: dictionary
         :return: a Linchpin resource definition dictionary
         """
@@ -1617,7 +1617,7 @@ class LinchpinResourceBuilder(object):
 
         :param provider: the Carbon Provider to validate against
         :type Object: Provider object
-        :param host_params: the Host Resource profile dictionary
+        :param host_params: the Asset Resource profile dictionary
         :type dict: dictionary
         :return: a Linchpin resource definition dictionary
         """

@@ -29,7 +29,7 @@ import copy
 import json
 import pytest
 import mock
-from carbon.resources import Host
+from carbon.resources import Asset
 from carbon.core import CarbonProvisioner
 from carbon.exceptions import CarbonProvisionerError
 from carbon.provisioners import LinchpinWrapperProvisioner
@@ -104,7 +104,7 @@ def aws_params():
 
 @pytest.fixture(params=['os', 'beaker', 'libvirt', 'aws'])
 def host(request, config):
-    return Host(
+    return Asset(
         name='host01',
         config=config,
         provisioner='linchpin-wrapper',

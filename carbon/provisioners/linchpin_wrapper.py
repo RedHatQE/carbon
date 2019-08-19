@@ -198,12 +198,14 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         pindict['carbon']['layout']['inventory_layout']['vars'].update(
             getattr(self.host, 'ansible_params'))
         pindict['carbon']['layout']['inventory_layout']['vars']['hostname'] = getattr(self.host, 'name')
+        try:
+            host_groups = getattr(self.host, 'role')
+            if not host_groups:
+                host_groups = getattr(self.host, 'groups')
 
-        host_groups = getattr(self.host, 'role')
-        if not host_groups:
-            host_groups = getattr(self.host, 'groups')
-
-        pindict['carbon']['layout']['inventory_layout']['hosts']['node']['host_groups'].extend(host_groups)
+            pindict['carbon']['layout']['inventory_layout']['hosts']['node']['host_groups'].extend(host_groups)
+        except AttributeError:
+            pass
         self.logger.debug('Generated PinFile:\n%s' % yaml.dump(pindict))
         self.pinfile = pindict
 
@@ -334,7 +336,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             txid = getattr(self.host, 'provider_params')['tx_id']
         except KeyError:
             txid = None
-            self.logger.warning('No tx_id found for Host: %s, this could mean it was not successfully'
+            self.logger.warning('No tx_id found for Asset: %s, this could mean it was not successfully'
                                 ' provisioned. Attempting to perform the destroy without a tx_id'
                                 ' but this might not work, so you may need to manually cleanup resources.' % host)
         self.logger.info('Delete host %s in %s.' % (host, self.provider))

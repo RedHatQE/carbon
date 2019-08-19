@@ -45,8 +45,10 @@ below describes each resource in more detail.
     *   - Resource
         - Description
 
-    *   - Host
-        - The host resources define the system resources for the scenario.
+    *   - Asset
+        - The asset resources define the system resources for the scenario.
+          These can be anything from hosts, virtual networks, storage,
+          security keys, etc.
 
     *   - Action
         - The action resources define the actions to be performed against
@@ -61,7 +63,8 @@ below describes each resource in more detail.
           defined host resources.
 
     *   - Report
-        - The report resources defines which reporting tool to notify.
+        - The report resources defines which reporting and analysis system to
+          import test artifacts generated during the execution phase.
 
 Now that we have knowledge about how a carbon object is constructed. Which
 includes a number of resources. Lets dive depper into the resources. What do

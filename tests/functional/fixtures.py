@@ -35,7 +35,7 @@ import copy
 import os
 
 import pytest
-from carbon.resources import Action, Execute, Host, Report, Scenario
+from carbon.resources import Action, Execute, Asset, Report, Scenario
 from carbon.utils.config import Config
 from carbon._compat import ConfigParser
 
@@ -111,7 +111,7 @@ def action_resource_cleanup():
 
 @pytest.fixture
 def host(default_host_params, config):
-    return Host(
+    return Asset(
         name='host01',
         config=config,
         parameters=copy.deepcopy(default_host_params)
@@ -136,7 +136,7 @@ def report_resource(config):
 @pytest.fixture
 def scenario(action_resource, host, execute_resource, report_resource,
              scenario_resource):
-    scenario_resource.add_hosts(host)
+    scenario_resource.add_assets(host)
     scenario_resource.add_actions(action_resource)
     scenario_resource.add_executes(execute_resource)
     scenario_resource.add_reports(report_resource)
@@ -147,16 +147,16 @@ def scenario(action_resource, host, execute_resource, report_resource,
 def master_child_scenario(action_resource, host, execute_resource, report_resource,
                           scenario_resource, default_host_params, config):
     child_scenario = Scenario(config=Config(), parameters={'k': 'v'})
-    host2 = Host(
+    host2 = Asset(
         name='host02',
         config=config,
         parameters=copy.deepcopy(default_host_params)
     )
     execute_res2 = Execute(name='execute02', parameters=dict(description='description', hosts='host02', executor='runner'))
-    child_scenario.add_hosts(host2)
+    child_scenario.add_assets(host2)
     child_scenario.add_executes(execute_res2)
     scenario_resource.add_child_scenario(child_scenario)
-    scenario_resource.add_hosts(host)
+    scenario_resource.add_assets(host)
     scenario_resource.add_actions(action_resource)
     scenario_resource.add_executes(execute_resource)
     scenario_resource.add_reports(report_resource)

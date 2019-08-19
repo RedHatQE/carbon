@@ -46,7 +46,7 @@ mapping:
             allowempty: True
             type: map
           regex;(role|groups):
-            required: True
+            required: False
             type: any
             func: type_str_list
 

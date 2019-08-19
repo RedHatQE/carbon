@@ -57,7 +57,7 @@ class LoggerMixin(object):
     Carbon packages (classes) can either include the logger mixin or create
     their own object.
 
-        class Host(CarbonResource):
+        class Asset(CarbonResource):
             self.logger.info('Carbon Resource!')
 
     Modules that want to use carbon logger per function base and not per class,
@@ -692,7 +692,7 @@ class CarbonProvider(LoggerMixin, TimeMixin):
         for item in self.opt_params:
             name = getattr(resource, 'name')
             param, param_type = item[0], item[1]
-            msg = "Host %s : optional param '%s' " % (name, param)
+            msg = "Asset %s : optional param '%s' " % (name, param)
             try:
                 param_value = getattr(resource, 'provider_params')[param]
                 self.logger.info(msg + 'exists.')
@@ -1321,40 +1321,31 @@ class Inventory(LoggerMixin, FileLockMixin):
                 section = host.name
                 section_vars = '%s:vars' % section
 
-                if host.role:
-                    for role in host.role:
-                        host_section = role + ":children"
-                        if host_section in config.sections():
-                            config.set(host_section, host.name)
-                        else:
-                            config.add_section(host_section)
-                            config.set(host_section, host.name)
+                if hasattr(host, 'role') or hasattr(host, 'groups'):
+                    for attr in ['role', 'groups']:
+                        for sect in getattr(host, attr, []):
+                            host_section = sect + ":children"
+                            if host_section in config.sections():
+                                config.set(host_section, host.name)
+                            else:
+                                config.add_section(host_section)
+                                config.set(host_section, host.name)
 
-                if host.groups:
-                    for group in host.groups:
-                        host_section = group + ":children"
-                        if host_section in config.sections():
-                            config.set(host_section, host.name)
-                        else:
-                            config.add_section(host_section)
-                            config.set(host_section, host.name)
+                    # create section(s)
+                    for item in [section, section_vars]:
+                        config.add_section(item)
 
-                # create section(s)
-                for item in [section, section_vars]:
-                    config.add_section(item)
+                    # add ip address to group
+                    if isinstance(host.ip_address, dict):
+                        config.set(section, host.ip_address.get('public'))
+                    elif isinstance(host.ip_address, str):
+                        config.set(section, host.ip_address)
 
-                # add ip address to group
-                if isinstance(host.ip_address, list):
-                    for item in host.ip_address:
-                        config.set(section, item)
-                elif isinstance(host.ip_address, str):
-                    config.set(section, host.ip_address)
-
-                # add host vars
-                for k, v in host.ansible_params.items():
-                    if k in ['ansible_ssh_private_key_file']:
-                        v = os.path.join(getattr(host, 'workspace'), v)
-                    config.set(section_vars, k, v)
+                    # add host vars
+                    for k, v in host.ansible_params.items():
+                        if k in ['ansible_ssh_private_key_file']:
+                            v = os.path.join(getattr(host, 'workspace'), v)
+                        config.set(section_vars, k, v)
 
             # write the inventory
             with open(self.master_inv, 'w') as f:
