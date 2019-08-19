@@ -250,7 +250,14 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         resource = results['carbon']['outputs']['resources']
         if self.provider == 'openstack':
             os_server = resource[0]['servers'][0]
-            setattr(self.host, 'ip_address', str(os_server['interface_ip']))
+            if os_server.get('private_v4', False) != "" and os_server.get('public_v4', False) != "":
+                setattr(self.host, 'ip_address', dict(public=str(os_server.get('public_v4')),
+                                                      private=str(os_server.get('private_v4'))))
+            else:
+                if os_server.get('private_v4', False) != "" and os_server.get('public_v4', False) == "":
+                    setattr(self.host, 'ip_address', str(os_server['private_v4']))
+                if os_server.get('private_v4', False) == "" and os_server.get('public_v4', False) != "":
+                    setattr(self.host, 'ip_address', str(os_server['public_v4']))
             getattr(self.host, 'provider_params')['node_id'] = str(os_server['id'])
             getattr(self.host, 'provider_params')['hostname'] \
                 = os_server['name']
@@ -265,6 +272,7 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                 del getattr(self.host, 'provider_params')['hostname']
             else:
                 lib_vm = resource[0]
+                # TODO update how multiple IPs are captured once Linchpin libvirt multinetwork fixed
                 setattr(self.host, 'ip_address', str(lib_vm['ip']))
                 getattr(self.host, 'provider_params')['hostname'] = lib_vm['name']
         if self.provider == 'aws':
@@ -287,8 +295,23 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                             'Error setting private key file permissions: %s' % ex
                         )
             else:
-                setattr(self.host, 'ip_address', str(aws_res.get('instances')[-1].get('public_ip')))
-                getattr(self.host, 'provider_params')['hostname'] = aws_res.get('instances')[-1].get('private_dns_name')
+                if aws_res.get('instances')[-1].get('private_ip', False) is not None and \
+                        aws_res.get('instances')[-1].get('public_ip', False) is not None:
+                    setattr(self.host, 'ip_address', dict(public=str(aws_res.get('instances')[-1].get('public_ip')),
+                                                          private=str(aws_res.get('instances')[-1].get('private_ip'))))
+                    getattr(self.host, 'provider_params')['hostname'] = \
+                        aws_res.get('instances')[-1].get('public_dns_name')
+                else:
+                    if aws_res.get('instances')[-1].get('public_ip', False) is not None and \
+                            aws_res.get('instances')[-1].get('private_ip', False) is None:
+                        setattr(self.host, 'ip_address', str(aws_res.get('instances')[-1].get('public_ip')))
+                        getattr(self.host, 'provider_params')['hostname'] = \
+                            aws_res.get('instances')[-1].get('public_dns_name')
+                    if aws_res.get('instances')[-1].get('public_ip', False) is None and \
+                            aws_res.get('instances')[-1].get('private_ip', False) is not None:
+                        setattr(self.host, 'ip_address', str(aws_res.get('instances')[-1].get('private_ip')))
+                        getattr(self.host, 'provider_params')['hostname'] = \
+                            aws_res.get('instances')[-1].get('private_dns_name')
                 getattr(self.host, 'provider_params')['node_id'] = str(aws_res.get('instances')[-1].get('id'))
 
     def create(self):

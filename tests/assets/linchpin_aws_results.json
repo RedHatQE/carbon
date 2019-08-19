@@ -83,7 +83,7 @@
                 "launch_time": "2019-08-07T19:37:31.000Z",
                 "placement": "us-east-2c",
                 "private_dns_name": "ip-172-31-46-143.us-east-2.compute.internal",
-                "private_ip": "172.31.46.143",
+                "private_ip": null,
                 "public_dns_name": "ec2-18-222-138-53.us-east-2.compute.amazonaws.com",
                 "public_ip": "10.0.58.5",
                 "ramdisk": null,

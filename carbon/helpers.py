@@ -55,7 +55,7 @@ from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
 
 from ._compat import string_types
-from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER
+from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER, DEFAULT_TASK_CONCURRENCY
 from .exceptions import CarbonError, HelpersError
 
 LOG = getLogger(__name__)
@@ -1350,6 +1350,25 @@ def lookup_ip_of_hostname(host_name):
     :return: return a string containing the ip
     """
     return socket.gethostbyname(host_name)
+
+
+def set_task_class_concurrency(task, resource):
+    """
+    set the task __concurrency__ field in the class
+    to whatever was passed in the config
+    :param task:
+    :type task: CarbonTask class
+    :param resource:
+    :type CarbonResource object
+    :return: CarbonTask class
+    """
+    val = getattr(resource, 'config')['TASK_CONCURRENCY'].get(task['task'].__task_name__.upper())
+    if val == 'True':
+        val = True
+    else:
+        val = False
+    task['task'].__concurrent__ = val
+    return task
 
 
 class LinchpinResourceBuilder(object):

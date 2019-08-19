@@ -27,9 +27,11 @@
 
 import pytest
 import os
+from carbon.resources.host import Host
+from carbon._compat import ConfigParser
+from carbon.utils.config import Config
 from carbon.exceptions import CarbonError, HelpersError
-from carbon.helpers import DataInjector
-from carbon.helpers import validate_render_scenario
+from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency
 
 
 @pytest.fixture(scope='class')
@@ -48,6 +50,29 @@ def data_injector():
             }
 
     return DataInjector([Host()])
+
+
+@pytest.fixture(scope='class')
+def task_concurrency_config():
+    config_file = '../assets/carbon.cfg'
+    cfgp = ConfigParser()
+    cfgp.read(config_file)
+    cfgp.set('task_concurrency','provision','True')
+    with open(config_file, 'w') as cf:
+        cfgp.write(cf)
+    os.environ['CARBON_SETTINGS'] = config_file
+    config = Config()
+    config.load()
+    return config
+
+@pytest.fixture(scope='class')
+def task_host(task_concurrency_config):
+    params=dict(groups='test_group',
+                ip_address='1.2.3.4')
+    host = Host(name='Host01',
+         config=task_concurrency_config,
+         parameters=params)
+    return host
 
 
 class TestDataInjector(object):
@@ -142,4 +167,14 @@ def test_validate_render_scenario_empty_include():
         validate_render_scenario('../assets/descriptor.yml')
 
 
+def test_set_task_concurrency_false(host):
+    for task in host.get_tasks():
+        if task['task'].__task_name__ == 'provision':
+            assert set_task_class_concurrency(task, host)['task'].__concurrent__ is False
+
+
+def test_set_task_concurrency_true(task_host):
+    for task in task_host.get_tasks():
+        if task['task'].__task_name__ == 'provision':
+            assert set_task_class_concurrency(task, task_host)['task'].__concurrent__ is True
 

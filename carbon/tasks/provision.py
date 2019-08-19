@@ -51,10 +51,6 @@ class ProvisionTask(CarbonTask):
                              results_dir=getattr(host, 'config')['RESULTS_FOLDER'],
                              static_inv_dir=getattr(host, 'config')['INVENTORY_FOLDER'])
 
-        # set concurrency
-        if getattr(host, 'config')['TASK_CONCURRENCY']['PROVISION'] != 'True':
-            __concurrent__ = False
-
         if not host.is_static:
             # create the provisioner object to create hosts
             try:

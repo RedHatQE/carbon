@@ -51,6 +51,10 @@ def config():
         cfgp.set('feature_toggles:host','plugin_implementation','False')
         with open(config_file, 'w') as cf:
             cfgp.write(cf)
+    if cfgp.get('task_concurrency','provision') != 'False':
+        cfgp.set('task_concurrency','provision','False')
+        with open(config_file, 'w') as cf:
+            cfgp.write(cf)
     config = Config()
     config.load()
     return config

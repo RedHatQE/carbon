@@ -410,9 +410,6 @@ class Carbon(LoggerMixin, TimeMixin):
             # Write the main scenario results
             file_mgmt('w', self.results_file, self.scenario.profile())
 
-            # archive everything from the data folder into the results folder
-            os.system('cp -r %s/* %s' % (self.data_folder, self.config['RESULTS_FOLDER']))
-
             self.logger.info('\n')
             self.logger.info('SCENARIO RUN (END)'.center(79))
             self.logger.info('-' * 79)
@@ -431,6 +428,9 @@ class Carbon(LoggerMixin, TimeMixin):
                                                                                      RESULTS_FILE))
             self.logger.info('-' * 79)
             self.logger.info('CARBON RUN (RESULT=%s)' % state)
+
+            # archive everything from the data folder into the results folder
+            os.system('cp -r %s/* %s' % (self.data_folder, self.config['RESULTS_FOLDER']))
 
             # also archive the inventory file if a static inventory directory is specified
             if self.static_inv_dir and os.path.exists(self.static_inv_dir):
