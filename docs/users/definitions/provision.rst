@@ -39,19 +39,19 @@ required or optional:
         - Required
 
     *   - name
-        - The name of the node to boot.
+        - The name of the asset to provision.
         - String
         - True
 
     *   - role/groups
-        - The names of the roles or groups for the node. Used to
-          assign host to groups when generating the Ansible
+        - The names of the roles or groups for the asset. Used to
+          assign host assets to groups when generating the Ansible
           inventory files.
         - List
-        - True
+        - False
 
     *   - provisioner
-        - The name of the provisioner to use to boot nodes.
+        - The name of the provisioner to use to provision assets.
         - String
         - False
 
@@ -64,7 +64,7 @@ required or optional:
 
     *   - ansible_params
         - Ansible parameters to be used within a inventory file to control how
-          ansible communicates with the host.
+          ansible communicates with the host asset.
         - Dict
         - False
 
@@ -82,6 +82,12 @@ changed the schema from role to groups to better reflect what the purpose of thi
 parameter is intended for. All scenario descriptor files written prior to 1.2.0
 using role will still be honored but it is considered deprecated and it is recommended to
 update all scenarios to use the new parameter.
+
+As of 1.4.0 role/groups is not a requirement for all asset types. This should only be
+specified for host assets like VMs or Baremetal Systems that have an ip and will be acted
+on later on during Orchestrate or Execute. Assets like networks, storage, security key, etc.
+do not and should not be assigned a role/groups to avoid polluting the Ansible inventory file
+with empty groups.
 
 You can associate a number of roles or groups to a host in a couple of different ways.
 First is to define your roles in a comma separated string

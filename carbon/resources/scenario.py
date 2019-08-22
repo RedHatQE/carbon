@@ -183,7 +183,7 @@ class Scenario(CarbonResource):
                     # Added report object in case we decide reporting
                     # should be done in parallel
                     if isinstance(value, Asset):
-                        for h in self.hosts:
+                        for h in self.assets:
                             if value.name == h.name:
                                 scenario_resource_list.append(value)
                     if isinstance(value, Report):
