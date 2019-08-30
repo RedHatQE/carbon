@@ -604,7 +604,7 @@ class RunnerExecutor(CarbonExecutor):
                     path = '/'.join(r['destination'].split('/')[-3:])
                 else:
                     path = '/'.join(r['destination'].split('/')[2:-1])
-                    art_list = ['/'.join(a.split('->')[-1].split('/')[4:]) for a in temp_list]
+                    art_list = ['/'.join(a.replace('’', "").split('->')[-1].split('/')[4:]) for a in temp_list]
 
                 self.logger.info('Copied the artifact(s), %s, from %s' % (art_list, r['host']))
 
@@ -617,7 +617,10 @@ class RunnerExecutor(CarbonExecutor):
                 else:
                     artifact_location[path] = art_list
 
-            self.execute.artifact_locations = artifact_location
+            if self.execute.artifact_locations:
+                self.execute.artifact_locations.update(artifact_location)
+            else:
+                self.execute.artifact_locations = artifact_location
 
             if r['skipped']:
                 self.logger.warning('Could not find artifact(s), %s, on %s. Make sure the file exists '

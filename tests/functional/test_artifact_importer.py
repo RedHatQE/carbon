@@ -72,6 +72,15 @@ def default_report_params(execute):
 
 
 @pytest.fixture(scope='class')
+def default_rp_report_params(execute):
+    params = dict(description='description', executes=[execute],
+                  provider=dict(name='reportportal',
+                                credential='reportportal-creds'
+                                ))
+    return params
+
+
+@pytest.fixture(scope='class')
 def default_profile_params():
     params = dict(data_folder='/tmp/.results',
                   workspace='/tmp',
@@ -80,11 +89,28 @@ def default_profile_params():
                                               password='testpassword'))
     return params
 
+@pytest.fixture(scope='class')
+def default_rp_profile_params():
+    params = dict(data_folder='/tmp/.results',
+                  workspace='/tmp',
+                  provider_credentials = dict(rp_url='https://test.com/rp',
+                                              api_token='1234-5678-9018',
+                                              service_url='https://test_service_rp.com/rp'))
+    return params
+
 
 @pytest.fixture(scope='class')
 def plugin():
     pg = mock.MagicMock(spec=ImporterPlugin,
                         __plugin_name__='polarion')
+    pg.profile = dict(name='test.xml')
+    pg.import_artifacts = mock.MagicMock(return_value='Import Success')
+    return pg
+
+@pytest.fixture(scope='class')
+def rp_plugin():
+    pg = mock.MagicMock(spec=ImporterPlugin,
+                        __plugin_name__='reportportal')
     pg.profile = dict(name='test.xml')
     pg.import_artifacts = mock.MagicMock(return_value='Import Success')
     return pg
@@ -104,10 +130,29 @@ def report(default_report_params, plugin, config,
 
     return report
 
+@pytest.fixture(scope='class')
+def report_rp(default_rp_report_params, rp_plugin, config,
+           default_rp_profile_params, execute):
+    report = mock.MagicMock(spec=Report, name='report_rp',
+                            config=config)
+    report.name = 'test.xml'
+    report.importer_plugin = rp_plugin
+    report.parameters = default_rp_report_params
+    report.executes = [execute]
+    report.profile.return_value = default_rp_profile_params
+
+    return report
+
 
 @pytest.fixture(scope='class')
 def artifact_importer(report):
     importer = ArtifactImporter(report=report)
+    return importer
+
+
+@pytest.fixture(scope='class')
+def artifact_importer_rp(report_rp):
+    importer = ArtifactImporter(report=report_rp)
     return importer
 
 
@@ -116,6 +161,10 @@ class TestArtifactImporter(object):
     @staticmethod
     def test_artifact_importer_constructor(artifact_importer):
         assert isinstance(artifact_importer, CarbonImporter)
+
+    @staticmethod
+    def test_artifact_importer_constructor_rp(artifact_importer_rp):
+        assert isinstance(artifact_importer_rp, CarbonImporter)
 
     @staticmethod
     @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')

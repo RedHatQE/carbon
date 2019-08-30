@@ -80,3 +80,20 @@ Carbon uses the beaker client package to provision physical machines in beaker.
     pip fails in Python 3. Beaker client is not compatible with Python 3
     currently. Once compatibile it can be installed with carbon. Carbon is
     Python 2.7 & Python 3.6 compatible.
+
+Report Portal Requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Carbon installs CCIT Report Portal client as an extra requirement. To know more
+about Report Portal Client, please refer
+`here <https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674>`_
+
+To install users can do the following
+
+.. code-block:: python
+
+   pip install carbon[rp-preproc]
+
+
+.. NOTE::
+    The client is supported only on Python 3 environments.

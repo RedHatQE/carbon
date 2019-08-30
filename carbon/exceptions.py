@@ -231,7 +231,7 @@ class ArchiveArtifactsError(CarbonError):
 
 
 class CarbonImporterError(CarbonError):
-    """Base class for the artifact importer execeptions."""
+    """Base class for the artifact importer exceptions."""
 
     def __init__(self, message):
         """Constructor.
@@ -243,7 +243,7 @@ class CarbonImporterError(CarbonError):
 
 
 class PolarionImporterError(CarbonImporterError):
-    """Base class for the Polarion importer execeptions."""
+    """Base class for the Polarion importer exceptions."""
 
     def __init__(self, message):
         """Constructor.
@@ -252,3 +252,15 @@ class PolarionImporterError(CarbonImporterError):
         :type message: str
         """
         super(PolarionImporterError, self).__init__(message)
+
+
+class ReportPortalImporterError(CarbonImporterError):
+    """Base class for the Report Portal importer exceptions."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: error message
+        :type message: str
+        """
+        super(ReportPortalImporterError, self).__init__(message)

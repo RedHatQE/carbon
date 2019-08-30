@@ -230,3 +230,27 @@ execute:
        - cleanup
     artifacts:
     - ~/cloud-user/client.facts
+
+# artifact_locations
+---
+execute:
+  - name:
+    description:
+    executor:
+    hosts:
+    ignore_rc: False
+    git:
+      - repo:
+        version:
+        dest:
+    shell:
+      - command: cmd_to_execute_the_tests
+        chdir:
+    artifacts:
+      - ~/restraint-example/tests
+      - ~/another_artificate_dir
+    artifact_locations:
+      payload_dir:
+        - results/
+        - artifacts/test1.log
+

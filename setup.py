@@ -57,6 +57,8 @@ setup(
         'linchpin[beaker, libvirt]>=1.7.4.1;python_version<="2.7"',
         'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.3#egg=polar'
     ],
+    extras_require={'rp-preproc':
+                        ['rp-preproc@git+https://gitlab.cee.redhat.com/ccit/reportportal/rp_preproc.git@master']},
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

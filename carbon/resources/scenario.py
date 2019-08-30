@@ -90,7 +90,7 @@ class Scenario(CarbonResource):
         self._description = parameters.pop('description', None)
 
         # External Dependency Component list of Scenario
-        self.resource_check = ""
+        self.resource_check = []
 
         # set resource attributes
         self._assets = list()

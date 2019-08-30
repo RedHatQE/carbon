@@ -85,3 +85,226 @@ report:
       polarion-testrun-id: PolId-123
       polarion-testrun-title: Sample Test Run
     testcase_csv_file: polarion/workitems.csv
+
+---
+report:
+  - name: payload_example_medium/*
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+# rp uc1
+---
+execute:
+    - name: rp_execute_test
+      description: execute poc for rp
+      hosts: test_host1
+      executor: runner
+      shell:
+        - chdir: /home/carbon_develop/e2e-acceptance-tests/
+          command: mkdir rp_examples/payload_eg;mkdir rp_examples/payload_eg/results; mkdir rp_examples/payload_eg/attachments; cp rp_examples/payload_example_medium/results/*.xml rp_examples/payload_eg/results/ ; cp -r rp_examples/payload_example_medium/attachments/* rp_examples/payload_eg/attachments/
+      artifacts:
+        - rp_examples/payload_eg/
+
+report:
+  - name: payload_eg/*
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+      rp_project: carbon_1
+      launch_name: carbon_launch
+      launch_description: carbon_launch_desc
+      tags:
+      - tag1
+      - tag2
+      merge_launches: True
+#rp uc2
+---
+execute:
+    - name: rp_execute_test
+      description: execute poc for rp
+      hosts: test_host1
+      executor: runner
+      shell:
+        - chdir: /home/carbon_develop/e2e-acceptance-tests/rp_examples
+          command: pwd;ls
+      artifact_locations:
+         payload_example_medium :
+           - results/
+           - attachments/
+
+report:
+  - name: payload_example_medium/*
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+      rp_project: carbon_1
+      launch_name: carbon_launch
+      launch_description: carbon_launch_desc
+      tags:
+      - tag1
+      - tag2
+      merge_launches: False
+#rp uc3
+---
+execute:
+    - name: rp_execute_test
+      description: execute poc for rp
+      hosts: test_host1
+      executor: runner
+      shell:
+        - chdir: /home/carbon_develop/e2e-acceptance-tests/rp_examples
+          command: pwd;ls
+      artifacts:
+        - rp_examples/payload_uc3
+
+report:
+  - name: '*.xml'
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+      rp_project: carbon_1
+      launch_name: carbon_launch
+      launch_description: carbon_launch_desc
+      tags:
+      - tag1
+      - tag2
+      merge_launches: False
+#rp uc4
+---
+execute:
+    - name: rp_execute_test
+      description: execute poc for rp
+      hosts: test_host1
+      executor: runner
+      shell:
+        - chdir: /home/carbon_develop/e2e-acceptance-tests/rp_examples
+          command: pwd;ls
+      artifact_locations:
+         payload_carbon :
+           - tempest-results-all.1.xml
+           - junit_example.xml
+           - MyTest.test_method3
+
+report:
+  - name: '*.xml'
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+      launch_name: carbon_launch1
+      rp_project: carbon_1
+      json_path: rp_config_1.json
+#rp_uc5
+---
+execute:
+    - name: rp_execute_test
+      description: execute poc for rp
+      hosts: test_host1
+      executor: runner
+      shell:
+        - chdir: /home/carbon_develop/e2e-acceptance-tests/rp_examples
+          command: pwd;ls
+      artifacts:
+        - /home/carbon_develop/e2e-acceptance-tests/rp_examples/payload_example_medium
+      artifact_locations:
+         payload_carbon :
+           - tempest-results-all.1.xml
+           - junit_example.xml
+           - MyTest.test_method3 
+
+report:
+  - name: '*.xml'
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+      rp_project: carbon_rujuta
+      launch_name: carbon_launch
+      launch_description: carbon_launch_desc
+      tags:
+      - tag1
+      - tag2
+      merge_launches: True
+#rp uc6
+---
+execute:
+    - name: rp_execute_test
+      description: execute poc for rp
+      hosts: test_host1
+      executor: runner
+      shell:
+        - chdir: /home/rushinde/carbon_develop/e2e-acceptance-tests/rp_examples
+          command: pwd;ls
+
+report:
+  - name: payload_example_medium/*
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+      rp_project: carbon_1
+      launch_name: carbon_launch
+      launch_description: carbon_launch_desc
+      tags:
+      - tag1
+      - tag2
+      merge_launches: False
+# rp_json_eg1
+---
+report:
+  - name: payload_example_medium/*
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+      rp_project: carbon_1
+      launch_name: carbon_launch
+      launch_description: carbon_launch_desc
+      tags:
+      - tag1
+      - tag2
+      merge_launches: False
+      simple_xml: False
+      auto_dashboard: True
+#rp_json_eg2
+---
+report:
+  - name: payload_example_medium/*
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+      rp_project: carbon_1
+      launch_name: carbon_launch
+      json_path: rp_config_1.json
+#rp_json_eg3
+---
+report:
+  - name: payload_example_medium/*
+    description: To test rp path
+    executes: rp_execute_test
+    provider:
+      name: reportportal
+      credential: reportportal-creds
+      rp_project: carbon_1
+      launch_name: carbon_launch
+      launch_description: carbon_launch_desc
+      tags:
+      - tag1
+      - tag2
+      merge_launches: False
+      auto_dashboard: True
+      json_path: rp_config_1.json

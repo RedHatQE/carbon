@@ -16,7 +16,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-
 from ..core import CarbonImporter
 from ..exceptions import CarbonImporterError
 from ..helpers import find_artifacts_on_disk, search_artifact_location_dict, DataInjector
@@ -60,25 +59,34 @@ class ArtifactImporter(CarbonImporter):
 
         # check that the execute object collected artifacts
         art_paths = []
-        for execute in self.report.executes:
+        '''for execute in self.report.executes:
             if execute.artifact_locations:
                 art_paths = search_artifact_location_dict(art_locations=execute.artifact_locations,
                                                           report_name=self.plugin.profile['name'])
             else:
-                self.logger.warn('The specified execute, %s, does not have any artifacts '
+                self.logger.warning('The specified execute, %s, does not have any artifacts '
                                  'with it.' % execute.name)
 
         # check that the list generated searching the dictionary is not empty
         if not art_paths:
-            self.logger.warn('Could not find %s as one of the artifacts that was collected. Checking the '
+            self.logger.warning('Could not find %s as one of the artifacts that was collected. Checking the '
                              'data directories anyways.'
                                       % self.report.name)
             self.artifact_paths = find_artifacts_on_disk(data_folder=self.data_folder,
                                                          path_list=[self.plugin.profile['name']],
                                                          art_location_found=False)
         else:
-            self.artifact_paths = find_artifacts_on_disk(data_folder=self.data_folder, path_list=art_paths)
-
+            self.artifact_paths = find_artifacts_on_disk(data_folder=self.data_folder, path_list=art_paths)'''
+        for execute in getattr(self.report, 'executes'):
+            if not execute.artifact_locations:
+                self.logger.warning('The specified execute, %s, does not have any artifacts '
+                                    'with it.' % execute.name)
+                self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
+                                                                  report_name=self.plugin.profile['name']))
+            else:
+                self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
+                                                                  report_name=self.plugin.profile['name'],
+                                                                  art_location=execute.artifact_locations))
         if not self.artifact_paths:
             raise CarbonImporterError('No artifact could be found on the Carbon controller data folder.')
 

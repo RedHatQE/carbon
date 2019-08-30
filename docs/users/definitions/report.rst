@@ -7,7 +7,7 @@ Overview
 Carbon's report section declares which test artifacts collected during execution 
 are to be imported into a Report & Analysis system. The input for artifact import
 will depend on the destination system. The current support for Reporting systems are:
-:ref:`Polarion<polarion_importing>`
+:ref:`Polarion<polarion_importing>` and :ref:`Report Portal<report_portal_importing>`
 
 First, let's go over the basic structure that defines a Report resource.
 
@@ -31,7 +31,9 @@ First, let's go over the basic structure that defines a Report resource.
         - Required
 
     *   - name
-        - The name of the test artifact to import.
+        - The name of the test artifact to import. This can be a
+          full name of an artifact, a shell pattern matching string, or
+          a string using Carbon's data-passthru mechanism
         - String
         - True
 
@@ -58,7 +60,42 @@ First, let's go over the basic structure that defines a Report resource.
 
 If you are familiar with the structure of Provision then the same
 concept of Provider has been utilized in the Report. We will dive 
-into the Polarion Provider parameters below.
+into the different report providers further below.
+
+Finding the right artifacts
+---------------------------
+
+As noted in the table, the driving input will be the name key.
+The name can be a string defining a file, a shell pattern matching
+string, or a carbon data-passthru string. Depending on the pattern
+used will it narrow or widen the search scope of the search. How carbon
+performs the search is by the following
+
+ * Check if the **artifact_locations** key is defined with artifact locations
+   in the execute section.
+
+ * If no **artifact_location** is key is found or the artifacts is not shown
+   as one of the items contained in the key, it proceeds to walk the
+   *unique_data_folder* generated for the current run and the
+   *data_folder/.results* folder.
+
+ * If no artifacts are found after walking the two directories, carbon will abort the
+   import process.
+
+ * If artifacts are found, the list of artifacts will be processed and imported into
+   the respective reporting system.
+
+Executes
+--------
+Carbon uses the execute resource for two reasons:
+
+ * It uses the **artifact_locations**  key as a quick way to check if the artifact
+   being requested was collected and where to find it.
+
+ * It uses the Asset resources assigned to the Execute to perform the internal
+   templating if a data-passthru string is being used in the name key
+   as search criteria.
+
 
 .. _polarion_importing:
 
@@ -73,7 +110,7 @@ in your carbon.cfg file, see `Polarion Credentials
 <credentials.html#polarion-credentials>`_ for more details.
 
 Polarion Artifact
-++++++++++++++++++
++++++++++++++++++
 
 The following shows all the possible keys for defining the artifact import
 for the Polarion xUnit Importer:
@@ -231,7 +268,7 @@ config file.  The following are the settings.
 
 
 Examples
---------
+++++++++
 
 Lets dive into a couple different examples.
 
@@ -301,3 +338,367 @@ id using the contents of the csv file. Then imported afterwards.
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
    :lines: 74-87
+
+
+.. _report_portal_importing:
+
+Importing artifacts into Report Portal
+--------------------------------------
+
+Credentials
++++++++++++
+
+To authenticate with Report Portal, you will need to have your Report Portal credentials
+in your carbon.cfg file, see `Report Portal Credentials
+<credentials.html#report-portal-credentials>`_ for more details.
+
+CCIT  Report Portal Client
+++++++++++++++++++++++++++
+
+Carbon uses CCIT Report Portal client to import artifacts to the Report Portal instance.
+To know more about Report Portal Client, please refer
+`here <https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674>`_
+
+Carbon Report Portal Configuration
+++++++++++++++++++++++++++++++++++
+
+The following shows all the possible keys for defining the artifact import
+for the Report Portal Importer:
+
+.. code-block:: yaml
+
+    ---
+    report:
+      - name: <name>
+        description: <description>
+        executes: <execute name>
+        importer: <importer>
+        provider:
+          credential: reportportal-creds
+          name: reportportal
+          rp_project: <project_name>
+          launch_name: <launch_name>
+          launch_description: <launch_description>
+          simple_xml: <to just import XML file directly>
+          auto_dashboard: <create dashboard>
+          merge_launches: <merge multiple launches into single true/false>
+          tags:
+          - <tag1>
+          - <tag2>
+          json_path: <relative path for report portal config file>
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Key
+        - Description
+        - Type
+        - Required
+
+    *   - name
+        - The name of the provider (reportportal).
+        - String
+        - True
+
+    *   - credential
+        - The name of the credentials to use to import the artifact
+          into report portal. This is the one defined in the credentials 
+          section of the carbon config file.
+        - String
+        - True
+
+    *   - rp_project
+        - The Report Portal project name
+        - String
+        - True
+
+    *   - launch_name
+        - The name of the launch(import session)
+        - String
+        - True
+
+    *   - launch_description
+        - The description of the launch
+        - String
+        - False
+
+    *   - tags
+        - Tags set for each launch
+        - list
+        - False
+
+    *   - merge_launches
+        - report portal client sends one xml file as one launch. To send multiple
+          xml files as a single launch this option is used. If set to false there
+          we can see multiple launches and multiple launch ids will be provided.
+          (Default: True)
+        - Boolean
+        - False
+
+    *   - auto_dashboard
+        - report portal client creates dashboard and populate it with a basic 
+          table widget filtered on the launch name specified. It returns a
+          dashboard url. (Default: True)
+        - Boolean
+        - False
+
+
+    *   - simple_xml
+        - bypass the pre-processor and just import the XML file directly. Attachments,
+          and other benefits of parsing into individual API calls, will not be available.
+          (Default: False)
+        - Boolean
+        - False
+
+    *   - json_path
+        - relative path for json file for the report portal configuration. When this option
+          is used, the rest of the provider params are ignored. User can set all the above
+          params in a json config file and provide ts path here.
+        - String
+        - True
+
+.. NOTE::
+   At this time Report Portal Client can create a dashboard for the launches using a single widget 
+   and one filter (name of the launch).
+
+Report Portal Config File
++++++++++++++++++++++++++
+
+Uers can provide a custom config json file using the key *json_path* under the provider 
+section of the report section in the SDF.
+
+Please refer report portal config section in the Report Portal client documentation to understand
+more about the config json file
+`here
+<https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674#CCITReportPortalUser'sGuide[EADraft]-ConfiguringtheClient>`_
+
+If config json file is not provided by the user then Carbon creates the config json file using the
+different report portal provider parameters provided in the report section of the SDF.
+
+Example for json config:
+
+.. code-block:: json
+
+   {
+    "rp_preproc": {
+        "service_url": "http://rp-preproc-downstream-ccit-reportportal.cloud.paas.psi.redhat.com/",
+        "payload_dir": ""
+
+    },
+    "reportportal": {
+        "host_url": "https://rp-ea.cloud.paas.psi.redhat.com",
+        "api_token": "000-000-000-000",
+        "project": "carbon_project",
+        "merge_launches": false,
+        "auto_dashboard": true,
+        "simple_xml": false,
+        "launch": {
+            "name": "carbon1",
+            "description": "carbon_launch_desc",
+            "tags":[
+                "tag1",
+                "tag2"
+            ]
+
+        }
+    }
+   }
+
+
+.. NOTE:: 
+   Even if the user provided config json file has a payload directory given, it gets overwritten 
+   by the one created/validated by Carbon create payload directory
+
+
+**Example 1**
+
+In the following example, *json_path* parameter is not provided, Carbon uses the reportportal provider's 
+remaining params and creates the json file *rp_config_file.json* in the workspace directory and uses it 
+to pass paylaod to the Report Portal Client
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+   :lines: 264-280
+
+**Example 2**
+
+In the following example, json_path is provided. Here Carbon uses the user provided config file to send
+the payload to the Report Portal Client
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+   :lines: 282-292
+
+
+**Example 3**
+
+In the following example both json_path and other params are given. Here since json_path is provided
+it will be used as the config file to send the payload, the other params are ignored
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+   :lines: 294-310
+
+Setting up payload directory for Report Portal Client
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+The CCIT Report Portal client requires artifacts to be presented in a specific payload directory structure.
+It needs all the xml files(test cases) to be in a folder named *results* and any specific test case related
+logs to be in a folder named *attachments*. The results folder is required. The attachments folder is optional,
+it is needed only when related items like pictures/logs need to be sent to Report Portal. The attachments folder
+also has a set of rules regarding sub-folder structure. Please refer to the Report Portal Payload Directory structure
+`here
+Payload Structure <https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674#CCITReportPortalUser's
+Guide[EADraft]-payloaddirectoryPayloadDirectory>`_
+
+
+There are a few ways Carbon can handle this:
+
+**Structured**
+
+ * User can pre create the artifacts payload directory as per the Report Portal requirement in the
+   execute stage and collect it as part of the *artifacts*
+
+ * User can pre-create the artifacts payload directory as per the Report Portal client requirements
+   but they aren't collected as part of *artifacts*. Probably as an intermediate step between the
+   Execute and Report phases. The user would have to place the payload directory under the *.results* folder.
+   User can then put the name of the payload folder in the *artifact_location* key or let Carbon
+   walk the data_folder directories.
+
+**Unstructured**
+
+ * User doesn't pre-create the payload directory and collects the unstructured artifacts they need in the execute
+   phase using *artifacts*. Carbon will filter the list of artifacts for any .xml files,
+   then creates a new folder under Carbon's data folder named **<data folder>/rp_paylod/results**, and place
+   the xml files in this directory.
+
+ * User doesn't pre-create the payload directory and doesn't collect the unstructured artifacts in the execute
+   phase using *artifacts*. Probably as an intermediate step between the Execute and Report phases.
+   The user would have to place the artifacts under the *.results* folder. User can then put the name of the
+   payload folder in the *artifact_location* key or let Carbon walk the data_folder directories.
+   Carbon will filter the list of artifacts for any .xml files, then creates a new folder under Carbon's
+   data folder named **<data folder>/rp_paylod/results**, and place the xml files in this directory.
+
+Use Case 1
+++++++++++
+
+Using execute section to collect artifacts with correct structure and send them as payload to the Report Portal Client
+
+In this use case the user needs to setup the execute section with an additional step to collect the artifacts and place
+them in the required directory structure needed by the Report Portal Client. i.e all xmls under results folder and all 
+logs related to the test cases under attachments folder.
+
+In the example below, the execute stage is setup to collect artifacts from location /rp_examples/payload_eg in the required
+structure. The report name in this case is a pattern payload/* to consider teh payload_eg dir rntirely as the payload
+to be sent to the Report Portal Client
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+   :lines: 98-123
+
+Use Case 2
+++++++++++
+
+Artifacts/payload to be sent is not collected using the execute section of Carbon and payload directory structure is 
+as required by Report Portal client
+
+In this usecase the artifacts/payload to be sent to Report Portal are not collected as a part of execute phase. 
+Here the user can place the payload directory created separately under carbon’s *.results*  folder and use the key
+*artifact_locations* under the execute section to let Carbon know to look in the .results folder for this payload 
+directory. In this usecase the directory structure is as per requirement.
+
+.. NOTE::
+   Please refer here to know more about using artifact_locations key under execute section of Carbon's SDF
+
+
+Carbon verifies that the given path has correct directory structure  and then passes that as the payload directory 
+to the Report Portal client 
+
+In the below example the payload_example_medium is a directory placed under *.results* folder and has the correct
+directory structure of results and attachments folder under it. The name of the report used is payload_example/medium/*
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+   :lines: 125-152
+
+Use Case 3
+++++++++++
+
+Artifacts are collected by the execute section of the Carbon SDF , but they are not stored in the correct directory 
+structure as needed by the Report Portal client. 
+
+In this case Carbon will create a separate directory named rp_payload under Carbon’s data folder. Here ONLY the 
+xml files are copied from artifacts in execute phase  over to rp_payload/results. 
+
+.. NOTE::
+   In case attachments/logs were collected as part of artifacts they are ignored. At this time Carbon does not 
+   support collecting additional logs and sending them as part of payload directory structure. To send the 
+   additional logs as a part of payload please look at usecase 1 or 2 examples.
+
+In the below example rp_examples/payload_uc3 is where artifacts are stored but not in correct format. Carbon looks through
+this folder, copies all the xml files and puts them under .carbon/<data folder>/rp_payload/results.
+
+**.carbon/<data folder>/rp_payload** is the payload directory path given to the Report Portal client
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+   :lines: 154-179
+
+Use Case 4
+++++++++++
+
+Artifacts/payload to be sent are NOT collected using the execute section of carbon and payload directory structure 
+is NOT as required  by Report Portal client
+
+In this usecase the user can place the payload directory created separately under Carbon’s *.results*  folder
+and can place the path of the payload directory under *artifact_locations* key of the execute section of the SDF.
+Carbon will create a separate directory rp_payload as .carbon/<data folder>/rp_payload/results and since the
+directory structure is NOT as required, will copy ONLY the xml files from payload directory which user has put
+under *.results* folder. 
+
+In the below example the payload_carbon is a directory placed under carbon’s  *.results* folder and does not have
+the correct directory structure of results and attachments folder under it.Here carbon will create a separate 
+directory rp_payload as .carbon/<data folder>/rp_payload/results and copy all the xml files from 
+.carbon/.results/payload_carbon/. The payload directory sent to report portal client will be **.carbon/.results/rp_payload**
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+   :lines: 181-205
+
+Use Case 5
+++++++++++
+
+Artifacts are collected by execute section (unstructured) of the SDF and there are other xml files
+(seperate from artifacts) that are needed to be added to the payload
+
+In this case the artifacts to be collected are put under the *artifact* key. The additional files to be added
+to payload are placed under carbon’s *.results* folder and they are mentioned under the *artifact_locations* 
+key
+
+This case even is used when the artifacts and artifac_location files are unstructured. Carbon creates a directory
+.carbon<data folder>rp_payload/results. It will then go through the paths in artifacts and artifact_locations and
+collect all the xml files there. Any other files will be ignored.
+
+The path for payload directory is **.carbon/<data folder>/rp_payload**
+
+In the below example the artifacts collected during execute phase are present under artifacts as
+/home/carbon_develop/e2e-acceptance-tests/rp_examples/payload_example_medium and the other xml files not collected 
+during execute are under artifact_locations and stored under Carbon's *.results* folder
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+   :lines: 207-237
+
+Use Case 6
+++++++++++
+
+The execute stage keys, artifact or artifact_locations are not used to mention the payload,
+but the xml files have been put under carbon’s .results folder
+
+Here if the artifacts or artifact_locations are not populated, Carbon goes through carbon’s data folder
+and carbon’s *.results* folder to find the artifacts matching the name provided in the report section's
+name key.
+
+If found, carbon creates a directory .carbon/<data folder>/rp_payload/results and collects all the xml files
+from the matching artifacts list . Any other files are ignored
+
+The payload directory path given to the Report Portal client is  **.carbon/<data folder>/rp_payload**
+
+In the below example the  data folder directory and .results directory are walked and the pattern payload_example_medium/*
+is  matched with files found in there. xml files are selected from the matched paths/files and added to the payload directory.
+
+.. literalinclude:: ../../../examples/docs-usage/report.yml
+   :lines: 239-262

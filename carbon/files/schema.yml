@@ -49,6 +49,10 @@ mapping:
             required: False
             type: any
             func: type_str_list
+          regex;(.*):
+            required: False
+            type: any
+            func: type_str_list
 
   orchestrate:
     sequence:

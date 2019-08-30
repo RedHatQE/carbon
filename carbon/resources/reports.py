@@ -157,16 +157,22 @@ class Report(CarbonResource):
         # finally lets set the provider credentials
         try:
             self._credential = self.provider_params['credential']
+            self.logger.debug(self._credential)
             provider_credentials = self.config['CREDENTIALS']
         except KeyError:
             self.logger.error('A credential must be set for the provider %s.'
                               % provider_name)
             sys.exit(1)
 
-        for item in provider_credentials:
-            if item['name'] == self._credential:
-                getattr(self.provider, 'set_credentials')(item)
-                break
+        try:
+            for item in provider_credentials:
+                if item['name'] == self._credential:
+                    getattr(self.provider, 'set_credentials')(item)
+                    break
+        except KeyError:
+            self.logger.error('The required credential parameters are not set correctly for the provider %s. Please '
+                              'verify the carbon config file' % provider_name)
+            sys.exit(1)
 
         return parameters
 

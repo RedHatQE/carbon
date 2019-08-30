@@ -721,7 +721,13 @@ class CarbonProvider(LoggerMixin, TimeMixin):
             try:
                 provider = getattr(resource, 'provider')
                 param_value = getattr(provider, 'credentials')[param]
-                self.logger.info(msg + 'exists.')
+                if param_value:
+                    self.logger.info(msg + 'exists.')
+                else:
+                    raise CarbonError(
+                        'Error occurred while validating required provider '
+                        'parameters for resource %s' % getattr(resource, 'name')
+                    )
 
                 if not type(param_value) in param_type:
                     self.logger.error(
@@ -750,8 +756,13 @@ class CarbonProvider(LoggerMixin, TimeMixin):
             try:
                 provider = getattr(resources, 'provider')
                 param_value = getattr(provider, 'credentials')[param]
-                self.logger.info(msg + 'exists.')
-
+                if param_value:
+                    self.logger.info(msg + 'exists.')
+                else:
+                    raise CarbonError(
+                        'Error occurred while validating required provider '
+                        'parameters for resource %s' % getattr(resources, 'name')
+                    )
                 if not type(param_value) in param_type:
                     self.logger.error(
                         '    - Type=%s, Optional Type=%s. (ERROR)' %
