@@ -99,8 +99,9 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
             if self.provider_params.get('libvirt_user', False):
                 context.set_evar('libvirt_user', self.provider_params.get('libvirt_user'))
 
-            # setup the default_ssh_key_location to be the scenario workspace
-            context.set_evar('default_ssh_key_path', os.path.join(getattr(self.host, 'workspace'), 'keys'))
+            # setup the default_ssh_key_location to be the scenario workspace for libvirt and aws
+            context.set_evar('default_ssh_key_path', os.path.join(
+                os.path.abspath(getattr(self.host, 'workspace')), 'keys'))
         return(context)
 
     def _load_credentials(self):

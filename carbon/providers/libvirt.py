@@ -88,7 +88,8 @@ class LibvirtProvider(CarbonProvider):
             ('libvirt_image_path', [str]),
             ('libvirt_user', [str]),
             ('libvirt_become', [bool]),
-            ('count', [int])
+            ('count', [int]),
+            ('domain', [str]),
         ]
 
         self.opt_network_params = [

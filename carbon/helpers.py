@@ -1711,6 +1711,17 @@ class LinchpinResourceBuilder(object):
             for evar in ['libvirt_image_path', 'libvirt_user', 'libvirt_become']:
                 resource_def.pop(evar, None)
 
+            # for xml key linchpin expects it in the linchpin workspace
+            # need to copy it over to the workspace carbon setups in .results
+            if resource_def.get('xml', None):
+                xml_path = os.path.join(host_params.get('workspace'), resource_def.get('xml', None))
+                lp_ws = os.path.join(
+                    os.path.join(os.path.dirname(host_params.get('data_folder')), '.results'), 'linchpin')
+                if not os.path.exists(xml_path):
+                    raise HelpersError('The xml file does not appear to exist in the carbon workspace.')
+                os.system('cp -r -f %s %s ' % (xml_path, lp_ws))
+                resource_def.update(dict(xml=os.path.basename(xml_path)))
+
             # update count for a host resource
             if not resource_def.get('count', False):
                 resource_def.update(dict(count=1))
