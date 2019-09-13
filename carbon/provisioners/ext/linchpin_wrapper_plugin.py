@@ -282,7 +282,7 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
                                 })
         if self.provider == 'beaker':
             for bkr_server in resource:
-                res.append({'ip': lookup_ip_of_hostname(bkr_server['system']),
+                res.append({'ip': str(lookup_ip_of_hostname(bkr_server['system'])),
                             'node_id': bkr_server['id'],
                             'job_url': bkr_server['url'],
                             'hostname': bkr_server['system'].split('.')[0],
@@ -294,7 +294,7 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
                 if self.provider_params.get('role', False) != 'libvirt_node':
                     del getattr(self.host, 'provider_params')['hostname']
                 else:
-                    res.append({'ip': lib_vm['ip'],
+                    res.append({'ip': str(lib_vm['ip']),
                                 'hostname': lib_vm['name'],
                                 'node_id': None,
                                 'tx_id': tx_id

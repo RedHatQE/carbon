@@ -130,7 +130,7 @@ class AssetProvisioner(CarbonProvisioner):
         Provision the host supplied.
         """
         host = getattr(self.host, 'name')
-        self.logger.info('Provisioning host %s in %s.' % (host, self.provider))
+        self.logger.info('Provisioning asset %s in %s.' % (host, self.provider))
         self.print_commonly_used_attributes()
         try:
             res = self.plugin.create()
@@ -150,17 +150,17 @@ class AssetProvisioner(CarbonProvisioner):
                         host_profile['name'] = res[i]['hostname']
                     # converting ip to str since it is returned as unicode
                     # this is for creating master inv as it checks for ip to be a string or list
-                    host_profile['ip_address'] = str(res[i].pop('ip'))
+                    host_profile['ip_address'] = res[i].pop('ip')
                     host_profile.get('provider').update(res[i])
                     host_profile.get('provider').update(dict(count=1))
                     res_profile_list.append(host_profile)
-                self.logger.info('Successfully provisioned %s host(s) %s :' % (len(res_profile_list),
-                                                                               [res_profile_list[i]['name']
+                self.logger.info('Successfully provisioned %s asset(s) %s :' % (len(res_profile_list),
+                                                                                [res_profile_list[i]['name']
                                                                                 for i in range(0, len(res))]))
                 return res_profile_list
             else:
                 # Single resource has been provisioned
-                setattr(self.host, 'ip_address', str(res[-1].pop('ip')))
+                setattr(self.host, 'ip_address', res[-1].pop('ip'))
                 getattr(self.host, 'provider_params').update(res[-1])
                 self.logger.info('Successfully provisioned host %s.' % host)
                 return
@@ -175,11 +175,11 @@ class AssetProvisioner(CarbonProvisioner):
         Teardown the host supplied.
         """
         host = getattr(self.host, 'name')
-        self.logger.info('Delete host %s in %s.' % (host, self.provider))
+        self.logger.info('Delete asset %s in %s.' % (host, self.provider))
         self.print_commonly_used_attributes()
         try:
             self.plugin.delete()
-            self.logger.info('Successfully deleted host %s.' % host)
+            self.logger.info('Successfully deleted asset %s.' % host)
         except Exception as ex:
             self.logger.error(ex)
             raise

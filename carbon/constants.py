@@ -91,3 +91,6 @@ DEFAULT_TASK_CONCURRENCY = dict(PROVISION='True',
                                 ORCHESTRATE='False',
                                 EXECUTE='False',
                                 REPORT='True')
+
+# Default feature toggle for provisioner plugins
+DEFAULT_FEATURE_TOGGLE_HOST_PLUGIN = dict(name='host', plugin_implementation='True')
