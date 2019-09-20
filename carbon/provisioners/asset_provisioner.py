@@ -29,6 +29,7 @@
 from pprint import pformat
 
 from carbon.core import CarbonProvisioner
+from carbon.helpers import mask_credentials_password
 import copy
 
 
@@ -122,7 +123,7 @@ class AssetProvisioner(CarbonProvisioner):
         self.logger.debug('Available provider parameters:\n %s'
                           % pformat(self.provider_params))
         self.logger.debug('Available provider credentials:\n %s'
-                          % pformat(self.provider_credentials))
+                          % pformat(mask_credentials_password(self.provider_credentials)))
 
     def create(self):
         """Create method. (must implement!)
@@ -160,9 +161,10 @@ class AssetProvisioner(CarbonProvisioner):
                 return res_profile_list
             else:
                 # Single resource has been provisioned
-                setattr(self.host, 'ip_address', res[-1].pop('ip'))
+                if res[-1].get('ip', False):
+                    setattr(self.host, 'ip_address', res[-1].pop('ip'))
                 getattr(self.host, 'provider_params').update(res[-1])
-                self.logger.info('Successfully provisioned host %s.' % host)
+                self.logger.info('Successfully provisioned asset %s.' % host)
                 return
 
         except Exception as ex:

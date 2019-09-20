@@ -31,7 +31,8 @@ from carbon.resources.assets import Asset
 from carbon._compat import ConfigParser
 from carbon.utils.config import Config
 from carbon.exceptions import CarbonError, HelpersError
-from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency
+from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency, \
+    mask_credentials_password
 
 
 @pytest.fixture(scope='class')
@@ -73,6 +74,20 @@ def task_host(task_concurrency_config):
          config=task_concurrency_config,
          parameters=params)
     return host
+
+@pytest.fixture(scope='function')
+def os_creds():
+    return dict(auth_url='http://test', username='tester', password='changeme')
+
+
+@pytest.fixture(scope='function')
+def rp_creds():
+    return dict(rp_url='http://test', api_token='1234-456-78912-4567')
+
+
+@pytest.fixture(scope='function')
+def aws_creds():
+    return dict(aws_access_key_id='ABCDEFG', aws_secret_access_key='abc123456defg')
 
 
 class TestDataInjector(object):
@@ -177,4 +192,22 @@ def test_set_task_concurrency_true(task_host):
     for task in task_host.get_tasks():
         if task['task'].__task_name__ == 'provision':
             assert set_task_class_concurrency(task, task_host)['task'].__concurrent__ is True
+
+
+def test_mask_credentials_password_param(os_creds):
+    key_len = len(os_creds.get('password'))
+    creds = mask_credentials_password(os_creds)
+    assert '*' in creds.get('password') and len(creds.get('password')) == key_len
+
+
+def test_mask_credentials_password_token_param(rp_creds):
+    key_len = len(rp_creds.get('api_token'))
+    creds = mask_credentials_password(rp_creds)
+    assert '*' in creds.get('api_token') and len(creds.get('api_token')) == key_len
+
+
+def test_mask_credentials_password_key_param(aws_creds):
+    key_len = len(aws_creds.get('aws_secret_access_key'))
+    creds = mask_credentials_password(aws_creds)
+    assert '*' in creds.get('aws_secret_access_key') and len(creds.get('aws_secret_access_key')) == key_len
 

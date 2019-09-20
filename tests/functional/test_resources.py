@@ -69,7 +69,7 @@ def default_report_params():
 
 @pytest.fixture
 def host1(default_host_params, config):
-    host1 = Asset(name='host01', config=config, parameters=copy.deepcopy(default_host_params))
+    host1 = Asset(name='host_count', config=config, parameters=copy.deepcopy(default_host_params))
     return host1
 
 @pytest.fixture
@@ -78,29 +78,47 @@ def report1(default_report_params, config):
 
 
 @pytest.fixture
-def scenario_res1(config, host1, report1):
+def scenario_res1(config, host1, host, report1):
     scenario1 = Scenario(config=config, parameters={'k': 'v'})
     scenario1.add_assets(host1)
+    scenario1.add_assets(host)
     scenario1.add_reports(report1)
     return scenario1
 
 @pytest.fixture
-def task_list_host(host1):
+def scenario_res2(config, host1, host, report1):
+    scenario1 = Scenario(config=config, parameters={'k': 'v'})
+    scenario1.add_assets(host1)
+    scenario1.add_assets(host)
+    scenario1.add_reports(report1)
+    return scenario1
+
+
+@pytest.fixture
+def task_list_host(host1, host):
 
     param1 = copy.deepcopy(host1.profile())
-    param1.update(name='host1_0')
+    param1.update(name='host_count_0')
     param2 = copy.deepcopy(host1.profile())
-    param2.update(name='host1_1')
+    param2.update(name='host_count_1')
 
     task_result_list = [
-                         {'status': 0,
-                          'task': 'carbontaskobj',
-                          'methods': [{'status': 0, 'rvalue': [param1, param2], 'name':'run'}],
-                          'bid': 123,
-                          'asset': host1,
-                          'msg': 'hostcreation'
-                         }
-                        ]
+        {'status': 0,
+         'task': 'carbontaskobj1',
+         'methods': [{'status': 0, 'rvalue': [param1, param2], 'name':'run'}],
+         'bid': 123,
+         'asset': host1,
+         'msg': 'hostcreation1'
+         },
+        {'status': 0,
+         'task': 'carbontaskobj2',
+         'methods': [{'status': 0, 'rvalue': None, 'name':'run'}],
+         'bid': 456,
+         'asset': host,
+         'msg': 'hostcreation2'
+         }
+    ]
+
     return task_result_list
 
 
@@ -477,10 +495,20 @@ class TestScenarioResource(object):
         assert isinstance(ch_sc[0], Scenario)
 
     @staticmethod
-    def test_reload_method01(task_list_host, scenario_res1):
+    def test_reload_method_assets_mixed_tasks(task_list_host, scenario_res1):
         scenario_res1.reload_resources(task_list_host)
-        assert len(scenario_res1.assets) > 1
+        assert len(scenario_res1.assets) == 3
 
+    @staticmethod
+    def test_reload_method_assets_reversed_mixed_tasks(task_list_host, scenario_res2):
+        task_list_host.reverse()
+        scenario_res2.reload_resources(task_list_host)
+        assert len(scenario_res2.assets) == 3
+
+    @staticmethod
+    def test_reload_method_reports_tasks(task_list_report, scenario_res1):
+        scenario_res1.reload_resources(task_list_report)
+        assert len(scenario_res1.reports) == 1
 
 
 class TestAssetResource(object):
@@ -626,7 +654,7 @@ class TestAssetResource(object):
     def test_provisioner_plugin_property(self, default_host_params, feature_toggle_config):
         params = self.__get_params_copy__(default_host_params)
         host = Asset(name='host01', parameters=params, config=feature_toggle_config)
-        assert host.provisioner_plugin is LinchpinWrapperProvisionerPlugin
+        assert host.provisioner_plugin is OpenstackLibCloudProvisionerPlugin
 
     def test_provisioner_plugin_setter(self, default_host_params, feature_toggle_config):
         params = self.__get_params_copy__(default_host_params)

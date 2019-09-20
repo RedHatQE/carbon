@@ -333,9 +333,9 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         Provision the host supplied.
         """
         host = getattr(self.host, 'name')
-        self.logger.info('Provisioning host %s in %s.' % (host, self.provider))
+        self.logger.info('Provisioning asset %s in %s.' % (host, self.provider))
         self._create()
-        self.logger.info('Successfully provisioned host %s.' % host)
+        self.logger.info('Successfully provisioned asset %s.' % host)
 
     def delete(self):
         """Delete method. (must implement!)
@@ -350,8 +350,8 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             self.logger.warning('No tx_id found for Asset: %s, this could mean it was not successfully'
                                 ' provisioned. Attempting to perform the destroy without a tx_id'
                                 ' but this might not work, so you may need to manually cleanup resources.' % host)
-        self.logger.info('Delete host %s in %s.' % (host, self.provider))
+        self.logger.info('Delete asset %s in %s.' % (host, self.provider))
         Log = Logger(logger=self.logger)
         self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=txid)
         del Log
-        self.logger.info('Successfully deleted host %s.' % host)
+        self.logger.info('Linchpin successfully deleted asset %s.' % host)

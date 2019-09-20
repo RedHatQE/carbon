@@ -79,7 +79,7 @@ class ProvisionTask(CarbonTask):
             try:
                 return self.provisioner.create()
             except Exception as ex:
-                self.logger.error('Failed to provision node %s' % self.name)
+                self.logger.error('Failed to provision asset %s' % self.name)
                 stackmsg = self.get_formatted_traceback()
                 self.logger.error(ex)
                 self.logger.error(stackmsg)

@@ -48,9 +48,10 @@ TASK_LOGLEVEL_CHOICES = [
 ]
 
 PROVISIONERS = {
-    "beaker": "beaker-client",
-    "openstack": "openstack-libcloud",
-    "linchpin": "linchpin-wrapper",
+    "beaker": ["beaker-client", "linchpin-wrapper"],
+    "openstack": ["openstack-libcloud", "linchpin-wrapper"],
+    "aws": "linchpin-wrapper",
+    "libvirt": "linchpin-wrapper",
     "asset": "asset-provisioner"
 }
 

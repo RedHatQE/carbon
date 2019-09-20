@@ -337,7 +337,7 @@ class Carbon(LoggerMixin, TimeMixin):
                 # Creating inventory only when task is provision
                 if task == 'provision':
                     inv = Inventory(hosts=list(),
-                                    all_hosts=self.scenario.get_all_hosts(),
+                                    all_hosts=self.scenario.get_all_assets(),
                                     data_dir=self.config['DATA_FOLDER'],
                                     results_dir=self.config['RESULTS_FOLDER'],
                                     static_inv_dir=self.config['INVENTORY_FOLDER']
@@ -345,7 +345,8 @@ class Carbon(LoggerMixin, TimeMixin):
                     try:
                         # create the master inventory
                         self.logger.info('Populating master inventory file with host(s) %s'
-                                         % [getattr(h, 'name') for h in self.scenario.get_all_hosts()])
+                                         % [getattr(h, 'name') for h in self.scenario.get_all_assets()
+                                            if hasattr(h, 'role') or hasattr(h, 'groups')])
                         inv.create_master()
                     except Exception as ex:
                         raise CarbonError("Error while creating the master inventory %s" % ex)

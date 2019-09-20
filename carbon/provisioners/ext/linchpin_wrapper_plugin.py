@@ -99,9 +99,9 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
             if self.provider_params.get('libvirt_user', False):
                 context.set_evar('libvirt_user', self.provider_params.get('libvirt_user'))
 
-            # setup the default_ssh_key_location to be the scenario workspace for libvirt and aws
-            context.set_evar('default_ssh_key_path', os.path.join(
-                os.path.abspath(getattr(self.host, 'workspace')), 'keys'))
+        # setup the default_ssh_key_location to be the scenario workspace for libvirt and aws
+        context.set_evar('default_ssh_key_path', os.path.join(
+            os.path.abspath(getattr(self.host, 'workspace')), 'keys'))
         return(context)
 
     def _load_credentials(self):
@@ -294,18 +294,20 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
             for lib_vm in resource:
                 if self.provider_params.get('role', False) != 'libvirt_node':
                     del getattr(self.host, 'provider_params')['hostname']
+                    res.append({'tx_id': tx_id})
                 else:
                     res.append({'ip': str(lib_vm['ip']),
                                 'hostname': lib_vm['name'],
                                 'node_id': None,
                                 'tx_id': tx_id
                                 })
-        if self.provider == 'aws' and resource:
-            for aws_res in resource[-1].get('instances'):
+        if self.provider == 'aws':
+            for aws_res in resource:
                 if self.provider_params.get('role', False) != 'aws_ec2':
                     del getattr(self.host, 'provider_params')['hostname']
+                    res.append({'tx_id': tx_id})
 
-                elif self.provider_params.get('role', False) == 'aws_ec2_key':
+                if self.provider_params.get('role', False) == 'aws_ec2_key':
                     # the Linchpin resource generates the private key and dumps to the box
                     # but it doesn't change the permissions on it so it will fail when used
                     # later on during orchestrate/execute
@@ -319,24 +321,29 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
                             raise CarbonProvisionerError(
                                 'Error setting private key file permissions: %s' % ex
                             )
-                else:
-                    ip_add = ""
-                    hostname = ""
-                    if aws_res.get('private_ip', False) is not None and aws_res.get('public_ip', False) is not None:
-                        ip_add = dict(public=str(aws_res.get('public_ip')), private=str(aws_res.get('private_ip')))
-                        hostname = aws_res.get('public_dns_name')
-                    else:
-                        if aws_res.get('public_ip', False) is not None and aws_res.get('private_ip', False) is None:
-                            ip_add = str(aws_res.get('public_ip'))
-                            hostname = aws_res.get('public_dns_name')
-                        if aws_res.get('public_ip', False) is None and aws_res.get('private_ip', False) is not None:
-                            ip_add = str(aws_res.get('private_ip'))
-                            hostname = aws_res.get('private_dns_name')
-                    res.append({'ip': ip_add,
-                                'hostname': hostname,
-                                'node_id': str(aws_res.get('id')),
-                                'tx_id': tx_id
-                                })
+                if aws_res.get('instances'):
+                    for instance in aws_res.get('instances'):
+                        ip_add = ""
+                        hostname = ""
+                        if instance.get('private_ip', False) is not None \
+                                and instance.get('public_ip', False) is not None:
+                            ip_add = dict(public=str(instance.get('public_ip')),
+                                          private=str(instance.get('private_ip')))
+                            hostname = instance.get('public_dns_name')
+                        else:
+                            if instance.get('public_ip', False) is not None \
+                                    and instance.get('private_ip', False) is None:
+                                ip_add = str(instance.get('public_ip'))
+                                hostname = instance.get('public_dns_name')
+                            if instance.get('public_ip', False) is None \
+                                    and instance.get('private_ip', False) is not None:
+                                ip_add = str(instance.get('private_ip'))
+                                hostname = instance.get('private_dns_name')
+                        res.append({'ip': ip_add,
+                                    'hostname': hostname,
+                                    'node_id': str(instance.get('id')),
+                                    'tx_id': tx_id
+                                    })
 
         return res
 
@@ -346,11 +353,14 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
         Provision the host supplied.
         """
         host = getattr(self.host, 'name')
-        self.logger.info('Provisioning host %s in %s.' % (host, self.host.provider))
+        self.logger.info('Provisioning Asset %s in %s.' % (host, self.host.provider))
         res = self._create()
         # TODO change this log message to something else
-        self.logger.info('Linchpin successfully provisioned %s asset(s) %s :' % (len(res), [res[i]['hostname']
-                                                                                 for i in range(0, len(res))]))
+        if res and res[-1].get('hostname', False):
+            self.logger.info('Linchpin successfully provisioned %s asset(s) %s :'
+                             % (len(res), [res[i]['hostname'] for i in range(0, len(res))]))
+        else:
+            self.logger.info('Linchpin successfully provisioned asset %s' % host)
         return res
 
     def delete(self):
@@ -363,14 +373,14 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
             txid = getattr(self.host, 'provider_params')['tx_id']
         except KeyError:
             txid = None
-            self.logger.warning('No tx_id found for Host: %s, this could mean it was not successfully'
+            self.logger.warning('No tx_id found for Asset: %s, this could mean it was not successfully'
                                 ' provisioned. Attempting to perform the destroy without a tx_id'
                                 ' but this might not work, so you may need to manually cleanup resources.' % host)
-        self.logger.info('Delete host %s in %s.' % (host, self.provider))
+        self.logger.info('Delete Asset %s in %s.' % (host, self.provider))
         Log = Logger(logger=self.logger)
         self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=txid)
         del Log
-        self.logger.info('Successfully deleted asset %s.' % host)
+        self.logger.info('Linchpin successfully deleted asset %s.' % host)
 
     def authenticate(self):
         raise NotImplementedError

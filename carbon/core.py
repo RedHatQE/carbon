@@ -1376,7 +1376,8 @@ class Inventory(LoggerMixin, FileLockMixin):
 
         # add place holders for all hosts
         for host in self.all_hosts:
-            config.add_section(host.name)
+            if hasattr(host, 'role') or hasattr(host, 'groups'):
+                config.add_section(host.name)
 
         # add specific hosts to the group to run the action against
         for host in self.hosts:

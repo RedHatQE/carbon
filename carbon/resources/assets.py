@@ -32,7 +32,8 @@ from ..core import CarbonResource
 from ..helpers import get_provider_class, get_providers_list, gen_random_str
 from ..helpers import get_provisioner_class, get_default_provisioner
 from ..helpers import get_provisioners_list, filter_host_name
-from ..helpers import get_provisioners_plugins_list, get_provisioner_plugin_class, get_default_provisioner_plugin
+from ..helpers import get_provisioners_plugins_list, get_provisioner_plugin_class, get_default_provisioner_plugin, \
+    is_provider_mapped_to_provisioner
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
 from .._compat import string_types
 from collections import OrderedDict
@@ -147,29 +148,31 @@ class Asset(CarbonResource):
             provisioner_name = parameters.pop('provisioner', provisioner)
 
             # TODO: Should we instantiate here rather just getting the classes
-            # check the feature toggle for gateway implementation
+            # check the feature toggle for plugin implementation
             if self._feature_toggles is not None and self._feature_toggles['plugin_implementation'] == 'True':
                 self._provisioner = get_default_provisioner()
                 if provisioner_name is None:
-                    self._provisioner_plugin = get_default_provisioner_plugin()
+                    self._provisioner_plugin = get_default_provisioner_plugin(self._provider)
                 else:
                     found_name = False
                     for name in get_provisioners_plugins_list():
                         if name.startswith(provisioner_name):
                             found_name = True
+                            break
 
-                    if found_name:
+                    if found_name and is_provider_mapped_to_provisioner(self._provider, provisioner_name):
                         self._provisioner_plugin = get_provisioner_plugin_class(provisioner_name)
                     else:
-                        self.logger.error('Provisioner %s for host %s is invalid.'
+                        self.logger.error('Provisioner %s for asset %s is invalid.'
                                           % (provisioner_name, self.name))
                         sys.exit(1)
             else:
                 if provisioner_name is None:
                     self._provisioner = get_default_provisioner(self._provider)
                     self._provisioner_plugin = None
-                elif provisioner_name not in get_provisioners_list():
-                    self.logger.error('Provisioner %s for host %s is invalid.'
+                elif provisioner_name not in get_provisioners_list() or \
+                        is_provider_mapped_to_provisioner(self._provider, provisioner_name) is False:
+                    self.logger.error('Provisioner %s for asset %s is invalid.'
                                       % (provisioner_name, self.name))
                     sys.exit(1)
                 else:
@@ -484,7 +487,7 @@ class Asset(CarbonResource):
             'task': self._provision_task_cls,
             'name': str(self.name),
             'asset': self,
-            'msg': '   provisioning host %s' % self.name,
+            'msg': '   provisioning asset %s' % self.name,
             'methods': self._req_tasks_methods
         }
         return task
@@ -499,7 +502,7 @@ class Asset(CarbonResource):
             'task': self._cleanup_task_cls,
             'name': str(self.name),
             'asset': self,
-            'msg': '   cleanup host %s' % self.name,
+            'msg': '   cleanup asset %s' % self.name,
             'methods': self._req_tasks_methods
         }
         return task

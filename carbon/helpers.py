@@ -177,7 +177,9 @@ def get_default_provisioner(provider=None):
         provisioner_name = PROVISIONERS['asset']
     else:
         try:
-            provisioner_name = PROVISIONERS[provider.__provider_name__]
+            provisioner_names = PROVISIONERS[provider.__provider_name__]
+            if isinstance(provisioner_names, list):
+                provisioner_name = provisioner_names[0]
         except KeyError:
             provisioner_name = 'linchpin-wrapper'
 
@@ -186,9 +188,11 @@ def get_default_provisioner(provider=None):
 
 def get_default_provisioner_plugin(provider=None):
     if provider is not None:
-        for plugin_class in get_provisioners_plugin_classes():
-            if plugin_class.__plugin_name__.startswith(provider.__provider_name__):
-                return plugin_class
+        provisioners = PROVISIONERS[provider.__provider_name__]
+        if isinstance(provisioners, list):
+            return get_provisioner_plugin_class(provisioners[0])
+        else:
+            return get_provisioner_plugin_class(provisioners)
     else:
         return get_provisioner_plugin_class('linchpin')
 
@@ -493,6 +497,26 @@ def get_default_importer_plugin(provider=None):
                 return plugin_class
     else:
         return get_importer_plugin_class('ccit-router')
+
+
+def is_provider_mapped_to_provisioner(provider, provisioner):
+    """
+    Given a provider and a provisioner, check if they are supported together.
+    :param provider:
+    :param provisioner:
+    :return:
+    """
+
+    for provider_key, prov_val in PROVISIONERS.items():
+        if getattr(provider, '__provider_name__') == provider_key:
+            if isinstance(prov_val, list):
+                for p in prov_val:
+                    if p == provisioner:
+                        return True
+            else:
+                if prov_val == provisioner:
+                    return True
+    return False
 
 
 def gen_random_str(char_num=8):
@@ -1372,6 +1396,32 @@ def set_task_class_concurrency(task, resource):
         val = False
     task['task'].__concurrent__ = val
     return task
+
+
+def mask_credentials_password(credentials):
+    """
+    Mask the credentials that could get printed out
+    to stdout or carbon_output.log
+
+    :param credentials:
+    :return: credentials dict
+    """
+    asteriks = ''
+    masked_creds = dict()
+    for k, v in credentials.items():
+        for p in ['password', 'token', 'key']:
+            if p not in k:
+                continue
+            else:
+                for i in range(0, len(v)):
+                    asteriks += '*'
+        if asteriks != '':
+            masked_creds.update({k: asteriks})
+            asteriks = ''
+            continue
+        masked_creds.update({k: v})
+
+    return masked_creds
 
 
 class LinchpinResourceBuilder(object):
