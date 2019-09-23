@@ -148,23 +148,6 @@ performing the execution. Please see the following example for more details:
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 59-65
 
-Playbook Tests
-~~~~~~~~~~~~~~
-
-Using the playbook parameter to execute tests works like how playbooks
-are executed in the Orchestration phase. The only thing not supported is the
-ability to download roles using the *ansible_galaxy_option*. The following
-is an example of how run test playbooks.
-
-.. literalinclude:: ../../../examples/docs-usage/execute.yml
-    :lines: 218-232
-
-
-.. note::
-   Unlike the shell or script parameter the test playbook executes locally
-   from where carbon is running. Which means the test playbook must be in
-   the workspace.
-
 Return Code for Test Execution
 ------------------------------
 
@@ -192,6 +175,41 @@ and the call overides it:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 197-217
+
+
+Using Shell Parameter for Test Execution
+----------------------------------------
+
+Some commands might be complex and require passing raw data as part of the input.
+When that happens users can end up mixing single and double quotes in the string.
+This can lead to issues parsing and loading the scenario if not done properly. When
+a need like that arises it's best to double quote the whole command string and
+single quote the raw data.
+
+.. code-block:: yaml
+
+    shell:
+        - command: "test_command --file='/tmp/test_file.xml'
+        --test-data={'node': '192.168.10.100', 'tool_config_file': '/etc/tool/tool.conf', 'data': 'Test Sentence'}"
+
+
+Using Playbook Parameter for Test Execution
+-------------------------------------------
+
+Using the playbook parameter to execute tests works like how playbooks
+are executed in the Orchestration phase. The only thing not supported is the
+ability to download roles using the *ansible_galaxy_option*. The following
+is an example of how run test playbooks.
+
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
+    :lines: 218-232
+
+
+.. note::
+    Unlike the shell or script parameter the test playbook executes locally
+    from where carbon is running. Which means the test playbook must be in
+    the workspace.
+
 
 Data Substitution Required for Test Execution
 ---------------------------------------------

@@ -55,7 +55,8 @@ from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
 
 from ._compat import string_types
-from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER, DEFAULT_TASK_CONCURRENCY
+from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER, DEFAULT_TASK_CONCURRENCY, \
+    TASKLIST
 from .exceptions import CarbonError, HelpersError
 
 LOG = getLogger(__name__)
@@ -1021,7 +1022,7 @@ class DataInjector(object):
         self.regexp = r"\{(.*?)\}"
 
         # regex to check jsonpath strings
-        self.jsonpath_chk_str = r"^range|^[|.|$|@]"
+        self.exclusion_chk_str = r"^range|^[|.|$|@]|[\w|']+:"
 
     def host_exist(self, node):
         """Determine if the host defined in the string formatted var is valid.
@@ -1055,7 +1056,7 @@ class DataInjector(object):
             return command
 
         for variable in variables:
-            if re.match(self.jsonpath_chk_str, variable):
+            if re.match(self.exclusion_chk_str, variable):
                 LOG.debug("JSONPath format was identified in the command %s." % variable)
                 continue
             else:
@@ -1422,6 +1423,15 @@ def mask_credentials_password(credentials):
         masked_creds.update({k: v})
 
     return masked_creds
+
+
+def sort_tasklist(user_tasks):
+    """
+    :param user_tasks:
+    :return: Array of tasks
+    """
+
+    return sorted(user_tasks, key=TASKLIST.index)
 
 
 class LinchpinResourceBuilder(object):

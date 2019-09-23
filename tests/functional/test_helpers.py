@@ -27,12 +27,13 @@
 
 import pytest
 import os
+from carbon.constants import TASKLIST
 from carbon.resources.assets import Asset
 from carbon._compat import ConfigParser
 from carbon.utils.config import Config
 from carbon.exceptions import CarbonError, HelpersError
 from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency, \
-    mask_credentials_password
+    mask_credentials_password, sort_tasklist
 
 
 @pytest.fixture(scope='class')
@@ -161,6 +162,15 @@ class TestDataInjector(object):
         cmd = data_injector.inject('cmd { range. }')
         assert cmd == 'cmd { range. }'
 
+    def test_inject_jsonpath_support_uc5(self, data_injector):
+        cmd = data_injector.inject('cmd { test: dictionary }')
+        assert cmd == 'cmd { test: dictionary }'
+
+    def test_inject_jsonpath_support_uc6(self, data_injector):
+        cmd = data_injector.inject("cmd { 'test': 'dictionary' }")
+        assert cmd == "cmd { 'test': 'dictionary' }"
+
+
 
 def test_validate_render_scenario_no_include():
     result = validate_render_scenario(os.path.abspath('../assets/no_include.yml'))
@@ -211,3 +221,7 @@ def test_mask_credentials_password_key_param(aws_creds):
     creds = mask_credentials_password(aws_creds)
     assert '*' in creds.get('aws_secret_access_key') and len(creds.get('aws_secret_access_key')) == key_len
 
+
+def test_sort_tasklist():
+    user_task = ['orchestrate', 'report', 'validate', 'cleanup', 'execute', 'provision']
+    assert sort_tasklist(user_task) == TASKLIST

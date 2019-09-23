@@ -32,7 +32,7 @@ import yaml
 from . import __name__ as __carbon_name__
 from .constants import TASKLIST, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, TimeMixin, Inventory
-from .helpers import file_mgmt, gen_random_str
+from .helpers import file_mgmt, gen_random_str, sort_tasklist
 from .resources import Scenario, Asset, Action, Report, Execute
 from .utils.config import Config
 from .utils.pipeline import PipelineBuilder
@@ -297,7 +297,7 @@ class Carbon(LoggerMixin, TimeMixin):
         self.logger.info('-' * 79 + '\n')
 
         try:
-            for task in tasklist:
+            for task in sort_tasklist(tasklist):
                 self.logger.info(' * Task    : %s' % task)
 
                 # create a pipeline builder object
