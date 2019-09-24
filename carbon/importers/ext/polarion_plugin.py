@@ -100,7 +100,7 @@ class PolarionImporterPlugin(ImporterPlugin):
         return [json.loads(json.dumps(r)) for r in results]
 
     def _parse_config_params(self, cparams):
-        cp = dict(save_file=True, poll_interval=60, wait_timeout=900)
+        cp = dict(save_file='True', poll_interval=60, wait_timeout=900)
         if cparams:
             for k, v in cparams.items():
                 if 'save_file' in k.lower():
