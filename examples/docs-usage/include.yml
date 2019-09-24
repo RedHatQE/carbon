@@ -37,3 +37,56 @@ report:
    .
    .
 
+---
+name: Include_example3
+description: Descriptor file with include section
+
+include:
+  - /var/lib/workspace/carbon_data/.results/common-provision_results.yml
+
+orchestrate:
+  .
+  .
+  .
+
+execute:
+   .
+   .
+   .
+
+report:
+   .
+   .
+   .
+
+---
+name: Include_example4
+description: Descriptor file with include section
+
+include:
+- provision.yml
+- orchestrate.yml
+
+orchestrate:
+- name: ansible/ssh_connect.yml
+    description: "setup key authentication between driver and clients"
+    orchestrator: ansible
+    hosts: driver
+    ansible_options:
+      skip_tags:
+      - ssh_auth
+      extra_vars:
+        username: root
+        password: redhat
+    ansible_galaxy_options:
+      role_file: roles.yml
+
+execute:
+  .
+  .
+  .
+
+report:
+  .
+  .
+  .

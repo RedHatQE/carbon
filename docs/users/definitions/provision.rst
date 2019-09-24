@@ -615,7 +615,7 @@ OpenStack Resource
 
 The OpenStack Provider has been augmented to include all the Linchpin
 OpenStack os_server resource type and topology parameters except
- **cacert**, and **cert**. For a full list of Linchpin OpenStack
+**cacert**, and **cert**. For a full list of Linchpin OpenStack
 os_server parameters please refer to the
 `Linchpin OpenStack Provider <https://linchpin.readthedocs.io/en/latest/openstack.html>`_.
 

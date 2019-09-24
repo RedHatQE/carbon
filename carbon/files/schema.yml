@@ -8,7 +8,7 @@ mapping:
     required: True
     type: str
   description:
-    required: True
+    required: False
     type: str
   resource_check:
     type: seq
