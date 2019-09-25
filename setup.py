@@ -55,7 +55,7 @@ setup(
         'requests>=2.20.1',
         'urllib3==1.24.3',
         'linchpin[beaker, libvirt]>=1.7.4.1;python_version<="2.7"',
-        'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.2#egg=polar'
+        'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.3#egg=polar'
     ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
