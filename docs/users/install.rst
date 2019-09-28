@@ -25,24 +25,6 @@ Your system requires the following packages to install carbon:
 
    To install Carbon version 1.1.0 and above, pip version 18.1 or higher is required
 
-Linchpin Requirements
-~~~~~~~~~~~~~~~~~~~~~
-
-As of 1.2.0, carbon will install Linchpin and Linchpin's Beaker & Libvirt python dependencies but Linchpin also needs certain requirements that need to be met
-so that this can be installed correctly.
-
-
-     * Please refer to the `minimum requirements <https://linchpin.readthedocs.io/en/latest/installation.html#minimal-software-requirements>`_
-       section in the Linchpin Installation guide.
-
-     * Please refer to the `additional dependencies <https://linchpin.readthedocs.io/en/latest/libvirt.html#additional-dependencies>`_ section
-       of the Libvirt provider page for the necessary requirements to support Libvirt.
-
-.. note::
-
-   Linchpin python 3 support is still experimental and not fully compatible so it will not be installed in this environment.
-   To take advantage of Linchpin you must be using python 2.7 environment.  
-
 Install
 +++++++
 
@@ -97,3 +79,48 @@ To install users can do the following
 
 .. NOTE::
     The client is supported only on Python 3 environments.
+
+Linchpin Requirements
+~~~~~~~~~~~~~~~~~~~~~
+
+As of 1.4.0, Linchpin will be an extra. To install Linchpin certain requirements need to be
+met so that it can be installed correctly. Please refer to the
+`minimum requirements <https://linchpin.readthedocs.io/en/latest/installation.html#minimal-software-requirements>`_
+section in the Linchpin Installation guide.
+
+Once installed, you can install Linchpin from Carbon
+
+.. code-block:: bash
+
+    $ pip install carbon[linchpin-wrapper]
+
+Once Linchpin is installed, you will get OpenStack and AWS support through Carbon for both python 2 and 3.
+If you want Beaker or Libvirt, there are some additional package dependencies that are required.
+
+ * Please refer to the
+   `additional dependencies <https://linchpin.readthedocs.io/en/latest/beaker.html#additional-dependencies>`_
+   section of the Beaker provider page for the necessary requirements to support Beaker.
+
+ * Please refer to the
+   `additional dependencies <https://linchpin.readthedocs.io/en/latest/libvirt.html#additional-dependencies>`_
+   section of the Libvirt provider page for the necessary requirements to support Libvirt.
+
+Luckily, Linchpin has automated this process for users using their **setup** command. This command will
+install the required dependencies for each of the providers
+
+.. code-block:: bash
+
+    $ linchpin setup beaker
+    $ linchpin setup libvirt [--ask-sudo-pass]
+
+Please refer to the Linchpin
+`installation guide <https://linchpin.readthedocs.io/en/latest/installation.html#linchpin-setup-automatic-dependency-
+installation>`_ for more information on the setup command.
+
+Once the dependencies are installed you will get Beaker support through Carbon for python 2 and
+Libvirt support through Carbon for python 2 and 3.
+
+.. note::
+
+   Linchpin python 3 support is still not available with Beaker. They are investigating support
+   for Beaker 27 client to enable python 3 support.
