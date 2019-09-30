@@ -1,3 +1,36 @@
+Version 1.4.0 (2019-09-30)
+--------------------------
+New Features
+~~~~~~~~~~~~
+
+* Support for Linchpin count functionality so that a single provision block can provision
+  multiple resources.
+* Support for Linchpin Libvirt provider to provision libvirt resources.
+* Support for Linchpin AWS provider to provision AWS resources.
+* Support fot CCIT rp_preproc client to import test artifacts into Report Portal
+
+Enhancements
+~~~~~~~~~~~~
+
+* User can control the provision task execution model from the carbon.cfg
+* All the resources in Carbon domain have generalized from Hosts to Assets to accommodate
+  the different resource types that can be provisioned with Linchpin.
+* All non-instance/machine Asset types no longer require a role/group to be defined.
+* Switch the provisioning to use a plugin implementation model.
+* Install CCIT polarion importing library Polar 1.1.3 for Polarion imports.
+
+Bug fixes
+~~~~~~~~~
+
+* When provisioning instances attached to multiple networks with Linchpin the public
+  and private ips will be collected and stored in the results.yml.
+* In the execute phase of Carbon, using shell and command the use of a dictionary '{}' casuses an error
+* Carbon runs tasks out of order if that is how tasks are specified via CLI
+* Polarion Importer not backing up the xunit file even though hardcoded to True
+* Polarion xUnit import errors aren't descriptive on python 3 when raising HTTP exceptions
+* Include scenario documentation examples is missing two required keys
+
+
 Version 1.3.1 (2019-07-18)
 --------------------------
 

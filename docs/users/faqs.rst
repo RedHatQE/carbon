@@ -44,11 +44,21 @@ candidate to migrate over to using the Linchpin provisioner.
 
 If the pre-existing scenarios use carbon native provisioner specific parameters
 that Linchpin does not support you will need to continue to use those until Lincphin
-supports the parameter. Linchpin's python 3 support is still experimental and not
-fully supported so Linchpin will not be installed by carbon in python 3 environments.
+supports the parameter. Linchpin is also python 3 compatible except for Beaker. This
+support is still not available. We are working with Beaker development to fully
+support Beaker client on python 3. Any Beaker scenarios using Python 3 should
+continue to use the carbon bkr-client provisioner. All other providers are
+supported in Python 3.
+
+... install Linchpin to use the Linchpin provisioner?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Refer to the `Linchpin Requirements section <install.html>`_
+to install Linchpin and it's dependencies.
 
 ... know if my current scenarios will work with the new Linchpin provisioner?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 You can add the provisioner key to use the linchpin-wrapper and run the validate
 command
 
@@ -70,6 +80,36 @@ Orchestrate
 
 See the `Data Pass-through Section
 <data_pass_through.html#data-pass-through>`_
+
+
+Report
+++++++
+
+... import an artifact that wasn't collected as part of Execute?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can place the file(s) or folder(s) in the *<data_folder>/.results*
+and let carbon search for it or once in the results directory
+define in it in the *artifact_locations* key telling carbon where to look.
+Refer to the `Finding the right artifacts <definitions/report.html>`_ section
+in the Report page.
+
+... stop finding duplicate artifacts during the import?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The driving factor is the name field of the report block. You can narrow and
+restrict the search based on the pattern specified.
+
+For example, if you specify an artifact like *SampleTest.xml* but the artifact
+has been collected numerous times before its possible a list of the same file in
+different locations within the carbon *<data_folder>* are going to be found.
+You can restrict the search to a particular instance by doing something like
+*test_driver/SampleTest.xml* with test_driver being a directory. Telling carbon
+to look in that particular directory for the artifact.
+
+For more information on the different patterns that can be used in the name field
+refer to some of the `examples <definitions/report.html>`_ under Polarion and Report Portal
+in the Report page.
 
 
 Miscellaneous

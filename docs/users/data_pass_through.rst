@@ -134,3 +134,13 @@ correct data) and then executes the command. These are just a couple examples
 on how you can access data from the host resources defined in the provision
 section. You have full access to all the key:values defined by each host
 resource.
+
+.. Note::
+
+    if the instance has been connected to multiple networks and you are using
+    the linchpin-wrapper provisioner, the ip addresses assigned to the instance
+    from both networks will be collected, and stored as a dictionary. Hence, to
+    use the data-passthrough in this situation you would do something like the
+    following:
+
+    { host01.public.ip_address }
