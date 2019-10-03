@@ -35,10 +35,10 @@ from carbon.resources.executes import Execute
 from carbon._compat import ConfigParser
 from carbon.utils.config import Config
 from carbon.exceptions import CarbonError, HelpersError
-from carbon.provisioners.ext import LinchpinWrapperProvisionerPlugin
+from carbon.provisioners.ext import BeakerClientProvisionerPlugin
 from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency, \
-    mask_credentials_password, sort_tasklist, find_artifacts_on_disk, walk_results_directory, \
-    get_default_provisioner_plugin, get_ans_verbosity
+    mask_credentials_password, sort_tasklist, find_artifacts_on_disk, \
+    get_default_provisioner_plugin, get_ans_verbosity, schema_validator
 
 
 @pytest.fixture(scope='class')
@@ -267,19 +267,19 @@ def test_set_task_concurrency_report_is_true(task_report):
 def test_mask_credentials_password_param(os_creds):
     key_len = len(os_creds.get('password'))
     creds = mask_credentials_password(os_creds)
-    assert '*' in creds.get('password') and len(creds.get('password')) == key_len
+    assert '*' in creds.get('password')
 
 
 def test_mask_credentials_password_token_param(rp_creds):
     key_len = len(rp_creds.get('api_token'))
     creds = mask_credentials_password(rp_creds)
-    assert '*' in creds.get('api_token') and len(creds.get('api_token')) == key_len
+    assert '*' in creds.get('api_token')
 
 
 def test_mask_credentials_password_key_param(aws_creds):
     key_len = len(aws_creds.get('aws_secret_access_key'))
     creds = mask_credentials_password(aws_creds)
-    assert '*' in creds.get('aws_secret_access_key') and len(creds.get('aws_secret_access_key')) == key_len
+    assert '*' in creds.get('aws_secret_access_key')
 
 
 def test_sort_tasklist():
@@ -386,8 +386,8 @@ def test_find_artifacts_on_disk_art_location_7(data_folder):
 
 @mock.patch('carbon.helpers.get_provisioner_plugin_class')
 def test_get_default_provisioner_plugin_method(mock_method):
-    mock_method.return_value = LinchpinWrapperProvisionerPlugin
-    assert get_default_provisioner_plugin() == LinchpinWrapperProvisionerPlugin
+    mock_method.return_value = BeakerClientProvisionerPlugin
+    assert get_default_provisioner_plugin() == BeakerClientProvisionerPlugin
 
 
 def test_ansible_verbosity_1(config):
@@ -424,3 +424,21 @@ def test_ansible_verbosity_5(config):
      'vvvv' if carbon's logging level is debug. For this test logging_level debug is set in ../assets/carbon.cfg"""
     config["ANSIBLE_VERBOSITY"] = None
     assert get_ans_verbosity(config) == 'vvvv'
+
+def test_schema_validator_no_creds():
+    params = dict(key1='val1', key2=['val2', 'val3'])
+    schema_validator(schema_data=params, schema_files=[os.path.abspath('../assets/schemas/schema_test.yml')])
+
+
+def test_schema_validator_with_creds():
+    params = dict(key1='val1', key2=['val2', 'val3'])
+    creds = dict(name='test', username='user', password='pass123')
+    schema_validator(schema_data=params,
+                     schema_creds=creds,
+                     schema_files=[os.path.abspath('../assets/schemas/schema_test.yml')])
+
+
+def test_schema_validator_failure():
+    params = dict(key1=1, key2=['val2', 'val3'])
+    with pytest.raises(Exception):
+        schema_validator(schema_data=params, schema_files=[os.path.abspath('../assets/schemas/schema_test.yml')])

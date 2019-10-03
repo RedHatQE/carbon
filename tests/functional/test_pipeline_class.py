@@ -30,6 +30,7 @@ from carbon.exceptions import CarbonError
 from carbon.tasks import CleanupTask, ExecuteTask, ProvisionTask, \
     OrchestrateTask, ReportTask, ValidateTask
 from carbon.utils.pipeline import PipelineBuilder
+from carbon._compat import string_types
 from carbon.resources import Asset
 
 
@@ -148,28 +149,32 @@ class TestPipelineBuilder(object):
         assert len(tasks) == 2
 
     @staticmethod
-    def test_fetch_asset_with_action(scenario1):
+    def test_pipeline_with_asset_count_for_action(scenario1):
         builder = PipelineBuilder(name='orchestrate')
         pipeline = builder.build(scenario1)
-        assert len(getattr(scenario1, 'actions')[0].hosts) == 1
-        assert getattr(getattr(scenario1, 'actions')[0].hosts[0], 'name') == 'host_0'
-        assert all(isinstance(h, Asset) for h in getattr(scenario1, 'actions')[0].hosts)
+        tasks = getattr(pipeline, 'tasks')
+        assert isinstance(getattr(tasks[0].get('package'), 'hosts')[-1], Asset)
+        assert len(getattr(tasks[0].get('package'), 'hosts')) == 1
+        assert getattr(getattr(tasks[0].get('package'), 'hosts')[-1], 'name') == 'host_0'
+
 
     @staticmethod
-    def test_fetch_asset_with_execute(scenario1, asset2):
+    def test_pipeline_with_asset_count_using_role_for_execute(scenario1, asset2):
         scenario1.add_assets(asset2)
         builder = PipelineBuilder(name='execute')
         pipeline = builder.build(scenario1)
-        assert len(getattr(scenario1, 'executes')[0].hosts) == 1
-        assert isinstance(getattr(scenario1, 'executes')[0].hosts[0], Asset)
-        assert getattr(getattr(scenario1, 'executes')[0].hosts[0], 'name') == 'host_1'
+        tasks = getattr(pipeline, 'tasks')
+        assert isinstance(getattr(tasks[-1].get('package'), 'hosts')[-1], Asset)
+        assert len(getattr(tasks[-1].get('package'), 'hosts')) == 1
+        assert getattr(getattr(tasks[-1].get('package'), 'hosts')[-1], 'name') == 'host_1'
 
     @staticmethod
-    def test_fetch_asset_with_groups(scenario1, asset3, execute2):
+    def test_pipeline_with_asset_count_using_groups_for_execute(scenario1, asset3, execute2):
         scenario1.add_assets(asset3)
         scenario1.add_executes(execute2)
         builder = PipelineBuilder(name='execute')
         pipeline = builder.build(scenario1)
-        assert getattr(scenario1, 'executes')[0].hosts == []
-        assert len(getattr(scenario1, 'executes')[1].hosts) == 1
-        assert getattr(getattr(scenario1, 'executes')[1].hosts[0], 'name') == 'host_3'
+        tasks = getattr(pipeline, 'tasks')
+        assert isinstance(getattr(scenario1, 'executes')[0].hosts[-1], string_types)
+        assert len(getattr(tasks[1].get('package'), 'hosts')) == 1
+        assert getattr(getattr(tasks[1].get('package'), 'hosts')[-1], 'name') == 'host_3'

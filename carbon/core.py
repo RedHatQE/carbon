@@ -27,6 +27,8 @@
 import errno
 import inspect
 import os
+import yaml
+import inspect
 from glob import glob
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 from logging import Formatter, getLogger, StreamHandler, FileHandler, Filter
@@ -514,75 +516,6 @@ class CarbonResource(LoggerMixin, TimeMixin):
 
     def validate(self):
         pass
-
-
-class CarbonProvisioner(LoggerMixin, TimeMixin):
-    """Carbon provisioner class.
-
-    Each provisioner implementation added into carbon requires that they
-    inherit the carbon provisioner class. This enforces that the
-    required methods are implemented in the new provisioner class.
-    """
-    # set the provisioner name
-    __provisioner_name__ = None
-
-    def __init__(self, host):
-        """Constructor.
-
-        Every provisioner requires a carbon host resource. This resource
-        contains all the necessary elements that are needed to fulfill a
-        provision request by the provisioner of choice.
-
-        :param host: carbons host resource
-        :type host: object
-        """
-        self.host = host
-
-        # set commonly accessed data used by provisioners
-        self.data_folder = getattr(self.host, 'data_folder')
-        self.provider = getattr(getattr(host, 'provider'), 'name')
-        self.provider_params = getattr(host, 'provider_params')
-        self.provider_credentials = getattr(getattr(
-            host, 'provider'), 'credentials')
-        self.workspace = getattr(self.host, 'workspace')
-
-        if not self.name and self.__class__.__name__ != 'CarbonProvisioner':
-            raise CarbonProvisionerError(
-                'Attribute __provisioner_name__ is None. Please set the '
-                'attribute and retry creating an object from the class.'
-            )
-
-    def create(self):
-        """Create method.
-
-        Main entry point for the provisioner to fulfill a provision request for
-        machines. Carbons provision task invokes the provisioners create
-        method to create all test machines.
-        """
-        raise NotImplementedError
-
-    def delete(self):
-        """Delete method.
-
-        Main entry point for the provisioner to fulfill the request to delete
-        machines. Carbons cleanup task invokes the provisioners delete method
-        to delete all test machines.
-        """
-        raise NotImplementedError
-
-    @property
-    def name(self):
-        """Return the name for the provisioner."""
-        return self.__provisioner_name__
-
-    @name.setter
-    def name(self, value):
-        """Set the provisioner name.
-
-        :param value: provisioner name
-        :type value: str
-        """
-        raise AttributeError('You cannot set name for the provisioner.')
 
 
 class CarbonProvider(LoggerMixin, TimeMixin):
@@ -1134,22 +1067,46 @@ class CarbonPlugin(LoggerMixin, TimeMixin):
     # set the plugin name
     __plugin_name__ = None
 
+    __schema_file_path__ = ''
+
+    @classmethod
+    def get_schema_keys(cls):
+
+        with open(cls.__schema_file_path__) as f:
+            schema_data = f.read()
+        return yaml.safe_load(schema_data).get('mapping').keys()
+
+    @classmethod
+    def build_profile(cls, resource):
+        """Builds a dictionary with all the parameters for the resource.
+
+        :param resource: resource object
+        :type resource: object
+        :return: dictionary with all plugin resource parameters
+        :rtype: OrderedDict
+        """
+        profile = OrderedDict()
+        for param in cls.get_schema_keys():
+            if hasattr(resource, param):
+                profile.update({param: getattr(resource, param, None)})
+        return profile
+
 
 class ProvisionerPlugin(CarbonPlugin):
     """Carbon provisioner plugin class.
 
     Each provisioner implementation added into carbon requires that they
-    inherit the carbon provisioner class. This enforces that the
+    inherit the porvisioner plugin class. This enforces that the
     required methods are implemented in the new provisioner class.
     Additional support/helper methods can be added to this class
     """
 
-    def __init__(self, profile):
+    def __init__(self, asset):
 
         """Constructor.
 
-        Each host resource is linked to a provider which is the location where
-        the host will be provisioned. Along with the provider you will also
+        Each asset resource is linked to a provisioner that knows how to
+        work with the different providers. Along with the provider you will also
         have access to all the provider parameters needed to fulfill the
         provision request. (i.e. images, flavor, network, etc. depending on
         the provider).
@@ -1158,11 +1115,6 @@ class ProvisionerPlugin(CarbonPlugin):
           - name: data_folder
             description: the runtime folder where all files/results are stored
             and archived for historical purposes.
-            type: string
-
-          - name: provider
-            description: name of the provider where host is to be created or
-            deleted.
             type: string
 
           - name: provider_params
@@ -1180,22 +1132,26 @@ class ProvisionerPlugin(CarbonPlugin):
             by the scenario in order to successfully run it.
             type: string
 
-        There can be more information within the host resource but the ones
+        There can be more information within the asset resource but the ones
         defined above are the most commonly ones used by provisioners.
 
-        :param host: carbon host resource
-        :type host: object
+        :param asset: carbon asset resource
+        :type asset: object
         """
+        self.asset = asset
 
-        self.profile = profile
+        # set commonly accessed data used by provisioners
+        self.data_folder = getattr(self.asset, 'data_folder')
+        if hasattr(self.asset, 'provider'):
+            self.provider_params = {k: v for k, v in self.asset.profile().items()
+                                    if k not in getattr(self.asset, '_fields')}.get('provider')
+        else:
+            self.provider_params = {k: v for k, v in self.asset.profile().items()
+                                    if k not in getattr(self.asset, '_fields')}
 
-        # set commonly accessed data used by the importer
-        self.data_folder = self.profile['data_folder']
-        self.provider = self.profile['provider']['name']
-        self.provider_params = self.profile['provider']
-        self.provider_credentials = self.profile['provider_credentials']
-        self.workspace = self.profile['workspace']
-        self.config_params = self.profile['config_params']
+        self.provider_credentials = getattr(self.asset, 'credential', {})
+        self.workspace = getattr(self.asset, 'workspace')
+        self.config = getattr(self.asset, 'config')
 
     def create(self):
         raise NotImplementedError
@@ -1204,6 +1160,9 @@ class ProvisionerPlugin(CarbonPlugin):
         raise NotImplementedError
 
     def authenticate(self):
+        raise NotImplementedError
+
+    def validate(self):
         raise NotImplementedError
 
 
@@ -1279,19 +1238,27 @@ class Inventory(LoggerMixin, FileLockMixin):
     ansible inventory for the carbon ansible action.
     """
 
-    def __init__(self, hosts, all_hosts, data_dir, results_dir, static_inv_dir=None):
+    def __init__(self, hosts, all_hosts, data_dir, results_dir, static_inv_dir=None, inv_dump=None):
         """Constructor.
 
         :param hosts: list of hosts to create the inventory file
         :type hosts: list
         :param all_hosts: list of all hosts in the given scenario
         :type all_hosts: list
-        :param data_dir: data directory where the inventory directory resides
+        :param data_dir: data directory of current execution
         :type data_dir: str
+        :param results_dir: the results directory where the inventory will go
+        :type results_dir: str
+        :param static_inv_dir: the static inventory folder specified in the config where inventories will go
+        :type static_inv_dir: str
+        :param inv_dump: multipart string from provisioners that generate their own inventory layout
+        :type inv_dump: str
         """
         self.hosts = hosts
         self.all_hosts = all_hosts
         self.lock_file = '/tmp/cbn_%s.lock' % os.path.basename(data_dir)
+        self.inv_dump = inv_dump
+        self.group = 'hosts'
 
         # set & create the inventory directory
         if static_inv_dir:
@@ -1319,7 +1286,20 @@ class Inventory(LoggerMixin, FileLockMixin):
         self.unique_inv = os.path.join(self.inv_dir, 'unique-%s' % uuid4())
 
         # defines the custom group to run the play against
-        self.group = 'hosts'
+        if self.hosts:
+            join = False
+            for host in self.hosts:
+                if isinstance(host, string_types) and 'localhost' not in host:
+                    if len(self.hosts) > 1:
+                        if join:
+                            self.group += ', %s' % host
+                        else:
+                            self.group = host
+                            join = True
+                        continue
+                    else:
+                        self.group = host
+                        continue
 
     def create_master(self):
         """Create the master ansible inventory.
@@ -1328,10 +1308,6 @@ class Inventory(LoggerMixin, FileLockMixin):
         hosts in the given scenario. Each host will have a group/group:vars.
         """
         try:
-            # create parser object, raw config parser allows keys with no values
-            config = RawConfigParser(allow_no_value=True)
-            # disable default behavior to set values to lower case
-            config.optionxform = str
 
             # get the lock
             self.acquire()
@@ -1344,6 +1320,15 @@ class Inventory(LoggerMixin, FileLockMixin):
                     if f != self.master_inv:
                         os.remove(f)
 
+            if self.inv_dump:
+                self.write_inventory()
+                return
+
+            # create parser object, raw config parser allows keys with no values
+            config = RawConfigParser(allow_no_value=True)
+            # disable default behavior to set values to lower case
+            config.optionxform = str
+
             # do not create master inventory if already exists
             # load it and keep building upon it
             if os.path.exists(self.master_inv):
@@ -1354,7 +1339,7 @@ class Inventory(LoggerMixin, FileLockMixin):
                 section = host.name
                 section_vars = '%s:vars' % section
 
-                if hasattr(host, 'role') or hasattr(host, 'groups'):
+                if (hasattr(host, 'role') or hasattr(host, 'groups')) and hasattr(host, 'ip_address'):
                     for attr in ['role', 'groups']:
                         for sect in getattr(host, attr, []):
                             host_section = sect + ":children"
@@ -1382,15 +1367,13 @@ class Inventory(LoggerMixin, FileLockMixin):
                             v = os.path.join(getattr(host, 'workspace'), v)
                         config.set(section_vars, k, v)
 
-            # write the inventory
-            with open(self.master_inv, 'w') as f:
-                config.write(f)
+                    # write the inventory
+                    self.write_inventory(config)
 
-            # release the lock
-            self.release()
         except Exception as ex:
-            self.release()
             raise ex
+        finally:
+            self.release()
 
         self.logger.debug("Master inventory content")
         self.log_inventory_content(config)
@@ -1402,24 +1385,6 @@ class Inventory(LoggerMixin, FileLockMixin):
         for all hosts in the scenario. Along with a child group containing
         all the hosts for the action to run on.
         """
-        # create parser object, raw config parser allows keys with no values
-        config = RawConfigParser(allow_no_value=True)
-        # disable default behavior to set values to lower case
-        config.optionxform = str
-        main_section = self.group + ":children"
-        config.add_section(main_section)
-
-        # add place holders for all hosts
-        for host in self.all_hosts:
-            if hasattr(host, 'role') or hasattr(host, 'groups'):
-                config.add_section(host.name)
-
-        # add specific hosts to the group to run the action against
-        if self.hosts:
-            for host in self.hosts:
-                config.set(main_section, host.name)
-        else:
-            self.create_implicit_localhost(main_section, config)
 
         # check for any old/stale unique inventories and delete them.
         # This is incase unique inventories from previous runs were left
@@ -1429,12 +1394,41 @@ class Inventory(LoggerMixin, FileLockMixin):
                 self.logger.debug("Found stale unique inv %s. Deleting this file" % f)
                 os.remove(f)
 
-        # write the inventory
-        with open(self.unique_inv, 'w') as f:
-            config.write(f)
+        # create parser object, raw config parser allows keys with no values
+        config = RawConfigParser(allow_no_value=True)
+        # disable default behavior to set values to lower case
+        config.optionxform = str
+        main_section = self.group + ":children"
 
-        self.logger.debug("Unique inventory content")
-        self.log_inventory_content(config)
+        # add specific hosts to the group to run the action against
+        # fetch assets will provide a host as a string type value when a host doesn't exist,
+        # essentially the string is a pass-thru. If user does not specify localhost as the string type
+        # value then assume they have supplied their own inventory file.
+        # i.e. user supplied linchpin a layout for linchpin to generate the inventory files.
+        # In that case just update the host group to match the pass-thru value rather than using
+        # the default group 'hosts' that we always use. This should take care of the use case of
+        # user supplied inventories and templatized host params in user playbooks, i.e.
+        # hosts: {{ hosts }}, will be passed the appropriate host group to run against the supplied
+        # inventory
+        if self.hosts and self.group == 'hosts':
+            config.add_section(main_section)
+            for host in self.hosts:
+                if isinstance(host, string_types) and 'localhost' == host:
+                    self.create_implicit_localhost(main_section, config)
+                    break
+                config.set(main_section, host.name)
+
+        if config.has_section(main_section):
+            # add place holders for all hosts
+            for host in self.all_hosts:
+                if hasattr(host, 'role') or hasattr(host, 'groups'):
+                    config.add_section(host.name)
+
+            # write the inventory
+            self.write_inventory(config)
+
+            self.logger.debug("Unique inventory content")
+            self.log_inventory_content(config)
 
     def create(self):
         """Create the inventory."""
@@ -1453,10 +1447,11 @@ class Inventory(LoggerMixin, FileLockMixin):
         try:
             os.remove(self.unique_inv)
         except OSError as ex:
-            self.logger.warning(ex)
-            self.logger.warning('You may experience problems with future '
-                                'ansible calls due to additional inventory '
-                                'files in the same inventory directory.')
+            if ex.errno != 2:
+                self.logger.warning(ex)
+                self.logger.warning('You may experience problems with future '
+                                    'ansible calls due to additional inventory '
+                                    'files in the same inventory directory.')
 
     def delete(self):
         """Delete all ansible inventory files."""
@@ -1486,5 +1481,19 @@ class Inventory(LoggerMixin, FileLockMixin):
         parser.set('localhost', '127.0.0.1')
         parser.add_section('localhost:vars')
         parser.set('localhost:vars', 'ansible_connection', 'local')
-        parser.set('localhost:vars', 'ansible_python_interpreter', '"{{ansible_playbook_python}}"')
+        parser.set('localhost:vars', 'ansible_python_interpreter', '"{{ ansible_playbook_python }}"')
         parser.set(main_section, 'localhost')
+
+    def write_inventory(self, config=None):
+        # generic method to write out the inventory file
+        if config:
+            if config.has_section('hosts:children'):
+                with open(self.unique_inv, 'w') as f:
+                    config.write(f)
+            else:
+                with open(self.master_inv, 'w') as f:
+                    config.write(f)
+
+        else:
+            with open(self.master_inv, 'w+') as inv_file:
+                inv_file.write(self.inv_dump)

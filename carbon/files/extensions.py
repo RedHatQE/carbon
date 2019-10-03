@@ -24,7 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-from carbon.constants import ORCHESTRATOR
+from carbon.constants import ORCHESTRATOR, PROVISIONERS
 from carbon.helpers import get_executor_plugin_class, get_executors_plugin_list, get_orchestrator_plugin_class
 
 
@@ -133,4 +133,32 @@ def valid_action_types(value, rule_obj, path):
             'Available types: %s\n'
             'Set types: %s' % (value['orchestrator'], types, match)
         )
+    return True
+
+
+def valid_asset_provider_params(value, rule_obj, path):
+    """ Verify that the specified provider has a provisioner mapped to it."""
+    provisioner = value['provisioner']
+    provider = value['provider']
+    if provider['name'] in PROVISIONERS:
+        if provisioner:
+            for plugins in PROVISIONERS[provider]:
+                if isinstance(plugins, list):
+                    for plugin in plugins:
+                        if plugin != provisioner:
+                            continue
+                        else:
+                            plugin.validate(provider)
+                            break
+                else:
+                    plugins.validate(provider)
+        else:
+            for plugins in PROVISIONERS[provider]:
+                if isinstance(plugins, list):
+                    for plugin in plugins:
+                        if plugin.startswith(provider['name']):
+                            plugin.validate(provider)
+                            break
+                else:
+                    plugins.validate(provider)
     return True

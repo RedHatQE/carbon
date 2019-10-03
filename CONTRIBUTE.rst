@@ -261,24 +261,99 @@ for testing or continued development you can do the following:
     <feature toggle name specified in step 2>=True
 
 
-How to write a importer plugin for carbon
------------------------------------------
-For developers who wish to put together their own importer plugins can follow these guidelines:
- * 1
-   The new plugin will need to import Carbon's Importer plugin class
+How to write an importer or provisioner plugin for carbon
+---------------------------------------------------------
+For developers who wish to put together their own plugins can follow these guidelines:
 
- * 2
-   It should have the plugin name using variable __plugin_name__
+1. The new plugin will need to import Carbon's **ProvisionerPlugin** or **ImporterPlugin** classes
+   from the **carbon.core** module.
 
- * 3
-   It should implement the importer_artifacts method
+2. It should have the plugin name using variable **__plugin_name__**
 
- * 4
-   It needs to create a logger using the Carbon's create_logger method or call the carbon's logger using the name'carbon'
-   to allow the plugin to log into carbon's log
+3. It should implement the following key functions
+     - For provisioner plugins implement the **create**, **delete**, and **validate** functions
+     - For importer plugins implement the **import_artifacts** and **validate** functions
 
- * 5
-   The plugin needs to add an entry point in its setup.py file using the key 'importer_plugins' Refer the example below:
+
+4. You should define a schema for Carbon to validate the required parameter inputs
+   defined in the scenario file. Carbon use's
+   `pyqwalify <https://pykwalify.readthedocs.io/en/master/>`__ to validate schema. Below is an
+   example schema
+
+   .. code-block:: yaml
+
+        ---
+        # default openstack libcloud schema
+
+        type: map
+        allowempty: True
+        mapping:
+          image:
+            required: True
+            type: str
+          flavor:
+            required: True
+            type: str
+          networks:
+            required: True
+            type: seq
+            sequence:
+              - type: str
+          floating_ip_pool:
+            required: False
+            type: str
+          keypair:
+            required: False
+            type: str
+          credential:
+            required: False
+            type: map
+            mapping:
+              auth_url:
+                type: str
+                required: True
+              username:
+                type: str
+                required: True
+              password:
+                type: str
+                required: True
+              tenant_name:
+                type: str
+                required: True
+              domain_name:
+                type: str
+                required: False
+              region:
+                type: str
+                required: False
+
+   Once you've created your schema and/or extension files. You can define them in the plugin
+   as the following attributes **__schema_file_path__** and **__schema_ext_path__**.
+
+   .. code-block:: python
+
+    __schema_file_path__ = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                        "files/schema.yml"))
+    __schema_ext_path__ = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                       "files/lp_schema_extensions.py"))
+
+   To validate the schema, you can import the **schema_validator** function from the **carbon.helpers**
+   class
+
+   .. code-block:: python
+
+    # validate carbon plugin schema first
+        schema_validator(schema_data=self.build_profile(self.host),
+                         schema_files=[self.__schema_file_path__],
+                         schema_ext_files=[self.__schema_ext_path__])
+
+5.
+   To enable logging you can create a logger using the **create_logger** function or calling python's **getLogger**
+
+6. The plugin needs to add an entry point in its setup.py file so that it can register the plugin where
+   Carbon can find it. For provsioners register the plugin to **provisioner_plugins** and for importers
+   register to **importer_plugins**. Refer the example below:
 
 .. code-block:: python
 

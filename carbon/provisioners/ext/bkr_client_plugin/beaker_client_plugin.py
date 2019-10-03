@@ -33,9 +33,9 @@ import os
 import paramiko
 import stat
 
-from ...core import ProvisionerPlugin
-from ...exceptions import BeakerProvisionerError
-from ...helpers import exec_local_cmd
+from carbon.core import ProvisionerPlugin
+from carbon.exceptions import BeakerProvisionerError
+from carbon.helpers import exec_local_cmd, schema_validator
 
 
 class BeakerClientProvisionerPlugin(ProvisionerPlugin):
@@ -50,17 +50,18 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         (with same config file).
     """
     __plugin_name__ = "beaker-client"
-    __plugin_prefix__ = 'bkr_'
+    __schema_file_path__ = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                        "schema.yml"))
 
-    def __init__(self, profile):
+    def __init__(self, asset):
         """Constructor.
 
-        :param host: The host object.
-        :type host: object
+        :param asset: The asset object.
+        :type asset: object
         """
-        super(BeakerClientProvisionerPlugin, self).__init__(profile)
+        super(BeakerClientProvisionerPlugin, self).__init__(asset)
 
-        self.job_xml = 'bkrjob_%s.xml' % self.profile['name']
+        self.job_xml = 'bkrjob_%s.xml' % getattr(self.asset, 'name')
         self.bkr_xml = BeakerXML()
         self.conf_dir = '%s/.beaker_client' % os.path.expanduser('~')
         self.conf = '%s/config' % self.conf_dir
@@ -307,7 +308,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         else:
             self.logger.warning('No SSH key defined, skip injecting key.')
 
-        return [dict(job_id=job_id, job_url=job_url, hostname=hostname, ip=ip)]
+        return [dict(asset_id=job_id, job_url=job_url, hostname=hostname, ip=ip)]
 
     def cancel_job(self, job_id):
         """Cancel a existing beaker job.
@@ -346,6 +347,9 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
 
         # cancel beaker job
         self.cancel_job(self.provider_params.get('job_id'))
+
+    def validate(self):
+        schema_validator(schema_data=self.build_profile(self.asset), schema_files=[self.__schema_file_path__])
 
     def get_job_status(self, xmldata):
         """Parse the beaker results.
@@ -418,7 +422,6 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
                 except Exception:
                     pass
 
-                # setattr(self.host, 'ip_address', addr)
                 return hostname, addr
 
     def copy_ssh_key(self, hostname, ip):

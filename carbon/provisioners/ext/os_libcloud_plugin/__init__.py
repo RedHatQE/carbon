@@ -16,5 +16,4 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .os_libcloud_plugin import OpenstackLibCloudProvisionerPlugin
-from .bkr_client_plugin import BeakerClientProvisionerPlugin
+from .openstack_libcloud_plugin import OpenstackLibCloudProvisionerPlugin

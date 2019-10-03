@@ -55,7 +55,7 @@ setup(
         'requests>=2.20.1',
         'urllib3==1.24.3'
     ],
-    extras_require={'linchpin-wrapper': ['linchpin>=1.7.4.1']},
+    extras_require={'linchpin-wrapper': ['carbon_linchpin_plugin@git+https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_linchpin_plugin@develop#egg=carbon_linchpin_plugin']},
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -75,7 +75,6 @@ setup(
              ],
         'provisioner_plugins': [
             'beaker_client = carbon.provisioners.ext:BeakerClientProvisionerPlugin',
-            'linchpin_wrapper_plugin = carbon.provisioners.ext:LinchpinWrapperProvisionerPlugin',
             'openstack_libcloud = carbon.provisioners.ext:OpenstackLibCloudProvisionerPlugin'
         ],
         'orchestrator_plugins': [

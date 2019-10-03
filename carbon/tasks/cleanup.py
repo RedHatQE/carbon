@@ -90,10 +90,10 @@ class CleanupTask(CarbonTask):
 
         # **** TASKS BELOW ONLY SHOULD BE RELATED TO THE PROVISIONER ****
         if self.asset:
-            try:
+            if not getattr(self.asset, 'is_static'):
                 provisioner = AssetProvisioner(self.asset)
                 # teardown the asset
                 getattr(provisioner, 'delete')()
-            except AttributeError:
+            else:
                 self.logger.warning('Asset %s is static, skipping teardown.' %
                                     getattr(self.asset, 'name'))

@@ -122,16 +122,18 @@ class Execute(CarbonResource):
         self.artifact_locations = parameters.pop('artifact_locations', None)
 
         # create the executor attributes in the execute object
-        for p in getattr(self.executor, 'get_all_parameters')():
-            setattr(self, p, parameters.get(p, {}))
+        if self.executor:
+            for p in getattr(self.executor, 'get_all_parameters')():
+                setattr(self, p, parameters.get(p, {}))
+            # update fields attr with executor types
+            for item in getattr(self.executor, '_execute_types'):
+                self._fields.append(item)
+        else:
+            self._executor = executor
 
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
         self._execute_task_cls = execute_task_cls
-
-        # update fields attr with executor types
-        for item in getattr(self.executor, '_execute_types'):
-            self._fields.append(item)
 
         # reload construct task methods
         self.reload_tasks()
@@ -163,7 +165,10 @@ class Execute(CarbonResource):
         profile = OrderedDict()
         profile.update({'name': self.name})
         profile.update({'description': self.description})
-        profile.update({'executor': getattr(self.executor, '__executor_name__')})
+        if isinstance(self.executor, string_types):
+            profile.update({'executor': self.executor})
+        else:
+            profile.update({'executor': getattr(self.executor, '__executor_name__')})
 
         for item in getattr(self, '_fields'):
             if getattr(self, item, None):
@@ -176,7 +181,8 @@ class Execute(CarbonResource):
             profile.update(dict(hosts=[host.name for host in self.hosts]))
 
         # update the profile with executor properties
-        profile.update(getattr(self.executor, 'build_profile')(self))
+        if not isinstance(self.executor, string_types):
+            profile.update(getattr(self.executor, 'build_profile')(self))
 
         if self.artifact_locations:
             profile.update({'artifact_locations': self.artifact_locations})

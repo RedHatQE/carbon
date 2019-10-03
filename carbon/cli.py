@@ -76,8 +76,12 @@ def create():
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default=None,
               help="Select logging level. (default=info)")
+@click.option("--vars-data",
+              default=None,
+              metavar="",
+              help="Pass in variable data to template the scenario. Can be a file or raw json.")
 @click.pass_context
-def validate(ctx, scenario, data_folder, log_level, workspace):
+def validate(ctx, scenario, data_folder, log_level, workspace, vars_data):
     """Validate a scenario configuration."""
     # Make sure the file exists and gets its absolute path
     if os.path.isfile(scenario):
@@ -88,7 +92,7 @@ def validate(ctx, scenario, data_folder, log_level, workspace):
 
     # Checking if include section is present and getting validated scenario stream/s
     try:
-        scenario_stream = validate_render_scenario(scenario)
+        scenario_stream = validate_render_scenario(scenario, vars_data)
     except yaml.YAMLError:
         click.echo('Error loading updated scenario data!')
         ctx.exit()
@@ -137,8 +141,12 @@ def validate(ctx, scenario, data_folder, log_level, workspace):
               type=click.Choice(TASK_LOGLEVEL_CHOICES),
               default=None,
               help="Select logging level. (default=info)")
+@click.option("--vars-data",
+              default=None,
+              metavar="",
+              help="Pass in variable data to template the scenario. Can be a file or raw json.")
 @click.pass_context
-def run(ctx, task, scenario, log_level, data_folder, workspace):
+def run(ctx, task, scenario, log_level, data_folder, workspace, vars_data):
     """Run a scenario configuration."""
     print_header()
 
@@ -151,7 +159,7 @@ def run(ctx, task, scenario, log_level, data_folder, workspace):
 
     # Checking if include section is present and getting validated scenario stream/s
     try:
-        scenario_stream = validate_render_scenario(scenario)
+        scenario_stream = validate_render_scenario(scenario, vars_data)
     except yaml.YAMLError:
         click.echo('Error loading updated scenario data!')
         ctx.exit()

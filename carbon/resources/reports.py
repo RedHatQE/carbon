@@ -154,7 +154,8 @@ class Report(CarbonResource):
         if provider_name not in get_provider_plugin_list():
             self.logger.error('Provider %s for report artifacts %s is invalid.' %
                               (provider_name, self.name))
-            sys.exit(1)
+            raise CarbonReportError('Could not find a valid provider. '
+                                    'Make sure the appropriate plugin has been registered')
 
         # now that we have the provider, lets create the provider object
         self._provider = get_provider_plugin_class(provider_name)()

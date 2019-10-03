@@ -25,9 +25,9 @@ in the scenario.
 Implicit Localhost
 ------------------
 
-If localhost or any other host name that is not explicitly defined in the Provision
-section is used as a value to *hosts* in the Orchestrate or Execute sections, Carbon
-will infer that the intended task is to be run on the localhost.
+As of 1.6.0, The use of any other arbitrary hostname will not be supported to infer localhost.
+It must be *localhost* that is used as a value to *hosts* in the Orchestrate or Execute sections,
+Carbon will infer that the intended task is to be run on the localhost.
 
 This will temporarily add a localhost entry, with the appropriate Ansible host group
 variables, to the inventory which will be available to Ansible when running the task.
@@ -52,7 +52,7 @@ available to the single task it was specified for.
 Example
 +++++++
 
-Here an Orchestrate and an Execute task refer to a couple hosts, *carbon_controller* and *localhost*,
+Here an Orchestrate and an Execute task refer to *localhost*,
 respectively, that are not defined in the provision section.
 
 .. code-block:: yaml
@@ -71,7 +71,7 @@ respectively, that are not defined in the provision section.
       - name: test_setup_playbook.yml
         description: "running a test setup playbook on localhost"
         orchestrator: ansible
-        hosts: carbon_controller
+        hosts: localhost
 
     execute:
       - name: test execution

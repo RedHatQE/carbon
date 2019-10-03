@@ -38,7 +38,7 @@ from ansible.vars.manager import VariableManager
 from shutil import copyfile
 from ansible.config.manager import ConfigManager
 from ._compat import string_types
-from .helpers import ssh_retry, exec_local_cmd_pipe, DataInjector, get_ans_verbosity
+from .helpers import ssh_retry, exec_local_cmd_pipe, DataInjector, get_ans_verbosity, is_host_localhost
 from .static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK, \
     ADHOC_SHELL_PLAYBOOK, ADHOC_SCRIPT_PLAYBOOK
 from .core import Inventory
@@ -341,10 +341,14 @@ class AnsibleService(object):
             # inject data into extra_vars
             extra_vars = self.injector.inject_dictionary(extra_vars)
 
+        extra_vars['localhost'] = False
         if self.hosts:
-            extra_vars["localhost"] = False
-        else:
-            extra_vars["localhost"] = True
+            for h in self.hosts:
+                if not isinstance(h, string_types) and hasattr(h, 'ip_address'):
+                    if is_host_localhost(h.ip_address):
+                        extra_vars['localhost'] = True
+                elif isinstance(h, string_types) and h == 'localhost':
+                    extra_vars['localhost'] = True
 
         return extra_vars
 

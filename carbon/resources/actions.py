@@ -113,19 +113,20 @@ class Action(CarbonResource):
 
         # every action has a mandatory orchestrator, lets set it
         orchestrator = parameters.pop('orchestrator', ORCHESTRATOR)
-        if orchestrator not in get_orchestrators_plugin_list():
-            raise CarbonActionError('Orchestrator: %s is not supported!' %
-                                    orchestrator)
 
         if orchestrator not in get_orchestrators_plugin_list():
             raise CarbonActionError('Orchestrator: %s is not supported!' %
                                     orchestrator)
+
         # now that we know the orchestrator, lets get the class
         self._orchestrator = get_orchestrator_plugin_class(orchestrator)
 
         # create the orchestrator attributes in the action object
-        for p in getattr(self.orchestrator, 'get_all_parameters')():
-            setattr(self, p, parameters.get(p, {}))
+        if self.orchestrator:
+            for p in getattr(self.orchestrator, 'get_all_parameters')():
+                setattr(self, p, parameters.get(p, {}))
+        else:
+            self._orchestrator = orchestrator
 
         # set up status code
         self._status = parameters.pop('status', 0)
@@ -186,8 +187,11 @@ class Action(CarbonResource):
         profile = OrderedDict()
         profile['name'] = self.name
         profile['description'] = self.description
-        profile['orchestrator'] = getattr(
-                self.orchestrator, '__orchestrator_name__')
+        if isinstance(self.orchestrator, string_types):
+            profile['orchestrator'] = self.orchestrator
+        else:
+            profile['orchestrator'] = getattr(
+                    self.orchestrator, '__orchestrator_name__')
 
         # set the action's hosts
         if all(isinstance(item, string_types) for item in self.hosts):
@@ -196,7 +200,8 @@ class Action(CarbonResource):
             profile.update(dict(hosts=[host.name for host in self.hosts]))
 
         # Update profile with all the parameters for the orchestrator
-        profile.update(getattr(self.orchestrator, 'build_profile')(self))
+        if not isinstance(self.orchestrator, string_types):
+            profile.update(getattr(self.orchestrator, 'build_profile')(self))
 
         profile.update({'cleanup': self.cleanup_def})
         profile.update({'status': self.status})

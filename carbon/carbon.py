@@ -342,9 +342,10 @@ class Carbon(LoggerMixin, TimeMixin):
                                     )
                     try:
                         # create the master inventory
-                        self.logger.info('Populating master inventory file with host(s) %s'
-                                         % [getattr(h, 'name') for h in self.scenario.get_all_assets()
-                                            if hasattr(h, 'role') or hasattr(h, 'groups')])
+                        for host in self.scenario.get_all_assets():
+                            if (hasattr(host, 'role') or hasattr(host, 'groups')) and hasattr(host, 'ip_address'):
+                                self.logger.info('Populating master inventory file with host(s) %s'
+                                                 % getattr(host, 'name'))
                         inv.create_master()
                     except Exception as ex:
                         raise CarbonError("Error while creating the master inventory %s" % ex)

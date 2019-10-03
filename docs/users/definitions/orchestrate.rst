@@ -178,6 +178,7 @@ on your selected orchestrator.Lets dive into them..
         - (Not required; however, one of the following must be defined:
           ansible_shell/script/playbook)
         - False
+
 The table above describes additional key:values you can set within your
 orchestrate task. Each of those keys can accept additional key:values.
 
@@ -640,6 +641,7 @@ list of dictionary and its paramter in the name field
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
     :lines: 232-239
+
 ----
 
 .. _Example_14:
@@ -657,10 +659,12 @@ Example to use ansible_script with extra arags as a part of ansible_options
 Example 15
 ~~~~~~~~~~
 
-Example to use ansible_script and using ansible_options: extra_args to provide the script parameters
+Example to use ansible_script and using ansible_options: extra_args to
+provide the script parameters
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 253-261
+    :lines: 254-260
+
 Resources
 ~~~~~~~~~
 

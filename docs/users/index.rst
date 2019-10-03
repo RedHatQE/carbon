@@ -22,6 +22,7 @@ Detailed Information
    examples
    best_practices
    localhost
+   variable_data
    faqs
 
 

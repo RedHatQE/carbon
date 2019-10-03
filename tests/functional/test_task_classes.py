@@ -32,7 +32,7 @@ from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError, Carb
 from carbon.tasks import CleanupTask, ExecuteTask, OrchestrateTask, \
     ProvisionTask, ReportTask, ValidateTask
 
-from carbon.core import CarbonProvisioner, ProvisionerPlugin, Inventory
+from carbon.core import  ProvisionerPlugin, Inventory
 from carbon.provisioners import AssetProvisioner
 from carbon.resources import Asset, Action
 
@@ -166,7 +166,7 @@ class TestProvisionTask(object):
 
     @staticmethod
     def test_run_with_provisioner(provision_task):
-        mock_provisioner = mock.MagicMock(spec=CarbonProvisioner,
+        mock_provisioner = mock.MagicMock(spec=AssetProvisioner,
                                           create=mock.MagicMock(return_value='Test Create Success'))
         provision_task.provision = True
         provision_task.provisioner = mock_provisioner
@@ -175,19 +175,11 @@ class TestProvisionTask(object):
         assert host_res is 'Test Create Success'
 
     @staticmethod
-    def test_create_with_provisioner_plugin():
-        asset = mock.MagicMock(spec=Asset, is_static=False, provisioner_plugin=ProvisionerPlugin,
-                               provisioner=AssetProvisioner, provider_params='test-provider-param')
-        with mock.patch('carbon.core.Inventory.__init__') as mock_inv:
-            mock_inv.return_value = None
-            pt = ProvisionTask('provision task', asset=asset)
-            assert pt.provision
-
-    @staticmethod
     @mock.patch.object(ProvisionTask, 'get_formatted_traceback')
     def test_run_provision_failure(mock_method, provision_task):
         mock_method.return_value = 'Traceback'
-        mock_provisioner = mock.MagicMock(spec=CarbonProvisioner, create=mock.MagicMock(side_effect=CarbonOrchestratorError('e')))
+        mock_provisioner = mock.MagicMock(spec=AssetProvisioner,
+                                          create=mock.MagicMock(side_effect=CarbonOrchestratorError('e')))
         provision_task.provision = True
         provision_task.provisioner = mock_provisioner
         with pytest.raises(CarbonOrchestratorError):
@@ -226,11 +218,22 @@ class TestCleanupTask(object):
 
     @staticmethod
     @mock.patch.object(ProvisionerPlugin, 'delete')
-    def test_run_with_asset_provisioner_plugin(mock_method, cleanup_task):
-        asset = mock.MagicMock(spec=Asset, provisioner_plugin=ProvisionerPlugin,
-                              provider_params='test-provider-param')
+    def test_run_cleanup_with_asset(mock_method, cleanup_task):
+        asset = mock.MagicMock(spec=Asset, provisioner=ProvisionerPlugin,
+                               is_static=False,
+                               provider_params='test-provider-param')
         cleanup_task.asset = asset
         mock_method.return_value = mock.MagicMock('Test Delete Success')
         cleanup_task.run()
         mock_method.assert_called()
+
+    @staticmethod
+    @mock.patch.object(ProvisionerPlugin, 'delete')
+    def test_run_cleanup_with_static_asset(mock_method, cleanup_task):
+        asset = mock.MagicMock(spec=Asset, provisioner=ProvisionerPlugin,
+                               is_static=True,
+                               provider_params='test-provider-param')
+        cleanup_task.asset = asset
+        cleanup_task.run()
+        mock_method.assert_not_called()
 

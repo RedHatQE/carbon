@@ -35,11 +35,12 @@ import glob
 import mock
 import pytest
 
-from carbon.core import CarbonOrchestrator, CarbonProvider, CarbonProvisioner, \
+from carbon.core import CarbonOrchestrator, CarbonProvider, \
     CarbonResource, CarbonTask, LoggerMixin, TimeMixin, CarbonExecutor, \
     CarbonPlugin, ProvisionerPlugin, ExecutorPlugin, ImporterPlugin, OrchestratorPlugin, FileLockMixin, \
     Inventory
 from carbon.resources import Asset
+from carbon.provisioners import AssetProvisioner
 from carbon.exceptions import CarbonError, LoggerMixinError
 
 
@@ -70,7 +71,7 @@ def carbon_resource():
 
 @pytest.fixture
 def carbon_provisioner(host):
-    return CarbonProvisioner(host)
+    return AssetProvisioner(host)
 
 
 @pytest.fixture(scope='class')
@@ -106,17 +107,25 @@ def report_profile():
 
 @pytest.fixture
 def provisioner_plugin(host):
-    profile = host.profile()
-    profile.update(provider_credentials={}, config_params={})
-    return ProvisionerPlugin(profile)
+    return ProvisionerPlugin(host)
+
+@pytest.fixture
+def provisioner_plugin_no_provider(default_host_params):
+    params = copy.deepcopy(default_host_params)
+    params.pop('provider')
+    host = Asset(name='test', parameters=params)
+    return ProvisionerPlugin(host)
+
 
 @pytest.fixture(scope='class')
 def executor_plugin():
     return ExecutorPlugin()
 
+
 @pytest.fixture(scope='class')
 def importer_plugin(report_profile):
     return ImporterPlugin(report_profile)
+
 
 @pytest.fixture(scope='class')
 def orchestrator_plugin():
@@ -404,28 +413,6 @@ class TestCarbonResource(object):
         assert carbon_resource.get_tasks() == []
 
 
-class TestCarbonProvisioner(object):
-    @staticmethod
-    def test_create(carbon_provisioner):
-        with pytest.raises(NotImplementedError):
-            carbon_provisioner.create()
-
-    @staticmethod
-    def test_delete(carbon_provisioner):
-        with pytest.raises(NotImplementedError):
-            carbon_provisioner.delete()
-
-    @staticmethod
-    def test_name_property(carbon_provisioner):
-        assert carbon_provisioner.name is None
-
-    @staticmethod
-    def test_name_setter(carbon_provisioner):
-        with pytest.raises(AttributeError) as ex:
-            carbon_provisioner.name = 'null'
-        assert 'You cannot set name for the provisioner.' in ex.value.args
-
-
 class TestCarbonProvider(object):
     @staticmethod
     def test_constructor(carbon_provider):
@@ -629,58 +616,63 @@ class TestCarbonCorePlugins(object):
         assert isinstance(carbon_plugin, CarbonPlugin)
 
     @staticmethod
-    def test_contructor_provisioner_gw(provisioner_plugin):
+    def test_contructor_provisioner_plugin(provisioner_plugin):
         assert isinstance(provisioner_plugin, ProvisionerPlugin)
 
     @staticmethod
-    def test_constructor_executor_gw(executor_plugin):
+    def test_constructor_executor_plugin(executor_plugin):
         assert isinstance(executor_plugin, ExecutorPlugin)
 
     @staticmethod
-    def test_constructor_reporter_gw(importer_plugin):
+    def test_constructor_reporter_plugin(importer_plugin):
         assert isinstance(importer_plugin, ImporterPlugin)
 
     @staticmethod
-    def test_constructor_orchestrator_gw(orchestrator_plugin):
+    def test_constructor_orchestrator_plugin(orchestrator_plugin):
         assert isinstance(orchestrator_plugin, OrchestratorPlugin)
 
     @staticmethod
-    def test_provisioner_gw_create(provisioner_plugin):
+    def test_provisioner_plugin_create(provisioner_plugin):
         with pytest.raises(NotImplementedError):
             provisioner_plugin.create()
 
     @staticmethod
-    def test_provisioner_gw_delete(provisioner_plugin):
+    def test_provisioner_plugin_delete(provisioner_plugin):
         with pytest.raises(NotImplementedError):
             provisioner_plugin.delete()
 
     @staticmethod
-    def test_provisioner_gw_authenticate(provisioner_plugin):
+    def test_provisioner_plugin_authenticate(provisioner_plugin):
         with pytest.raises(NotImplementedError):
             provisioner_plugin.authenticate()
 
     @staticmethod
-    def test_importer_gw_aggregate(importer_plugin):
+    def test_provisioner_plugin_validate(provisioner_plugin):
+        with pytest.raises(NotImplementedError):
+            provisioner_plugin.validate()
+
+    @staticmethod
+    def test_importer_plugin_aggregate(importer_plugin):
         with pytest.raises(NotImplementedError):
             importer_plugin.aggregate_artifacts()
 
     @staticmethod
-    def test_importer_gw_push(importer_plugin):
+    def test_importer_plugin_push(importer_plugin):
         with pytest.raises(NotImplementedError):
             importer_plugin.import_artifacts()
 
     @staticmethod
-    def test_importer_gw_cleanup(importer_plugin):
+    def test_importer_plugin_cleanup(importer_plugin):
         with pytest.raises(NotImplementedError):
             importer_plugin.cleanup_artifacts()
 
     @staticmethod
-    def test_executor_gw_run(executor_plugin):
+    def test_executor_plugin_run(executor_plugin):
         with pytest.raises(NotImplementedError):
             executor_plugin.run()
 
     @staticmethod
-    def test_orchestrator_gw_run(orchestrator_plugin):
+    def test_orchestrator_plugin_run(orchestrator_plugin):
         with pytest.raises(NotImplementedError):
             orchestrator_plugin.run()
 
@@ -745,7 +737,12 @@ class TestInventory(object):
 
     @staticmethod
     def test_static_dir_create_master_inv(inv_host):
-        inv = Inventory(hosts=[inv_host], all_hosts=[inv_host],
+        inv_host_2 = Asset(name='dummy', parameters=dict(ip_address=['1.3.5.7', '2.4.5.6'],
+                                                         role='dummy-role'))
+        inv_host_3 = Asset(name='nummy', parameters=dict(ip_address='2.4.5.6',
+                                                         role='nummy-role'))
+        inv = Inventory(hosts=[inv_host, inv_host_2, inv_host_3],
+                        all_hosts=[inv_host, inv_host_2, inv_host_3],
                         data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
                         static_inv_dir='/tmp/inv')
         inv.create_master()
@@ -760,9 +757,9 @@ class TestInventory(object):
         assert not os.path.exists('/tmp/inv/inventory/master-xyz')
 
     @staticmethod
-    def test_implicit_localhost_unique_inv(inv_host):
+    def test_implicit_localhost_unique_inv(inv_host, cleanup_unique_inv):
         data =''
-        inv = Inventory(hosts=[], all_hosts=[inv_host],
+        inv = Inventory(hosts=['localhost'], all_hosts=[],
                         data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
                         static_inv_dir='/tmp/inv')
         inv.create_unique()
@@ -771,6 +768,40 @@ class TestInventory(object):
                 data = f.read()
         assert data.find('localhost') != -1
         cleanup_unique_inv
+
+    @staticmethod
+    def test_group_hosts_equals_string_pass_thru(inv_host, cleanup_unique_inv):
+        inv = Inventory(hosts=['carbon_controller'], all_hosts=[],
+                       data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
+                       static_inv_dir='/tmp/inv')
+        assert inv.group == 'carbon_controller'
+
+    @staticmethod
+    def test_group_multi_hosts_equals_string_pass_thru(inv_host, cleanup_unique_inv):
+        inv = Inventory(hosts=['carbon_controller', 'dummy-host'], all_hosts=[],
+                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
+                        static_inv_dir='/tmp/inv')
+        assert inv.group == 'carbon_controller, dummy-host'
+
+    @staticmethod
+    def test_create_master_inv_with_dump_layout(inv_host):
+        inv = Inventory(hosts=[], all_hosts=[],
+                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
+                        static_inv_dir='/tmp/inv',
+                        inv_dump="""
+                        [example]
+                        10.0.154.237 hostname=10.0.154.237 ansible_ssh_private_key_file=/tmp/demo
+
+                        [all]
+                        10.0.154.237 hostname=10.0.154.237 ansible_ssh_private_key_file=/tmp/demo
+                        """)
+        inv.create_master()
+        for i in glob.glob('/tmp/inv/inventory/master-*'):
+            with open(i) as f:
+                data = f.read()
+        assert data.find('example') != -1
+        inv.delete_master()
+
 
 
 

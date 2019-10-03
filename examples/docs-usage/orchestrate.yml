@@ -74,6 +74,7 @@ orchestrate:
     ansible_galaxy_options:
       roles:
         - oasis-roles.rhsm
+        - git+https://gitlab.cee.redhat.com/oasis-roles/coreos_infra.git,master,oasis_roles.coreos_infra
 
 ---
 orchestrate:

@@ -68,11 +68,21 @@ required or optional:
         - Dict
         - False
 
-    *   - provider
-        - Dictionary of the specific provider key/values.
-        - Dict
-        - True
 
+
+Provisioner
++++++++++++
+
+As of 1.6.0, this key is will be a requirement to specify. We will still be backwards compatible
+for users who do not use this key in conjuction with the **provider** key. But at some point in
+the future will be making this a hard requirement. So it is recommended to update all scenarios
+to start explicitly using this key.
+
+Provider
+++++++++
+
+As of 1.6.0, the provider key is no longer a requirement for all provisioners. Going forward this
+key is only required for the **bkr-client** and **openstack-libcloud** provisioners.
 
 Role/Groups
 +++++++++++
@@ -395,49 +405,138 @@ Example
 
 .. _linchpin_provisioning:
 
-Provisioning Systems with Linchpin
+Provisioning Assets with Linchpin
 ----------------------------------
 
-The Beaker, OpenStack, Libvirt, and AWS resources can also be deployed using the
-Linchpin provisioner. To use the linchpin provisioner you must supply
-the **provisioner** key in your provision section.
+Starting in Carbon 1.6.0 you can fully provision all Linchpin supported providers
+using the Linchpin plugin. The code has also been pulled out of Carbon and maintained
+as a separate plugin.
+
+First the plugin must be installed. Refer to the carbon `installation <install.html>`__ document on
+how you can install the plugin as an extra package.
+
+You can also refer to the
+`plugin <https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_linchpin_plugin/blob/develop/docs/user.md#installation>`__
+documentation directly
+
+In your scenario file specify the **provisioner** key in your provision section.
 
 .. code-block:: yaml
 
     provisioner: linchpin-wrapper
 
 
+Specify any of the
+`keys <https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_linchpin_plugin/blob/develop/docs/user.md#provisioning-assets-with-linchpin>`__
+supported by the linchpin provisioner.
+
+
 .. note::
 
-    When provisioning resources of different types, from the same Provider,
-    that have some inter-dependency with each other it is recommended to use the
+   Users who were using the linchpin provisoiner and using the **provider**
+   key, we will only be supported for OpenStack and Beaker Providers. It is highly
+   recommended that users migrate to using the new set of linchpin provisioner keys.
+   Refer to second example below.
+
+.. note::
+
+    Due to Linchpin's lack of transactional concurrency support in their database
+    it is recommended to provision resources sequentially. Refer to the
     `task_concurrency <../configuration.html#carbon-configuration>`__
     setting in the carbon.cfg to switch the provision task execution
     to be sequential.
 
-.. note::
+Credentials
++++++++++++
+Since Linchpin support multiple providers, each provider supports different types of parameters.
+Linchpin also comes with it's own ability to pass in credentials. To be flexible, we support the
+following options
 
-    You may notice that name in the provider parameters is different than
-    name used in Linchpin pinfiles. For carbon, name is the name of the provider,
-    i.e. libvirt, so carbon knows which provider to use and how to build the
-    resource definitions. When building the resource defintion for Linchpin, Carbon
-    will take the name of the defined carbon resource in the provision
-    section and use that as the name parameter for the resource defintion.
+ - You can define the credentials in the *carbon.cfg* and reference
+   them using the Carbon *credential* key. In most cases, Carbon will export the provider
+   specific credential environmental variables supported by Linchpin/Ansible.
+
+ - You can use the Linchpin *credentials* option and create the credentials file per
+   Linchpin provider specification.
+
+ - You can specify no *credential* or *credentials* key and export the specific provider
+   credential environmental variables supported by Linchpin/Ansible yourself.
+
+For more information refer to the plugins
+`credential <https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_linchpin_plugin/blob/develop/docs/user.md#provisioning-assets-with-linchpin>`__
+document section.
+
+Examples
+++++++++
+
+Below we will just touch on a couple examples. You can see the rest of the
+`examples <https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_linchpin_plugin/blob/develop/docs/user.md#credentials>`__
+in the plugin documentation.
+
+Example 1
+~~~~~~~~~
+
+This example uses a PinFile that has already been developed with specific targets in the pinfile.
+
+.. code-block:: yaml
+
+    ---
+    provision:
+    - name: db2_dummy
+      provisioner: linchpin-wrapper
+      pinfile:
+        path: openstack-simple/PinFile
+        targets:
+          - openstack-stage
+          - openstack-dev
+
+
+Example 2
+~~~~~~~~~
+
+This example uses the more traditional way of provisioning with Carbon. It's recommended that users
+still using the **provider** key with the Linchpin provisioner should switch over to this style.
+
+.. code-block:: yaml
+
+    ---
+    provision:
+    - name: db2_dummy
+      provisioner: linchpin-wrapper
+      credential: osp-creds
+      groups:
+        - example
+      resource_group_type: openstack
+      resource_definitions:
+        - name: {{ instance | default('database') }}
+          role: os_server
+          flavor: {{ flavor | default('m1.small') }}
+          image:  rhel-7.5-server-x86_64-released
+          count: 1
+          keypair: {{ keypair | default('db2-test') }}
+          networks:
+            - {{ networks | default('provider_net_ipv6_only') }}
+      ansible_params:
+        ansible_user: cloud-user
+        ansible_ssh_private_key_file: keys/{{ OS_KEYPAIR }}
+
 
 Using Linchpin Count
 ++++++++++++++++++++
 
-Carbon supports Linchpin's count feature to create multiple resources using
-Beaker, Openstack, Libvirt and AWS providers. For this *count* key has to be added 
-to the provider section in the scenario descriptor file.
+Carbon supports Linchpin's count feature to create multiple resources in a single
+Asset block. Refer to the example.
 
 Example
 ~~~~~~~
-To create 2 resources in openstack **count: 2** is added to the provider 
-section. 
-Resources created using count will be suffixed with a digit starting at 0
-upto the number of resources. This example will provision 2 resources
-*openstack-node_0* and *openstack-node_1*
+To create 2 resources in openstack **count: 2** is added.
+It's important to note that when multiple
+resources are generated Carbon will save them as two distinct assets.
+Assets created using count will be suffixed with a digit starting at 0 up
+to the number of resources.
+
+This example will provision 2 resources *openstack-node_0* and *openstack-node_1*
+
 By default count value is 1.
 
 .. code-block:: yaml
@@ -446,317 +545,68 @@ By default count value is 1.
     - name: openstack-node
       role: node
       provisioner: linchpin-wrapper
-      provider: 
-        name: openstack
-        credential: openstack-creds
-        image: rhel-7.5-server-x86_64-released
-        flavor: m1.small
-        networks:
-         - '{{ network }}'
-        count: 2
+      resource_group_type: openstack
+      resource_definitions:
+         - name: openstack
+           credential: openstack-creds
+           image: rhel-7.5-server-x86_64-released
+           flavor: m1.small
+           networks:
+            - '{{ network }}'
+           count: 2
 
-To enable the use of count feature while using linchpin set the feature toggle to
-true in the carbon.cfg file
+the output of results.yml
 
 .. code-block:: yaml
 
-   [feature_toggles:host]
-   plugin_implementation=True
-
-
-Beaker Resource
-+++++++++++++++
-
-The Beaker Provider has been augmented to include all the Linchpin roles and
-parameters. For a full list of Linchpin Beaker parameters
-please refer to
-the `Linchpin Beaker Provider <https://linchpin.readthedocs.io/en/latest/beaker.html>`_.
-
-Credentials
-~~~~~~~~~~~
-
-Nothing has changed with the authentication mechanism used by Carbon when using
-Linchpin. Please refer to the previous Beaker section for the specific credential.
-
-Common Beaker Parameters
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-There is commonality between some of the bkr-client provisioner parameters and the
-Linchpin parameters. If a bkr-client parameter is used with Linchpin, it will be translated
-to the appropriate key name and value type supported by Linchpin. The table below highlights
-some of the common parameters shared by both provisioners.
-
-.. list-table::
-    :widths: auto
-    :header-rows: 1
-
-    *   - Carbon Key
-        - Carbon Type
-        - Linchpin Key
-        - Linchpin Type
-
-    *   - name
-        - String
-        - name
-        - String
-
-    *   - arch
-        - String
-        - arch
-        - String
-
-    *   - variant
-        - String
-        - variant
-        - String
-
-    *   - family
-        - String
-        - family
-        - String
-
-    *   - distro
-        - String
-        - distro
-        - String
-
-    *   - whiteboard
-        - String
-        - whiteboard
-        - String
-
-    *   - jobgroup
-        - String
-        - job_group
-        - String
-
-    *   - tag
-        - String
-        - tags
-        - List
-
-    *   - host_requires_options
-        - List
-        - hostrequires
-        - List
-
-    *   - key_values
-        - List
-        - keyvalues
-        - List
-
-    *   - kernel_options
-        - List
-        - kernel_options
-        - String
-
-    *   - kernel_post_options
-        - List
-        - kernel_options_post
-        - String
-
-    *   - kickstart
-        - String
-        - kickstart
-        - String
-
-    *   - taskparam
-        - List
-        - taskparam
-        - List
-
-    *   - ksmeta
-        - List
-        - ks_meta
-        - List
-
-
-
-SSH Keys
-~~~~~~~~
-
-It is important to note the **ssh_key** parameter with the bkr-client
-provisioner was a string containing the private key path. From this key file
-a public key was generated and injected it into the Beaker host.
-
-Linchpin Beaker offers a couple different methods for public key injection. It's been
-decided to keep the single **ssh_key** parameter and transparently map them
-to the appropriate Linchpin parameters. The key file still needs to be in the
-Scenario workspace.
-
-.. list-table::
-    :widths: auto
-    :header-rows: 1
-
-    *   - Key
-        - Key Type Provided
-        - Linchpin Key Mapped To
-
-    *   - ssh_key
-        - List of public ssh keys
-        - ssh_key
-
-    *   - ssh_key
-        - List of private ssh key files
-        - ssh_keys_path and ssh_key_file
-
-    *   - ssh_key
-        - List of public ssh key files
-        - ssh_keys_path and ssh_key_file
-
-Example
-~~~~~~~
-
-.. literalinclude:: ../../.examples/provision/linchpin/beaker_scenario_linchpin.yml
-
-
-OpenStack Resource
-++++++++++++++++++
-
-The OpenStack Provider has been augmented to include all the Linchpin
-OpenStack os_server resource type and topology parameters except
-**cacert**, and **cert**. For a full list of Linchpin OpenStack
-os_server parameters please refer to the
-`Linchpin OpenStack Provider <https://linchpin.readthedocs.io/en/latest/openstack.html>`_.
-
-Credentials
-~~~~~~~~~~~
-
-Nothing has changed with the authentication mechanism used by Carbon when using
-Linchpin. Please refer to the previous OpenStack section for the specific credential.
-
-Common OpenStack Parameters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-There is commonality between some of the openstack-libcloud provisioner parameters and the
-Linchpin parameters. If a openstack-libcloud parameter is used with Linchpin, it will be translated
-to the appropriate key name and value type supported by Linchpin. The table below
-highlights some of the common parameters shared by both provisioners
-
-.. list-table::
-    :widths: auto
-    :header-rows: 1
-
-    *   - Carbon Key
-        - Carbon Type
-        - Linchpin Key
-        - Linchpin Type
-
-    *   - name
-        - String
-        - name
-        - String
-
-    *   - image
-        - String
-        - image
-        - String
-
-    *   - flavor
-        - String
-        - flavor
-        - String
-
-    *   - networks
-        - List
-        - networks
-        - List
-
-    *   - floating_ip_pool
-        - String
-        - fip_pool
-        - String
-
-    *   - keypair
-        - String
-        - keypair
-        - String
-
-
-Example
-~~~~~~~
-
-.. literalinclude:: ../../.examples/provision/linchpin/openstack_scenario_linchpin.yml
-
-
-Libvirt Resource
-++++++++++++++++
-
-A Libvirt Provider has been added that supports all the resource types and
-their respective parameters, except **count**.
-
-Libvirt Parameters
-~~~~~~~~~~~~~~~~~~
-The most important provider parameter is **role**. This defines the resource type being
-provisioned to Linchpin. Carbon will know which provider parameters that need to be
-validated and how to put together the pinfile for Linchpin based on this parameter.
-For a full list of Linchpin Libvirt parameters please refer to the
-`Linchpin Libvirt Provider <https://linchpin.readthedocs.io/en/latest/libvirt.html>`_.
-
-The Libvirt provider also has some configuration evars that affect how Linchpin
-provisions Libvirt resources.
-
-    * The `image management keys <https://linchpin.readthedocs.io/en/latest/libvirt.html#copying-images>`_
-      can be directly specified in the providers dictionary in the scenario descriptor file.
-
-    * The **default_ssh_key_path** defaults to *~/.ssh* and is used by Linchpin
-      to find the ssh keys to be used or created when provisioning resources.
-      Carbon overrides this key to point to the Scenario workspace *keys* directory.
-
-
-Libvirt Credentials
-~~~~~~~~~~~~~~~~~~~
-
-To authenticate with Libvirt, you will need to have a Libvirt credentials
-in your carbon.cfg file, see `Libvirt Credentials
-<credentials.html#libvirt-credentials>`_ for more details.
-
-
-Example
-~~~~~~~
-
-.. literalinclude:: ../../.examples/provision/linchpin/libvirt_scenario_linchpin.yml
-
-
-AWS Resource
-++++++++++++
-
-An AWS Provider has been added that supports all the resource types and
-their respective parameters, except **count**.
-
-AWS Parameters
-~~~~~~~~~~~~~~
-The most important provider parameter is **role**. This defines the resource type being
-provisioned to Linchpin. Carbon will know which provider parameters that need to be
-validated and how to put together the pinfile for Linchpin based on this parameter.
-For a full list of Linchpin AWS parameters please refer to the
-`Linchpin AWS Provider <https://linchpin.readthedocs.io/en/latest/aws.html>`_.
-
-The AWS provider also has some configuration evars and parameters that affect how Linchpin
-provisions AWS resources.
-
-    * The **default_ssh_key_path** evar defaults to *~/.ssh* and is used by Linchpin
-      to find the ssh keys to be used or created when provisioning resources.
-      Carbon overrides this key to point to the Scenario workspace *keys* directory.
-
-    * Certain parameters will require a path to some type of file like **policy_file**
-      or **template_path**. These will need to be stored in the Scenario workspace
-      and specified as a relative file path.
-
-
-
-AWS Credentials
-~~~~~~~~~~~~~~~
-
-To authenticate with AWS, you will need to have an AWS credentials
-in your carbon.cfg file, see `AWS Credentials
-<credentials.html#aws-credentials>`_ for more details.
-
-
-Example
-~~~~~~~
-
-.. literalinclude:: ../../.examples/provision/linchpin/aws_scenario_linchpin.yml
+    provision:
+    - name: openstack-node_0
+      role: node
+      provisioner: linchpin-wrapper
+      resource_group_type: openstack
+      resource_definitions:
+         - name: openstack
+           credential: openstack-creds
+           image: rhel-7.5-server-x86_64-released
+           flavor: m1.small
+           networks:
+            - '{{ network }}'
+           count: 2
+
+    - name: openstack-node_1
+      role: node
+      provisioner: linchpin-wrapper
+      resource_group_type: openstack
+      resource_definitions:
+         - name: openstack
+           credential: openstack-creds
+           image: rhel-7.5-server-x86_64-released
+           flavor: m1.small
+           networks:
+            - '{{ network }}'
+           count: 2
+
+Generating Ansible Inventory
+++++++++++++++++++++++++++++
+
+Both Carbon and Linchpin have the capability to generate inventory files post
+provisioning. For those that want Carbon to continue to generate the Inventory
+file and use the Linchpin provisioner as just a pure provisioner can do so
+by specifying the following keys
+
+ - roles/group
+ - ansible_params
+
+Refer to Example 2 above in the examples section.
+
+For those that want to use Linchpin to generate the inventory file. You must do the following
+
+ - Specify the **layout** key and either provide a dictionary of a Linchpin layout or provide
+   a path to a layout file in your workspace.
+
+ - Do NOT specify **roles/group** and **ansible_params** keys
+
+Refer to examples 6 and 8 in the Linchpin plugin documents to see the two variations.
 
 Defining Static Machines
 ------------------------

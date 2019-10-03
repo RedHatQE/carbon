@@ -32,13 +32,13 @@ import uuid
 import mock
 import pytest
 
-from carbon._compat import ConfigParser
+from carbon._compat import ConfigParser, string_types
 from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
-    ScenarioError, CarbonError, CarbonReportError
+    ScenarioError, CarbonError, CarbonReportError, CarbonResourceError
 from carbon.executors import RunnerExecutor
 from carbon.orchestrators import AnsibleOrchestrator
 from carbon.providers import OpenstackProvider
-from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin, LinchpinWrapperProvisionerPlugin
+from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin
 from carbon.resources import Action, Execute, Asset, Report, Scenario
 from carbon.utils.config import Config
 from carbon.core import ImporterPlugin, CarbonProvider
@@ -68,7 +68,6 @@ def default_report_params():
                                 )
                   )
     return params
-
 
 @pytest.fixture
 def host1(default_host_params, config):
@@ -573,23 +572,23 @@ class TestAssetResource(object):
         asset = Asset(name='host01', config=config, parameters=params)
         assert hasattr(asset, 'role') is False
 
-    def test_create_host_undefined_provider(self, default_host_params):
+    def test_create_host_undefined_provider(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params.pop('provider')
-        with pytest.raises(SystemExit):
-            Asset(name='host01', parameters=params)
+        with pytest.raises(CarbonResourceError):
+            host = Asset(name='host01', parameters=params, config=config)
 
-    def test_create_host_invalid_provider(self, default_host_params):
+    def test_create_host_invalid_provider(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params['provider']['name'] = 'null'
-        with pytest.raises(SystemExit):
-            Asset(name='host01', parameters=params)
+        with pytest.raises(CarbonResourceError):
+            Asset(name='host01', parameters=params, config=config)
 
     def test_create_host_invalid_provisioner(
             self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'null'
-        with pytest.raises(SystemExit):
+        with pytest.raises(CarbonResourceError):
             Asset(name='host01', parameters=params, config=config)
 
     def test_create_host_with_provisioner_set(
@@ -597,22 +596,23 @@ class TestAssetResource(object):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'openstack-libcloud'
         host = Asset(name='host01', parameters=params, config=config)
-        assert host.provisioner_plugin is OpenstackLibCloudProvisionerPlugin
+        assert host.provisioner is OpenstackLibCloudProvisionerPlugin
 
-    def test_create_host_undefined_credential(self, default_host_params):
+    def test_create_host_undefined_credential(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)
         params['provider'].pop('credential')
-        with pytest.raises(SystemExit):
-            Asset(name='host01', parameters=params)
+        host = Asset(name='host01', parameters=params, config=config)
+        assert not hasattr(host, 'credential')
 
     def test_create_host_provider_static(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
         params.pop('provider')
         params['ip_address'] = '127.0.0.1'
-        Asset(name='host01', parameters=params)
+        asset = Asset(name='host01', parameters=params)
+        assert asset.is_static
 
     def test_ip_address_property(self, host):
-        assert host.ip_address is None
+        assert not hasattr(host, 'ip_address')
 
     def test_ip_address_setter(self, host):
         host.ip_address = '127.0.0.1'
@@ -641,7 +641,7 @@ class TestAssetResource(object):
                ' one time within the YAML input.' in ex.value.args
 
     def test_provider_property(self, host):
-        assert isinstance(host.provider, OpenstackProvider)
+        assert isinstance(host.provider, string_types)
 
     def test_provider_setter(self, host):
         with pytest.raises(AttributeError) as ex:
@@ -682,38 +682,15 @@ class TestAssetResource(object):
     def test_validate_success(self, host):
         host.validate()
 
-    def test_provisioner_plugin_property(self, default_host_params, feature_toggle_config):
+    def test_provisioner_property(self, default_host_params, feature_toggle_config):
         params = self.__get_params_copy__(default_host_params)
         host = Asset(name='host01', parameters=params, config=feature_toggle_config)
-        assert host.provisioner_plugin is OpenstackLibCloudProvisionerPlugin
+        assert host.provisioner is OpenstackLibCloudProvisionerPlugin
 
-    def test_provisioner_plugin_setter(self, default_host_params, feature_toggle_config):
+    def test_provisioner_setter(self, default_host_params, feature_toggle_config):
         params = self.__get_params_copy__(default_host_params)
         host = Asset(name='host01', parameters=params, config=feature_toggle_config)
         with pytest.raises(AttributeError) as ex:
-            host.provisioner_plugin = 'null'
+            host.provisioner = 'null'
         assert 'You cannot set the asset provisioner plugin after asset class ' \
                'is instantiated.' in ex.value.args
-
-    # TODO maybe need to modify this test when ticket 5108 is implemented. For now commenting this test
-    # TODO as the asset provisioner is not called
-    # def test_create_host_that_loads_host_provisioner_interface(
-    #         self, default_host_params, feature_toggle_config):
-    #     params = self.__get_params_copy__(default_host_params)
-    #     host = Asset(name='host01', parameters=params, config=feature_toggle_config)
-    #     assert host.provisioner_plugin is AssetProvisioner
-
-    def test_create_host_with_provisioner_set_loads_provisioner_plugin(
-            self, default_host_params, feature_toggle_config):
-        params = self.__get_params_copy__(default_host_params)
-        params['provisioner'] = 'openstack-libcloud'
-        host = Asset(name='host01', parameters=params, config=feature_toggle_config)
-        assert host.provisioner_plugin is OpenstackLibCloudProvisionerPlugin
-
-
-    def test_create_host_invalid_provisioner_plugin(
-            self, default_host_params, feature_toggle_config):
-        params = self.__get_params_copy__(default_host_params)
-        params['provisioner'] = 'null'
-        with pytest.raises(SystemExit):
-            Asset(name='host01', parameters=params, config=feature_toggle_config)

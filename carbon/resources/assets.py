@@ -27,10 +27,12 @@
 """
 
 import sys
-
+import json
+import copy
 from ..core import CarbonResource
-from ..helpers import get_provider_plugin_class, get_provider_plugin_list, gen_random_str
-from ..helpers import filter_host_name
+from ..exceptions import CarbonResourceError
+from ..provisioners import AssetProvisioner
+from ..helpers import gen_random_str
 from ..helpers import get_provisioners_plugins_list, get_provisioner_plugin_class, get_default_provisioner_plugin, \
     is_provider_mapped_to_provisioner
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
@@ -52,9 +54,15 @@ class Asset(CarbonResource):
     _fields = [
         'name',
         'description',
+        'role',
+        'groups',
+        'provisioner',
+        'credential',
+        'hostname',
+        'asset_id',
         'ip_address',
         'metadata',
-        'ansible_params'
+        'ansible_params',
     ]
 
     def __init__(self,
@@ -127,43 +135,72 @@ class Asset(CarbonResource):
         # set ansible parameters
         self._ansible_params = parameters.pop('ansible_params', {})
 
+        # check if ansible_params and roles groups is empty
+        if not hasattr(self, 'role') or not hasattr(self, 'groups') \
+                and not self._ansible_params:
+            self.no_inventory = True
+
+        # Pop any attributes that aren't needed like data_folder and workspace
+        # since that already gets set.
+        parameters.pop('workspace', None)
+        parameters.pop('data_folder', None)
+
         # determine if the host is a static machine already provisioned
-        # how? if the ip_address param is defined and provider is not defined
+        # how? if the ip_address param is defined and provider & provisioner is not defined
         # then we can be safe to say the machine is static
-        if 'ip_address' in parameters and 'provider' not in parameters:
+        if 'ip_address' in parameters and 'provider' not in parameters and \
+                'provisioner' not in parameters:
             self._ip_address = parameters.pop('ip_address')
             # set flag to control whether the host is static or not
             self.is_static = True
+            self._provisioner = None
+            del self.provisioner
         else:
             # set flag to control whether the host is static or not
             self.is_static = False
+
+            # lets get the right provisioner to use
+            provisioner_name = parameters.pop('provisioner', provisioner)
+
+            # save ip address if one is provided
+            self._ip_address = parameters.pop('ip_address', None)
+
+            # delete the ip_addres prop if none provided
+            if not self.ip_address:
+                del self.ip_address
+
             # host needs to be provisioned, get the provider parameters
             parameters = self.__set_provider_attr_(parameters)
 
             # lets setup any feature toggles that we defined in the configuration file
             self.__set_feature_toggles_()
 
-            # finally lets get the right provisioner to use
-            provisioner_name = parameters.pop('provisioner', provisioner)
+            self._provisioner = get_default_provisioner_plugin()
 
-            # TODO: Should we instantiate here rather just getting the classes
-            if provisioner_name is None:
-                self._provisioner_plugin = get_default_provisioner_plugin(self._provider)
-            else:
+            if provisioner_name is None and self.has_provider:
+                try:
+                    self._provisioner = get_default_provisioner_plugin(self._provider)
+                except KeyError:
+                    raise CarbonResourceError('Specified provider is not supported by a provisioner.')
+            elif provisioner_name:
                 found_name = False
                 for name in get_provisioners_plugins_list():
                     if name.startswith(provisioner_name):
                         found_name = True
                         break
 
-                if found_name and is_provider_mapped_to_provisioner(self._provider, provisioner_name):
-                    self._provisioner_plugin = get_provisioner_plugin_class(provisioner_name)
+                if found_name:
+                    if self.has_provider and \
+                            is_provider_mapped_to_provisioner(self._provider, provisioner_name):
+                        self._provisioner = get_provisioner_plugin_class(provisioner_name)
+                    else:
+                        self._provisioner = get_provisioner_plugin_class(provisioner_name)
                 else:
                     self.logger.error('Provisioner %s for asset %s is invalid.'
                                       % (provisioner_name, self.name))
-                    sys.exit(1)
-
-            self._ip_address = parameters.pop('ip_address', None)
+                    raise CarbonResourceError('The specified provisioner is not valid for the asset type.')
+            else:
+                raise CarbonResourceError('Could not find a provisioner to satisfy the asset type.')
 
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
@@ -180,7 +217,6 @@ class Asset(CarbonResource):
     def __set_feature_toggles_(self):
 
         self._feature_toggles = None
-
         for item in self.config['TOGGLES']:
             if item['name'] == 'host':
                 self._feature_toggles = item
@@ -193,37 +229,31 @@ class Asset(CarbonResource):
         :return: updated parameters
         :rtype: dict
         """
-        try:
-            self.provider_params = parameters.pop('provider')
-        except KeyError:
-            self.logger.error('Provider parameter is required for assets being'
-                              ' provisioned.')
-            sys.exit(1)
 
-        provider_name = self.provider_params['name']
+        self._provider = {}
 
-        # lets verify the provider is valid
-        if provider_name not in get_provider_plugin_list():
-            self.logger.error('Provider %s for host %s is invalid.' %
-                              (provider_name, self.name))
-            sys.exit(1)
+        if parameters.get('provider', False):
+            creds = parameters.get('provider').pop('credential', None)
+            for p, v in parameters.pop('provider').items():
+                if p == 'name':
+                    self._provider = v
+                    continue
+                setattr(self, p, v)
+            self.has_provider = True
+        else:
+            # set no provider object
+            creds = parameters.pop('credential', None)
+            for p, v in parameters.items():
+                setattr(self, p, v)
+            del self.provider
+            self.has_provider = False
 
-        # now that we have the provider, lets create the provider object
-        self._provider = get_provider_plugin_class(provider_name)()
-
-        # finally lets set the provider credentials
-        try:
-            self._credential = self.provider_params['credential']
-            provider_credentials = self.config['CREDENTIALS']
-        except KeyError:
-            self.logger.error('A credential must be set for the provider %s.'
-                              % provider_name)
-            sys.exit(1)
-
-        for item in provider_credentials:
-            if item['name'] == self._credential:
-                getattr(self.provider, 'set_credentials')(item)
-                break
+        # lets set the credentials if any
+        if creds:
+            for item in self.config['CREDENTIALS']:
+                if item['name'] == creds:
+                    self._credential = item
+                    break
 
         return parameters
 
@@ -248,6 +278,11 @@ class Asset(CarbonResource):
     def ip_address(self, value):
         """Set ip address property."""
         self._ip_address = value
+
+    @ip_address.deleter
+    def ip_address(self):
+        """Set ip address property."""
+        del self._ip_address
 
     @property
     def metadata(self):
@@ -302,20 +337,37 @@ class Asset(CarbonResource):
         raise AttributeError('You cannot set the asset provider after asset '
                              'class is instantiated.')
 
+    @provider.deleter
+    def provider(self):
+        """delete Provider property.
+
+        :return: provider class
+        :rtype: string
+        """
+        del self._provider
+
     @property
-    def provisioner_plugin(self):
+    def provisioner(self):
         """Provisioner plugin property.
 
         :return: provisioner plugin class
         :rtype: object
         """
-        return self._provisioner_plugin
+        return self._provisioner
 
-    @provisioner_plugin.setter
-    def provisioner_plugin(self, value):
+    @provisioner.setter
+    def provisioner(self, value):
         """Set provisioner plugin property."""
         raise AttributeError('You cannot set the asset provisioner plugin after asset '
                              'class is instantiated.')
+
+    @provisioner.deleter
+    def provisioner(self):
+        """
+        delete the provisioner property
+        :return:
+        """
+        del self._provisioner
 
     @property
     def role(self):
@@ -363,6 +415,51 @@ class Asset(CarbonResource):
         """
         del self._groups
 
+    @property
+    def credential(self):
+        """Provisioner credential property.
+
+        :return: credential
+        :rtype: dict
+        """
+        return self._credential
+
+    @credential.setter
+    def credential(self, value):
+        """Set credential property."""
+        raise AttributeError('You cannot set the asset credential after asset '
+                             'class is instantiated.')
+
+    @credential.deleter
+    def credential(self):
+        """
+        delete the credential property
+        :return:
+        """
+        del self._credential
+
+    @property
+    def asset_id(self):
+        """Provisioner credential property.
+
+        :return: credential
+        :rtype: dict
+        """
+        return self._asset_id
+
+    @asset_id.setter
+    def asset_id(self, value):
+        """Set credential property."""
+        self._asset_id = value
+
+    @asset_id.deleter
+    def asset_id(self):
+        """
+        delete the credential property
+        :return:
+        """
+        del self._asset_id
+
     def profile(self):
         """Builds a profile for the host resource.
 
@@ -370,33 +467,41 @@ class Asset(CarbonResource):
         :rtype: OrderedDict
         """
         profile = OrderedDict()
-        profile['name'] = self.name
-        profile['description'] = self.description
+        filtered_attr = {k: v for k, v in vars(self).items() if not k.startswith('_') and k not in
+                         ['is_static', 'has_provider', 'no_inventory']}
 
-        # set the hosts's roles
-        if hasattr(self, 'role'):
-            if all(isinstance(item, string_types) for item in self.role):
-                profile.update(role=[role for role in self.role])
-        elif hasattr(self, 'groups'):
-            if all(isinstance(item, string_types) for item in self.groups):
-                profile.update(groups=[group for group in self.groups])
-
-        try:
-            if getattr(self, 'provisioner_plugin')is not None:
+        # update asset fields
+        for f in self._fields:
+            if f == 'role' and hasattr(self, f):
+                if all(isinstance(item, string_types) for item in self.role):
+                    profile.update(role=[role for role in self.role])
+                continue
+            elif f == 'groups' and hasattr(self, f):
+                if all(isinstance(item, string_types) for item in self.groups):
+                    profile.update(groups=[group for group in self.groups])
+                continue
+            elif f == 'provisioner' and hasattr(self, f):
                 profile.update({'provisioner': getattr(
-                        self.provisioner_plugin, '__plugin_name__')})
-                profile.update({'provider': self.provider_params})
-        except AttributeError:
-            self.logger.debug('Asset is static, no need to profile provider '
-                              'facts.')
-        finally:
-            if self.ip_address:
-                profile.update({'ip_address': self.ip_address})
-
-        profile['ansible_params'] = self.ansible_params
-        profile['metadata'] = self.metadata
-        profile['workspace'] = self.workspace
-        profile['data_folder'] = self.data_folder
+                    self.provisioner, '__plugin_name__')})
+                if hasattr(self, 'provider') and len(getattr(self, 'provider', {})) != 0:
+                    profile.update(OrderedDict(provider={}))
+                    profile.get('provider').update(name=self.provider)
+                    profile.get('provider').update(filtered_attr)
+                else:
+                    profile.update(filtered_attr)
+                continue
+            elif f == 'credential' and hasattr(self, f):
+                if len(getattr(self, 'provider', {})) == 0:
+                    profile.update(credential=self.credential.get('name'))
+                else:
+                    profile.get('provider').update(credential=self.credential.get('name'))
+                continue
+            elif f == 'metadata' and hasattr(self, f):
+                if len(getattr(self, f)) != 0:
+                    profile.update({f: getattr(self, f)})
+                continue
+            elif hasattr(self, f) and getattr(self, f) is not None:
+                profile.update({f: getattr(self, f)})
 
         return profile
 
@@ -406,21 +511,8 @@ class Asset(CarbonResource):
             self.logger.debug('Validation is not required for static hosts!')
             return
 
-        self.logger.info('Validating asset %s provider required parameters.' %
-                         self.name)
-        getattr(self.provider, 'validate_req_params')(self)
-
-        self.logger.info('Validating asset %s provider optional parameters.' %
-                         self.name)
-        getattr(self.provider, 'validate_opt_params')(self)
-
-        self.logger.info('Validating asset %s provider required credential '
-                         'parameters.' % self.name)
-        getattr(self.provider, 'validate_req_credential_params')(self)
-
-        self.logger.info('Validating asset %s provider optional credential '
-                         'parameters.' % self.name)
-        getattr(self.provider, 'validate_opt_credential_params')(self)
+        # TODO This will change once we get everything over to use the plugin model
+        getattr(AssetProvisioner(self), 'validate')()
 
     def _construct_validate_task(self):
         """Setup the validate task data structure.

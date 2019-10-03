@@ -1,7 +1,8 @@
 include CHANGES LICENSE AUTHORS README.rst
 include carbon/files/schema.yml
-include carbon/files/PinFile.yml
 include carbon/files/extensions.py
+include carbon/provisioners/ext/bkr_client_plugin/schema.yml
+include carbon/provisioners/ext/os_libcloud_plugin/schema.yml
 exclude setup.cfg
 prune docs/_build
 prune docs/.ropeproject

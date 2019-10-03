@@ -85,6 +85,8 @@ DEFAULT_CONFIG = {
     'INVENTORY_FOLDER': '',
     'RESULTS_FOLDER': os.path.join(DATA_FOLDER, '.results'),
     'TASK_CONCURRENCY': DEFAULT_TASK_CONCURRENCY,
+    'TOGGLES': [],
+    'CREDENTIALS': [],
     'SETUP_LOGGER': []
 }
 

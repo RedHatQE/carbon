@@ -27,8 +27,7 @@
 import os
 
 from .._compat import RawConfigParser
-from ..constants import DEFAULT_CONFIG, DEFAULT_CONFIG_SECTIONS, DEFAULT_TASK_CONCURRENCY, \
-    DEFAULT_FEATURE_TOGGLE_HOST_PLUGIN
+from ..constants import DEFAULT_CONFIG, DEFAULT_CONFIG_SECTIONS, DEFAULT_TASK_CONCURRENCY
 
 
 class Config(dict):
@@ -106,7 +105,6 @@ class Config(dict):
     def __set_feature_toggles__(self):
         """Set the feature toggle configuration settings."""
         toggles = []
-        toggles.append(DEFAULT_FEATURE_TOGGLE_HOST_PLUGIN)
 
         for section in getattr(self.parser, '_sections'):
             if not section.startswith('feature_toggles'):
@@ -117,12 +115,6 @@ class Config(dict):
             for option in self.parser.options(section):
                 _toggles[option] = \
                     self.parser.get(section, option)
-            # TODO: temp code to enable host plugin for count feature. Remove when we don't need the others
-            if section.split(':')[-1] == 'host':
-                for t in toggles:
-                    if t['name'] == 'host':
-                        t.update(_toggles)
-            else:
                 _toggles['name'] = section.split(':')[-1]
                 toggles.append(_toggles)
 

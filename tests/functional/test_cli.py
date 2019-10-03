@@ -28,6 +28,7 @@
 import mock
 import pytest
 import yaml
+import json
 from carbon import Carbon
 from carbon.cli import print_header, carbon
 from click.testing import CliRunner
@@ -117,3 +118,23 @@ class TestCli(object):
         results = runner.invoke(carbon, ['run', '-s', '../assets/wrong_include_descriptor.yml'])
         assert 'Included File is invalid or Include section is empty .You have to provide valid scenario files ' \
                'to be included.' in results.output
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_valid_run_var_file(mock_method, runner):
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['run', '-t', 'validate', '-s', '../assets/descriptor.yml',
+                     '-d', '/tmp', '--vars-data', '../assets/vars_data.yml']
+        )
+        assert results.exit_code == 0
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_valid_run_var_raw_json(mock_method, runner):
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['run', '-t', 'validate', '-s', '../assets/descriptor.yml',
+                     '-d', '/tmp', '--vars-data', json.dumps(dict(asset_name='unit_test'))]
+        )
+        assert results.exit_code == 0

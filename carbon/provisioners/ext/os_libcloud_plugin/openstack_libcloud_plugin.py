@@ -26,6 +26,7 @@
 """
 import random
 import time
+import os
 
 import libcloud.security
 import urllib3
@@ -35,7 +36,7 @@ from libcloud.compute.types import InvalidCredsError, Provider
 from carbon._compat import string_types
 from carbon.core import ProvisionerPlugin
 from carbon.exceptions import OpenstackProviderError
-from carbon.helpers import gen_random_str, filter_host_name
+from carbon.helpers import gen_random_str, filter_host_name, schema_validator
 
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
@@ -48,13 +49,15 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
     the actions to create and delete resources.
     """
     __plugin_name__ = 'openstack-libcloud'
+    __schema_file_path__ = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                        "schema.yml"))
 
-    def __init__(self, profile):
+    def __init__(self, asset):
         """Constructor.
 
-        :param host: The host object.
+        :param asset: The asset object.
         """
-        super(OpenstackLibCloudProvisionerPlugin, self).__init__(profile)
+        super(OpenstackLibCloudProvisionerPlugin, self).__init__(asset)
 
         # object place holders
         self._driver = object
@@ -84,7 +87,6 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
         # suppress insecure request warning messages
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-        provider = self.provider
         credentials = self.provider_credentials
 
         # determine region
@@ -657,24 +659,25 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
             if self.provider_params.get('count', False):
                 self.logger.warn('Count parameter is found for host %s '
                                  'Count is not supported with openstack_libcloud as provisioner and will be ignored.'
-                                 % self.profile.get('name'))
+                                 % getattr(self.asset, 'name'))
         except KeyError:
             pass
 
         # determine hostname for the host
-        if 'hostname' not in self.provider_params:
-            hostname = filter_host_name(self.profile.get('name')) + '_%s' % gen_random_str(5)
+        hostname = self.provider_params.get('hostname', None)
+        if not hostname:
+            hostname = filter_host_name(getattr(self.asset, 'name')) + '_%s' % gen_random_str(5)
 
         _ip, _id = self._create(
-            self.provider_params.get('hostname', hostname),
+            hostname,
             self.provider_params.get('image'),
             self.provider_params.get('flavor'),
             self.provider_params.get('networks'),
             self.provider_params.get('keypair'),
-            self.provider_credentials.get('floating_ip_pool', None)
+            self.provider_params.get('floating_ip_pool', None)
         )
 
-        return [dict(hostname=hostname, node_id=_id, ip=_ip)]
+        return [dict(hostname=hostname, asset_id=_id, ip=_ip)]
 
     def delete(self):
         """Delete a node in openstack.
@@ -685,3 +688,7 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
         self.logger.info('Tearing down machines from %s', self.__class__)
 
         self._delete(self.provider_params.get('hostname'))
+
+    def validate(self):
+
+        schema_validator(schema_data=self.build_profile(self.asset), schema_files=[self.__schema_file_path__])

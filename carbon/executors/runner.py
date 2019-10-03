@@ -30,7 +30,9 @@ import collections
 import copy
 import os.path
 import textwrap
+import json
 from ..core import CarbonExecutor
+from .._compat import string_types
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError, AnsibleServiceError
 from ..helpers import DataInjector, get_ans_verbosity, is_host_localhost
 from ..ansible_helpers import AnsibleService
@@ -237,10 +239,10 @@ class RunnerExecutor(CarbonExecutor):
         extra_vars['localhost'] = False
         if self._hosts:
             for h in self._hosts:
-                if is_host_localhost(h.ip_address):
+                if not isinstance(h, string_types) and is_host_localhost(h.ip_address):
                     extra_vars['localhost'] = True
-        else:
-            extra_vars['localhost'] = True
+                elif isinstance(h, string_types) and h == 'localhost':
+                    extra_vars['localhost'] = True
 
         results = self.ans_service.run_artifact_playbook(extra_vars)
 

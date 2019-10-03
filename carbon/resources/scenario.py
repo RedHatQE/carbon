@@ -39,7 +39,8 @@ from ..constants import SCENARIO_SCHEMA, SCHEMA_EXT, \
     SET_CREDENTIALS_OPTIONS
 from ..core import CarbonResource
 from ..exceptions import ScenarioError
-from ..helpers import gen_random_str
+
+from ..helpers import gen_random_str, schema_validator
 from ..tasks import ValidateTask
 from ..utils.resource_checker import ResourceChecker
 
@@ -435,11 +436,9 @@ class Scenario(CarbonResource):
         msg = 'validated scenario YAML file against the schema!'
 
         try:
-            c = Core(source_data=yaml.safe_load(self.yaml_data),
-                     schema_files=[SCENARIO_SCHEMA],
-                     extensions=[SCHEMA_EXT])
-            c.validate(raise_exception=True)
-
+            schema_validator(schema_data=yaml.safe_load(self.yaml_data),
+                             schema_files=[SCENARIO_SCHEMA],
+                             schema_ext_files=[SCHEMA_EXT])
             self.logger.debug('Successfully %s' % msg)
         except (CoreError, SchemaError) as ex:
             self.logger.error('Unsuccessfully %s' % msg)

@@ -113,10 +113,10 @@ For Polarion Plugin
 Linchpin Requirements
 ~~~~~~~~~~~~~~~~~~~~~
 
-As of 1.4.0, Linchpin will be an extra. To install Linchpin certain requirements need to be
+The Linchpin plugin will be available as an extra. To install Linchpin certain requirements need to be
 met so that it can be installed correctly. Please refer to the
-`minimum requirements <https://linchpin.readthedocs.io/en/latest/installation.html#minimal-software-requirements>`_
-section in the Linchpin Installation guide.
+`pre-install section <https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_linchpin_plugin/blob/develop/docs/user.md#installation>`_
+of the plugin documentation on how to install them.
 
 Once installed, you can install Linchpin from Carbon
 
@@ -124,28 +124,8 @@ Once installed, you can install Linchpin from Carbon
 
     $ pip install carbon[linchpin-wrapper]
 
-Once Linchpin is installed, you will get OpenStack and AWS support through Carbon for both python 2 and 3.
-If you want Beaker or Libvirt, there are some additional package dependencies that are required.
-
- * Please refer to the
-   `additional dependencies <https://linchpin.readthedocs.io/en/latest/beaker.html#additional-dependencies>`_
-   section of the Beaker provider page for the necessary requirements to support Beaker.
-
- * Please refer to the
-   `additional dependencies <https://linchpin.readthedocs.io/en/latest/libvirt.html#additional-dependencies>`_
-   section of the Libvirt provider page for the necessary requirements to support Libvirt.
-
-Luckily, Linchpin has automated this process for users using their **setup** command. This command will
-install the required dependencies for each of the providers
-
-.. code-block:: bash
-
-    $ linchpin setup beaker
-    $ linchpin setup libvirt [--ask-sudo-pass]
-
-Please refer to the Linchpin
-`installation guide <https://linchpin.readthedocs.io/en/latest/installation.html#linchpin-setup-automatic-dependency-
-installation>`_ for more information on the setup command.
-
-Once the dependencies are installed you will get Beaker and Libvirt support through Carbon for python 2 and 3.
+Once Linchpin is installed, you will get support for all providers. Although there are
+some providers that require a few more dependencies to be installed. Refer to the
+`post-install section <https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_linchpin_plugin/blob/develop/docs/user.md#post-install>`__
+of the plugin document for methods on how to install those dependencies.
 

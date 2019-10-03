@@ -55,6 +55,9 @@ from ._compat import string_types
 from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER, DEFAULT_TASK_CONCURRENCY, \
     TASKLIST
 from .exceptions import CarbonError, HelpersError
+from pykwalify.core import Core
+from pykwalify.errors import CoreError, SchemaError
+
 import pkg_resources
 
 LOG = getLogger(__name__)
@@ -106,69 +109,6 @@ def get_core_tasks_classes():
     return tasks_list
 
 
-'''
-# TODO Need to refactor asset provisioner and remove/refactor these classes
-# TODO get_provisioners_classes, get_provisioner_class, get_default_provisioner
-def get_provisioners_classes():
-    """Go through all modules within carbon.provisioners package and return
-    the list of all provisioners classes within it. All provisioners within
-    the carbon.provisioners package are considered valid provisioners classes
-    to be used by Carbon framework.
-    :return: List of all provisioners classes"""
-    from .core import CarbonProvisioner
-    from . import provisioners
-
-    # all task classes must
-    prefix = provisioners.__name__ + "."
-
-    provisioners_list = []
-
-    # Run through each module within tasks and take the list of
-    # classes that are subclass of CarbonTask but not CarbonTask itself.
-    # When you import a class within a module, it becames a member of
-    # that class
-    for importer, modname, ispkg in pkgutil.iter_modules(provisioners.__path__, prefix):
-        if str(modname).endswith('.ext'):
-            continue
-        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
-        for clsname, clsmember in clsmembers:
-            if (clsmember is not CarbonProvisioner) and issubclass(clsmember, CarbonProvisioner):
-                provisioners_list.append(clsmember)
-
-    return provisioners_list
-
-
-def get_provisioner_class(name):
-    """Return the provisioner class based on the __provisioner_name__ set
-    within the class. See ~carbon.core.CarbonProvisioner for more information.
-    :param name: The name of the provisioner
-    :return: The provisioner class
-    """
-    for provisioner in get_provisioners_classes():
-        if provisioner.__provisioner_name__ == name:
-            return provisioner
-
-
-def get_default_provisioner(provider=None):
-    """
-    Given a provider, it will return the default provisioner
-    :param provider: the provider value
-    :return: the default provisioner
-    """
-
-    if provider is None:
-        provisioner_name = PROVISIONERS['asset']
-    else:
-        try:
-            provisioner_names = PROVISIONERS[provider.__provider_name__]
-            if isinstance(provisioner_names, list):
-                provisioner_name = provisioner_names[0]
-        except KeyError:
-            provisioner_name = 'linchpin-wrapper'
-
-    return get_provisioner_class(provisioner_name) '''
-
-
 # Using entry point to get the provisioners defined in carbon's setup.py file
 def get_provisioners_plugin_classes():
     """Return all provisioner plugin classes discovered by carbon
@@ -181,19 +121,26 @@ def get_provisioners_plugin_classes():
 
 
 def get_default_provisioner_plugin(provider=None):
-    """Return provisioner plugin classe based on the given provider class. If provider is None linchpin_wrapper plugin
-    class is returned as the default provisioner class
+    """
+    Return provisioner plugin class based on the given provider class.
+    If provider is None linchpin_wrapper plugin class is returned as the default
+    provisioner class.
     :param provider: The provider class
     :return: The provisioner plugin class
     """
-    if provider is not None:
+
+    if provider is None:
+        return get_provisioner_plugin_class('linchpin')
+
+    if provider is not None and hasattr(provider, '__provider_name__'):
         provisioners = PROVISIONERS[provider.__provider_name__]
-        if isinstance(provisioners, list):
-            return get_provisioner_plugin_class(provisioners[0])
-        else:
-            return get_provisioner_plugin_class(provisioners)
     else:
-        return get_provisioner_plugin_class('linchpin_wrapper')
+        provisioners = PROVISIONERS[provider]
+
+    if isinstance(provisioners, list):
+        return get_provisioner_plugin_class(provisioners[0])
+    else:
+        return get_provisioner_plugin_class('linchpin')
 
 
 def get_provisioners_plugins_list():
@@ -366,9 +313,12 @@ def is_provider_mapped_to_provisioner(provider, provisioner):
     :param provisioner:
     :return:
     """
-
+    if hasattr(provider, '__provider_name__'):
+        provider_name = provider.__provider_name__
+    else:
+        provider_name = provider
     for provider_key, prov_val in PROVISIONERS.items():
-        if getattr(provider, '__provider_name__') == provider_key:
+        if provider_name == provider_key:
             if isinstance(prov_val, list):
                 for p in prov_val:
                     if p == provisioner:
@@ -377,6 +327,43 @@ def is_provider_mapped_to_provisioner(provider, provisioner):
                 if prov_val == provisioner:
                     return True
     return False
+
+
+def schema_validator(schema_data, schema_files, schema_creds=None, schema_ext_files=None):
+    """
+
+    :param schema_data: the schema dictionary data
+    :type dict
+    :param schema_files: the yaml schema file for the plugins
+    :type list of file paths
+    :param schema_creds: optional dictionary creds
+    :type dict
+    :param schema_ext_files: optional list of extension file paths
+    :type: list of file paths
+    :return:
+    """
+
+    schema = {}
+
+    if schema_creds:
+        schema = {k: v for k, v in schema_creds.items() if k != 'name'}
+        schema.update({k: v for k, v in schema_data.items() if k != 'credential'})
+    else:
+        schema.update({k: v for k, v in schema_data.items() if k != 'credential'})
+        creds = {k: v for k, v in schema_data.items() if k == 'credential'}
+        if creds:
+            creds = dict(credential={x: y for k, v in creds.items() for x, y in v.items() if x != 'name'})
+            schema.update(creds)
+
+    c = Core(source_data=schema,
+             schema_files=schema_files,
+             extensions=schema_ext_files)
+
+    try:
+        c.validate(raise_exception=True)
+    except (CoreError, SchemaError) as ex:
+        LOG.error(ex.msg)
+        raise
 
 
 def gen_random_str(char_num=8):
@@ -432,7 +419,17 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
                         # Config parser file
                         return cfg_parser.readfp(f_raw)
                     else:
-                        return f_raw.read()
+                        # lets check if it is json
+                        data = f_raw.read()
+                        try:
+                            return json.load(data)
+                        except Exception:
+                            # it wasn't json, lets try yaml
+                            try:
+                                return yaml.load(data)
+                            except Exception:
+                                # it wasn't yaml, lets just return pure string
+                                return data
         else:
             raise IOError("%s file not found!" % file_path)
     elif operation in ['w', 'write']:
@@ -454,6 +451,9 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
                     cfg_parser.write(f_raw)
                 else:
                     f_raw.write(content)
+    elif operation in ['d', 'delete']:
+        if os.path.exists(file_path):
+            os.unlink(file_path)
     else:
         raise HelpersError("Unknown file operation: %s." % operation)
 
@@ -618,8 +618,8 @@ def fetch_assets(hosts, task, all_hosts=True):
                 if host.name == task_host.name or task_host.name in host.name:
                     _hosts.append(host)
                     break
-
-    task[_type].hosts = _hosts
+    if _hosts:
+        task[_type].hosts = _hosts
     task[_type].all_hosts = _all_hosts
     return task
 
@@ -1114,7 +1114,7 @@ def build_artifact_regex_query(name):
     return regquery
 
 
-def validate_render_scenario(scenario):
+def validate_render_scenario(scenario, temp_data=None):
     """
     This method takes the absolute path of the scenario descriptor file and returns back a list of
     data streams of scenario(s) after doing the following checks:
@@ -1124,14 +1124,26 @@ def validate_render_scenario(scenario):
     (4) Checks there is no yaml.safe_load error for scenario file in the include section
     :param scenario: scenario file path
     :type scenario: str
+    :param temp_data: the file path to jinja template vars data or a json dictionary of vars data
+    :type temp_data: dict or str
     :return: scenario data stream(s)
     :rtype: list of data streams
     """
     scenario_stream_list = list()
+    if not temp_data:
+        temp_data = {}
+        temp_data.update(os.environ)
+
+    elif os.path.isfile(temp_data):
+        temp_data = file_mgmt('r', temp_data)
+    else:
+        temp_data = json.loads(temp_data)
+        temp_data.update(os.environ)
+
     try:
-        data = yaml.safe_load(template_render(scenario, os.environ))
+        data = yaml.safe_load(template_render(scenario, temp_data))
         # adding master scenario as the first scenario data stream
-        scenario_stream_list.append(template_render(scenario, os.environ))
+        scenario_stream_list.append(template_render(scenario, temp_data))
         if 'include' in data.keys():
             include_item = data['include']
             include_template = list()
@@ -1141,8 +1153,8 @@ def validate_render_scenario(scenario):
                         item = os.path.abspath(item)
                         # check to verify the data in included scenario is valid
                         try:
-                            yaml.safe_load(template_render(item, os.environ))
-                            include_template.append(template_render(item, os.environ))
+                            yaml.safe_load(template_render(item, temp_data))
+                            include_template.append(template_render(item, temp_data))
                         except yaml.YAMLError:
                             # raising Carbon error to differentiate the yaml issue is with included scenario
                             raise CarbonError('Error loading updated included scenario data!')
@@ -1250,18 +1262,19 @@ def mask_credentials_password(credentials):
     """
     asteriks = ''
     masked_creds = dict()
-    for k, v in credentials.items():
-        for p in ['password', 'token', 'key']:
-            if p not in k:
+    if credentials:
+        for k, v in credentials.items():
+            for p in ['password', 'token', 'key', 'id']:
+                if p not in k:
+                    continue
+                else:
+                    for i in range(0, len(v)):
+                        asteriks += '*' * random.randint(1, 3)
+            if asteriks != '':
+                masked_creds.update({k: asteriks})
+                asteriks = ''
                 continue
-            else:
-                for i in range(0, len(v)):
-                    asteriks += '*'
-        if asteriks != '':
-            masked_creds.update({k: asteriks})
-            asteriks = ''
-            continue
-        masked_creds.update({k: v})
+            masked_creds.update({k: v})
 
     return masked_creds
 
@@ -1273,424 +1286,3 @@ def sort_tasklist(user_tasks):
     """
 
     return sorted(user_tasks, key=TASKLIST.index)
-
-
-class LinchpinResourceBuilder(object):
-
-    """
-    LinchpinResourceBuilder Class used by the Linchpin
-    provisioner plugin to be able to take the dictionary
-    parameters in a Carbon Provider and build a proper
-    Linchpin resource definition dictionary that can be used
-    to build the resource group
-
-    """
-
-    _bkr_op_list = ['like', '==', '!=', '<=', '>=', '=', '<', '>']
-
-    @classmethod
-    def build_linchpin_resource_definition(cls, provider, host_params):
-        """
-        main public method for Linchpin provisioner to interact with.
-
-        :param provider: the Carbon Provider to validate against
-        :type Object: Provider object
-        :param host_params: the Asset Resource profile dictionary
-        :type dict: dictionary
-        :return: a Linchpin resource definition dictionary
-        """
-        provider_name = getattr(provider, '__provider_name__')
-        if provider_name == 'beaker':
-            return cls._build_beaker_resource_definition(provider, host_params)
-        elif provider_name == 'openstack':
-            return cls._build_openstack_resource_definition(provider, host_params)
-        elif provider_name == 'libvirt':
-            return cls._build_libvirt_resource_defintion(provider, host_params)
-        elif provider_name == 'aws':
-            return cls._build_aws_resource_defintion(provider, host_params)
-
-    @classmethod
-    def _build_beaker_resource_definition(cls, provider, host_params):
-        """
-        Private beaker specific method to build the resource definition. It
-        will call the sub methods to build the recipe set, the root
-        resource definition, and combine them.
-
-        :param provider: the Carbon Provider to validate against
-        :type Object: Provider object
-        :param host_params: the Asset Resource profile dictionary
-        :type dict: dictionary
-        :return: a Linchpin resource definition dictionary
-        """
-
-        # Check that the provider params
-        cls._check_key_exist_in_provider(provider, host_params)
-
-        # Build the recipe set
-        rs = cls._build_beaker_recipe_set(provider, host_params)
-
-        # Build the resource def
-        rd = cls._build_beaker_resource(host_params)
-
-        # Update the recipe set and resource def with proper ssh params
-        # if ssh param is a key_file
-        if rs.get('ssh_key_file', None):
-            key_dir = os.path.dirname(rs.get('ssh_key_file')[0])
-            files = [os.path.basename(f) for f in rs.get('ssh_key_file')]
-            if os.path.dirname(key_dir) == '.':
-                key_dir = os.path.abspath(key_dir)
-            rd['ssh_keys_path'] = key_dir
-            rs['ssh_key_file'] = files
-
-        # Add the recipe set to resource def
-        rd.update(dict(recipesets=[rs]))
-
-        return rd
-
-    @classmethod
-    def _build_beaker_resource(cls, host_params):
-        """
-        Private beaker specific method to build the root resource definition.
-
-        :param host_params: the Asset Resource profile dictionary
-        :return: a Linchpin resource definition dictionary
-        """
-
-        resource_def = dict(role='bkr_server')
-        params = host_params['provider']
-
-        # Add the resource def params
-        for k, v in params.items():
-            if k in ['whiteboard', 'max_attempts', 'attempt_wait_time',
-                     'cancel_message', 'job_group']:
-                resource_def[k] = v
-            if k == 'jobgroup':
-                resource_def['job_group'] = v
-
-        return resource_def
-
-    @classmethod
-    def _build_beaker_recipe_set(cls, provider, host_params):
-        """
-        Private beaker specific method to build the beaker
-        recipeset.
-
-        :param provider: the Carbon Provider to validate against
-        :type Object: Provider object
-        :param host_params: the Asset Resource profile dictionary
-        :type dict: dictionary
-        :return: a Linchpin resource definition dictionary
-        """
-
-        recipe_set = dict(count=1)
-        params = host_params['provider']
-
-        # Build the recipe set with required parameters
-        for k, v in params.items():
-            for item in provider.req_params:
-                if k == item[0]:
-                    recipe_set[k] = v
-
-        # Next add the common parameters
-        for k, v in params.items():
-            if k == 'whiteboard':
-                continue
-            for item in provider.comm_opt_params:
-                if k == item[0] and k == 'kickstart':
-                    recipe_set[k] = os.path.abspath(os.path.join(host_params['workspace'], v))
-                    continue
-                if k == item[0]:
-                    recipe_set[k] = v
-
-        # Next add the linchpin common params that differ in name or type
-        for k, v in params.items():
-            if k == 'ssh_key':
-                continue
-            if k == 'job_group':
-                continue
-            for lp, lt in provider.linchpin_comm_opt_params:
-                if k == lp:
-                    recipe_set[k] = v
-
-        # Next add the carbon common params that differ in name or type
-        # but do the conversion to linchpin name or type.
-        for k, v in params.items():
-            for cp, ct in provider.carbon_comm_opt_params:
-                if k == cp and k == 'tag':
-                    for lp, lt in provider.linchpin_comm_opt_params:
-                        if lp == 'tags':
-                            if not isinstance(v, lt[0]):
-                                recipe_set[lp] = [v]
-                            else:
-                                recipe_set[lp] = v
-                if k == cp and k == 'kernel_options':
-                    for lp, lt in provider.linchpin_comm_opt_params:
-                        if lp == 'kernel_options':
-                            if not isinstance(v, lt[0]):
-                                ko = ""
-                                for i in v:
-                                    ko += "%s " % i
-                                recipe_set[lp] = ko.strip()
-                            else:
-                                recipe_set[lp] = v
-                if k == cp and k == 'kernel_post_options':
-                    for lp, lt in provider.linchpin_comm_opt_params:
-                        if lp == 'kernel_options_post':
-                            if not isinstance(v, lt[0]):
-                                kop = ""
-                                for i in v:
-                                    kop += "%s " % i
-                                recipe_set[lp] = kop.strip()
-                            else:
-                                recipe_set[lp] = v
-                if k == cp and k == 'host_requires_options':
-                    for lp, lt in provider.linchpin_comm_opt_params:
-                        if lp == 'hostrequires':
-                            if dict not in v:
-                                hr = []
-                                for op in cls._bkr_op_list:
-                                    for h in v:
-                                        if op in h.strip():
-                                            hrt, hrv = h.strip().split(op)
-                                            if hrt.strip() in ['force', 'rawxml']:
-                                                hr.append({hrt.strip(): hrv.strip()})
-                                            else:
-                                                hr.append(dict(tag=hrt.strip(),
-                                                               op=op,
-                                                               value=hrv.strip()))
-                                recipe_set[lp] = hr
-                            else:
-                                recipe_set[lp] = v
-                if k == cp and k == 'ksmeta':
-                    for lp, lt in provider.linchpin_comm_opt_params:
-                        if lp == 'ks_meta':
-                            if not isinstance(v, lt[0]):
-                                ksm = ""
-                                for i in v:
-                                    ksm += "%s " % i
-                                recipe_set[lp] = ksm.strip()
-                            else:
-                                recipe_set[lp] = v
-                if k == cp and k == 'key_values':
-                    for lp, lt in provider.linchpin_comm_opt_params:
-                        if lp == 'keyvalues':
-                            recipe_set[lp] = v
-
-                if k == cp and k == 'ssh_key':
-                    if not isinstance(v, str):
-                        keys = [key for key in v if 'ssh-rsa' in key]
-                        if len(keys) > 0:
-                            recipe_set[k] = keys
-                        key_files = [ssh_key_file_generator(host_params['workspace'], kf) for kf in v
-                                     if 'ssh-rsa' not in kf]
-                        if len(key_files) > 0:
-                            recipe_set['ssh_key_file'] = key_files
-                    else:
-                        recipe_set['ssh_key_file'] = [ssh_key_file_generator(host_params['workspace'], v)]
-
-        # Add only the linchpin specific optional parameters
-        for k, v in params.items():
-            for item in provider.linchpin_only_opt_params:
-                if item[0] == 'max_attempts':
-                    continue
-                if item[0] == 'attempt_wait_time':
-                    continue
-                if item[0] == 'cancel_message':
-                    continue
-                if item[0] == 'tx_id':
-                    continue
-                if k == item[0]:
-                    recipe_set[k] = v
-
-        # Add the node_id
-        if params.get('node_id', None):
-            if recipe_set.get('ids', None):
-                recipe_set['ids'].append(params.get('node_id'))
-            else:
-                recipe_set['ids'] = [params.get('node_id')]
-
-        # Finally, update the name with the real name
-        recipe_set['name'] = host_params['name']
-
-        return recipe_set
-
-    @classmethod
-    def _build_openstack_resource_definition(cls, provider, host_params):
-        """
-        Private openstack specific method to build the resource definition.
-
-        :param provider: the Carbon Provider to validate against
-        :type Object: Provider object
-        :param host_params: the Asset Resource profile dictionary
-        :type dict: dictionary
-        :return: a Linchpin resource definition dictionary
-        """
-
-        resource_def = dict(role='os_server', count=1, verify='false')
-
-        params = host_params['provider']
-        creds = getattr(provider, 'credentials')
-
-        # Check that the provider params
-        cls._check_key_exist_in_provider(provider, host_params)
-
-        # Add any of the op cred params:
-        for key, value in creds.items():
-            for cp, ct in provider.opt_credential_params:
-                if key == cp and key == 'region':
-                    resource_def['region_name'] = value
-
-        # Add in all the required params
-        for key, value in params.items():
-            for cp, ct in provider.req_params:
-                if key == cp:
-                    resource_def[key] = value
-
-        # Next add in all the common params
-        for key, value in params.items():
-            for cp, ct in provider.comm_opt_params:
-                if key == cp:
-                    resource_def[key] = value
-
-        # Next add the common params that differ by    `
-        # name or by type
-        for key, value in params.items():
-            for cp, ct in provider.linchpin_comm_opt_params:
-                if key == cp:
-                    resource_def[key] = value
-
-        # Next add the linchpin only opt params
-        for key, value in params.items():
-            if key == 'tx_id':
-                continue
-            for cp, ct in provider.linchpin_only_opt_params:
-                if key == cp:
-                    resource_def[key] = value
-
-        # Finally, add the carbon specific common
-        # params that differ by name or type
-        for key, value in params.items():
-            for cp, ct in provider.carbon_comm_opt_params:
-                if key == cp and not resource_def.get('fip_pool'):
-                    resource_def['fip_pool'] = value
-
-        # Update name with real name of host resource
-        resource_def['name'] = host_params['name']
-
-        return resource_def
-
-    @classmethod
-    def _build_libvirt_resource_defintion(cls, provider, host_params):
-
-        resource_def = dict()
-        params = host_params['provider']
-        roles = getattr(provider, '_supported_roles')
-
-        for p in provider.req_params:
-            if p[0] in params:
-                if params[p[0]] and params[p[0]] in roles:
-                    for k, v in params.items():
-                        if k in ['credential', 'hostname', 'tx_id', 'node_id']:
-                            continue
-                        resource_def[k] = v
-                else:
-                    LOG.error('The specified role type is not one of the supported types.')
-                    raise HelpersError('One of the following roles must be specified %s.' % roles)
-
-            else:
-                LOG.error('Could not find the role key in the provider parameters.')
-                raise HelpersError('The key, role, must be specified to build the resource definition properly.')
-
-        # Update with the real host name
-        resource_def['name'] = host_params['name']
-
-        # Update with host specific keys
-        if resource_def['role'].find('node') != -1:
-
-            # remove the libvirt_evars if any were specified since they don't belong in the
-            # topology file. Those get set as evars in the linchpin cfg.
-            for evar in ['libvirt_image_path', 'libvirt_user', 'libvirt_become']:
-                resource_def.pop(evar, None)
-
-            # for xml key linchpin expects it in the linchpin workspace
-            # need to copy it over to the workspace carbon setups in .results
-            if resource_def.get('xml', None):
-                xml_path = os.path.join(host_params.get('workspace'), resource_def.get('xml', None))
-                lp_ws = os.path.join(
-                    os.path.join(os.path.dirname(host_params.get('data_folder')), '.results'), 'linchpin')
-                if not os.path.exists(xml_path):
-                    raise HelpersError('The xml file does not appear to exist in the carbon workspace.')
-                os.system('cp -r -f %s %s ' % (xml_path, lp_ws))
-                resource_def.update(dict(xml=os.path.basename(xml_path)))
-
-            # update count for a host resource
-            if not resource_def.get('count', False):
-                resource_def.update(dict(count=1))
-
-        return resource_def
-
-    @classmethod
-    def _build_aws_resource_defintion(cls, provider, host_params):
-
-        resource_def = dict()
-        params = host_params['provider']
-        roles = getattr(provider, '_supported_roles')
-
-        for p in provider.req_params:
-            if p[0] in params:
-                if params[p[0]] and params[p[0]] in roles:
-                    for k, v in params.items():
-                        if k in ['credential', 'hostname', 'tx_id', 'node_id']:
-                            continue
-                        resource_def[k] = v
-                else:
-                    LOG.error('The specified role type is not one of the supported types.')
-                    raise HelpersError('One of the following roles must be specified %s.' % roles)
-
-            else:
-                LOG.error('Could not find the role key in the provider parameters.')
-                raise HelpersError('The key, role, must be specified to build the resource definition properly.')
-
-        # Update with the real host name
-        resource_def['name'] = host_params['name']
-
-        # Update with host specific keys
-        if resource_def['role'].find('ec2') != -1 and len(resource_def['role']) == 7:
-            # update count for a host resource
-            if not resource_def.get('count', False):
-                resource_def.update(dict(count=1))
-
-        # Update the specific params that deal with relative file path to be
-        # abs pathes in the scenario workspace
-        for key in resource_def:
-            if key in ['policy_file', 'template_path']:
-                if not os.path.isabs(key):
-                    ws_abs = os.path.join(host_params.get('workspace'), key)
-                    resource_def[key] = ws_abs
-
-        return resource_def
-
-    @classmethod
-    def _check_key_exist_in_provider(cls, provider, host_params):
-
-        provider_params = host_params['provider']
-
-        provider_keys = [k[0] for k in provider.req_params]
-        provider_keys.extend([k[0] for k in provider.comm_opt_params])
-        provider_keys.extend([k[0] for k in provider.linchpin_comm_opt_params])
-        provider_keys.extend([k[0] for k in provider.carbon_comm_opt_params])
-        provider_keys.extend([k[0] for k in provider.linchpin_only_opt_params])
-
-        # Openstack provider does not have carbon only options
-        try:
-            provider_keys.extend([k[0] for k in provider.carbon_only_opt_params])
-        except AttributeError:
-            pass
-
-        for key in provider_params:
-            if key in ['hostname', 'credential', 'node_id', 'job_url']:
-                continue
-            if key not in provider_keys:
-                LOG.warning('specified key: %s is not one supported by the carbon provider. '
-                            'It will be ignored. Please run carbon validate -s <scenario.yml> '
-                            'to make sure you have the proper parameters.' % key)

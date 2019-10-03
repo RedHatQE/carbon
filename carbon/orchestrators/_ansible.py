@@ -89,9 +89,6 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         # ansible service object
         self.ans_service = AnsibleService(self.config, self.hosts, self.all_hosts, self.options, self.galaxy_options)
 
-        # setup injector
-        self.injector = DataInjector(self.all_hosts)
-
     def backwards_compat_check(self):
         """ This method does the check if name field is a script/playbook path or name of the orchestrator task by
             checking is '/' i spresent in the string.

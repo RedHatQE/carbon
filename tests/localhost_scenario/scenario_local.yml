@@ -16,12 +16,12 @@ orchestrate:
   - name: ansible/test_playbook_tasks.yml
     description: "run orchestrate step w/non-template playbook"
     orchestrator: ansible
-    hosts: controller
+    hosts: localhost
 
   - name: ansible/template_host_test_playbook_tasks.yml
     description: "run orchestrate step w/template playbook"
     orchestrator: ansible
-    hosts: laptop
+    hosts: localhost
     ansible_options:
       extra_vars:
         ip: { dummy.ip_address }
@@ -29,7 +29,7 @@ orchestrate:
   - name: scripts/add_two_numbers.sh
     description: "run orchestrate step w/bash script using no real host"
     orchestrator: ansible
-    hosts: controller
+    hosts: localhost
     ansible_script: True
     ansible_options:
       extra_args: X={ dummy.metadata.x } Y={ dummy.metadata.y }
@@ -37,7 +37,7 @@ orchestrate:
   - name: scripts/add_two_numbers.sh X=10 Y=20
     description: "run orchestrate step with passing params to script in the name field"
     orchestrator: ansible
-    hosts: controller
+    hosts: localhost
     ansible_script: True
 
   - name: scripts/hello_world.py Carbon_user
@@ -67,7 +67,7 @@ orchestrate:
       name: ansible/test_playbook_tasks.yml
     description: "run orchestrate with a name field not as playbook/script"
     orchestrator: ansible
-    hosts: controller
+    hosts: localhost
 
   - name: orch_shell
     orchestrator: ansible
@@ -97,7 +97,7 @@ orchestrate:
   - name: ansible/template_host_test_playbook_tasks.yml
     description: "run orchestrate step using file key as extra_vars"
     orchestrator: ansible
-    hosts: laptop
+    hosts: localhost
     ansible_options:
       extra_vars:
         file: variable.yml
