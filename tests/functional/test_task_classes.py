@@ -35,13 +35,7 @@ from carbon.tasks import CleanupTask, ExecuteTask, OrchestrateTask, \
 from carbon.core import CarbonProvisioner, ProvisionerPlugin, Inventory
 from carbon.provisioners import AssetProvisioner, OpenstackLibCloudProvisioner
 from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin
-from carbon.resources import Asset
-
-
-
-@pytest.fixture(scope='class')
-def inventory():
-    return mock.MagicMock(spec=Inventory, create_master=mock.MagicMock('success'))
+from carbon.resources import Asset, Action
 
 
 @pytest.fixture(scope='class')
@@ -69,8 +63,7 @@ def orchestrate_task():
     package.orchestrator = mock.MagicMock()
     return OrchestrateTask(msg='orchestrate task', package=package, name='Test-Package')
 
-# patching the __init__ for some reason patching out the Inventory
-# class as a whole was not working in py 2 but works in py3
+
 @pytest.fixture(scope='class')
 def provision_task():
     asset = mock.MagicMock()
@@ -231,7 +224,7 @@ class TestCleanupTask(object):
 
     @staticmethod
     @mock.patch.object(CarbonProvisioner, 'delete')
-    def test_run_cleanup_with_asset_provisioner(mock_method, cleanup_task):
+    def test_run_with_asset_provisioner(mock_method, cleanup_task):
         asset = mock.MagicMock(spec=Asset, provisioner_plugin=None, provisioner=CarbonProvisioner,
                               provider_params='test-provider-param')
         cleanup_task.asset = asset
@@ -241,7 +234,7 @@ class TestCleanupTask(object):
 
     @staticmethod
     @mock.patch.object(AssetProvisioner, 'delete')
-    def test_run_cleanup_with_asset_provisioner_plugin(mock_method, cleanup_task):
+    def test_run_with_asset_provisioner_plugin(mock_method, cleanup_task):
         asset = mock.MagicMock(spec=Asset, provisioner_plugin=ProvisionerPlugin, provisioner=AssetProvisioner,
                               provider_params='test-provider-param')
         cleanup_task.asset = asset

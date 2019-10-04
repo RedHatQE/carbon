@@ -59,8 +59,8 @@ class CleanupTask(CarbonTask):
         """
         # set package attributes to get actual asset objects over strings
         cleanup = getattr(self.package, 'cleanup')
-        setattr(cleanup, 'all_assets', getattr(self.package, 'all_assets'))
-        setattr(cleanup, 'assets', getattr(self.package, 'assets'))
+        setattr(cleanup, 'all_hosts', getattr(self.package, 'all_hosts'))
+        setattr(cleanup, 'hosts', getattr(self.package, 'hosts'))
 
         # create the orchestrator object
         return getattr(self.package, 'orchestrator')(cleanup)
