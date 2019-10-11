@@ -94,26 +94,33 @@ class Report(CarbonResource):
         if isinstance(self.executes, string_types):
             self.executes = self.executes.replace(' ', '').split(',')
 
-        # report needs to be imported, get the provider parameters
-        parameters = self.__set_provider_attr__(parameters)
-
-        # finally lets get the right importer to use
-        importer_name = parameters.pop('importer', importer)
+        # Lets load the default importer interface
         self._importer = get_default_importer()
-        if importer_name is None:
-            self._importer_plugin = get_default_importer_plugin(self._provider)
-        else:
-            found_name = False
-            for name in get_importers_plugins_list():
-                if name.startswith(importer_name):
-                    found_name = True
+        importer_name = parameters.pop('importer', importer)
 
-            if found_name:
-                self._importer_plugin = get_importer_plugin_class(importer_name)
+        # Finally check and load plugin impl
+        if 'provider' in parameters:
+            # report needs to be imported, get the provider parameters
+            parameters = self.__set_provider_attr__(parameters)
+            if importer_name is None:
+                self._importer_plugin = get_default_importer_plugin(self._provider)
             else:
-                self.logger.error('Importer %s for report artifacts %s is invalid.'
-                                  % (importer_name, self.name))
-                sys.exit(1)
+                found_name = False
+                for name in get_importers_plugins_list():
+                    if name.startswith(importer_name):
+                        found_name = True
+
+                if found_name:
+                    self._importer_plugin = get_importer_plugin_class(importer_name)
+                else:
+                    self.logger.error('Importer %s for report artifacts %s is invalid.'
+                                      % (importer_name, self.name))
+                    sys.exit(1)
+            self.do_import = True
+        else:
+            self._importer_plugin = importer_name
+            self._provider = None
+            self.do_import = False
 
         self._import_results = parameters.pop('import_results', [])
 
@@ -180,7 +187,9 @@ class Report(CarbonResource):
         """
         Only validating provider attributes
         """
-
+        if not self.do_import:
+            self.logger.debug('Validation is not required for imports without a provider!')
+            return
         # validate provider properties
         self.logger.info('Validating report %s provider required parameters.' %
                          self.name)
@@ -280,9 +289,13 @@ class Report(CarbonResource):
         profile = OrderedDict()
         profile['name'] = self.name
         profile['description'] = self.description
-        profile['importer'] = getattr(
-                       self.importer_plugin, '__plugin_name__')
-        profile['provider'] = self.provider_params
+        if not isinstance(self.importer_plugin, string_types):
+            profile['importer'] = getattr(
+                           self.importer_plugin, '__plugin_name__')
+        else:
+            profile['importer'] = self.importer_plugin
+        if self.provider:
+            profile['provider'] = self.provider_params
 
         # set the report's executes
         if all(isinstance(item, string_types) for item in self.executes):

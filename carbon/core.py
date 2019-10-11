@@ -1059,11 +1059,12 @@ class CarbonImporter(LoggerMixin, TimeMixin):
         self._report = report
 
         # set commonly accessed data used by importers
+        self.report_name = getattr(report, 'name')
         self.data_folder = getattr(report, 'data_folder')
-        self.provider = getattr(getattr(report, 'provider'), 'name')
+        self.provider = getattr(getattr(report, 'provider'), 'name', 'dummy')
         self.provider_params = getattr(report, 'provider_params', {})
         self.provider_credentials = getattr(getattr(
-            report, 'provider'), 'credentials')
+            report, 'provider'), 'credentials', {})
         self.workspace = getattr(report, 'workspace')
         self.config = getattr(report, 'config')
 

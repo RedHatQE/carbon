@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from .._compat import string_types
 
 
 class ReportTask(CarbonTask):
@@ -40,9 +41,13 @@ class ReportTask(CarbonTask):
         """
         super(ReportTask, self).__init__(**kwargs)
         self.msg = msg
+        self.do_import = True
 
         # create the artifact importer and assign it the plugin class
         self.importer = getattr(package, 'importer')(package)
+
+        if not package.do_import:
+            self.do_import = False
 
     def run(self):
         """Run.
@@ -52,11 +57,22 @@ class ReportTask(CarbonTask):
         self.logger.debug(self.msg)
 
         try:
-            # run the configuration with the given importer
-            self.importer.import_artifacts()
+            # check if the artifacts are on disk.
+            self.importer.validate_artifacts()
         except Exception as ex:
             self.logger.error('Failed to run report %s ' % self.name)
             stackmsg = self.get_formatted_traceback()
             self.logger.error(ex)
             self.logger.error(stackmsg)
             raise
+
+        if self.do_import:
+            try:
+                # run the configuration with the given importer
+                self.importer.import_artifacts()
+            except Exception as ex:
+                self.logger.error('Failed to run report %s ' % self.name)
+                stackmsg = self.get_formatted_traceback()
+                self.logger.error(ex)
+                self.logger.error(stackmsg)
+                raise

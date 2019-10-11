@@ -125,6 +125,7 @@ def report(default_report_params, plugin, config,
     report.name = 'test.xml'
     report.importer_plugin = plugin
     report.parameters = default_report_params
+    report.do_import = True
     report.executes = [execute]
     report.profile.return_value = default_profile_params
 
@@ -138,6 +139,7 @@ def report_rp(default_rp_report_params, rp_plugin, config,
     report.name = 'test.xml'
     report.importer_plugin = rp_plugin
     report.parameters = default_rp_report_params
+    report.do_import = True
     report.executes = [execute]
     report.profile.return_value = default_rp_profile_params
 
@@ -178,7 +180,7 @@ class TestArtifactImporter(object):
                                         for dir in locations]
         execute.artifact_locations = []
         artifact_importer.plugin = plugin
-        artifact_importer.import_artifacts()
+        artifact_importer.validate_artifacts()
 
     @staticmethod
     @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
@@ -191,7 +193,23 @@ class TestArtifactImporter(object):
         artifact_importer.artifact_paths = []
         with pytest.raises(CarbonImporterError):
             artifact_importer.plugin = plugin
-            artifact_importer.import_artifacts()
+            artifact_importer.validate_artifacts()
+
+    @staticmethod
+    @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
+    def test_artifact_importer_execute_artifact_on_disk(mock_find_disks, artifact_importer,
+                                      plugin, artifact_locations, execute):
+
+        locations = [os.path.join(dir, f)
+                     for dir, files in artifact_locations.items()
+                     for f in files]
+        mock_find_disks.return_value = [os.path.join('/tmp', dir)
+                                        for dir in locations]
+        artifact_locations['artifacts/host01'] = ['test.xml']
+        execute.artifact_locations = artifact_locations
+        artifact_importer.plugin = plugin
+        artifact_importer.validate_artifacts()
+
 
     @staticmethod
     @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')

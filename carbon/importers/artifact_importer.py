@@ -18,7 +18,8 @@
 
 from ..core import CarbonImporter
 from ..exceptions import CarbonImporterError
-from ..helpers import find_artifacts_on_disk, search_artifact_location_dict, DataInjector
+from .._compat import string_types
+from ..helpers import find_artifacts_on_disk, DataInjector
 
 
 class ArtifactImporter(CarbonImporter):
@@ -37,61 +38,44 @@ class ArtifactImporter(CarbonImporter):
                                    provider_credentials=self.provider_credentials,
                                    artifacts=[]))
 
-        # build the config params that might be useful to plugin implementation
-        plugin_name = getattr(self.report, 'importer_plugin').__plugin_name__
-        config_params = dict()
-        for k, v in self.config.items():
-            if plugin_name.upper() in k:
-                config_params[k.lower()] = v
-
-        report_profile.update(dict(config_params=config_params))
-
         # check if user specified data pass-through injection
-        for execute in self.report.executes:
-            injector = DataInjector(execute.all_hosts)
-            report_name = injector.inject(self.report.name)
-            report_profile['name'] = report_name
+        host_list = [host for execute in self.report.executes for host in execute.all_hosts]
+        injector = DataInjector(host_list)
+        self.report_name = injector.inject(self.report.name)
+        report_profile['name'] = self.report_name
 
-        # setup plugin with profile dict
-        self.plugin = getattr(self.report, 'importer_plugin')(report_profile)
+        # build the config params that might be useful to plugin and instantiate
+        if self.report.do_import:
+            plugin_name = getattr(self.report, 'importer_plugin').__plugin_name__
+            config_params = dict()
+            for k, v in self.config.items():
+                if plugin_name.upper() in k:
+                    config_params[k.lower()] = v
+
+            report_profile.update(dict(config_params=config_params))
+
+            # setup plugin with profile dict
+            self.plugin = getattr(self.report, 'importer_plugin')(report_profile)
 
     def validate_artifacts(self):
 
         # check that the execute object collected artifacts
         art_paths = []
-        '''for execute in self.report.executes:
-            if execute.artifact_locations:
-                art_paths = search_artifact_location_dict(art_locations=execute.artifact_locations,
-                                                          report_name=self.plugin.profile['name'])
-            else:
-                self.logger.warning('The specified execute, %s, does not have any artifacts '
-                                 'with it.' % execute.name)
-
-        # check that the list generated searching the dictionary is not empty
-        if not art_paths:
-            self.logger.warning('Could not find %s as one of the artifacts that was collected. Checking the '
-                             'data directories anyways.'
-                                      % self.report.name)
-            self.artifact_paths = find_artifacts_on_disk(data_folder=self.data_folder,
-                                                         path_list=[self.plugin.profile['name']],
-                                                         art_location_found=False)
-        else:
-            self.artifact_paths = find_artifacts_on_disk(data_folder=self.data_folder, path_list=art_paths)'''
+        self.logger.debug(self.report_name)
         for execute in getattr(self.report, 'executes'):
             if not execute.artifact_locations:
                 self.logger.warning('The specified execute, %s, does not have any artifacts '
                                     'with it.' % execute.name)
                 self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
-                                                                  report_name=self.plugin.profile['name']))
+                                                                  report_name=self.report_name))
             else:
                 self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
-                                                                  report_name=self.plugin.profile['name'],
+                                                                  report_name=self.report_name,
                                                                   art_location=execute.artifact_locations))
         if not self.artifact_paths:
             raise CarbonImporterError('No artifact could be found on the Carbon controller data folder.')
 
     def import_artifacts(self):
-        self.validate_artifacts()
         self.plugin.artifacts = self.artifact_paths
         try:
             results = self.plugin.import_artifacts()
