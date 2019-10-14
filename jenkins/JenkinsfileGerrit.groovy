@@ -35,14 +35,22 @@ pipeline {
             steps {
                 sh """
                 source venv/bin/activate
-                make
+                make test-functional
+                """
+            }
+        }
+        stage('local scenario tests') {
+            steps {
+                sh """
+                source venv/bin/activate
+                make test-scenario
                 """
             }
         }
     }
     post {
         always {
-            archiveArtifacts artifacts: 'tests/coverage/**'
+            archiveArtifacts artifacts: 'tests/coverage/**, tests/localhost_scenario/.carbon'
         }
     }
 }

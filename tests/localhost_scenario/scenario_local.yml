@@ -1,0 +1,116 @@
+---
+name: LOCAL-EXAMPLE
+description: An example scenario for local running
+
+provision:
+  - name: laptop
+    groups: localhost
+    ip_address: 127.0.0.1
+    ansible_params:
+      ansible_connection: local
+
+orchestrate:
+  - name: ansible/list_block_devices.yml
+    description: "run orchestrate step w/non-template playbook"
+    orchestrator: ansible
+    hosts: controller
+
+  - name: ansible/template_host_list_block_devices.yml
+    description: "run orchestrate step w/template playbook"
+    orchestrator: ansible
+    hosts: laptop
+
+  - name: scripts/add_two_numbers.sh
+    description: "run orchestrate step w/bash script using no real host"
+    orchestrator: ansible
+    hosts: controller
+    ansible_script: True
+    ansible_options:
+      extra_args: X=12 Y=18
+
+  - name: scripts/hello_world.py
+    description: "test orchestrate step w/python script"
+    orchestrator: ansible
+    hosts: localhost
+    ansible_script: True
+    ansible_options:
+      extra_args: executable=python
+    cleanup:
+      name: scripts/cleanup_artifacts.sh
+      description: "cleanup the data passthrough artifact"
+      orchestrator: ansible
+      hosts: all
+      ansible_script: True
+
+execute:
+  - name: Test running command
+    description: "Test running command during execute"
+    executor: runner
+    hosts: localhost
+    shell: 
+      - chdir: {{ WORKSPACE }}/scripts
+        command: bash add_two_numbers.sh X=12 Y=12
+        valid_rc: [2]
+
+  - name: Test running script
+    description: "Test running script during execute"
+    executor: runner
+    hosts: localhost
+    script:
+      - name: {{ WORKSPACE }}/scripts/add_two_numbers.sh X=12 Y=12
+        ignore_rc: true
+
+  - name: Test running playbook
+    description: "Test running playbook during execute"
+    executor: runner
+    hosts: localhost
+    playbook:
+      - name: ansible/tests/test_execute_playbook.yml
+    ansible_options:
+      extra_vars:
+        X: 18
+        Y: 12
+        ch_dir: ../../scripts/
+
+  - name: Testcollectingartifacts
+    description: "Test collecting artifacts"
+    executor: runner
+    hosts: localhost
+    shell:
+      - chdir: {{ WORKSPACE }}/sample_artifacts
+        command: ls -lrta
+      - chdir: {{ WORKSPACE }}/sample_artifacts
+        command: |
+           cp SampleTest.xml  SampleTest_'{ laptop.ip_address }'.xml
+           cp SampleTest_'{ laptop.ip_address }'.xml ../.carbon/{{ PY_VERSION }}/.results/
+      - chdir: {{ WORKSPACE }}/sample_artifacts
+        command: |
+          cp SampleTest.log SampleDummy.log
+          cp SampleDummy.log ../.carbon/{{ PY_VERSION }}/.results/
+    artifacts:
+      - {{ WORKSPACE }}/sample_artifacts/SampleTest.*
+    artifact_locations:
+      .results:
+         - SampleTest.log
+
+report:
+  - name: '*.xml'
+    description: "Test importing all found xml files."
+    executes: "Test collecting artifacts"
+    importer: dummy
+
+  - name: SampleTest_{ laptop.ip_address }.xml
+    description: "Test importing xml files with data-passthrough"
+    executes: "Test collecting artifacts"
+    importer: dummy
+
+  - name: SampleDummy.log
+    description: "Test importing all found xml file"
+    executes: "Test collecting artifacts"
+    importer: dummy
+
+  - name: localhost/SampleTest.log
+    description: "Test importing all log using directory/file path"
+    executes: "Test collecting artifacts"
+    importer: dummy 
+

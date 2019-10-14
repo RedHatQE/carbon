@@ -4,10 +4,13 @@ all: clean-pyc clean-tests clean test-functional docs
 
 clean-all: clean-pyc clean-tests clean
 
-test-all: test-functional
+test-all: test-functional test-scenario
 
 test-functional:
-	tox -e py27,py36
+	tox -e py27-unit,py36-unit
+
+test-scenario:
+	tox -e py27-scenario,py36-scenario
 
 clean:
 	rm -rf *.egg
@@ -23,6 +26,11 @@ clean-tests:
 	rm -rf tests/.coverage*
 	rm -rf tests/.cache
 	rm -rf tests/coverage
+	rm -rf tests/localhost_scenario/.carbon
+	rm -rf tests/localhost_scenario/.ansible
+	rm -rf tests/functional/coverage
+	rm -rf tests/functional/.ansible
+	rm -rf tests/functional/.coverage*
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
