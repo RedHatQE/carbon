@@ -40,7 +40,9 @@ class PolarionImporterPlugin(ImporterPlugin):
 
         try:
             self.logger.info('Attempting to import xUnit file.')
-            if polarion_props is not None:
+            # polarion_props is a dict with one key 'properties'. if 'properties' key has no value
+            # then no properties were defined
+            if polarion_props['properties']:
                 self.logger.debug('About to do conversion.')
                 results = polarion.convert_xunit(xunit_files=self.artifacts,
                                                  polarion_props=polarion_props,
