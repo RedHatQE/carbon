@@ -88,11 +88,11 @@ class Report(CarbonResource):
         self._executes = parameters.pop('executes')
         if self.executes is None:
             raise CarbonReportError('Unable to associate executes to report artifact:'
-                                     '%s. No executes defined!' % self._name)
+                                    '%s. No executes defined!' % self._name)
 
         # convert the executes into list format if executes defined as str format
         if isinstance(self.executes, string_types):
-            self.executes = self.executes.replace(' ', '').split(',')
+            self.executes = [val.strip() for val in self.executes.split(',')]
 
         # Lets load the default importer interface
         self._importer = get_default_importer()

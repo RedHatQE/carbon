@@ -72,7 +72,7 @@ execute:
         Y: 12
         ch_dir: ../../scripts/
 
-  - name: Testcollectingartifacts
+  - name: Test collecting artifacts
     description: "Test collecting artifacts"
     executor: runner
     hosts: localhost
