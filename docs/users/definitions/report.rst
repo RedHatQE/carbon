@@ -473,9 +473,6 @@ more about the config json file
 `here
 <https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674#CCITReportPortalUser'sGuide[EADraft]-ConfiguringtheClient>`_
 
-If config json file is not provided by the user then Carbon creates the config json file using the
-different report portal provider parameters provided in the report section of the SDF.
-
 Example for json config:
 
 .. code-block:: json
@@ -504,6 +501,26 @@ Example for json config:
         }
     }
    }
+
+If config json file is not provided by the user then Carbon creates the file using the
+different report portal provider parameters in the report section of the SDF. User has the option
+to save this Carbon created file for future use. By default the file gets deleted after every run.
+
+In the carbon configuration file, user can set the following parameter in the **[importer:reportportal]**
+section to save the Carbon created reportportal config file.
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Key
+        - Description
+        - Default
+
+    *   - save_json_config
+        - configuration option to save a copy of the reportportal config json file
+          created by Carbon
+        - By default this is set to False to delete the file after every run
 
 
 .. NOTE:: 

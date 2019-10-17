@@ -34,8 +34,7 @@ class ReportPortalPlugin(ImporterPlugin):
         super(ReportPortalPlugin, self).__init__(profile)
 
     def import_artifacts(self):
-        # TODO make rp_file_flag a configurable parameter, allowing the user to store the config file or NOT
-        # TODO under [importer:rp_client]
+        # Flag is set when Carbon creates the rp config file
         rp_file_flag = False
         if self.provider_params.get('json_path'):
             rp_config_file = self._validate_rp_json_path_exist(self.provider_params.get('json_path'))
@@ -57,9 +56,11 @@ class ReportPortalPlugin(ImporterPlugin):
 
         results = self._execute_rp_cmd(cmd)
 
-        # Removing the Carbon created json config file
-        if rp_file_flag:
-            self.logger.debug("Deleting file %s" % rp_config_file)
+        # Checking for reportportal_save_file flag .
+        # Checking if Carbon created the rp config file
+        # Removing the Carbon created json config file if reportportal_save_file is set to False
+        if rp_file_flag and self.config_params.get("reportportal_save_json_config", 'False').lower() == 'false':
+            self.logger.info("Deleting file %s" % rp_config_file)
             os.remove(rp_config_file)
 
         return results
