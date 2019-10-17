@@ -43,7 +43,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'ansible>=2.7.9',
+        'ansible>=2.5.0',
         'apache-libcloud==2.2.0',
         'blaster>=0.1.8',
         'Click>=6.7',
@@ -51,7 +51,7 @@ setup(
         'pykwalify>=1.6.0',
         'python-cachetclient',
         'ruamel.yaml>=0.15.64',
-        'paramiko==2.4.2',
+        'paramiko>=2.4.2',
         'requests>=2.20.1',
         'urllib3==1.24.3',
         'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.3#egg=polar'
