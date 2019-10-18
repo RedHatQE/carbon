@@ -68,6 +68,12 @@ ORCHESTRATOR = 'ansible'
 # Default executor
 EXECUTOR = 'runner'
 
+# Default task concurrency settings
+DEFAULT_TASK_CONCURRENCY = dict(PROVISION='True',
+                                ORCHESTRATE='False',
+                                EXECUTE='False',
+                                REPORT='True')
+
 # Default config
 DEFAULT_CONFIG = {
     'ANSIBLE_LOG_REMOVE': True,
@@ -75,7 +81,8 @@ DEFAULT_CONFIG = {
     'LOG_LEVEL': 'info',
     'RESOURCE_CHECK_ENDPOINT': '',
     'INVENTORY_FOLDER': '',
-    'RESULTS_FOLDER': os.path.join(DATA_FOLDER, '.results')
+    'RESULTS_FOLDER': os.path.join(DATA_FOLDER, '.results'),
+    'TASK_CONCURRENCY': DEFAULT_TASK_CONCURRENCY
 }
 
 # Default config sections
@@ -86,12 +93,6 @@ SET_CREDENTIALS_OPTIONS = ['config', 'scenario']
 
 # Default importer
 IMPORTER = 'artifact-importer'
-
-# Default task concurrency settings
-DEFAULT_TASK_CONCURRENCY = dict(PROVISION='True',
-                                ORCHESTRATE='False',
-                                EXECUTE='False',
-                                REPORT='True')
 
 # Default feature toggle for provisioner plugins
 DEFAULT_FEATURE_TOGGLE_HOST_PLUGIN = dict(name='host', plugin_implementation='True')
