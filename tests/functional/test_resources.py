@@ -266,6 +266,13 @@ class TestReportResource(object):
         assert isinstance(report.executes, list)
 
     @staticmethod
+    def test_create_report_with_executes_as_str_1(default_report_params, config):
+        default_report_params['executes'] = 'execute 01,execute 02, execute03'
+        report = Report(name='test.xml', parameters=default_report_params, config=config)
+        assert isinstance(report.executes, list)
+        assert len(report.executes) == 3
+
+    @staticmethod
     def test_build_report_profile_case_01(report_resource):
         assert isinstance(report_resource.profile(), dict)
 
