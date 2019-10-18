@@ -240,8 +240,11 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
             inv_file.write(inv)
 
     def _create(self):
+        Log = Logger(logger=self.logger)
         host = getattr(self.host, 'name', 'carbon-name')
         code, results = self.linchpin_api.do_action(self.pinfile, action='up')
+        del Log
+        self.logger.debug(json.dumps(results))
         if code:
             raise CarbonProvisionerError("Failed to provision asset %s" % host)
         try:
