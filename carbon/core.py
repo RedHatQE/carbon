@@ -1350,6 +1350,8 @@ class Inventory(LoggerMixin, FileLockMixin):
                     # add ip address to group
                     if isinstance(host.ip_address, dict):
                         config.set(section, host.ip_address.get('public'))
+                    elif isinstance(host.ip_address, list):
+                        [config.set(section, ip) for ip in host.ip_address]
                     elif isinstance(host.ip_address, str):
                         config.set(section, host.ip_address)
 
