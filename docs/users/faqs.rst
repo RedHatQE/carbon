@@ -82,6 +82,24 @@ See the `Data Pass-through Section
 <data_pass_through.html#data-pass-through>`_
 
 
+Execute
++++++++
+
+... have my test shell command parsed correctly?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When crafting your complex commands you need to consider a couple items:
+
+ - proper YAML syntax
+ - proper Shell escaping
+
+You can refer to any online YAML validator to make sure the test command
+is valid YAML syntax. Then you need to remember to make sure you have proper
+shell escaping syntax to make sure the test command is interpreted properly.
+Refer to the `Using Shell Parameter for Test Execution <execute.html>`_  section
+in the Execute page.
+
+
 Report
 ++++++
 
@@ -98,7 +116,7 @@ in the Report page.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The driving factor is the name field of the report block. You can narrow and
-restrict the search based on the pattern specified.
+restrict the search based on the shell pattern specified.
 
 For example, if you specify an artifact like *SampleTest.xml* but the artifact
 has been collected numerous times before its possible a list of the same file in
