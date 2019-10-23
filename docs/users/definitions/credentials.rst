@@ -49,7 +49,7 @@ either keytab and keytab_principal or username and password:
         - String
         - False
 
-    *   - ca_path
+    *   - ca_cert
         - path to a trusted certificate file
         - String
         - False
@@ -67,7 +67,7 @@ scenario descriptor by the host as **credential: beaker-creds**:
   keytab_principal=<keytab_principal>
   username=<username>
   password=<password>
-  ca_path=<ca_path>
+  ca_cert=<ca_cert_path>
 
 The following is an example of a resource in the scenario descriptor file
 that references this credential:

@@ -124,8 +124,8 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             with open(bkr_conf, 'w') as conf:
                 if 'hub_url' in self.provider_credentials:
                     conf.write('HUB_URL = "%s"\n' % creds['hub_url'])
-                if 'ca_path' in self.provider_credentials:
-                    conf.write('CA_CERT = "%s"\n' % creds['ca_path'])
+                if 'ca_cert' in self.provider_credentials:
+                    conf.write('CA_CERT = "%s"\n' % creds['ca_cert'])
                 if 'password' in self.provider_credentials:
                     conf.write('AUTH_METHOD = "password"\n')
                     conf.write('USERNAME = "%s"\n' % creds['username'])

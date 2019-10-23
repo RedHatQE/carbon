@@ -148,7 +148,7 @@ class BeakerProvider(PhysicalProvider):
             ('keytab', [str]),
             ('username', [str]),
             ('password', [str]),
-            ('ca_path', [str]),
+            ('ca_cert', [str]),
             ('realm', [str]),
             ('service', [str]),
             ('ccache', [str])

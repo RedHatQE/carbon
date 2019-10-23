@@ -95,9 +95,9 @@ class BeakerClientProvisioner(CarbonProvisioner):
         conf_obj.write('HUB_URL = "%s"\n' % self.url)
 
         # write the path to beaker trusted ssl certs if specified.
-        if 'ca_path' in credentials and credentials['ca_path']:
-            self.logger.debug('ca_path was provided %s' % credentials['ca_path'])
-            conf_obj.write('CA_PATH = "%s"\n' % credentials['ca_path'])
+        if 'ca_cert' in credentials and credentials['ca_cert']:
+            self.logger.debug('ca_cert was provided %s' % credentials['ca_cert'])
+            conf_obj.write('CA_CERT = "%s"\n' % credentials['ca_cert'])
 
         if 'username' in credentials and credentials['username'] \
                 and 'password' in credentials and credentials['password']:
