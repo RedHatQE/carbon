@@ -1217,14 +1217,9 @@ class BeakerXML(object):
         :param hr_name: Host requires name
         :param hr_op: Host requires operation
         :param hr_value: Host requires value"""
-        if hr_name not in self._hrname:
-            self._hrname.append(hr_name)
-            self._hrop.append(hr_op)
-            self._hrvalue.append(hr_value)
-        else:
-            updateindex = self._hrname.index(hr_name)
-            self._hrop[updateindex] = hr_op
-            self._hrvalue[updateindex] = hr_value
+        self._hrname.append(hr_name)
+        self._hrop.append(hr_op)
+        self._hrvalue.append(hr_value)
 
     def setdistrorequires(self, dr_name, dr_op, dr_value):
         """Set the distro requires parameters.
