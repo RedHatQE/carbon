@@ -137,5 +137,5 @@ Miscellaneous
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 See the list of current `Issues
-<https://projects.engineering.redhat.com/secure/CreateIssue!default.jspa>`_
+<https://projects.engineering.redhat.com/issues/?filter=32574>`_
 logged against carbon.
