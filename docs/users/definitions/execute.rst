@@ -190,17 +190,78 @@ and the call overides it:
 Using Shell Parameter for Test Execution
 ----------------------------------------
 
-Some commands might be complex and require passing raw data as part of the input.
-When that happens users can end up mixing single and double quotes in the string.
-This can lead to issues parsing and loading the scenario if not done properly. When
-a need like that arises it's best to double quote the whole command string and
-single quote the raw data.
+When building your shell commands it is important to take into consideration
+that there are multiple layers the command is being passed through before
+being executed. The two main things to pay attention to are
+YAML syntax/escaping and Shell escaping.
+
+When writing the command in the scenario descriptor file it needs to be written in
+a way that both Carbon and Ansible can parse the YAML properly. From a Carbon perspective
+it is when the the scenario descriptor is first loaded. From an Ansible perspective
+its when we pass it the playbook we create, cbn_execute_shell.yml, through to the
+ansible-playbook CLI.
+
+Then there could be further escapes required to preserve the test command so it can be
+interpreted by the shell properly. From a Carbon perspective that is when we
+pass the test command to the ansible-playbook CLI on the local shell using the
+-e "xcmd='<test_command>'" parameter. From the Ansible perspective its when
+the shell module executes the actual test command using the shell on the designated system.
+
+Let's go into a couple examples
+
+.. code-block:: yaml
+
+   shell:
+     - command: glusto --pytest='-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml'
+                --log /tmp/glusto_sample.log
+
+On the surface the above command will pass YAML syntax parsing but will fail when actually
+executing the command on the shell. That is because the command is not preserved properly on
+the shell when it comes to the *--pytest* optioned being passed in. In order to get
+this to work you could escape this in one of two ways so that the *--pytest* optioned is
+preserved.
+
+.. code-block:: yaml
+
+   shell:
+     - command: glusto --pytest=\\\"-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml\\\"
+                --log /tmp/glusto_sample.log
+
+
+   shell:
+     - command: glusto \\\"--pytest=-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml\\\"
+                --log /tmp/glusto_sample.log
+
+
+Here is a more complex example
 
 .. code-block:: yaml
 
     shell:
-        - command: "test_command --file='/tmp/test_file.xml'
-        --test-data={'node': '192.168.10.100', 'tool_config_file': '/etc/tool/tool.conf', 'data': 'Test Sentence'}"
+        - command: if [ `echo \$PRE_GA | tr [:upper:] [:lower:]` == 'true' ];
+                   then sed -i 's/pre_ga:.*/pre_ga: true/' ansible/test_playbook.yml; fi
+
+By default this will fail to be parsed by YAML as improper syntax. The rule of thumb is
+if your unquoted YAML string has any of the following special characters :-{}[]!#|>&%@
+the best practice is to quote the string. You have the option to either use single quote
+or double quotes. There are pros and cons to which quoting method to use. There are online
+resources that go further into this topic.
+
+Once the string is quoted, you now need to make sure the command is preserved properly
+on the shell. Below are a couple of examples of how you could achieve this using either
+a single quoted or double quoted YAML string
+
+.. code-block:: yaml
+
+    shell:
+        - command: 'if [ \`echo \$PRE_GA | tr [:upper:] [:lower:]\` == ''true'' ];
+                   then sed -i \"s/pre_ga:.*/pre_ga: true/\" ansible/test_playbook.yml; fi'
+
+
+    shell:
+        - command: "if [ \\`echo \\$PRE_GA | tr [:upper:] [:lower:]\\` == \\'true\\' ];
+                   then sed \\'s/pre_ga:.*/pre_ga: true/\\' ansible/test_playbook.yml; fi"
+
 
 
 Using Playbook Parameter for Test Execution
