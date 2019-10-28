@@ -29,13 +29,13 @@ import pytest
 import os
 from carbon.constants import TASKLIST
 from carbon.resources.assets import Asset
+from carbon.resources.reports import Report
+from carbon.resources.executes import Execute
 from carbon._compat import ConfigParser
 from carbon.utils.config import Config
 from carbon.exceptions import CarbonError, HelpersError
 from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency, \
-    mask_credentials_password, sort_tasklist, find_artifacts_on_disk, walk_results_directory, \
-    search_artifact_location_dict, build_artifact_regex_query
-
+    mask_credentials_password, sort_tasklist, find_artifacts_on_disk, walk_results_directory
 
 
 @pytest.fixture(scope='class')
@@ -62,12 +62,14 @@ def task_concurrency_config():
     cfgp = ConfigParser()
     cfgp.read(config_file)
     cfgp.set('task_concurrency','provision','True')
+    cfgp.set('task_concurrency','report','True')
     with open(config_file, 'w') as cf:
         cfgp.write(cf)
     os.environ['CARBON_SETTINGS'] = config_file
     config = Config()
     config.load()
     return config
+
 
 @pytest.fixture(scope='class')
 def task_host(task_concurrency_config):
@@ -77,6 +79,18 @@ def task_host(task_concurrency_config):
          config=task_concurrency_config,
          parameters=params)
     return host
+
+
+@pytest.fixture(scope='class')
+def task_report(task_concurrency_config):
+    e_params = dict(description='description', hosts='test', executor='runner')
+    ex = Execute(name='dummy_execute', parameters=e_params)
+    r_params=dict(importer='dummy', executes=[ex])
+    report = Report(name='/tmp/dummy.xml',
+                 config=task_concurrency_config,
+                 parameters=r_params)
+    return report
+
 
 @pytest.fixture(scope='function')
 def os_creds():
@@ -100,6 +114,7 @@ def data_folder():
     os.system('touch /tmp/1/artifacts/localhosts/payload_eg/results/junit_example.xml '
               '/tmp/.results/junit2.xml /tmp/1/junit3.xml')
     return data_folder
+
 
 class TestDataInjector(object):
 
@@ -181,7 +196,6 @@ class TestDataInjector(object):
         assert cmd == "cmd { 'test': 'dictionary' }"
 
 
-
 def test_validate_render_scenario_no_include():
     result = validate_render_scenario(os.path.abspath('../assets/no_include.yml'))
     assert len(result) == 1
@@ -202,16 +216,28 @@ def test_validate_render_scenario_empty_include():
         validate_render_scenario('../assets/descriptor.yml')
 
 
-def test_set_task_concurrency_false(host):
+def test_set_task_concurrency_provision_is_false(host):
     for task in host.get_tasks():
         if task['task'].__task_name__ == 'provision':
             assert set_task_class_concurrency(task, host)['task'].__concurrent__ is False
 
 
-def test_set_task_concurrency_true(task_host):
+def test_set_task_concurrency_report_is_false(report_resource):
+    for task in report_resource.get_tasks():
+        if task['task'].__task_name__ == 'report':
+            assert set_task_class_concurrency(task, report_resource)['task'].__concurrent__ is False
+
+
+def test_set_task_concurrency_provision_is_true(task_host):
     for task in task_host.get_tasks():
         if task['task'].__task_name__ == 'provision':
             assert set_task_class_concurrency(task, task_host)['task'].__concurrent__ is True
+
+
+def test_set_task_concurrency_report_is_true(task_report):
+    for task in task_report.get_tasks():
+        if task['task'].__task_name__ == 'report':
+            assert set_task_class_concurrency(task, task_report)['task'].__concurrent__ is True
 
 
 def test_mask_credentials_password_param(os_creds):

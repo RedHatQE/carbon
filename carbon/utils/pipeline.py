@@ -160,7 +160,7 @@ class PipelineBuilder(object):
                 if task['task'].__task_name__ == self.name:
                     # fetch & set hosts and executes for the given reports task
                     task = fetch_executes(scenario_executes, scenario_assets, task)
-                    pipeline.tasks.append(task)
+                    pipeline.tasks.append(set_task_class_concurrency(task, report))
 
         # reverse the order of the tasks to be executed for cleanup task
         if self.name == CleanupTask.__task_name__:

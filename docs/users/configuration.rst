@@ -45,15 +45,24 @@ ansible files in the directory. Carbon will then use this static directory durin
 task_concurrency
 ~~~~~~~~~~~~~~~~
 
-The **task_concurrency** option is used to control how tasks are executed by Carbon. Whether it should be sequential or in
-parallel/concurrent. Right now this is used to control only the execution of the Provision task.
+The **task_concurrency** option is used to control how tasks are executed by Carbon. Whether it should be sequential
+or in parallel/concurrent. Right now this is used to control only the execution of the Provision or Report task.
+By default Provision and Report tasks will execute concurrently/parallel independent of each other.
 
-By default Provision tasks will execute concurrently/parallel independent of each other. There are cases
-when provisioning resources of different types that there might be an inter-dependency so executing the tasks in
-parallel will not suffice. In that case, set the **provision=False** and arrange the resources defined in the scenario
-descriptor file in the proper sequential order.
+There are cases when provisioning resources of different types that there might be an inter-dependency so executing
+the tasks in parallel will not suffice. In that case, set the **provision=False** and arrange the resources defined
+in the scenario descriptor file in the proper sequential order.
 
 A valid example is when you want to provision a virtual network and you want to provision a VM attached to that
 network. Arrange the resource definition so that the virtual network is provisioned first, and then the VM is
 provisioned afterwards.
+
+There are cases when you need to import the same test artifact into separate reporting systems but one reporting
+systems needs the data in the test artifact to be modified with metadata before it can be imported. In that case,
+set the **report=False** and arrange the resources defined in the scenario descriptor file in the
+proper sequential order.
+
+A valid example is when you want to import into Polarion but need to modify the test artifact with Polarion
+metadata and then import that same artifact into Report Portal. Arrange the resource definition so that
+either the Polarion conversion and import happens before or after the import into Report Portal.
 

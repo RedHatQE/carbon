@@ -55,6 +55,10 @@ def config():
         cfgp.set('task_concurrency','provision','False')
         with open(config_file, 'w') as cf:
             cfgp.write(cf)
+    if cfgp.get('task_concurrency','report') != 'False':
+        cfgp.set('task_concurrency','report','False')
+        with open(config_file, 'w') as cf:
+            cfgp.write(cf)
     config = Config()
     config.load()
     return config
