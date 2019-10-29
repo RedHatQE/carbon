@@ -1,3 +1,33 @@
+Version 1.4.1 (2019-10-29)
+--------------------------
+
+Bug fixes
+~~~~~~~~~
+
+* Update FAQs page with proper link to Carbon issues
+* Change the beaker certificate param from CA_PATH to CA_CERT
+* Allow ip_address as a list of ips when creating master inventory
+* Carbon fails to find the execute of a Report when execute name has spaces
+* Errors on task concurrency if carbon.cfg is not found
+* Linchpin provisioner not logging to carbon logger during create
+* Polarion importer attempts to do properties translation even though no properties specified
+* Modify setup file to install requires versions for paramiko to be >=2.4.2 and ansible to be back >=2.5.0
+* Fix cleanup task failure
+
+Enhancements:
+~~~~~~~~~~~~~
+
+* Added more info to execute docs creating raw test shell commands
+* Add the capability to control the Report task concurrency setting using carbon.cfg
+* Make storing carbon created rp config file option configurable
+* Edit the hostrequires option for beaker provider to allow multiple keys with same name
+
+Testing Improvements:
+~~~~~~~~~~~~~~~~~~~~
+
+* Added localhost scenario as integration tests
+* Refactored the Report resources/tasks/importers to make it more testable
+
 Version 1.4.0 (2019-09-30)
 --------------------------
 New Features
