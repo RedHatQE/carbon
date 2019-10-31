@@ -21,6 +21,7 @@ Detailed Information
    output
    examples
    best_practices
+   localhost
    faqs
 
 

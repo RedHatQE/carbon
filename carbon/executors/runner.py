@@ -539,10 +539,14 @@ class RunnerExecutor(CarbonExecutor):
         extra_vars['dest'] = destination
         extra_vars['artifacts'] = self.artifacts
 
-        # check for localhost
-        for h in self._hosts:
-            if is_host_localhost(h.ip_address):
-                extra_vars['localhost'] = True
+        # check for localhost in the list of host
+        extra_vars['localhost'] = False
+        if self._hosts:
+            for h in self._hosts:
+                if is_host_localhost(h.ip_address):
+                    extra_vars['localhost'] = True
+        else:
+            extra_vars['localhost'] = True
 
         # build run options
         run_options = self.build_run_options()

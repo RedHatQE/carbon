@@ -145,7 +145,8 @@ Hosts
 
 Carbon provides many ways to define your host.  This has already been
 described in the orchestration section, please view information about
-defining the hosts `here <orchestrate.html#hosts>`_.
+defining the hosts `here <orchestrate.html#hosts>`_. For more localhost
+usage refer to the`localhost <../localhost.html>`_ page.
 
 Ansible
 -------

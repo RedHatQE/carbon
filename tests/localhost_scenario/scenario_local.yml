@@ -3,9 +3,9 @@ name: LOCAL-EXAMPLE
 description: An example scenario for local running
 
 provision:
-  - name: laptop
-    groups: localhost
-    ip_address: 127.0.0.1
+  - name: dummy
+    groups: static-dummy
+    ip_address: 127.0.1.1
     ansible_params:
       ansible_connection: local
 
@@ -81,8 +81,8 @@ execute:
         command: ls -lrta
       - chdir: {{ WORKSPACE }}/sample_artifacts
         command: |
-           cp SampleTest.xml  SampleTest_'{ laptop.ip_address }'.xml
-           cp SampleTest_'{ laptop.ip_address }'.xml ../.carbon/{{ PY_VERSION }}/.results/
+           cp SampleTest.xml  SampleTest_'{ dummy.ip_address }'.xml
+           cp SampleTest_'{ dummy.ip_address }'.xml ../.carbon/{{ PY_VERSION }}/.results/
       - chdir: {{ WORKSPACE }}/sample_artifacts
         command: |
           cp SampleTest.log SampleDummy.log
@@ -99,7 +99,7 @@ report:
     executes: "Test collecting artifacts"
     importer: dummy
 
-  - name: SampleTest_{ laptop.ip_address }.xml
+  - name: SampleTest_{ dummy.ip_address }.xml
     description: "Test importing xml files with data-passthrough"
     executes: "Test collecting artifacts"
     importer: dummy

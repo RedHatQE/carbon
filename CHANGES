@@ -14,15 +14,15 @@ Bug fixes
 * Modify setup file to install requires versions for paramiko to be >=2.4.2 and ansible to be back >=2.5.0
 * Fix cleanup task failure
 
-Enhancements:
-~~~~~~~~~~~~~
+Enhancements
+~~~~~~~~~~~~
 
 * Added more info to execute docs creating raw test shell commands
 * Add the capability to control the Report task concurrency setting using carbon.cfg
 * Make storing carbon created rp config file option configurable
 * Edit the hostrequires option for beaker provider to allow multiple keys with same name
 
-Testing Improvements:
+Testing Improvements
 ~~~~~~~~~~~~~~~~~~~~
 
 * Added localhost scenario as integration tests

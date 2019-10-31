@@ -37,7 +37,7 @@ from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError, \
     CarbonProvisionerError, CarbonImporterError
 from .helpers import get_core_tasks_classes
 from traceback import format_exc
-from ._compat import RawConfigParser
+from ._compat import RawConfigParser, string_types
 from uuid import uuid4
 from sys import exc_info
 
@@ -1352,7 +1352,7 @@ class Inventory(LoggerMixin, FileLockMixin):
                         config.set(section, host.ip_address.get('public'))
                     elif isinstance(host.ip_address, list):
                         [config.set(section, ip) for ip in host.ip_address]
-                    elif isinstance(host.ip_address, str):
+                    elif isinstance(host.ip_address, string_types):
                         config.set(section, host.ip_address)
 
                     # add host vars
@@ -1394,8 +1394,11 @@ class Inventory(LoggerMixin, FileLockMixin):
                 config.add_section(host.name)
 
         # add specific hosts to the group to run the action against
-        for host in self.hosts:
-            config.set(main_section, host.name)
+        if self.hosts:
+            for host in self.hosts:
+                config.set(main_section, host.name)
+        else:
+            self.create_implicit_localhost(main_section, config)
 
         # check for any old/stale unique inventories and delete them.
         # This is incase unique inventories from previous runs were left
@@ -1456,3 +1459,11 @@ class Inventory(LoggerMixin, FileLockMixin):
                 cfg_str += '\n'
             new_section = True
         self.logger.debug('\n' + cfg_str)
+
+    def create_implicit_localhost(self, main_section, parser):
+        parser.add_section('localhost')
+        parser.set('localhost', '127.0.0.1')
+        parser.add_section('localhost:vars')
+        parser.set('localhost:vars', 'ansible_connection', 'local')
+        parser.set('localhost:vars', 'ansible_python_interpreter', '"{{ansible_playbook_python}}"')
+        parser.set(main_section, 'localhost')

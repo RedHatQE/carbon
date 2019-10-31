@@ -750,9 +750,25 @@ class TestInventory(object):
         assert os.path.exists('/tmp/inv/inventory/master-xyz')
 
     @staticmethod
-    def test_static_dir_delete_master_inv(inv_host):
+    def test_static_dir_delete_master_inv(inv_host, cleanup_unique_inv):
         inv = Inventory(hosts=[inv_host], all_hosts=[inv_host],
                         data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
                         static_inv_dir='/tmp/inv')
         inv.delete_master()
         assert not os.path.exists('/tmp/inv/inventory/master-xyz')
+
+    @staticmethod
+    def test_implicit_localhost_unique_inv(inv_host):
+        data =''
+        inv = Inventory(hosts=[], all_hosts=[inv_host],
+                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
+                        static_inv_dir='/tmp/inv')
+        inv.create_unique()
+        for i in glob.glob('/tmp/inv/inventory/unique-*'):
+            with open(i) as f:
+                data = f.read()
+        assert data.find('localhost') != -1
+        cleanup_unique_inv
+
+
+

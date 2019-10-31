@@ -323,7 +323,8 @@ Example 8
 ~~~~~~~~~
 
 The following is an example of running a script.  The following is an
-example of a script running on the localhost.
+example of a script running on the localhost. For localhost usage refer
+to the`localhost <../localhost.html>`_ page.
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
     :lines: 150-156

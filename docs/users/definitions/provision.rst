@@ -773,16 +773,6 @@ Example
 .. literalinclude:: ../../.examples/provision/static/scenario.yml
 
 There may also be a scenario where you want to run cmds or scripts on the
-local system instead of the provisioned resources.  In that case, you should
-define a static localhost system.
-
-The following is an example of a statically defined local machine:
-
-.. _localhost_example:
-
-Example
-+++++++
-
-.. literalinclude:: ../../.examples/orchestrate/ansible/basic/scenario.yml
-    :lines: 1-11
+local system instead of the provisioned resources.  Refer to the
+`localhost <../localhost.html>`_ page for more details.
 
