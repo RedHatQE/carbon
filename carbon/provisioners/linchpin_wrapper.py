@@ -39,10 +39,21 @@ except ImportError:
     pass
 from carbon.core import CarbonProvisioner
 from carbon.exceptions import CarbonProvisionerError, CarbonProviderError
-from ..helpers import LinchpinResourceBuilder, lookup_ip_of_hostname
+from ..helpers import LinchpinResourceBuilder, lookup_ip_of_hostname, exec_local_cmd
 from .._compat import ConfigParser
 import json
 import stat
+
+
+class CarbonContext(LinchpinContext):
+    # Really only subclassing so we can utilize our logger
+    # when linchpin api logs any activity
+
+    def setup_logging(self):
+        self.console = self.cbn_logger
+
+    def add_logger(self, logger):
+        self.cbn_logger = logger
 
 
 class Logger(object):
@@ -77,7 +88,8 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self._create_inv = False
 
     def _init_context(self):
-        context = LinchpinContext()
+        context = CarbonContext()
+        context.add_logger(self.logger)
         context.setup_logging()
         context.load_config()
         context.load_global_evars()
@@ -246,10 +258,8 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
             inv_file.write(inv)
 
     def _create(self):
-        Log = Logger(logger=self.logger)
         host = getattr(self.host, 'name', 'carbon-name')
-        code, results = self.linchpin_api.do_action(self.pinfile, action='up')
-        del Log
+        code, results = self._lp_action()
         self.logger.debug(json.dumps(results))
         if code:
             raise CarbonProvisionerError("Failed to provision host %s" % host)
@@ -351,7 +361,48 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                                 ' provisioned. Attempting to perform the destroy without a tx_id'
                                 ' but this might not work, so you may need to manually cleanup resources.' % host)
         self.logger.info('Delete asset %s in %s.' % (host, self.provider))
-        Log = Logger(logger=self.logger)
-        self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=txid)
-        del Log
+        self._lp_action(txid=txid)
         self.logger.info('Linchpin successfully deleted asset %s.' % host)
+
+    def _is_ansible_29(self):
+        """
+        Used to determine the logging of ansible task output method.
+        Starting with ansible 2.9.0, carbon setups an ansible logger
+        that can redirect the output where we need. Ansible<2.9.0
+        the ansible logger has no affect so we need to redirect
+        stdout to our logger.
+        """
+        rc, out, err = exec_local_cmd('ansible --version')
+        if rc == 0:
+            if 'ansible 2.9.0' not in out.split('\n'):
+                return False
+        else:
+            self.logger.warning('Could not determine the ansible version. Proceeding with the default'
+                                ' way of logging ansible task output.')
+            return False
+        return True
+
+    def _lp_action(self, **kwargs):
+        """
+        wrapper function for calling the linchpin api
+        to do up or destroy. We only supply txid when
+        carbon is trying to destroy resources. So assume
+        when no txid is provided that we are being asked
+        to create resources.
+        """
+        results = None
+
+        if self._is_ansible_29():
+            if kwargs.get('txid'):
+                self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=kwargs.get('txid'))
+            else:
+                results = self.linchpin_api.do_action(self.pinfile, action='up')
+        else:
+            Log = Logger(logger=self.logger)
+            if kwargs.get('txid'):
+                self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=kwargs.get('txid'))
+            else:
+                results = self.linchpin_api.do_action(self.pinfile, action='up')
+            del Log
+
+        return results

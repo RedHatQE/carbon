@@ -29,7 +29,8 @@ import inspect
 import os
 from glob import glob
 from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
-from logging import Formatter, getLogger, StreamHandler, FileHandler, LoggerAdapter, Filter
+from logging import Formatter, getLogger, StreamHandler, FileHandler, Filter
+from logging import config as log_config
 from time import time, sleep
 from collections import OrderedDict
 
@@ -40,6 +41,7 @@ from traceback import format_exc
 from ._compat import RawConfigParser, string_types
 from uuid import uuid4
 from sys import exc_info
+from .constants import LOGGING_CONFIG
 
 
 class LoggerMixin(object):
@@ -94,15 +96,6 @@ class LoggerMixin(object):
         :param config: Carbon config object.
         :type config: dict
         """
-        # get logger
-        logger = getLogger(name)
-
-        # skip creating logger if handler already exists
-        if len(logger.handlers) > 0:
-            return
-
-        # construct stream handler
-        stream_handler = StreamHandler()
 
         # create log directory
         log_dir = os.path.join(config['DATA_FOLDER'], 'logs')
@@ -118,27 +111,39 @@ class LoggerMixin(object):
                 msg += ', %s.' % ex
             raise LoggerMixinError(msg)
 
-        # construct file handler
-        file_handler = FileHandler(os.path.join(
-            log_dir, 'carbon_scenario.log'))
+        full_path = os.path.join(log_dir, 'carbon_scenario.log')
 
-        # configure handlers
-        for handler in [stream_handler, file_handler]:
-            handler.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
-            # remove the extra logging regarding class/function/lineno if not in debug mode
-            if config['LOG_LEVEL'] == 'info':
-                handler.setFormatter(Formatter(cls._INFO_LOG_FORMAT))
-            else:
-                handler.setFormatter(Formatter(cls._DEBUG_LOG_FORMAT))
+        # setup file for filehandler
+        LOGGING_CONFIG['handlers']['file'].update({'filename': full_path})
 
-        # add exception filter to the stream handler so we don't print stack trace
-        filter = LoggerMixin.ExceptionFilter()
-        stream_handler.addFilter(filter)
+        # setup logging formatters
+        LOGGING_CONFIG['formatters']['default'].update({'format': cls._INFO_LOG_FORMAT})
+        LOGGING_CONFIG['formatters']['debug'].update({'format': cls._DEBUG_LOG_FORMAT})
 
-        # configure logger
-        logger.setLevel(cls._LOG_LEVELS[config['LOG_LEVEL']])
-        logger.addHandler(stream_handler)
-        logger.addHandler(file_handler)
+        # setup any other loggers that might have been specified in the carbon.cfg
+        # For now this might suffice but if the carbon community changes we can look
+        # at a better way through the plugins
+        for l in config['SETUP_LOGGER']:
+            LOGGING_CONFIG['loggers'].update({l: {'handlers': ['console', 'file'],
+                                                  'level': cls._LOG_LEVELS[config['LOG_LEVEL']],
+                                                  'propagate': False}})
+
+        # setup formatter and log level for handlers based on log level
+        if config['LOG_LEVEL'] != 'info':
+            for handler in LOGGING_CONFIG['handlers']:
+                LOGGING_CONFIG['handlers'][handler].update({'formatter': 'debug'})
+                LOGGING_CONFIG['handlers'][handler].update({'level': cls._LOG_LEVELS[config['LOG_LEVEL']]})
+
+            for logger in LOGGING_CONFIG['loggers']:
+                LOGGING_CONFIG['loggers'][logger].update({'level': cls._LOG_LEVELS[config['LOG_LEVEL']]})
+
+        # Configure the carbon main logger
+        LOGGING_CONFIG['loggers'].update({name: {'handlers': ['console', 'file'],
+                                                   'level': cls._LOG_LEVELS[config['LOG_LEVEL']],
+                                                   'propagate': False}})
+
+        # Init the logging config
+        log_config.dictConfig(LOGGING_CONFIG)
 
     @property
     def logger(self):

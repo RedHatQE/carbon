@@ -142,6 +142,23 @@ class Config(dict):
 
         self.__setitem__('TASK_CONCURRENCY', _concurrency_settings)
 
+    def __set_setup_logger__(self):
+        """
+        Set new loggers that carbon should configure logging. This
+        is so those libraries/utils log their logger output to
+        carbon's console and filehandler using carbon's formatter.
+        """
+        _logging_settings = []
+
+        for section in getattr(self.parser, '_sections'):
+            if not section.startswith('setup_logger'):
+                continue
+
+            for option in self.parser.options(section):
+                _logging_settings.append(self.parser.get(section, option))
+
+        self.__setitem__('SETUP_LOGGER', _logging_settings)
+
     def load(self):
         """Load configuration settings.
 

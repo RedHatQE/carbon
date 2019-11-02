@@ -82,11 +82,13 @@ DEFAULT_CONFIG = {
     'RESOURCE_CHECK_ENDPOINT': '',
     'INVENTORY_FOLDER': '',
     'RESULTS_FOLDER': os.path.join(DATA_FOLDER, '.results'),
-    'TASK_CONCURRENCY': DEFAULT_TASK_CONCURRENCY
+    'TASK_CONCURRENCY': DEFAULT_TASK_CONCURRENCY,
+    'SETUP_LOGGER': []
 }
 
 # Default config sections
-DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator', 'feature_toggles', 'importer', 'task_concurrency']
+DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator', 'feature_toggles', 'importer',
+                           'task_concurrency', 'setup_logger']
 
 # options on how credentials can be set
 SET_CREDENTIALS_OPTIONS = ['config', 'scenario']
@@ -96,3 +98,53 @@ IMPORTER = 'artifact-importer'
 
 # Default feature toggle for provisioner plugins
 DEFAULT_FEATURE_TOGGLE_HOST_PLUGIN = dict(name='host', plugin_implementation='True')
+
+# Default logging config for carbon
+# Need this because ansible 2.9 setups a logging basicConfig which 'hijacks' the carbon loggers
+LOGGING_CONFIG = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'default': {
+            'format': ''
+        },
+        'debug': {
+            'format': ''
+        },
+    },
+    'filters': {
+        'exception': {
+            '()': 'carbon.core.LoggerMixin.ExceptionFilter',
+        }
+    },
+    'handlers': {
+        'file': {
+            'class': 'logging.FileHandler',
+            'level': 'INFO',
+            'formatter': 'default',
+            'filename': '',
+            'mode': 'w',
+            'encoding': 'utf-8',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
+            'filters': ['exception']
+        }
+    },
+    'loggers': {
+        'blaster': {'handlers': ['console', 'file'],
+                    'level': 'INFO',
+                    'propagate': False},
+        'polar': {'handlers': ['console', 'file'],
+                  'level': 'INFO',
+                  'propagate': False},
+        'lp_console': {'handlers': ['console', 'file'],
+                       'level': 'INFO',
+                       'propagate': False},
+        'ansible': {'handlers': ['console', 'file'],
+                    'level': 'INFO',
+                    'propagate': False},
+    }
+}

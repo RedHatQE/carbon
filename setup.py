@@ -54,7 +54,7 @@ setup(
         'paramiko>=2.4.2',
         'requests>=2.20.1',
         'urllib3==1.24.3',
-        'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.1.3#egg=polar'
+        'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@logger#egg=polar'
     ],
     extras_require={'rp-preproc':
                         ['rp-preproc@git+https://gitlab.cee.redhat.com/ccit/reportportal/rp_preproc.git@master'],
