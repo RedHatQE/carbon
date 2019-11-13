@@ -45,7 +45,7 @@ import json
 import stat
 
 
-class CarbonContext(LinchpinContext):
+'''class CarbonContext(LinchpinContext):
     # Really only subclassing so we can utilize our logger
     # when linchpin api logs any activity
 
@@ -53,7 +53,7 @@ class CarbonContext(LinchpinContext):
         self.console = self.cbn_logger
 
     def add_logger(self, logger):
-        self.cbn_logger = logger
+        self.cbn_logger = logger'''
 
 
 class Logger(object):
@@ -88,8 +88,9 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         self._create_inv = False
 
     def _init_context(self):
-        context = CarbonContext()
-        context.add_logger(self.logger)
+        # context = CarbonContext()
+        # context.add_logger(self.logger)
+        context = LinchpinContext()
         context.setup_logging()
         context.load_config()
         context.load_global_evars()
