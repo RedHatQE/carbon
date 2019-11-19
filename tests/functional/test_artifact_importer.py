@@ -46,7 +46,7 @@ def artifact_locations():
 
 
 @pytest.fixture(scope='class')
-def config():
+def report_config():
     config_file = '../assets/carbon.cfg'
     os.environ['CARBON_SETTINGS'] = config_file
     config = Config()
@@ -72,30 +72,12 @@ def default_report_params(execute):
 
 
 @pytest.fixture(scope='class')
-def default_rp_report_params(execute):
-    params = dict(description='description', executes=[execute],
-                  provider=dict(name='reportportal',
-                                credential='reportportal-creds'
-                                ))
-    return params
-
-
-@pytest.fixture(scope='class')
 def default_profile_params():
     params = dict(data_folder='/tmp/.results',
                   workspace='/tmp',
                   provider_credentials = dict(polarion_url='https://test.com/polarion',
                                               username='testuser',
                                               password='testpassword'))
-    return params
-
-@pytest.fixture(scope='class')
-def default_rp_profile_params():
-    params = dict(data_folder='/tmp/.results',
-                  workspace='/tmp',
-                  provider_credentials = dict(rp_url='https://test.com/rp',
-                                              api_token='1234-5678-9018',
-                                              service_url='https://test_service_rp.com/rp'))
     return params
 
 
@@ -107,20 +89,12 @@ def plugin():
     pg.import_artifacts = mock.MagicMock(return_value='Import Success')
     return pg
 
-@pytest.fixture(scope='class')
-def rp_plugin():
-    pg = mock.MagicMock(spec=ImporterPlugin,
-                        __plugin_name__='reportportal')
-    pg.profile = dict(name='test.xml')
-    pg.import_artifacts = mock.MagicMock(return_value='Import Success')
-    return pg
-
 
 @pytest.fixture(scope='class')
-def report(default_report_params, plugin, config,
+def report(default_report_params, plugin, report_config,
            default_profile_params, execute):
     report = mock.MagicMock(spec=Report, name='report',
-                            config=config)
+                            config=report_config)
 
     report.name = 'test.xml'
     report.importer_plugin = plugin
@@ -131,30 +105,10 @@ def report(default_report_params, plugin, config,
 
     return report
 
-@pytest.fixture(scope='class')
-def report_rp(default_rp_report_params, rp_plugin, config,
-           default_rp_profile_params, execute):
-    report = mock.MagicMock(spec=Report, name='report_rp',
-                            config=config)
-    report.name = 'test.xml'
-    report.importer_plugin = rp_plugin
-    report.parameters = default_rp_report_params
-    report.do_import = True
-    report.executes = [execute]
-    report.profile.return_value = default_rp_profile_params
-
-    return report
-
 
 @pytest.fixture(scope='class')
 def artifact_importer(report):
     importer = ArtifactImporter(report=report)
-    return importer
-
-
-@pytest.fixture(scope='class')
-def artifact_importer_rp(report_rp):
-    importer = ArtifactImporter(report=report_rp)
     return importer
 
 
@@ -165,13 +119,9 @@ class TestArtifactImporter(object):
         assert isinstance(artifact_importer, CarbonImporter)
 
     @staticmethod
-    def test_artifact_importer_constructor_rp(artifact_importer_rp):
-        assert isinstance(artifact_importer_rp, CarbonImporter)
-
-    @staticmethod
     @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
-    def test_artifact_importer_no_execute_artifacts_collected(mock_find_disks, artifact_importer,
-                                      plugin, artifact_locations, execute):
+    def test_artifact_importer_validate_no_artifact_location(mock_find_disks, artifact_importer,
+                                                             plugin, artifact_locations, execute):
 
         locations = [os.path.join(dir, f)
                      for dir, files in artifact_locations.items()
@@ -184,21 +134,8 @@ class TestArtifactImporter(object):
 
     @staticmethod
     @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
-    def test_artifact_importer_no_artifact_on_disk(mock_find_disks, artifact_importer,
-                                                   plugin, execute, report):
-
-        execute.artifact_locations = []
-        mock_find_disks.return_value = []
-        report.name = 'test.xml'
-        artifact_importer.artifact_paths = []
-        with pytest.raises(CarbonImporterError):
-            artifact_importer.plugin = plugin
-            artifact_importer.validate_artifacts()
-
-    @staticmethod
-    @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
-    def test_artifact_importer_execute_artifact_on_disk(mock_find_disks, artifact_importer,
-                                      plugin, artifact_locations, execute):
+    def test_artifact_importer_validate_artifact_locations_artifact_on_disk(mock_find_disks, artifact_importer,
+                                                                            plugin, artifact_locations, execute):
 
         locations = [os.path.join(dir, f)
                      for dir, files in artifact_locations.items()
@@ -210,11 +147,42 @@ class TestArtifactImporter(object):
         artifact_importer.plugin = plugin
         artifact_importer.validate_artifacts()
 
+    @staticmethod
+    @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
+    def test_artifact_importer_validate_no_execute_artifacts_on_disk(mock_find_disks, plugin, report,
+                                                                     artifact_locations):
+
+        locations = [os.path.join(dir, f)
+                     for dir, files in artifact_locations.items()
+                     for f in files]
+        mock_find_disks.return_value = [os.path.join('/tmp', dir)
+                                        for dir in locations]
+
+        report.executes = []
+        report.all_hosts = ['host_01', 'host_02']
+        artifact_importer = ArtifactImporter(report=report)
+        artifact_importer.plugin = plugin
+        artifact_importer.validate_artifacts()
+
 
     @staticmethod
     @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
-    def test_artifact_importer_import(mock_find_disks, artifact_importer,
-                                      plugin, artifact_locations, execute):
+    def test_artifact_importer_validate_no_artifact_on_disk(mock_find_disks, artifact_importer,
+                                                            plugin, execute, report):
+
+        execute.artifact_locations = []
+        mock_find_disks.return_value = []
+        report.name = 'test.xml'
+        artifact_importer.artifact_paths = []
+        with pytest.raises(CarbonImporterError):
+            artifact_importer.plugin = plugin
+            artifact_importer.validate_artifacts()
+
+
+    @staticmethod
+    @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
+    def test_artifact_importer_import_artifacts(mock_find_disks, artifact_importer,
+                                                plugin, artifact_locations, execute):
 
         locations = [os.path.join(dir, f)
                      for dir, files in artifact_locations.items()
@@ -229,8 +197,8 @@ class TestArtifactImporter(object):
 
     @staticmethod
     @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
-    def test_artifact_importer_import_failure(mock_find_disks, artifact_importer,
-                                              plugin, artifact_locations):
+    def test_artifact_importer_import_artifacts_failure(mock_find_disks, artifact_importer,
+                                                        plugin, artifact_locations):
 
         locations = [os.path.join(dir, f)
                      for dir, files in artifact_locations.items()

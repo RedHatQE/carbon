@@ -252,11 +252,10 @@ class TestReportResource(object):
     @staticmethod
     def test_create_report_without_executes(default_report_params, config):
         # params = dict(executes=None, key='value')
-        default_report_params['executes'] = None
-        with pytest.raises(CarbonReportError) as ex:
-            Report(name='test.xml', parameters=default_report_params, config=config)
-        assert 'Unable to associate executes to report artifact:test.xml. No executes ' \
-               'defined!' in ex.value.args
+        params = copy.deepcopy(default_report_params)
+        del params['executes']
+        report = Report(name='test.xml', parameters=params, config=config)
+        assert isinstance(report.executes, list)
 
     @staticmethod
     def test_create_report_with_executes_as_str(default_report_params, config):

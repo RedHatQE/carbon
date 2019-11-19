@@ -91,7 +91,7 @@ execute:
       - {{ WORKSPACE }}/sample_artifacts/SampleTest.*
     artifact_locations:
       .results:
-         - SampleTest.log
+         - SampleTest_'{ dummy.ip_address }'.xml
 
 report:
   - name: '*.xml'
@@ -106,7 +106,6 @@ report:
 
   - name: SampleDummy.log
     description: "Test importing all found xml file"
-    executes: "Test collecting artifacts"
     importer: dummy
 
   - name: localhost/SampleTest.log

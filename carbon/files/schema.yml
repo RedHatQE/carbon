@@ -177,4 +177,4 @@ mapping:
         executes:
           type: any
           func: type_str_list
-          required: True
+          required: False

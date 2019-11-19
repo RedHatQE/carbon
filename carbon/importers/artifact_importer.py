@@ -16,6 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
 from ..core import CarbonImporter
 from ..exceptions import CarbonImporterError
 from .._compat import string_types
@@ -40,8 +41,14 @@ class ArtifactImporter(CarbonImporter):
 
         # check if user specified data pass-through injection
         host_list = [host for execute in self.report.executes for host in execute.all_hosts]
-        injector = DataInjector(host_list)
-        self.report_name = injector.inject(self.report.name)
+        if host_list:
+            self.injector = DataInjector(host_list)
+        else:
+            # Assume no executes is assigned, so the helper
+            # method fetch_executes added an attribute 'all_hosts'
+            # to the report object
+            self.injector = DataInjector(self.report.all_hosts)
+        self.report_name = self.injector.inject(self.report.name)
         report_profile['name'] = self.report_name
 
         # build the config params that might be useful to plugin and instantiate
@@ -59,19 +66,33 @@ class ArtifactImporter(CarbonImporter):
 
     def validate_artifacts(self):
 
-        # check that the execute object collected artifacts
+        # Check report has any executes associated. If not, proceed
+        # to walk the data directory on disk.
         art_paths = []
         self.logger.debug(self.report_name)
-        for execute in getattr(self.report, 'executes'):
-            if not execute.artifact_locations:
-                self.logger.warning('The specified execute, %s, does not have any artifacts '
-                                    'with it.' % execute.name)
-                self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
-                                                                  report_name=self.report_name))
-            else:
-                self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
-                                                                  report_name=self.report_name,
-                                                                  art_location=execute.artifact_locations))
+        if getattr(self.report, 'executes'):
+            for execute in getattr(self.report, 'executes'):
+                # check that the execute object collected artifacts
+                if not execute.artifact_locations:
+                    self.logger.warning('The specified execute, %s, does not have any artifacts '
+                                        'with it.' % execute.name)
+                    self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
+                                                                      report_name=self.report_name))
+                else:
+                    # check artifact locations for data pass-thru first
+                    artifact_locations = dict()
+                    for key, value in execute.artifact_locations.items():
+                        dir_key = self.injector.inject(key)
+                        files = [self.injector.inject(v) for v in value]
+                        artifact_locations.update({dir_key: files})
+
+                    # Perform check to walk the data directory
+                    self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
+                                                                      report_name=self.report_name,
+                                                                      art_location=artifact_locations))
+        else:
+            self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
+                                                              report_name=self.report_name))
         if not self.artifact_paths:
             raise CarbonImporterError('No artifact could be found on the Carbon controller data folder.')
 

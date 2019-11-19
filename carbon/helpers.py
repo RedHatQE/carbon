@@ -26,7 +26,6 @@
 """
 import inspect
 import json
-import logging
 import os
 import pkgutil
 import random
@@ -40,8 +39,6 @@ import warnings
 from logging import getLogger
 import fnmatch
 import stat
-import copy
-
 import cachetclient.cachet as cachet
 import jinja2
 import requests
@@ -54,7 +51,6 @@ import yaml
 from paramiko import SSHClient, WarningPolicy
 from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
-
 from ._compat import string_types
 from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER, DEFAULT_TASK_CONCURRENCY, \
     TASKLIST
@@ -817,9 +813,12 @@ def fetch_executes(executes, hosts, task):
                     break
 
     if not _executes:
-        LOG.error('The specified execute was not found.')
-        raise HelpersError('The execute does not look to exist in the scenario. Make sure to specify one that exists.')
-    task[_type].executes = _executes
+        # Kept having issues tyring to import the Execute
+        # resource to make a dummy Execute with all the hosts
+        # so this is a hack way of assigning the hosts.
+        task[_type].all_hosts = hosts
+    else:
+        task[_type].executes = _executes
     return task
 
 
@@ -1253,12 +1252,6 @@ def find_artifacts_on_disk(data_folder, report_name, art_location=[]):
         LOG.error('Did not find any of the artifacts on local disk. '
                   'Import cannot occur!')
 
-    '''if total_paths < len(fnd_paths):
-        LOG.warning('Found %s artifacts. Will still attempt to import the'
-                    ' artifacts that were found' % len(fnd_paths))
-    else:
-        LOG.warning('Found %s out of %s artifacts. Will still attempt to import the'
-                    ' artifacts that were found' % (len(fnd_paths), total_paths))'''
     return fnd_paths
 
 
