@@ -263,7 +263,9 @@ a single quoted or double quoted YAML string
         - command: "if [ \\`echo \\$PRE_GA | tr [:upper:] [:lower:]\\` == \\'true\\' ];
                    then sed \\'s/pre_ga:.*/pre_ga: true/\\' ansible/test_playbook.yml; fi"
 
-
+.. note::
+     It is NOT recommended to output verbose logging to standard output for long running tests as there could be
+     issues with carbon parsing the output
 
 Using Playbook Parameter for Test Execution
 -------------------------------------------

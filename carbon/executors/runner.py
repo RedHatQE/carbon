@@ -31,6 +31,7 @@ import copy
 import os.path
 import textwrap
 import re
+import json
 
 from ruamel.yaml import YAML
 from ..core import CarbonExecutor, Inventory
@@ -325,25 +326,25 @@ class RunnerExecutor(CarbonExecutor):
             # remove dynamic playbook
             os.remove(playbook)
 
-            # Get results from file
+            # Get results from the json file and build results in sh_results
             try:
-                with open('shell-results.txt') as fp:
-                    lines = fp.read().splitlines()
+                sh_results = []
+                with open('shell-results.json') as f:
+                    my_json = json.load(f)
+                    for item in my_json:
+                        host = item['host_name']
+                        rc = int(item['rc'])
+                        err = item['err']
+                        sh_results.append({'host': host, 'rc': rc, 'err': err})
             except (IOError, OSError) as ex:
                 self.logger.error(ex)
-                raise CarbonExecuteError('Failed to find the shell-results.txt file '
+                raise CarbonExecuteError('Failed to find the shell-results.json file '
                                          'which means there was an uncaught failure running '
                                          'the dynamic playbook. Please enable verbose Ansible '
                                          'logging in the carbon.cfg file and try again.')
 
-            # Build Results
-            sh_results = []
-            for line in lines:
-                host, rc, err = ast.literal_eval(textwrap.dedent(line).strip())
-                sh_results.append({'host': host, 'rc': rc, 'err': err})
-
             # remove Shell Results file
-            os.remove('shell-results.txt')
+            os.remove('shell-results.json')
 
             ignorerc = self.ignorerc
             validrc = self.validrc
