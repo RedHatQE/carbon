@@ -418,19 +418,25 @@ class RunnerExecutor(CarbonExecutor):
             # remove dynamic playbook
             os.remove(playbook)
 
-            # Get results from file
-            with open('script-results.txt') as fp:
-                lines = fp.read().splitlines()
-
-            # Build Results
+            # Get results from the json file and build results in sh_results
             script_results = []
-            for line in lines:
-                host, rc, err = ast.literal_eval(textwrap.dedent(line).strip())
-                script_results.append({'host': host, 'rc': rc, 'err': err})
+            try:
+                with open('script-results.json') as f:
+                    my_json = json.load(f)
+                    for item in my_json:
+                        host = item['host_name']
+                        rc = int(item['rc'])
+                        err = item['err']
+                        script_results.append({'host': host, 'rc': rc, 'err': err})
+            except (IOError, OSError) as ex:
+                self.logger.error(ex)
+                raise CarbonExecuteError('Failed to find the script-results.json file '
+                                         'which means there was an uncaught failure running '
+                                         'the dynamic playbook. Please enable verbose Ansible '
+                                         'logging in the carbon.cfg file and try again.')
 
             # remove Shell Results file
-            os.remove('script-results.txt')
-
+            os.remove('script-results.json')
             ignorerc = self.ignorerc
             validrc = self.validrc
             if "ignore_rc" in script and script['ignore_rc']:

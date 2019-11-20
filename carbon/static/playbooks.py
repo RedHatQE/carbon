@@ -227,9 +227,19 @@ ADHOC_SCRIPT_PLAYBOOK = '''
       {{ args }}
       {{ options }}
 
-    - name: copy results to file
-      shell:
-        echo -e "('{{ inventory_hostname }}', {{ scrpt_results.rc }}, \'\'\'{{ scrpt_results.stderr }}\'\'\')" \
-        | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> script-results.txt
+    - name: to get correct (stderr/stdout/msg) output msg
+      set_fact:
+        scrpt_out: "{{  scrpt_results.stderr | default( scrpt_results.stdout )| default( scrpt_results.msg )|
+                        default('stderr,stdout.msg NOT present in the output') }}"
+    - name: setting json str
+      set_fact:
+        json_str: "{ 'host_name': '{{ ansible_facts.hostname}}', 'rc': '{{ scrpt_results.rc | default(1) }}',
+                     'err': '{{ scrpt_out | regex_replace('\\\\s\\\\s+','')| regex_replace('\\n','')
+                     | regex_replace(\\"'\\",'')}}' }"
+    - name: copy to shell results to a json file
+      copy:
+        content: "{{ ansible_play_hosts | map('extract', hostvars, 'json_str') | list | to_nice_json }}"
+        dest: ./script-results.json
+      run_once: true
       delegate_to: localhost
 '''

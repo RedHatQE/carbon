@@ -146,7 +146,7 @@ Hosts
 Carbon provides many ways to define your host.  This has already been
 described in the orchestration section, please view information about
 defining the hosts `here <orchestrate.html#hosts>`_. For more localhost
-usage refer to the`localhost <../localhost.html>`_ page.
+usage refer to the `localhost <../localhost.html>`_ page.
 
 Ansible
 -------
@@ -158,6 +158,10 @@ performing the execution. Please see the following example for more details:
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 59-65
+
+.. note::
+   Carbon uses the ansible copy module to process the results of the requested action. The copy module requires selinux
+   access. Refer to the `install guide <../install.html#install>`_.
 
 Return Code for Test Execution
 ------------------------------
