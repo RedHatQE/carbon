@@ -43,7 +43,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'ansible>=2.5.0',
+        'ansible>=2.5.0,<=2.9.0',
         'apache-libcloud==2.2.0',
         'blaster>=0.1.8',
         'Click>=6.7',

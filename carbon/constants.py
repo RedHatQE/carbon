@@ -143,8 +143,5 @@ LOGGING_CONFIG = {
         'lp_console': {'handlers': ['console', 'file'],
                        'level': 'INFO',
                        'propagate': False},
-        'ansible': {'handlers': ['console', 'file'],
-                    'level': 'INFO',
-                    'propagate': False},
     }
 }

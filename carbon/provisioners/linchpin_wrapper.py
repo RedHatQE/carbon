@@ -362,9 +362,13 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
                                 ' provisioned. Attempting to perform the destroy without a tx_id'
                                 ' but this might not work, so you may need to manually cleanup resources.' % host)
         self.logger.info('Delete asset %s in %s.' % (host, self.provider))
-        self._lp_action(txid=txid)
+        rc, results = self._lp_action(txid=txid)
+        if rc > 0:
+            raise CarbonProvisionerError('Failed to destroy the asset %s with return code %s.'
+                                         ' Refer to the Linchpin stdout for more information.' % (host, rc))
         self.logger.info('Linchpin successfully deleted asset %s.' % host)
 
+    # TODO: Delete this is function if we don't ever re-enable ansible logging with linchpin
     def _is_ansible_29(self):
         """
         Used to determine the logging of ansible task output method.
@@ -393,17 +397,18 @@ class LinchpinWrapperProvisioner(CarbonProvisioner):
         """
         results = None
 
-        if self._is_ansible_29():
-            if kwargs.get('txid'):
-                self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=kwargs.get('txid'))
-            else:
-                results = self.linchpin_api.do_action(self.pinfile, action='up')
+        # TODO: Delete this block of code if we don't ever re-enable ansible logging with linchpin
+        # if self._is_ansible_29():
+        #    if 'txid' in kwargs:
+        #        results = self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=kwargs.get('txid'))
+        #    else:
+        #        results = self.linchpin_api.do_action(self.pinfile, action='up')
+        # else:
+        Log = Logger(logger=self.logger)
+        if 'txid' in kwargs:
+            results = self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=kwargs.get('txid'))
         else:
-            Log = Logger(logger=self.logger)
-            if kwargs.get('txid'):
-                self.linchpin_api.do_action(self.pinfile, action='destroy', tx_id=kwargs.get('txid'))
-            else:
-                results = self.linchpin_api.do_action(self.pinfile, action='up')
-            del Log
+            results = self.linchpin_api.do_action(self.pinfile, action='up')
+        del Log
 
         return results

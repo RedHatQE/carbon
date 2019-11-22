@@ -128,13 +128,16 @@ class TestLinchpinWrapperProvisioner(object):
                 results = json.load(sample)
             return (0, [results])
         elif kwargs['action'] == 'destroy':
-            return True
+            return (0, {})
 
     def up_failed(self, *args, **kwargs):
         return (1, {})
 
     def get_run_data(*args, **kwargs):
         return args[1]
+
+    def destroy_failed(self, *args, **kwargs):
+        return (1, {})
 
 
     @staticmethod
@@ -151,6 +154,12 @@ class TestLinchpinWrapperProvisioner(object):
     def test_linchpin_failed_os_create(linchpin_wrapper):
         with pytest.raises(CarbonProvisionerError):
             linchpin_wrapper.create()
+
+    @staticmethod
+    @mock.patch.object(LinchpinAPI, 'do_action', destroy_failed)
+    def test_linchpin_failed_os_destroy(linchpin_wrapper):
+        with pytest.raises(CarbonProvisionerError):
+            linchpin_wrapper.delete()
 
     @staticmethod
     @mock.patch.object(LinchpinAPI, 'do_action', do_action)
