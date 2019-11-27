@@ -102,15 +102,23 @@ class PolarionImporterPlugin(ImporterPlugin):
         return [json.loads(json.dumps(r)) for r in results]
 
     def _parse_config_params(self, cparams):
-        cp = dict(save_file='True', poll_interval=60, wait_timeout=900)
+        cp = dict(save_file='True', poll_interval=60, wait_timeout=900, concurrent_processing=True)
         if cparams:
             for k, v in cparams.items():
                 if 'save_file' in k.lower():
-                    cp['save_file'] = v
+                    if v in ['true', 'True', 'TRUE']:
+                        cp['save_file'] = True
+                    elif v in ['false', 'False', 'FALSE']:
+                        cp['save_file'] = False
                 if 'poll_interval' in k.lower():
                     cp['poll_interval'] = int(v)
                 if 'wait_timeout' in k.lower():
                     cp['wait_timeout'] = int(v)
+                if 'concurrent_processing' in k.lower():
+                    if v in ['true', 'True', 'TRUE']:
+                        cp['concurrent_processing'] = True
+                    elif v in ['false', 'False', 'FALSE']:
+                        cp['concurrent_processing'] = False
 
         self.logger.debug('Polarion config params translated to the following %s' % cp)
         return cp

@@ -259,7 +259,7 @@ config file.  The following are the settings.
     *   - save_file
         - configuration option to save a copy of the xUnit file
           before performing the xUnit conversion.
-        - By default this is set to true to make a copy.
+        - By default this is set to True to make a copy.
 
     *   - wait_timeout
         - configuration option to set how long carbon should 
@@ -274,6 +274,14 @@ config file.  The following are the settings.
         - By default, carbon will poll the xUnit queue every 1 minute.
           This value can be overwritten but must be specified in seconds
           i.e. 1 minute = 60 seconds.
+
+    *   - concurrent_processing
+        - configuration option on whether the polarion library
+          should perform each activity (xunit translation/
+          initial import/waiting for import completion)concurrently
+          or serially.
+        - By default this is set to True to perform the different
+          actions concurrently.
 
 
 Examples
