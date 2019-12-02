@@ -259,3 +259,67 @@ for testing or continued development you can do the following:
 
     [feature_toggle:<resource name from step 1>]
     <feature toggle name specified in step 2>=True
+
+
+How to write a importer plugin for carbon
+-----------------------------------------
+For developers who wish to put together their own importer plugins can follow these guidelines:
+ * 1
+   The new plugin will need to import Carbon's Importer plugin class
+
+ * 2
+   It should have the plugin name using variable __plugin_name__
+
+ * 3
+   It should implement the importer_artifacts method
+
+ * 4
+   It needs to create a logger using the Carbon's create_logger method or call the carbon's logger using the name'carbon'
+   to allow the plugin to log into carbon's log
+
+ * 5
+   The plugin needs to add an entry point in its setup.py file using the key 'importer_plugins' Refer the example below:
+
+.. code-block:: python
+
+    from setuptools import setup, find_packages
+
+    setup(
+        name='new_plugin',
+        version="1.0",
+        description="new plugin for carbon",
+        author="Red Hat Inc",
+        packages=find_packages(),
+        include_package_data=True,
+        python_requires=">=3",
+        install_requires=[
+            'carbon@git+https://code.engineering.redhat.com/gerrit/p/carbon.git@master',
+        ],
+        entry_points={
+                      'importer_plugins': 'new_plugin_importer = <plugin pckage name>:NewPluginClass'
+                     }
+    )
+
+Please refer `here <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
+for more information on entry points
+
+Example for plugin:
+
+.. code-block:: python
+
+    from carbon.core import ImporterPlugin
+
+    class NewPlugin(ImporterPlugin):
+
+        __plugin_name__ = 'newplugin'
+
+        def __init__(self, profile):
+
+            super(NewPlugin, self).__init__(profile)
+            # creating logger for this plugin to get added to carbon's loggers
+            self.create_logger(name='newplugin', data_folder=<data folder name>)
+            # OR
+            logger = logging.getLogger('carbon')
+
+        def import_artifacts(self):
+            # Your code

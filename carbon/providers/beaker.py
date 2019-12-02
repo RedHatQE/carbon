@@ -186,7 +186,7 @@ class BeakerProvider(PhysicalProvider):
                         '    - Type=%s, Optional Type=%s. (ERROR)' %
                         (type(param_value), param_type))
                     raise CarbonProviderError(
-                        'Error occurred while validating required provider '
+                        'Error occurred while validating common optional provider '
                         'parameters for resource %s' % resource_name
                     )
             except KeyError:
@@ -214,7 +214,7 @@ class BeakerProvider(PhysicalProvider):
                                 '    - Type=%s, Optional Type=%s. (ERROR)' %
                                 (type(param_value), str))
                             raise CarbonProviderError(
-                                'Error occurred while validating required provider '
+                                'Error occurred while validating common optional provider '
                                 'parameters for resource %s' % resource_name
                             )
 
@@ -242,7 +242,7 @@ class BeakerProvider(PhysicalProvider):
                                 '    - Type=%s, Optional Type=%s. (ERROR)' %
                                 (type(param_value), str))
                             raise CarbonProviderError(
-                                'Error occurred while validating required provider '
+                                'Error occurred while validating common optional provider '
                                 'parameters for resource %s' % resource_name)
 
                     if 'linchpin' not in provisioner_name:
@@ -275,7 +275,7 @@ class BeakerProvider(PhysicalProvider):
                         '    - Type=%s, Optional Type=%s. (ERROR)' %
                         (type(param_value), param_type))
                     raise CarbonProviderError(
-                        'Error occurred while validating required provider '
+                        'Error occurred while validating common optional provider '
                         'parameters for resource %s' % resource_name
                     )
             except KeyError:
@@ -315,7 +315,7 @@ class BeakerProvider(PhysicalProvider):
                             '    - Type=%s, Optional Type=%s. (ERROR)' %
                             (type(param_value), param_type))
                         raise CarbonProviderError(
-                            'Error occurred while validating required provider '
+                            'Error occurred while validating common optional provider '
                             'parameters for resource %s' % resource_name
                         )
 
@@ -337,7 +337,7 @@ class BeakerProvider(PhysicalProvider):
                             '    - Type=%s, Optional Type=%s. (ERROR)' %
                             (type(param_value), param_type))
                         raise CarbonProviderError(
-                            'Error occurred while validating required provider '
+                            'Error occurred while validating linchpin optional provider '
                             'parameters for resource %s' % resource_name
                         )
                 except KeyError:
@@ -368,7 +368,7 @@ class BeakerProvider(PhysicalProvider):
                             '    - Type=%s, Optional Type=%s. (ERROR)' %
                             (type(param_value), param_type))
                         raise CarbonProviderError(
-                            'Error occurred while validating required provider '
+                            'Error occurred while validating carbon optional provider '
                             'parameters for resource %s' % resource_name
                         )
                 except KeyError:

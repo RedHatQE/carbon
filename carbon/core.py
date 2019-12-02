@@ -86,19 +86,63 @@ class LoggerMixin(object):
     }
 
     @classmethod
-    def create_logger(cls, name, config=None):
+    def setup_logger(cls, name, file_path, config=None):
+
+        log_level = 'debug'
+
+        # Setting up handlers
+        LOGGING_CONFIG['handlers']['file'].update({'filename': file_path})
+
+        # setup logging formatters
+        LOGGING_CONFIG['formatters']['default'].update({'format': cls._INFO_LOG_FORMAT})
+        LOGGING_CONFIG['formatters']['debug'].update({'format': cls._DEBUG_LOG_FORMAT})
+
+        if config:
+            # setup any other loggers that might have been specified in the carbon.cfg
+            # For now this might suffice but if the carbon community changes we can look
+            # at a better way through the plugins
+            for l in config['SETUP_LOGGER']:
+                LOGGING_CONFIG['loggers'].update({l: {'handlers': ['console', 'file'],
+                                                      'level': cls._LOG_LEVELS[config['LOG_LEVEL']],
+                                                      'propagate': False}})
+            if config['LOG_LEVEL'] != 'info':
+                log_level = config['LOG_LEVEL']
+
+        for handler in LOGGING_CONFIG['handlers']:
+            LOGGING_CONFIG['handlers'][handler].update({'formatter': 'debug'})
+            LOGGING_CONFIG['handlers'][handler].update({'level': cls._LOG_LEVELS[log_level]})
+
+        for logger in LOGGING_CONFIG['loggers']:
+            LOGGING_CONFIG['loggers'][logger].update({'level': cls._LOG_LEVELS[log_level]})
+
+        # Configure the individual logger, name is the logger name provided during creation
+        LOGGING_CONFIG['loggers'].update({name: {'handlers': ['console', 'file'],
+                                                 'level': cls._LOG_LEVELS[log_level],
+                                                 'propagate': False}})
+
+        # Init the logging config
+        log_config.dictConfig(LOGGING_CONFIG)
+
+    @classmethod
+    def create_logger(cls, name, config=None, data_folder=None):
         """Create logger.
 
         This method will create logger's to be used throughout carbon.
 
+        :param data_folder: name of carbon's data folder
+        :type data_folder: str
         :param name: Name for the logger to create.
         :type name: str
         :param config: Carbon config object.
         :type config: dict
+
         """
 
         # create log directory
-        log_dir = os.path.join(config['DATA_FOLDER'], 'logs')
+        if config:
+            log_dir = os.path.join(config['DATA_FOLDER'], 'logs')
+        else:
+            log_dir = os.path.join(data_folder, 'logs')
 
         try:
             if not os.path.exists(log_dir):
@@ -113,37 +157,8 @@ class LoggerMixin(object):
 
         full_path = os.path.join(log_dir, 'carbon_scenario.log')
 
-        # setup file for filehandler
-        LOGGING_CONFIG['handlers']['file'].update({'filename': full_path})
-
-        # setup logging formatters
-        LOGGING_CONFIG['formatters']['default'].update({'format': cls._INFO_LOG_FORMAT})
-        LOGGING_CONFIG['formatters']['debug'].update({'format': cls._DEBUG_LOG_FORMAT})
-
-        # setup any other loggers that might have been specified in the carbon.cfg
-        # For now this might suffice but if the carbon community changes we can look
-        # at a better way through the plugins
-        for l in config['SETUP_LOGGER']:
-            LOGGING_CONFIG['loggers'].update({l: {'handlers': ['console', 'file'],
-                                                  'level': cls._LOG_LEVELS[config['LOG_LEVEL']],
-                                                  'propagate': False}})
-
-        # setup formatter and log level for handlers based on log level
-        if config['LOG_LEVEL'] != 'info':
-            for handler in LOGGING_CONFIG['handlers']:
-                LOGGING_CONFIG['handlers'][handler].update({'formatter': 'debug'})
-                LOGGING_CONFIG['handlers'][handler].update({'level': cls._LOG_LEVELS[config['LOG_LEVEL']]})
-
-            for logger in LOGGING_CONFIG['loggers']:
-                LOGGING_CONFIG['loggers'][logger].update({'level': cls._LOG_LEVELS[config['LOG_LEVEL']]})
-
-        # Configure the carbon main logger
-        LOGGING_CONFIG['loggers'].update({name: {'handlers': ['console', 'file'],
-                                                   'level': cls._LOG_LEVELS[config['LOG_LEVEL']],
-                                                   'propagate': False}})
-
-        # Init the logging config
-        log_config.dictConfig(LOGGING_CONFIG)
+        # setup and initialize LOGGING_CONFIG
+        cls.setup_logger(name, full_path)
 
     @property
     def logger(self):

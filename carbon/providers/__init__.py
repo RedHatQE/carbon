@@ -27,7 +27,5 @@
 
 from .beaker import BeakerProvider
 from .openstack import OpenstackProvider
-from .polarion import PolarionProvider
 from .libvirt import LibvirtProvider
 from .aws import AwsProvider
-from .reportportal import ReportPortalProvider

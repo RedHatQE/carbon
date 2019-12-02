@@ -25,7 +25,7 @@
 """
 
 from carbon.constants import ORCHESTRATOR
-from carbon.helpers import get_executor_class, get_executors_list
+from carbon.helpers import get_executor_plugin_class, get_executors_plugin_list
 
 
 def type_str_list(value, rule_obj, path):
@@ -64,7 +64,7 @@ def valid_orchestrator(value, rule_obj, path):
 
 def valid_executor(value, rule_obj, path):
     """Verify the given executor is a valid selection by carbon."""
-    executors = get_executors_list()
+    executors = get_executors_plugin_list()
     if value.lower() not in executors:
         raise AssertionError(
             'Executor %s is invalid.\n'
@@ -81,7 +81,7 @@ def valid_execute_types(value, rule_obj, path):
     # first verify the executor is valid
     valid_executor(executor, rule_obj, path)
 
-    types = getattr(get_executor_class(value['executor']), '_execute_types')
+    types = getattr(get_executor_plugin_class(value['executor']), '_execute_types')
 
     for item in types:
         if item in value.keys():

@@ -91,18 +91,10 @@ class CleanupTask(CarbonTask):
         if self.asset:
             try:
 
-                # let's try to create the provisioner gateway implementation first
-                if getattr(self.asset, 'provisioner_plugin') is not None:
-                    plugin = getattr(self.asset, 'provisioner_plugin')(self.asset)
-                    self.logger.debug('Asset loaded the following provisioner plugin: %s' % plugin.__plugin_name__)
-                    provisioner = getattr(self.asset, 'provisioner')(self.asset, plugin)
-                    self.logger.debug('Asset loaded the following provisioner interface: %s'
-                                      % provisioner.__provisioner_name__)
-                else:
-                    # create the provisioner object
-                    provisioner = getattr(self.asset, 'provisioner')(self.asset)
-                    self.logger.debug('Asset loaded the following provisioner interface: %s'
-                                      % provisioner.__provisioner_name__)
+                # TODO needs to modify when asset provisioner will be modified with ticket 5108
+                # Getting the provisioner_plugin as an asset package and setting it as provisioner.
+                provisioner = getattr(self.asset, 'provisioner_plugin')(self.asset)
+                self.logger.debug('Asset loaded the following provisioner plugin: %s' % provisioner.__plugin_name__)
 
                 # teardown the asset
                 getattr(provisioner, 'delete')()

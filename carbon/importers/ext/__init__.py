@@ -1,2 +1,0 @@
-from .polarion_plugin import PolarionImporterPlugin
-from .reportportal_plugin import ReportPortalPlugin

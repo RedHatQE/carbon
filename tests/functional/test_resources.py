@@ -38,10 +38,10 @@ from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
 from carbon.executors import RunnerExecutor
 from carbon.orchestrators import AnsibleOrchestrator
 from carbon.providers import OpenstackProvider
-from carbon.provisioners import OpenstackLibCloudProvisioner, AssetProvisioner
 from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin, LinchpinWrapperProvisionerPlugin
 from carbon.resources import Action, Execute, Asset, Report, Scenario
 from carbon.utils.config import Config
+from carbon.core import ImporterPlugin, CarbonProvider
 
 
 @pytest.fixture(scope='class')
@@ -60,10 +60,13 @@ def feature_toggle_config():
 
 @pytest.fixture
 def default_report_params():
-    params = dict(description='description', executes='execute',
+    params = dict(
+                  description='description',
+                  executes='execute',
                   provider=dict(name='polarion',
                                 credential='polarion'
-                                ))
+                                )
+                  )
     return params
 
 
@@ -72,8 +75,15 @@ def host1(default_host_params, config):
     host1 = Asset(name='host_count', config=config, parameters=copy.deepcopy(default_host_params))
     return host1
 
+
 @pytest.fixture
-def report1(default_report_params, config):
+@mock.patch('carbon.resources.reports.get_provider_plugin_list')
+@mock.patch('carbon.resources.reports.get_provider_plugin_class')
+@mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
+def report1(mock_importerplugin, mock_provider_class, mock_pluginlist, default_report_params, config):
+    mock_pluginlist.return_value = ['polarion']
+    mock_provider_class.return_value = CarbonProvider
+    mock_importerplugin.return_value = ImporterPlugin
     return Report(name='SampleTest.xml', parameters=default_report_params, config=config)
 
 
@@ -84,6 +94,7 @@ def scenario_res1(config, host1, host, report1):
     scenario1.add_assets(host)
     scenario1.add_reports(report1)
     return scenario1
+
 
 @pytest.fixture
 def scenario_res2(config, host1, host, report1):
@@ -237,10 +248,8 @@ class TestReportResource(object):
         assert isinstance(report_resource.profile(), dict)
 
     @staticmethod
-    def test_create_report_with_name(default_report_params, config):
-        # params = dict(executes=['execute1'], key='value')
-        report = Report(name='test.xml', parameters=default_report_params, config=config)
-        assert isinstance(report, Report)
+    def test_create_report_with_name(report1):
+        assert isinstance(report1, Report)
 
     @staticmethod
     def test_create_report_without_name():
@@ -249,24 +258,49 @@ class TestReportResource(object):
         assert 'Unable to build report object. Name field missing!' in \
                ex.value.args
 
+
     @staticmethod
     def test_create_report_without_executes(default_report_params, config):
-        # params = dict(executes=None, key='value')
         params = copy.deepcopy(default_report_params)
         del params['executes']
         report = Report(name='test.xml', parameters=params, config=config)
         assert isinstance(report.executes, list)
 
+
     @staticmethod
-    def test_create_report_with_executes_as_str(default_report_params, config):
-        # params = dict(description='description', executes='execute01, execute02')
+    @mock.patch('carbon.resources.reports.get_provider_plugin_list')
+    @mock.patch('carbon.resources.reports.get_provider_plugin_class')
+    @mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
+    def test_create_report_without_executes(mock_importerplugin, mock_provider_class, mock_pluginlist, default_report_params, config):
+        params = copy.deepcopy(default_report_params)
+        del params['executes']
+        mock_pluginlist.return_value = ['polarion']
+        mock_provider_class.return_value = CarbonProvider
+        mock_importerplugin.return_value = ImporterPlugin
+        report = Report(name='test.xml', parameters=params, config=config)
+        assert isinstance(report.executes, list)
+
+    @staticmethod
+    @mock.patch('carbon.resources.reports.get_provider_plugin_list')
+    @mock.patch('carbon.resources.reports.get_provider_plugin_class')
+    @mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
+    def test_create_report_with_executes_as_str(mock_importerplugin, mock_provider_class, mock_pluginlist , default_report_params, config):
         default_report_params['executes'] = 'execute01, execute02'
+        mock_pluginlist.return_value = ['polarion']
+        mock_provider_class.return_value = CarbonProvider
+        mock_importerplugin.return_value = ImporterPlugin
         report = Report(name='test.xml', parameters=default_report_params, config=config)
         assert isinstance(report.executes, list)
 
     @staticmethod
-    def test_create_report_with_executes_as_str_1(default_report_params, config):
+    @mock.patch('carbon.resources.reports.get_provider_plugin_list')
+    @mock.patch('carbon.resources.reports.get_provider_plugin_class')
+    @mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
+    def test_create_report_with_executes_as_str_1(mock_importerplugin, mock_provider_class, mock_pluginlist , default_report_params, config):
         default_report_params['executes'] = 'execute 01,execute 02, execute03'
+        mock_pluginlist.return_value = ['polarion']
+        mock_provider_class.return_value = CarbonProvider
+        mock_importerplugin.return_value = ImporterPlugin
         report = Report(name='test.xml', parameters=default_report_params, config=config)
         assert isinstance(report.executes, list)
         assert len(report.executes) == 3
@@ -563,7 +597,7 @@ class TestAssetResource(object):
         params = self.__get_params_copy__(default_host_params)
         params['provisioner'] = 'openstack-libcloud'
         host = Asset(name='host01', parameters=params, config=config)
-        assert host.provisioner is OpenstackLibCloudProvisioner
+        assert host.provisioner_plugin is OpenstackLibCloudProvisionerPlugin
 
     def test_create_host_undefined_credential(self, default_host_params):
         params = self.__get_params_copy__(default_host_params)
@@ -615,15 +649,6 @@ class TestAssetResource(object):
         assert 'You cannot set the asset provider after asset class is ' \
                'instantiated.' in ex.value.args
 
-    def test_provisioner_property(self, host):
-        assert host.provisioner is OpenstackLibCloudProvisioner
-
-    def test_provisioner_setter(self, host):
-        with pytest.raises(AttributeError) as ex:
-            host.provisioner = 'null'
-        assert 'You cannot set the asset provisioner after asset class ' \
-               'is instantiated.' in ex.value.args
-
     def test_role_property(self, host):
         assert host.role[-1] == 'client'
 
@@ -670,11 +695,13 @@ class TestAssetResource(object):
         assert 'You cannot set the asset provisioner plugin after asset class ' \
                'is instantiated.' in ex.value.args
 
-    def test_create_host_that_loads_host_provisioner_interface(
-            self, default_host_params, feature_toggle_config):
-        params = self.__get_params_copy__(default_host_params)
-        host = Asset(name='host01', parameters=params, config=feature_toggle_config)
-        assert host.provisioner is AssetProvisioner
+    # TODO maybe need to modify this test when ticket 5108 is implemented. For now commenting this test
+    # TODO as the asset provisioner is not called
+    # def test_create_host_that_loads_host_provisioner_interface(
+    #         self, default_host_params, feature_toggle_config):
+    #     params = self.__get_params_copy__(default_host_params)
+    #     host = Asset(name='host01', parameters=params, config=feature_toggle_config)
+    #     assert host.provisioner_plugin is AssetProvisioner
 
     def test_create_host_with_provisioner_set_loads_provisioner_plugin(
             self, default_host_params, feature_toggle_config):
@@ -682,6 +709,7 @@ class TestAssetResource(object):
         params['provisioner'] = 'openstack-libcloud'
         host = Asset(name='host01', parameters=params, config=feature_toggle_config)
         assert host.provisioner_plugin is OpenstackLibCloudProvisionerPlugin
+
 
     def test_create_host_invalid_provisioner_plugin(
             self, default_host_params, feature_toggle_config):

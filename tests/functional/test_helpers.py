@@ -27,6 +27,7 @@
 
 import pytest
 import os
+import mock
 from carbon.constants import TASKLIST
 from carbon.resources.assets import Asset
 from carbon.resources.reports import Report
@@ -34,8 +35,10 @@ from carbon.resources.executes import Execute
 from carbon._compat import ConfigParser
 from carbon.utils.config import Config
 from carbon.exceptions import CarbonError, HelpersError
+from carbon.provisioners.ext import LinchpinWrapperProvisionerPlugin
 from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency, \
-    mask_credentials_password, sort_tasklist, find_artifacts_on_disk, walk_results_directory
+    mask_credentials_password, sort_tasklist, find_artifacts_on_disk, walk_results_directory, \
+    get_default_provisioner_plugin
 
 
 @pytest.fixture(scope='class')
@@ -105,6 +108,7 @@ def rp_creds():
 @pytest.fixture(scope='function')
 def aws_creds():
     return dict(aws_access_key_id='ABCDEFG', aws_secret_access_key='abc123456defg')
+
 
 @pytest.fixture(scope='class')
 def data_folder():
@@ -333,3 +337,7 @@ def test_find_artifacts_on_disk_art_location_7(data_folder):
     assert len(find_artifacts_on_disk(data_folder, 'junit2.xml', art_location)) == 1
 
 
+@mock.patch('carbon.helpers.get_provisioner_plugin_class')
+def test_get_default_provisioner_plugin_method(mock_method):
+    mock_method.return_value = LinchpinWrapperProvisionerPlugin
+    assert get_default_provisioner_plugin() == LinchpinWrapperProvisionerPlugin

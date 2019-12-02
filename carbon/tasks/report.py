@@ -25,6 +25,7 @@
 """
 from ..core import CarbonTask
 from .._compat import string_types
+from ..importers import ArtifactImporter
 
 
 class ReportTask(CarbonTask):
@@ -43,8 +44,8 @@ class ReportTask(CarbonTask):
         self.msg = msg
         self.do_import = True
 
-        # create the artifact importer and assign it the plugin class
-        self.importer = getattr(package, 'importer')(package)
+        # create the artifact importer interface and supply the plugins to this interface
+        self.importer = ArtifactImporter(package)
 
         if not package.do_import:
             self.do_import = False

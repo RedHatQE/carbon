@@ -9,6 +9,12 @@ are to be imported into a Report & Analysis system. The input for artifact impor
 will depend on the destination system. The current support for Reporting systems are:
 :ref:`Polarion<polarion_importing>` and :ref:`Report Portal<report_portal_importing>`
 
+.. attention::
+   To be able to use Polarion and Report Portal with carbon, new carbon_polarion_plugin and carbon_rppreproc_plugin will
+   have to be installed in your workspace prior to running any scenarios. Please see
+   `Carbon Importer Plugin Requirements <../install.html#carbon-importer-plugin-requirements>`_ for installation
+   process
+
 First, let's go over the basic structure that defines a Report resource.
 
 .. code-block:: yaml
@@ -104,7 +110,6 @@ scope of the search. How carbon performs the search is by the following
 
  * If artifacts are found, the list of artifacts will be processed and imported into
    the respective reporting system.
-
 
 .. _polarion_importing:
 

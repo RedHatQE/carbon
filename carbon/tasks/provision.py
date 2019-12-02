@@ -48,18 +48,12 @@ class ProvisionTask(CarbonTask):
             # create the provisioner object to create assets
             try:
                 # TODO We should move this code out into the Asset Resource to instantiate there?
-                # let's try to create the provisioner gateway implementation first
+                # let's try to create the provisioner plugin gateway implementation first
                 if getattr(asset, 'provisioner_plugin') is not None:
-                    plugin = getattr(asset, 'provisioner_plugin')(asset)
-                    self.logger.debug('Asset loaded the following provisioner plugin: %s'
-                                      % plugin.__plugin_name__)
-                    self.provisioner = getattr(asset, 'provisioner')(asset, plugin)
-                    self.logger.debug('Asset loaded the following provisioner interface: %s'
-                                      % self.provisioner.__provisioner_name__)
-                else:
-                    self.provisioner = getattr(asset, 'provisioner')(asset)
-                    self.logger.debug('Asset loaded the following provisioner interface: %s'
-                                      % self.provisioner.__provisioner_name__)
+
+                    self.provisioner = getattr(asset, 'provisioner_plugin')(asset)
+                    self.logger.debug('Asset loaded the following provisioner plugin interface: %s'
+                                      % self.provisioner.__plugin_name__)
             except AttributeError as ex:
                 self.logger.error(ex)
                 raise

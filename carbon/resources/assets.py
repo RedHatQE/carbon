@@ -29,9 +29,8 @@
 import sys
 
 from ..core import CarbonResource
-from ..helpers import get_provider_class, get_providers_list, gen_random_str
-from ..helpers import get_provisioner_class, get_default_provisioner
-from ..helpers import get_provisioners_list, filter_host_name
+from ..helpers import get_provider_plugin_class, get_provider_plugin_list, gen_random_str
+from ..helpers import filter_host_name
 from ..helpers import get_provisioners_plugins_list, get_provisioner_plugin_class, get_default_provisioner_plugin, \
     is_provider_mapped_to_provisioner
 from ..tasks import ProvisionTask, CleanupTask, ValidateTask
@@ -148,36 +147,21 @@ class Asset(CarbonResource):
             provisioner_name = parameters.pop('provisioner', provisioner)
 
             # TODO: Should we instantiate here rather just getting the classes
-            # check the feature toggle for plugin implementation
-            if self._feature_toggles is not None and self._feature_toggles['plugin_implementation'] == 'True':
-                self._provisioner = get_default_provisioner()
-                if provisioner_name is None:
-                    self._provisioner_plugin = get_default_provisioner_plugin(self._provider)
-                else:
-                    found_name = False
-                    for name in get_provisioners_plugins_list():
-                        if name.startswith(provisioner_name):
-                            found_name = True
-                            break
-
-                    if found_name and is_provider_mapped_to_provisioner(self._provider, provisioner_name):
-                        self._provisioner_plugin = get_provisioner_plugin_class(provisioner_name)
-                    else:
-                        self.logger.error('Provisioner %s for asset %s is invalid.'
-                                          % (provisioner_name, self.name))
-                        sys.exit(1)
+            if provisioner_name is None:
+                self._provisioner_plugin = get_default_provisioner_plugin(self._provider)
             else:
-                if provisioner_name is None:
-                    self._provisioner = get_default_provisioner(self._provider)
-                    self._provisioner_plugin = None
-                elif provisioner_name not in get_provisioners_list() or \
-                        is_provider_mapped_to_provisioner(self._provider, provisioner_name) is False:
+                found_name = False
+                for name in get_provisioners_plugins_list():
+                    if name.startswith(provisioner_name):
+                        found_name = True
+                        break
+
+                if found_name and is_provider_mapped_to_provisioner(self._provider, provisioner_name):
+                    self._provisioner_plugin = get_provisioner_plugin_class(provisioner_name)
+                else:
                     self.logger.error('Provisioner %s for asset %s is invalid.'
                                       % (provisioner_name, self.name))
                     sys.exit(1)
-                else:
-                    self._provisioner = get_provisioner_class(provisioner_name)
-                    self._provisioner_plugin = None
 
             self._ip_address = parameters.pop('ip_address', None)
 
@@ -219,13 +203,13 @@ class Asset(CarbonResource):
         provider_name = self.provider_params['name']
 
         # lets verify the provider is valid
-        if provider_name not in get_providers_list():
+        if provider_name not in get_provider_plugin_list():
             self.logger.error('Provider %s for host %s is invalid.' %
                               (provider_name, self.name))
             sys.exit(1)
 
         # now that we have the provider, lets create the provider object
-        self._provider = get_provider_class(provider_name)()
+        self._provider = get_provider_plugin_class(provider_name)()
 
         # finally lets set the provider credentials
         try:
@@ -324,21 +308,6 @@ class Asset(CarbonResource):
                              'class is instantiated.')
 
     @property
-    def provisioner(self):
-        """Provisioner property.
-
-        :return: provisioner class
-        :rtype: object
-        """
-        return self._provisioner
-
-    @provisioner.setter
-    def provisioner(self, value):
-        """Set provisioner property."""
-        raise AttributeError('You cannot set the asset provisioner after asset '
-                             'class is instantiated.')
-
-    @property
     def provisioner_plugin(self):
         """Provisioner plugin property.
 
@@ -422,11 +391,6 @@ class Asset(CarbonResource):
                 profile.update({'provisioner': getattr(
                         self.provisioner_plugin, '__plugin_name__')})
                 profile.update({'provider': self.provider_params})
-            else:
-                profile.update({'provisioner': getattr(self.provisioner,
-                                                       '__provisioner_name__')})
-                profile.update({'provider': self.provider_params})
-
         except AttributeError:
             self.logger.debug('Asset is static, no need to profile provider '
                               'facts.')
