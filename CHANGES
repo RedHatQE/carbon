@@ -1,3 +1,26 @@
+Version 1.4.2 (2019-12-05)
+--------------------------
+
+Bug fixes
+~~~~~~~~~
+* Update the shell and script playbooks to handle error conditions
+* Large amount of output causes failure writing to shell-results.txt
+* Linchpin Provisioner code not being checked during cleanup
+* Fix logging traceback KeyErrors due to Ansible 2.9.0
+* Fix Polar Thread hangs when the number of cmds > than number of threads
+* Linchpin provisioner is displaying double logging message
+
+Enhancements
+~~~~~~~~~~~~
+* Enable scripts to be run on localhost in Carbon's execute phase
+* Enable Data Injector usage in Report phase to apply to artifacts_location
+* Relax the requirement for a report task to have an execute resource
+
+Known Issues
+~~~~~~~~~~~~
+* With Linchpin 1.9.2 Carbon hangs when running concurrent linchpin API calls. Bug 1511
+  https://github.com/CentOS-PaaS-SIG/linchpin/issues/1511
+
 Version 1.4.1 (2019-10-29)
 --------------------------
 
