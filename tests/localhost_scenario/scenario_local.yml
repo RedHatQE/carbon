@@ -26,13 +26,11 @@ orchestrate:
       extra_vars:
         ip: { dummy.ip_address }
 
-  - name: scripts/add_two_numbers.sh
+  - name: scripts/add_two_numbers.sh X={ dummy.metadata.x } Y={ dummy.metadata.y }
     description: "run orchestrate step w/bash script using no real host"
     orchestrator: ansible
     hosts: controller
     ansible_script: True
-    ansible_options:
-      extra_args: X={ dummy.metadata.x } Y={ dummy.metadata.y }
 
   - name: scripts/hello_world.py
     description: "test orchestrate step w/python script"
@@ -47,6 +45,30 @@ orchestrate:
       orchestrator: ansible
       hosts: all
       ansible_script: True
+
+  - name: orch_name_test
+    ansible_playbook:
+      name: ansible/test_playbook_tasks.yml
+    description: "run orchestrate with a name field not as playbook/script"
+    orchestrator: ansible
+    hosts: controller
+
+  - name: orch_shell
+    orchestrator: ansible
+    description: "orch task to run shell commands"
+    hosts: localhost
+    ansible_shell:
+      command: bash add_two_numbers.sh X=15 Y=15
+      chdir: ./scripts/
+
+  - name: orch_extra_args
+    orchestrator: ansible
+    description: "orch task to run extra args as a part script"
+    hosts: localhost
+    ansible_script:
+      name: scripts/hello_world.py
+      executable: python
+
 
 execute:
   - name: Test running command

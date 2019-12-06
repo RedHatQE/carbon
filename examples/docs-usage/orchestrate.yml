@@ -177,23 +177,21 @@ orchestrate:
     orchestrator: ansible
 
 ---
+orchestrate:
 - name: ansible/ssh_connect.yml
-    description: "setup key authentication between driver and clients"
-    orchestrator: ansible
-    hosts: driver
-    ansible_options:
-      skip_tags:
-        - ssh_auth
-      extra_vars:
-        username: root
-        password: redhat
-    ansible_galaxy_options:
-      role_file: roles.yml
+  description: "setup key authentication between driver and clients"
+  orchestrator: ansible
+  hosts: driver
+  ansible_options:
+    skip_tags:
+      - ssh_auth
+    extra_vars:
+      username: root
+      password: redhat
+  ansible_galaxy_options:
+    role_file: roles.yml
 
 ---
-name: common-orchestrate
-description: 'common orchestration used by the rest of the scenarios.'
-
 orchestrate:
 - name: rhsm_register.yml
   description: "register systems under test against rhsm"
@@ -203,3 +201,50 @@ orchestrate:
   - host02
   ansible_galaxy_options:
     role_file: roles.yml
+
+# Example 12
+---
+- name: orchestrate_1
+  description: "orchestrate1"
+  orchestrator: ansible
+  hosts: localhost
+  ansible_playbook:
+    name: ansible/list_block_devices.yml
+
+- name: orchestrate_2
+  description: "orchestrate2"
+  orchestrator: ansible
+  hosts: localhost
+  ansible_shell:
+    chdir: ./test_sample_artifacts
+    command: ls
+
+- name: orchestrate_3
+  description: "orchestrate3"
+  orchestrator: ansible
+  hosts: localhost
+  ansible_script:
+    name: ./scripts/helloworld.py Carbon_user
+    executable: python
+
+
+# Example 13
+---
+- name: orchestrate_1
+  description: "orchestrate1"
+  orchestrator: ansible
+  hosts: localhost
+  ansible_script:
+    name: ./scripts/helloworld.py Carbon_user
+    executable: python
+
+# Example 14
+---
+- name: orchestrate_1
+  description: "orchestrate1"
+  orchestrator: ansible
+  hosts: localhost
+  ansible_script:
+    name: ./scripts/helloworld.py Carbon_user
+  ansible_options:
+    extra_args: executable=python

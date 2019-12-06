@@ -780,62 +780,8 @@ def ssh_retry(obj):
     return check_access
 
 
-def resource_check(scenario, config):
-    """
-    External Component Dependency Check
-    Throws exception if all components are not UP
+def get_ans_verbosity(config):
 
-    :param scenario: carbon scenario object
-    :param config: carbon config object
-    """
-
-    # External Dependency Check
-    # Available components to check ci-rhos, zabbix-sysops, brew, covscan
-    #                             polarion, rpmdiff, umb, errata, rdo-cloud
-    #                             gerrit
-    if config['RESOURCE_CHECK_ENDPOINT']:
-        endpoint = config['RESOURCE_CHECK_ENDPOINT']
-        ext_resources_avail = True
-        component_names = scenario.resource_check
-        urllib3.disable_warnings()
-        components = cachet.Components(endpoint=endpoint, verify=False)
-        LOG.info(' DEPENDENCY CHECK '.center(64, '-'))
-        for comp in component_names:
-            comp_resource_invalid = False
-            comp_resource_avail = False
-            for attempts in range(1, 6):
-                component_data = components.get(params={'name': comp})
-                if json.loads(component_data)['data']:
-                    comp_status = json.loads(component_data)['data'][0]['status']
-                    if comp_status == 4:
-                        comp_resource_avail = False
-                        time.sleep(30)
-                        continue
-                    else:
-                        comp_resource_avail = True
-                        break
-                else:
-                    comp_resource_invalid = True
-            if comp_resource_avail is not True or comp_resource_invalid is True:
-                ext_resources_avail = False
-            if comp_resource_invalid:
-                LOG.info('{:>40} {:<9} - Attempts {}'.format(
-                    comp.upper(), ': INVALID', attempts))
-            else:
-                LOG.info('{:>40} {:<9} - Attempts {}'.format(
-                    comp.upper(), ': UP' if comp_resource_avail else ': DOWN', attempts))
-        warnings.resetwarnings()
-        LOG.info(''.center(64, '-'))
-
-        if ext_resources_avail is not True:
-            LOG.error("ERROR: Not all external resources are available or valid. Not running scenario")
-            raise CarbonError(
-                'Scenario %s will not be run! Not all external resources are available or valid' %
-                scenario.name
-            )
-
-
-def get_ans_verbosity(logger, config):
     ans_verbosity = None
 
     if "ANSIBLE_VERBOSITY" in config and \

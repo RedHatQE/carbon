@@ -271,6 +271,31 @@ a single quoted or double quoted YAML string
      It is NOT recommended to output verbose logging to standard output for long running tests as there could be
      issues with carbon parsing the output
 
+
+Extra_args for script and shell
+-------------------------------
+
+Carbon supports the following parameters used by ansible script and shell modules
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Parameters
+    *   - chdir
+    *   - creates
+    *   - decrypt
+    *   - executable
+    *   - removes
+    *   - warn
+    *   - stdin
+    *   - stdin_add_newline
+
+Please look here for more info
+
+`Ansible Script Module <https://docs.ansible.com/ansible/latest/modules/script_module.html>`_
+`Ansible Shell Module <https://docs.ansible.com/ansible/latest/modules/shell_module.html>`_
+
 Using Playbook Parameter for Test Execution
 -------------------------------------------
 

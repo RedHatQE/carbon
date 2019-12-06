@@ -25,7 +25,7 @@
 """
 
 from carbon.constants import ORCHESTRATOR
-from carbon.helpers import get_executor_plugin_class, get_executors_plugin_list
+from carbon.helpers import get_executor_plugin_class, get_executors_plugin_list, get_orchestrator_plugin_class
 
 
 def type_str_list(value, rule_obj, path):
@@ -92,5 +92,45 @@ def valid_execute_types(value, rule_obj, path):
             'Only one execute type can be set for executor ~ %s.\n'
             'Available types: %s\n'
             'Set types: %s' % (executor, types, match)
+        )
+    return True
+
+
+def valid_ansible_script_type(value, rule_obj, path):
+    """ Verify if ansible_script type is either a boolean or a dictionary
+        and extra_args are from the given list and name key is required
+    """
+
+    extra_args = ['name', 'creates', 'decrypt', 'executable', 'removes', 'warn', 'stdin', 'stdin_add_newline']
+    if isinstance(value, bool):
+        return True
+    elif isinstance(value, dict):
+        if True in [keys in extra_args and isinstance(values, str) for keys, values in value.items()] \
+                and value['name']:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+def valid_action_types(value, rule_obj, path):
+    """ Verify if only one action type is set for a orchestrate task"""
+    match = list()
+
+    # first verify the orchestrator is valid
+    valid_orchestrator(value['orchestrator'], rule_obj, path)
+
+    types = getattr(get_orchestrator_plugin_class(value['orchestrator']), '_action_types')
+
+    for item in types:
+        if item in value.keys():
+            match.append(item)
+
+    if match.__len__() > 1:
+        raise AssertionError(
+            'Only one action type can be set for orchestrator ~ %s.\n'
+            'Available types: %s\n'
+            'Set types: %s' % (value['orchestrator'], types, match)
         )
     return True

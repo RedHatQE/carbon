@@ -1,36 +1,62 @@
 Resource Check
 ==============
 
-Carbon's Resource Dependency Check Section is optional. It specifies a list of
-external resource component names whose status will be checked before proceeding
-to run the scenario. If all components are up the scenario will be executed.
-If one or more components are down the scenario will exit with an error. It will
-also indicate if a component name given is invalid.
+Carbon's Resource Dependency Check Section is optional. It is run during the Validate task
+Resource_check is a dictionary which takes in three keys **service, playbook, script**
+
+Service
+~~~~~~~
+
+User can define a list of external components to check if thier status is up or not.
+if all components are up the scenario will be executed .If one or more components are
+down the scenario will exit with an error. It will also indicate if a component name
+given is invalid.
 
 The key "resource_check_endpoint" must be set in the carbon.cfg file to actually
 perform check. If not set this section is ignored. The "resource_check_endpoint"
 must be the URL of a "Cachet" status page endpoint. Component names must be valid
-for that status page.
+for that status page
 
-Examples
---------
+.. code-block:: yaml
+
+   [defaults]
+   log_level=info
+   workspace=.
+   data_folder=.carbon
+   resource_check_endpoint=<URL>
+
+
+Playbook/ Script
+~~~~~~~~~~~~~~~~
+
+User can put in a list of customized playbooks or scripts to validate certain things
+before starting their scenario. if any of the user defined validation playbook/scripts
+fail the scenario will not be run.
+
+All playbooks and scripts are run only on the localhost from where carbon is being executed.
+Carbon will not be able to take any output from these scripts/playbooks and make any
+decisions based on that
+Carbon will consider the resource _check successfull or not based on the return code received
+after running the playbook or script
+
+Carbon uses the ansible to run these playbooks and scripts. User should define playbooks and
+scripts similar to how it is defined in the `Execute <./execute.html>`_ section of Carbon
+
 
 Example 1
 ~~~~~~~~~
 
-List format 1.
+Using service, playbook, script
 
 .. literalinclude:: ../../../examples/docs-usage/resource_check.yml
-    :lines: 1-30
+    :lines: 2-43
 
 Example 2
 ~~~~~~~~~
 
-List format 2.
+Using service
 
 .. literalinclude:: ../../../examples/docs-usage/resource_check.yml
-    :lines: 32-51
+    :lines: 46-61
 
-Please look at this `template <https://gitlab.cee.redhat.com/qeet/carbon/examples/blob/master/e2e/template.yml>`_
-for details on what a complete scenario descriptor should look like.
 

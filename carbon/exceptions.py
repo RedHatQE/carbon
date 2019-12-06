@@ -230,6 +230,16 @@ class ArchiveArtifactsError(CarbonError):
         super(ArchiveArtifactsError, self).__init__(message)
 
 
+class AnsibleServiceError(CarbonError):
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: error message
+        :type message: str
+        """
+        super(AnsibleServiceError, self).__init__(message)
+
+
 class CarbonImporterError(CarbonError):
     """Base class for the artifact importer exceptions."""
 

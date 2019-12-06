@@ -28,8 +28,6 @@
 from .._compat import string_types
 from ..core import CarbonResource
 from ..constants import EXECUTOR
-# from ..helpers import get_executor_class, \
-#     get_executors_list
 from ..helpers import get_executor_plugin_class, \
     get_executors_plugin_list
 from ..tasks import ExecuteTask, ValidateTask

@@ -26,7 +26,8 @@ understand the key/values defined.
         - Default
 
     *   - name
-        - The name of the action you want carbon to execute
+        - The name of the action you want carbon to execute OR the path of the script/playbook you want to run
+          as a part of the orchestrate action
         - String
         - Yes
         - n/a
@@ -49,6 +50,10 @@ understand the key/values defined.
         - List
         - Yes
         - n/a
+
+.. note::
+   The name field being used as script/playbook path will be deprecated in the coming releases
+   Please refer :ref:`here<ans>` to get an idea on how to define scripts and playbooks
 
 Hosts
 -----
@@ -106,15 +111,25 @@ orchestrator's could be used to execute configuration tasks declared. For the
 remainder of this page, please go to your preferred orchestrator below. To
 learn more on how you can setup your orchestrate task structures.
 
+.. _ans:
+
 Ansible
 -------
 
 Ansible is carbons default orchestrator. As we mentioned above each task has
-a given name (action). This name is the ansible playbook name (including the
-file extension) or a script name (including the file extension). Carbon has the
-ability to find the playbook or script. In addition to the required orchestrate
-base keys, there are more you can define based on your selected orchestrator.
-Lets dive into them..
+a given **name** (action). This name can be the ansible playbook name (including the
+file extension) or a script name (including the file extension), OR just the orchestrate
+task name. Carbon has the ability to find the playbook or script.
+
+Starting version 1.5.0 Carbon supports running shell commands as well. Carbon will use new keywords
+to detect to ansible playbook, script or shell command **ansible_playbook, ansible_script, ansible_shell**
+respectively. (keeping backward compatibility for using name field to provide script and playbook)
+
+Please refer :ref:`here<ans_keys>` to get an idea on how to use the keys
+
+
+In addition to the required orchestrate base keys, there are more you can define based
+on your selected orchestrator.Lets dive into them..
 
 .. list-table::
     :widths: auto
@@ -141,14 +156,34 @@ Lets dive into them..
         - n/a
 
     *   - ansible_script
-        - Boolean to define if you are executing a user defined script
+        - This key can be a boolean or a dictionary
+          Boolean to define if you are executing a user defined script
           (required to be set to True, if using a user defined script)
-        - Boolean
-        - No
-        - n/a
+          OR List of scripts to be run
+        - Boolean or dictionary
+        - (Not required; however, one of the following must be defined:
+          ansible_shell/script/playbook)
+        - False
 
+    *   - ansible_playbook
+        - list of playbooks to be run.
+        - dictionary
+        - (Not required; however, one of the following must be defined:
+          ansible_shell/script/playbook)
+        - False
+
+    *   - ansible_shell
+        - list of shell commands to be run.
+        - dictionary
+        - (Not required; however, one of the following must be defined:
+          ansible_shell/script/playbook)
+        - False
 The table above describes additional key:values you can set within your
 orchestrate task. Each of those keys can accept additional key:values.
+
+.. note::
+   The ansible_script field as Boolean will be deprecated in the coming releases.
+
 
 Carbon Ansible Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -200,6 +235,175 @@ added to the logs folder of carbon's output, please see `Carbon Output
 <../output.html>`_ for more details.
 
 
+.. _ans_keys:
+
+Using ansible_script
+~~~~~~~~~~~~~~~~~~~~
+
+Orchestrate task uses ansible script module to run the user provided scripts.
+The script name can be given under the name field of the orchestrator task or
+within the *name* key of the ansible_script list of dictionary.
+The script parameters can be provided along withe name of the script by separating
+it using space
+Extra_args for the script can be provided as a part of the ansible_script list
+of dictionary or under ansible_options. Please see
+:ref:`Extra_args<extra_args>`
+:ref:`Example 13<Example_13>`
+:ref:`Example 14<Example_14>`
+
+Using ansible_shell
+~~~~~~~~~~~~~~~~~~~
+
+Orchestrate task uses ansible shell module to run the user provided shell commands.
+The shell command can be provided under the *command* key the ansible_shell list of
+dictionary. Extra_args for the shell command can be provided as a part of the ansible_shell
+list of dictionary or under ansible_options. Please see :ref:`Extra_args<extra_args>`
+:ref:`Example 12<eg_12>`
+
+
+When building your shell commands it is important to take into consideration
+that there are multiple layers the command is being passed through before
+being executed. The two main things to pay attention to are
+YAML syntax/escaping and Shell escaping.
+
+When writing the command in the scenario descriptor file it needs to be written in
+a way that both Carbon and Ansible can parse the YAML properly. From a Carbon perspective
+it is when the the scenario descriptor is first loaded. From an Ansible perspective
+its when we pass it the playbook we create, cbn_execute_shell.yml, through to the
+ansible-playbook CLI.
+
+Then there could be further escapes required to preserve the test command so it can be
+interpreted by the shell properly. From a Carbon perspective that is when we
+pass the test command to the ansible-playbook CLI on the local shell using the
+-e "xcmd='<test_command>'" parameter. From the Ansible perspective its when
+the shell module executes the actual test command using the shell on the designated system.
+
+Let's go into a couple examples
+
+.. code-block:: yaml
+
+   ansible_shell:
+     command: glusto --pytest='-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml'
+              --log /tmp/glusto_sample.log
+
+On the surface the above command will pass YAML syntax parsing but will fail when actually
+executing the command on the shell. That is because the command is not preserved properly on
+the shell when it comes to the *--pytest* optioned being passed in. In order to get
+this to work you could escape this in one of two ways so that the *--pytest* optioned is
+preserved.
+
+.. code-block:: yaml
+
+   ansible_shell:
+     command: glusto --pytest=\\\"-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml\\\"
+              --log /tmp/glusto_sample.log
+
+
+   ansible_shell:
+     command: glusto \\\"--pytest=-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml\\\"
+              --log /tmp/glusto_sample.log
+
+
+Here is a more complex example
+
+.. code-block:: yaml
+
+    ansible_shell:
+        command: if [ `echo \$PRE_GA | tr [:upper:] [:lower:]` == 'true' ];
+                 then sed -i 's/pre_ga:.*/pre_ga: true/' ansible/test_playbook.yml; fi
+
+By default this will fail to be parsed by YAML as improper syntax. The rule of thumb is
+if your unquoted YAML string has any of the following special characters :-{}[]!#|>&%@
+the best practice is to quote the string. You have the option to either use single quote
+or double quotes. There are pros and cons to which quoting method to use. There are online
+resources that go further into this topic.
+
+Once the string is quoted, you now need to make sure the command is preserved properly
+on the shell. Below are a couple of examples of how you could achieve this using either
+a single quoted or double quoted YAML string
+
+.. code-block:: yaml
+
+    ansible_shell:
+        command: 'if [ \`echo \$PRE_GA | tr [:upper:] [:lower:]\` == ''true'' ];
+                  then sed -i \"s/pre_ga:.*/pre_ga: true/\" ansible/test_playbook.yml; fi'
+
+
+    ansible_shell:
+        command: "if [ \\`echo \\$PRE_GA | tr [:upper:] [:lower:]\\` == \\'true\\' ];
+                  then sed \\'s/pre_ga:.*/pre_ga: true/\\' ansible/test_playbook.yml; fi"
+
+.. note::
+        It is NOT recommended to output verbose logging to standard output for long running tests as there could be
+        issues with carbon parsing the output
+
+Using ansible_playbook
+~~~~~~~~~~~~~~~~~~~~~~
+
+Using the ansible_playbook parameter you can provide the playbook to be run
+The name of the playbook can be provided as the *name* key of teh orchestrate task
+OR under the ansible_playbook list of dictionary
+
+:ref:`Example2<eg_2>`
+:ref:`Example12<eg_12>`
+
+.. note::
+        Unlike the shell or script parameter the test playbook executes locally
+        from where carbon is running. Which means the test playbook must be in
+        the workspace.
+
+.. _extra_args:
+
+
+.. note::
+         Only one action type, either ansible_playbook or ansible_script or ansible_shell is supported
+         per orchestrate task
+
+Extra_args for script and shell
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Carbon supports the following parameters used by ansible script and shell modules
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Parameters
+    *   - chdir
+    *   - creates
+    *   - decrypt
+    *   - executable
+    *   - removes
+    *   - warn
+    *   - stdin
+    *   - stdin_add_newline
+
+Please look here for more info
+
+`Ansible Script Module <https://docs.ansible.com/ansible/latest/modules/script_module.html>`_
+`Ansible Shell Module <https://docs.ansible.com/ansible/latest/modules/shell_module.html>`_
+
+Ansible Galaxy Options
+~~~~~~~~~~~~~~~~~~~~~~
+
+These are additional options provided to the ansible orchestrator regarding the ansible roles
+
+Retry
++++++
+
+To make sure ansible roles are downloaded correctly, 'retry' ansible galaxy option is used
+
+.. code-block:: yaml
+
+    ---
+    - name: ansible/setup-vnc.yml
+      description: "setup a vnc server on test clients"
+      orchestrator: ansible
+      hosts: vnc
+      ansible_galaxy_options:
+        role_file: roles.yml
+        retry: True
+
 Examples
 --------
 
@@ -213,6 +417,8 @@ require any additional extra variables.
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
     :lines: 31-38
+
+.. _eg_2:
 
 Example 2
 ~~~~~~~~~
@@ -361,9 +567,39 @@ You have a playbook which needs to run against x number of hosts and requires
 skipping tasks with a tag set to ssh_auth and requires extra variables.
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 179-191
+    :lines: 179-192
 
+.. _eg_12:
+
+Example 12
+~~~~~~~~~~
+
+Example to run playbooks, scripts and shell command as a part of orchestrate task
+
+.. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
+    :lines: 206-228
+
+.. _Example_13:
+
+Example 13
+~~~~~~~~~~
+
+Example to use ansible_script with extra arags with in the ansible_script
+list of dictionary and its paramter in the name field
+
+.. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
+    :lines: 232-239
 ----
+
+.. _Example_14:
+
+Example 14
+~~~~~~~~~~
+
+Example to use ansible_script with extra arags as a part of ansible_options
+
+.. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
+    :lines: 242-250
 
 Resources
 ~~~~~~~~~

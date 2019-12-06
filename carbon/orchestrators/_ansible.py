@@ -27,176 +27,12 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-import logging
 import os
-from collections import namedtuple
-from shutil import copyfile
-
-from ansible.config.manager import ConfigManager
-from ansible.inventory.manager import InventoryManager
-from ansible.parsing.dataloader import DataLoader
-from ansible.vars.manager import VariableManager
-
-from .._compat import RawConfigParser, string_types
-from ..core import CarbonOrchestrator, Inventory
-from ..exceptions import CarbonOrchestratorError
-from ..helpers import ssh_retry, exec_local_cmd_pipe, is_host_localhost, \
-    get_ans_verbosity, DataInjector
-
-
-class AnsibleController(object):
-    """Ansible controller.
-
-    The primary responsibility is for driving the execution of either modules
-    or playbooks to configure/manage remote machines.
-    """
-
-    def __init__(self, inventory):
-        """Constructor.
-
-        Primarily used for initializing attributes used by module/playbook
-        execution.
-
-        :param inventory: inventory file
-        """
-        self.loader = DataLoader()
-        self.ansible_inventory = inventory
-        self.inventory = None
-        self.variable_manager = None
-
-        # module options
-        self.module_options = namedtuple(
-            'Options', ['connection',
-                        'module_path',
-                        'forks',
-                        'become',
-                        'become_method',
-                        'become_user',
-                        'check',
-                        'remote_user',
-                        'private_key_file',
-                        'diff']
-        )
-
-    def set_inventory(self):
-        """Create the ansible inventory object with the supplied inventory."""
-        self.variable_manager = VariableManager(loader=self.loader)
-        self.inventory = InventoryManager(
-            loader=self.loader,
-            sources=self.ansible_inventory
-        )
-        self.variable_manager.set_inventory(self.inventory)
-
-    @ssh_retry
-    def run_module(self, module, logger, script=None, run_options={},
-                   extra_args=None, extra_vars=None, ans_verbosity=None):
-        """
-
-        :param module: Name of the ansible module to run.
-        :type module: str
-        :param logger: Logger object.
-        :type logger: logger object
-        :param script: Absolute path a script, if using the script module.
-        :type script: str
-        :param run_options: additional ansible run options
-        :type run_options: dict
-        :param extra_args: module arguments
-        :type extra_args: str
-        :param extra_vars: used to determine where to run the module against
-        :type extra_vars: dict
-        :param ans_verbosity: verbosity to use for the ansible call.
-        :type ans_verbosity: str
-        :return: A tuple (rc, sterr)
-        """
-
-        if "localhost" in extra_vars and extra_vars["localhost"]:
-            module_call = "ansible localhost -m %s" % (module)
-        else:
-            module_call = "ansible -i %s %s -m %s" % \
-                          (self.ansible_inventory, extra_vars["hosts"], module)
-
-        # add extra arguments
-        if module == "script" or module == "shell":
-            if extra_args:
-                module_call += " -a '%s %s'" % (script, extra_args)
-            else:
-                module_call += " -a '%s'" % script
-        elif extra_args:
-            module_call += " -a '%s'" % extra_args
-
-        if run_options:
-            for key in run_options:
-                if key == "remote_user":
-                    module_call += " --user %s" % run_options[key]
-                elif key == "become":
-                    if run_options[key]:
-                        module_call += " --%s" % key
-                elif key == "tags":
-                    taglist = ','.join(run_options[key])
-                    module_call += " --tags %s" % taglist
-                else:
-                    module_call += " --%s %s" % (key.replace('_', '-'), run_options[key])
-
-        if ans_verbosity:
-            module_call += " -%s" % ans_verbosity
-
-        # Set the connection if localhost
-        if "localhost" in extra_vars and extra_vars["localhost"]:
-            module_call += " -c local"
-
-        logger.debug(module_call)
-        output = exec_local_cmd_pipe(module_call, logger)
-        return output
-
-    @ssh_retry
-    def run_playbook(self, playbook, logger, extra_vars=None, run_options=None,
-                     ans_verbosity=None):
-        """Run an Ansible playbook.
-
-        :param playbook: Playbook to call
-        :type playbook: str
-        :param extra_vars: Additional variables for playbook
-        :type extra_vars: dict
-        :param run_options: playbook run options
-        :type run_options: dict
-        :param ans_verbosity: ansible verbosity settings
-        :type ans_verbosity: str
-        :return: A tuple (rc, sterr)
-        """
-
-        playbook_call = "ansible-playbook -i %s %s" % \
-                        (self.ansible_inventory, playbook)
-        if extra_vars is not None:
-            for key in extra_vars:
-                if not isinstance(extra_vars[key], string_types):
-                    extra_var_dict = {}
-                    extra_var_dict[key] = extra_vars[key]
-                    playbook_call += ' -e "%s" ' % extra_var_dict
-                else:
-                    playbook_call += " -e %s=\"'%s'\"" % (key, extra_vars[key])
-
-        if run_options:
-            for key in run_options:
-                if key == "remote_user":
-                    playbook_call += " --user %s" % run_options[key]
-                elif key == "become":
-                    if run_options[key]:
-                        playbook_call += " --%s" % key
-                elif key == "tags":
-                    taglist = ','.join(run_options[key])
-                    playbook_call += " --tags %s" % taglist
-                elif key == "skip_tags":
-                    taglist = ','.join(run_options[key])
-                    playbook_call += " --skip-tags %s" % taglist
-                else:
-                    playbook_call += " --%s %s" % (key.replace('_', '-'), run_options[key])
-
-        if ans_verbosity:
-            playbook_call += " -%s" % ans_verbosity
-
-        logger.debug(playbook_call)
-        output = exec_local_cmd_pipe(playbook_call, logger)
-        return output
+import time
+from ..core import CarbonOrchestrator
+from ..exceptions import CarbonOrchestratorError, AnsibleServiceError
+from ..helpers import DataInjector
+from ..ansible_helpers import AnsibleService
 
 
 class AnsibleOrchestrator(CarbonOrchestrator):
@@ -212,10 +48,15 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         'options',
         'galaxy_options',
         'script',
+        'playbook',
+        'shell'
     )
 
-    user_run_vals = ["become", "become_method", "become_user", "remote_user",
-                     "connection", "forks"]
+    _action_types = [
+        'ansible_script',
+        'ansible_playbook',
+        'ansible_shell'
+    ]
 
     def __init__(self, package):
         """Constructor.
@@ -225,253 +66,138 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         """
         super(AnsibleOrchestrator, self).__init__()
 
-        # set attributes
+        self.action_name = getattr(package, 'name')
         self._hosts = getattr(package, 'hosts')
+        self.desc = getattr(package, 'description')
         self.options = getattr(package, '%s_options' % self.name)
         self.galaxy_options = getattr(package, '%s_galaxy_options' % self.name)
-        self.script = getattr(package, '%s_script' % self.name)
         self.config = getattr(package, 'config')
         self.all_hosts = getattr(package, 'all_hosts')
         self.workspace = self.config['WORKSPACE']
-        self._action = os.path.join(self.workspace, getattr(package, 'name'))
+        self.playbook = getattr(package, '%s_playbook' % self.name, None)
+        self.script = getattr(package, '%s_script' % self.name, None)
+        self.shell = getattr(package, '%s_shell' % self.name, None)
+
+        # calling the method to do a backward compatibility check in case user is defining name field as a path for
+        # script or playbook
+        # TODO delete this if we want to remove backward compatibility for later releases
+        self.backwards_compat_check()
 
         # saving package to set status later
         self.package = package
 
-        # create inventory object for create/delete inventory file
-        self.inv = Inventory(
-            hosts=self.hosts,
-            all_hosts=self.all_hosts,
-            data_dir=self.config['DATA_FOLDER'],
-            results_dir=self.config['RESULTS_FOLDER'],
-            static_inv_dir=self.config['INVENTORY_FOLDER']
-
-        )
+        # ansible service object
+        self.ans_service = AnsibleService(self.config, self.hosts, self.all_hosts, self.options, self.galaxy_options)
 
         # setup injector
         self.injector = DataInjector(self.all_hosts)
 
-    def validate(self):
-        """Validate that action is valid and exists."""
-        found = os.path.exists(self.action)
-        msg = 'Action %s ' % self.action
-        if found:
-            msg += 'found!'
-            self.logger.debug(msg)
-        else:
-            msg += 'not found!'
-            self.logger.error(msg)
-            raise CarbonOrchestratorError(msg)
+    def backwards_compat_check(self):
+        """ This method does the check if name field is a script/playbook path or name of the orchestrator task by
+            checking is '/' i spresent in the string.
+            If it is a path then it checks if ansible_script field is a boolean and is True . If so
+            a new dictionary is created with key=name and the value= script path. This is then assigned to
+            ansible_script.
+            If the ansible_script is not present then it is understood that the path belongs to a playbook.
+             a new dictionary is created with key=name and the value= playbook path. This is then assigned to
+            ansible_playbook.
+            """
 
-    def download_roles(self):
-        """Download ansible roles defined for the given action."""
-        flag = 0
+        if os.sep in self.action_name:
+            self.logger.warning('Using name field to provide ansible_script/ansible_playbook path')
 
-        if self.galaxy_options is None:
-            return
+            self.logger.debug('Joining current workspace %s to the ansible_script/playbook path %s'
+                              % (self.workspace, self.action_name))
+            new_item = {'name': os.path.join(self.workspace, self.action_name)}
 
-        if 'role_file' in self.galaxy_options:
-            flag += 1
-
-            f = os.path.join(self.config['WORKSPACE'],
-                             self.galaxy_options['role_file'])
-            self.logger.info('Installing roles using req. file: %s' % f)
-
-            cmd = 'ansible-galaxy install -r %s' % f
-            results = exec_local_cmd_pipe(cmd, self.logger)
-
-            if results[0] != 0:
-                raise CarbonOrchestratorError(
-                    'A problem occurred while installing roles using req. file'
-                    ' %s' % f)
-            self.logger.info('Roles installed successfully from: %s!' % f)
-
-        if 'roles' in self.galaxy_options:
-            if flag >= 1:
-                self.logger.warning('FYI roles were already installed using a'
-                                    ' requirements file. Problems may occur.')
-
-            for item in self.galaxy_options['roles']:
-                cmd = 'ansible-galaxy install %s' % item
-                results = exec_local_cmd_pipe(cmd, self.logger)
-
-                if results[0] != 0:
-                    raise CarbonOrchestratorError(
-                        'A problem occurred while installing role: %s' % item
-                    )
-                self.logger.info('Role: %s successfully installed!' % item)
-
-    def get_default_config(self, key=None):
-        """getting the default configuration defined by ansible.cfg
-        (Uses default values if there is no ansible.cfg).
-
-        :param key: get a value of a specific key of the ansible.cfg file
-        :type key: str
-
-        :return: key/values of the default ansible configuration or
-                 a specifc value of the config
-        :rtype: dict if key not defined or string if defined
-        """
-        returndict = {}
-        acm = ConfigManager()
-        a_settings = acm.data.get_settings()
-        if key:
-            for setting in a_settings:
-                if setting.name == key:
-                    return setting.value
-            return None
-        else:
-            for setting in a_settings:
-                if setting.name == "CONFIG_FILE":
-                    self.logger.debug("Using %s for default configuration" % setting.value)
-                elif setting.name == "DEFAULT_BECOME":
-                    returndict["become"] = setting.value
-                elif setting.name == "DEFAULT_BECOME_METHOD":
-                    returndict["become_method"] = setting.value
-                elif setting.name == "DEFAULT_BECOME_USER":
-                    returndict["become_user"] = setting.value
-                elif setting.name == "DEFAULT_REMOTE_USER":
-                    returndict["remote_user"] = setting.value
-                elif setting.name == "DEFAULT_FORKS":
-                    returndict["forks"] = setting.value
-                elif setting.name == 'DEFAULT_TRANSPORT':
-                    returndict["connection"] = setting.value
-            return returndict
-
-    def alog_update(self):
-        """move ansible logs to data folder as needed
-        """
-        ans_logfile = self.get_default_config(key="DEFAULT_LOG_PATH")
-        if ans_logfile:
-            dest = os.path.join(self.config['DATA_FOLDER'], 'logs', "ansible.log")
-            # if user wishes to keep the ansible log copy the log file
-            if os.path.isfile(dest) and not self.config["ANSIBLE_LOG_REMOVE"]:
-                copyfile(ans_logfile, dest)
-            # if user wants to delete the log file (default)
-            elif os.path.isfile(dest):
-                with open(dest, "a") as destfile:
-                    with open(ans_logfile) as logfile:
-                        for line in logfile:
-                            destfile.write(line)
+            self.logger.debug('Converting ansible_script/playbook path to dictionary %s' % new_item)
+            if isinstance(self.script, bool) and self.script:
+                self.script = new_item
+            elif not self.script:
+                self.playbook = new_item
             else:
-                copyfile(ans_logfile, dest)
-            # remove ansible log (default)
-            if os.path.isfile(ans_logfile) and self.config["ANSIBLE_LOG_REMOVE"]:
-                os.remove(ans_logfile)
-            self.logger.debug("ansible logging moved to: %s" % dest)
+                raise CarbonOrchestratorError('Error in defining the orchestrate name/ansible_script/ansible_playbook'
+                                              ' fields')
 
-    def run(self):
-        """Run.
-
-        This method handles the bulk work for the ansible orchestrator class.
-        Here you will see every required step for processing a carbon ansible
-        action. Please see the comments below for step by step details.
-        """
-
-        # lets create the ansible inventory file to run the given action on
-        # its associated hosts. Only creating unique, provision handles the
-        # the master
-        self.inv.create_unique()
-
-        # create an ansible controller object
-        obj = AnsibleController(self.inv.inv_dir)
-
-        # configure playbook variables
-        extra_vars = dict(hosts=self.inv.group)
-
-        ans_verbosity = get_ans_verbosity(self.logger, self.config)
-
-        # download ansible roles (if applicable)
-        try:
-            self.download_roles()
-        except CarbonOrchestratorError:
-            if 'retry' in self.galaxy_options and self.galaxy_options['retry']:
-                self.logger.Info("Download failed.  Sleeping 5 seconds and \
-                                  trying again")
-                time.sleep(5)
-                self.download_roles()
+    def validate(self):
+        """Validate that script/playbook path is valid and exists."""
 
         if self.script:
-            # running a script, using the ansible script module
-
-            run_options = {}
-
-            # override ansible options (user passed vals for specific action)
-            for val in self.user_run_vals:
-                if self.options and val in self.options and self.options[val]:
-                    run_options[val] = self.options[val]
-
-            extra_args = None
-
-            if self.options and 'extra_args' in self.options and \
-                    self.options['extra_args']:
-                # inject extra_args string with any data that might require data pass-thru
-                extra_args = self.injector.inject(self.options['extra_args'])
-
-            if self._hosts:
-                extra_vars["localhost"] = False
+            if os.path.exists(self.script.get('name').split(' ', 1)[0]):
+                self.logger.debug('Found Action script %s' % self.script.get('name'))
             else:
-                extra_vars["localhost"] = True
+                raise CarbonOrchestratorError('Cannot find Action script %s' % self.script.get('name'))
+        elif self.playbook:
+            if os.path.exists(self.playbook.get('name').split(' ', 1)[0]):
+                self.logger.debug('Found Action playbook %s' % self.playbook.get('name'))
+            else:
+                raise CarbonOrchestratorError('Cannot find Action playbook %s' % self.playbook.get('name'))
 
-            self.logger.debug("Extra variables used: " + str(extra_vars))
-            self.logger.debug("Extra arguments used: " + str(extra_args))
-            results = obj.run_module(
-                "script",
-                extra_vars=extra_vars,
-                script=self.action,
-                run_options=run_options,
-                extra_args=extra_args,
-                logger=self.logger,
-                ans_verbosity=ans_verbosity
-            )
-        else:
-            # If not a script then it must be a playbook
-
-            if self.options and 'extra_vars' in self.options and \
-                    self.options['extra_vars']:
-                extra_vars.update(self.options['extra_vars'])
-
-                # inject the extra_vars in case data-passthru is being used
-                extra_vars = self.injector.inject_dictionary(extra_vars)
-
-            self.logger.info('Executing action: %s.' % self.action)
-
-            run_options = {}
-
-            if "tags" in self.options and self.options["tags"]:
-                run_options["tags"] = self.options["tags"]
-
-            if "skip_tags" in self.options and self.options["skip_tags"]:
-                run_options["skip_tags"] = self.options["skip_tags"]
-
-            # override ansible options (user passed vals for specific action)
-            for val in self.user_run_vals:
-                if self.options and val in self.options and self.options[val]:
-                    run_options[val] = self.options[val]
-
-            self.logger.debug("Ansible options used: " + str(run_options))
-            self.logger.debug("Extra variables being used: " + str(extra_vars))
-            results = obj.run_playbook(
-                self.action,
-                extra_vars=extra_vars,
-                run_options=run_options,
-                ans_verbosity=ans_verbosity,
-                logger=self.logger
-            )
-
-        setattr(self.package, 'status', 0)
-        self.logger.info('Finished action: %s execution.' % self.action)
-        self.logger.info('Status => %s.' % results[0])
-
-        # get ansible logs as needed
-        self.alog_update()
-
-        # delete the unique inventory particular to this run
-        self.inv.delete_unique()
-
-        # raise an exception if the ansible action failed
+    def __playbook__(self):
+        self.logger.info('Executing playbook:')
+        results = self.ans_service.run_playbook(self.playbook)
         if results[0] != 0:
-            setattr(self.package, 'status', 1)
-            raise CarbonOrchestratorError(
-                'Ansible action did not return a valid return code!'
-            )
+            raise CarbonOrchestratorError('Playbook %s failed to run successfully!' % self.playbook['name'])
+        else:
+            self.logger.info('Successfully completed playbook : %s' % self.playbook['name'])
+
+    def __script__(self):
+        self.logger.info('Executing script:')
+
+        result = self.ans_service.run_script_playbook(self.script)
+        if result['rc'] != 0:
+            raise CarbonOrchestratorError('Script %s failed. Host=%s rc=%d Error: %s'
+                                          % (self.script['name'], result['host'], result['rc'], result['err']))
+        else:
+            self.logger.info('Successfully completed script : %s' % self.script['name'])
+
+    def __shell__(self):
+        self.logger.info('Executing shell command:')
+        result = self.ans_service.run_shell_playbook(self.shell)
+        if result['rc'] != 0:
+            raise CarbonOrchestratorError('Command %s failed. Host=%s rc=%d Error: %s'
+                                           % (self.shell['command'], result['host'], result['rc'], result['err']))
+        else:
+            self.logger.info('Successfully completed command : %s' % self.shell['command'])
+
+    def run(self):
+        """Run method for orchestrator.
+        """
+        # Orchestrate supports only one action_types( playbook, script or shell) per task
+        # if more than one action types are declared then the first action_type found will be executed
+
+        flag = 0
+        for item in ['playbook', 'script', 'shell']:
+            # Orchestrate supports only one action_types( playbook, script or shell) per task
+            # if more than one action types are declared then the first action_type found will be executed
+            if getattr(self, item):
+                flag += 1
+                # Download ansible roles (if applicable)
+                if flag == 1:
+                    try:
+                        self.ans_service.download_roles()
+                    except (CarbonOrchestratorError, AnsibleServiceError):
+                        if 'retry' in self.galaxy_options and self.galaxy_options['retry']:
+                            self.logger.Info("Download failed.  Sleeping 5 seconds and \
+                                              trying again")
+                            time.sleep(5)
+                            self.ans_service.download_roles()
+
+                    try:
+                        getattr(self, '__%s__' % item)()
+                    except (CarbonOrchestratorError, AnsibleServiceError) as e:
+                        setattr(self.package, 'status', 1)
+                        raise CarbonOrchestratorError("Orchestration failed : %s" % e.message)
+                    finally:
+                        # get ansible logs as needed
+                        self.ans_service.alog_update()
+                else:
+                    self.logger.warning('Found more than one action types (ansible_playbook, ansible_script ,'
+                                        'ansible_shell )in the orchestrate task, only the first found'
+                                        ' action type was executed, the rest are skipped.')
+                    break
+
+        # If every script/playbook/shell command within the each orchestrate has passed, mark that task as
+        # successful with status 0
+        setattr(self.package, 'status', 0)
+        self.logger.info('Completed orchestrate action: %s.' % self.action_name)

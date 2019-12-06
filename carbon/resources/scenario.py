@@ -39,8 +39,9 @@ from ..constants import SCENARIO_SCHEMA, SCHEMA_EXT, \
     SET_CREDENTIALS_OPTIONS
 from ..core import CarbonResource
 from ..exceptions import ScenarioError
-from ..helpers import gen_random_str, resource_check
+from ..helpers import gen_random_str
 from ..tasks import ValidateTask
+from ..utils.resource_checker import ResourceChecker
 
 
 class Scenario(CarbonResource):
@@ -89,8 +90,8 @@ class Scenario(CarbonResource):
         # set the scenario description attribute
         self._description = parameters.pop('description', None)
 
-        # External Dependency Component list of Scenario
-        self.resource_check = []
+        # resource check dictionary , for external dependency checks, or custom validation scripts and playbooks
+        self.resource_check = parameters.pop('resource_check', {})
 
         # set resource attributes
         self._assets = list()
@@ -426,6 +427,11 @@ class Scenario(CarbonResource):
         """Validate the scenario based on the default schema."""
         self.logger.debug('Validating scenario YAML file')
 
+        if self.resource_check:
+            self.logger.debug('Validating resource check section')
+            rs = ResourceChecker(self, self.config)
+            rs.validate_resources()
+
         msg = 'validated scenario YAML file against the schema!'
 
         try:
@@ -438,14 +444,6 @@ class Scenario(CarbonResource):
         except (CoreError, SchemaError) as ex:
             self.logger.error('Unsuccessfully %s' % msg)
             raise ScenarioError(ex.msg)
-
-        # Verify dependency check components are supported/valid then
-        # Check status (UP/DOWN)
-        # Only check if dependancy check endpoint set and components given
-        # Else it is ignored
-        if self.config['RESOURCE_CHECK_ENDPOINT'] and self.resource_check:
-            # Check Status of components (UP/DOWN)
-            resource_check(self, self.config)
 
     def profile(self):
         """Builds a profile which represents the scenario and its properties.

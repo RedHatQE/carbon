@@ -1,18 +1,30 @@
+# example 1
 ---
 name: Example Discriptor
 description: Descriptor file with resource check section
 
 resource_check:
-  - component1
-  - component2
-  - component3
-  - component4
-  - component5
-  - component6
-  - component7
-  - component8
-  - component9
-  - component10
+  service:
+    - polarion
+    - umb
+  playbook:
+    - name: ansible/list_block_devices.yml
+      ansible_options:
+        extra_vars:
+          X: 18
+          Y: 12
+          ch_dir: ./scripts/
+    - name: ansible/tests/test_execute_playbook.yml
+      ansible_options:
+        extra_vars:
+          X: 12
+          Y: 12
+          ch_dir: ../../scripts/
+  script:
+      - name: ./scripts/hello_world1.py Carbon_user
+        executable: python
+      - name: ./scripts/add_two_numbers.sh X=15 Y=15
+
 
 provision:
    .
@@ -29,11 +41,13 @@ execute:
    .
    .
 
+# example 2
 ---
 name: Example Discriptor
 description: Descriptor file with resource check section
 
-resource_check: ['component1', 'component2', 'component3', 'component5']
+resource_check:
+  service: ['polarion', 'umb']
 
 provision:
    .

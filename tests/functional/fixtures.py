@@ -34,7 +34,6 @@
 import copy
 import os
 import mock
-
 import pytest
 from carbon.resources import Action, Execute, Asset, Report, Scenario
 from carbon.utils.config import Config

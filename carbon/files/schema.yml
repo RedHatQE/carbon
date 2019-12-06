@@ -10,10 +10,60 @@ mapping:
   description:
     required: False
     type: str
+
   resource_check:
-    type: seq
-    sequence:
-      - type: str
+    allowempty: True
+    type: map
+    mapping:
+      service:
+        allowempty: True
+        type: seq
+        sequence:
+          - type: str
+      playbook:
+        allowempty: True
+        type: seq
+        sequence:
+          - type: map
+            mapping:
+              name:
+                required: True
+                type: str
+              ansible_options:
+                required: False
+                type: any
+              ansible_galaxy_options:
+                allowempty: True
+                type: map
+      script:
+        allowempty: True
+        type: seq
+        sequence:
+          - type: map
+            mapping:
+              name:
+                required: True
+                type: str
+              chdir:
+                type: str
+              creates:
+                 type: str
+              decrypt:
+                type: str
+              executable:
+                type: str
+              removes:
+                type: str
+              warn:
+                type: str
+              stdin:
+                type: str
+              stdin_add_newline:
+                type: str
+              ansible_options:
+                required: False
+                type: any
+
   include:
     required: False
     type: any
@@ -58,6 +108,7 @@ mapping:
     sequence:
       - type: map
         allowempty: True
+        func: valid_action_types
         mapping:
           name:
             required: True
@@ -66,13 +117,41 @@ mapping:
             type: str
           orchestrator:
             type: str
-            func: valid_orchestrator
           hosts:
             required: True
             type: any
             func: type_str_list
+          ansible_playbook:
+            type: map
+            mapping:
+              name:
+                required: True
+                type: str
           ansible_script:
-            type: bool
+            type: any
+            func: valid_ansible_script_type
+          ansible_shell:
+            type: map
+            mapping:
+              command:
+                required: True
+                type: str
+              chdir:
+                type: str
+              creates:
+                type: str
+              decrypt:
+                type: str
+              executable:
+                type: str
+              removes:
+                type: str
+              warn:
+                type: str
+              stdin:
+                type: str
+              stdin_add_newline:
+                type: str
           ansible_options:
             allowempty: True
             type: map
@@ -121,6 +200,20 @@ mapping:
                 mapping:
                   chdir:
                     type: str
+                  creates:
+                    type: str
+                  decrypt:
+                    type: str
+                  executable:
+                    type: str
+                  removes:
+                    type: str
+                  warn:
+                    type: str
+                  stdin:
+                    type: str
+                  stdin_add_newline:
+                    type: str
                   ignore_rc:
                     type: bool
                   valid_rc:
@@ -136,6 +229,20 @@ mapping:
               - type: map
                 mapping:
                   chdir:
+                    type: str
+                  creates:
+                    type: str
+                  decrypt:
+                    type: str
+                  executable:
+                    type: str
+                  removes:
+                    type: str
+                  warn:
+                    type: str
+                  stdin:
+                    type: str
+                  stdin_add_newline:
                     type: str
                   ignore_rc:
                     type: bool
