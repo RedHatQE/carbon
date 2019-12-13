@@ -195,6 +195,24 @@ class TestDataInjector(object):
         cmd = data_injector.inject("cmd { 'test': 'dictionary' }")
         assert cmd == "cmd { 'test': 'dictionary' }"
 
+    def test_inject_dictionary_01(self, data_injector):
+        cmd = data_injector.inject_dictionary(dict(ans_var='{ node01.random }'))
+        assert cmd.get('ans_var') == '123'
+
+    def test_inject_dictionary_02(self, data_injector):
+        cmd = data_injector.inject_dictionary(dict(ans_var=['{ node01.random }']))
+        assert cmd.get('ans_var')[-1] == '123'
+
+    def test_inject_dictionary_03(self, data_injector):
+        cmd = data_injector.inject_dictionary(
+            dict(ans_var={'{ node01.metadata.k1 }': '{ node01.random_01[0] }'})
+        )
+        assert cmd.get('ans_var').get('v1') == '123'
+
+    def test_inject_dictionary_04(self, data_injector):
+        cmd = data_injector.inject_dictionary(dict(ans_args='-c -e { node01.random } { node01.random_01[0]}'))
+        assert '123' in cmd.get('ans_args')
+
 
 def test_validate_render_scenario_no_include():
     result = validate_render_scenario(os.path.abspath('../assets/no_include.yml'))

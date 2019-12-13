@@ -79,17 +79,14 @@ class ArtifactImporter(CarbonImporter):
                     self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
                                                                       report_name=self.report_name))
                 else:
-                    # check artifact locations for data pass-thru first
-                    artifact_locations = dict()
-                    for key, value in execute.artifact_locations.items():
-                        dir_key = self.injector.inject(key)
-                        files = [self.injector.inject(v) for v in value]
-                        artifact_locations.update({dir_key: files})
 
                     # Perform check to walk the data directory
                     self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
                                                                       report_name=self.report_name,
-                                                                      art_location=artifact_locations))
+                                                                      art_location=self.injector.inject_dictionary(
+                                                                          execute.artifact_locations)
+                                                                      )
+                                               )
         else:
             self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
                                                               report_name=self.report_name))

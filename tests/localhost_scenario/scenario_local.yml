@@ -8,17 +8,23 @@ provision:
     ip_address: 127.0.1.1
     ansible_params:
       ansible_connection: local
+    metadata:
+      x: '12'
+      y: '18'
 
 orchestrate:
-  - name: ansible/list_block_devices.yml
+  - name: ansible/test_playbook_tasks.yml
     description: "run orchestrate step w/non-template playbook"
     orchestrator: ansible
     hosts: controller
 
-  - name: ansible/template_host_list_block_devices.yml
+  - name: ansible/template_host_test_playbook_tasks.yml
     description: "run orchestrate step w/template playbook"
     orchestrator: ansible
     hosts: laptop
+    ansible_options:
+      extra_vars:
+        ip: { dummy.ip_address }
 
   - name: scripts/add_two_numbers.sh
     description: "run orchestrate step w/bash script using no real host"
@@ -26,7 +32,7 @@ orchestrate:
     hosts: controller
     ansible_script: True
     ansible_options:
-      extra_args: X=12 Y=18
+      extra_args: X={ dummy.metadata.x } Y={ dummy.metadata.y }
 
   - name: scripts/hello_world.py
     description: "test orchestrate step w/python script"
@@ -68,8 +74,8 @@ execute:
       - name: ansible/tests/test_execute_playbook.yml
     ansible_options:
       extra_vars:
-        X: 18
-        Y: 12
+        X: '{ dummy.metadata.x }'
+        Y: 18
         ch_dir: ../../scripts/
 
   - name: Test collecting artifacts

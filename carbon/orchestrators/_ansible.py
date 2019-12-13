@@ -40,7 +40,8 @@ from ansible.vars.manager import VariableManager
 from .._compat import RawConfigParser, string_types
 from ..core import CarbonOrchestrator, Inventory
 from ..exceptions import CarbonOrchestratorError
-from ..helpers import ssh_retry, exec_local_cmd_pipe, is_host_localhost, get_ans_verbosity
+from ..helpers import ssh_retry, exec_local_cmd_pipe, is_host_localhost, \
+    get_ans_verbosity, DataInjector
 
 
 class AnsibleController(object):
@@ -247,6 +248,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
         )
 
+        # setup injector
+        self.injector = DataInjector(self.all_hosts)
+
     def validate(self):
         """Validate that action is valid and exists."""
         found = os.path.exists(self.action)
@@ -394,7 +398,8 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
             if self.options and 'extra_args' in self.options and \
                     self.options['extra_args']:
-                extra_args = self.options['extra_args']
+                # inject extra_args string with any data that might require data pass-thru
+                extra_args = self.injector.inject(self.options['extra_args'])
 
             if self._hosts:
                 extra_vars["localhost"] = False
@@ -418,6 +423,9 @@ class AnsibleOrchestrator(CarbonOrchestrator):
             if self.options and 'extra_vars' in self.options and \
                     self.options['extra_vars']:
                 extra_vars.update(self.options['extra_vars'])
+
+                # inject the extra_vars in case data-passthru is being used
+                extra_vars = self.injector.inject_dictionary(extra_vars)
 
             self.logger.info('Executing action: %s.' % self.action)
 

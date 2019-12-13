@@ -1122,6 +1122,30 @@ class DataInjector(object):
                 command = command.replace('{ %s }' % variable, value)
         return command
 
+    def inject_dictionary(self, dictionary):
+        """
+        inject data into a dictionary where
+        data-passthrough template is encountered
+
+        :param dictionary:
+        :return:
+        """
+        injected_dict = dict()
+
+        for key, value in dictionary.items():
+            inj_key = self.inject(key)
+            if isinstance(value, list):
+                inj_val = [self.inject(v) for v in value]
+            elif isinstance(value, dict):
+                inj_val = self.inject_dictionary(value)
+            elif isinstance(value, string_types):
+                inj_val = self.inject(value)
+            else:
+                inj_val = value
+            injected_dict.update({inj_key: inj_val})
+
+        return injected_dict
+
 
 def is_host_localhost(host_ip):
     """Determine if the host ip address given is localhost.

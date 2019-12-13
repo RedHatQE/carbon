@@ -47,6 +47,82 @@ When having just one action defined calling a master playbook. It then requires
 someone to go into the master playbook to understand what actions are actually
 taking place.
 
+There are cases where you want to pass some data about the test machines as a
+means of starting the configuration process rather during the configuration
+process. For example, say you've tagged the test machine with metadata that
+would be useful to be used in the configuration as extra variables or
+extra arguments. Carbon has the ability to template this data as parameters.
+Let's take a look at a couple examples:
+
+.. code-block:: yaml
+
+    ---
+    provision:
+      - name: host01
+        role: node
+        provider:
+          name: openstack
+          ...
+        ip_address:
+          public: 1.1.1.1
+          private: 192.168.10.10
+        metadata:
+          key1: 'value1'
+          key2: 'value2'
+          ...
+        ansible_params:
+          ansible_user: cloud-user
+          ...
+
+    orchestrate:
+      - name: ansible/configure_task_01.yml
+        description: run configure playbook and do something with ip
+        orchestrator: ansible
+        hosts: host01
+        ansible_options:
+          extra_vars:
+            priv_ip: <NEED PRIVATE IP OF HOST>
+
+      - name: scripts/configure_task_02.sh
+        description: run configure bash script and do something with metadata
+        orchestrator: ansible
+        hosts: host01
+        ansible_script: True
+        ansible_options:
+          extra_args: X=<NEED METADATA> Y=<NEED METADATA>
+
+We have two orchestrate tasks, one wants to use the private ip address of the machine
+to configure something on the host. The other wants to use some metadata that was tagged
+in the test resource. Here is how you could do that
+
+.. code-block:: yaml
+
+    ---
+    provision:
+      <truncated>
+
+    orchestrate:
+      - name: ansible/configure_task_01.yml
+        description: run configure playbook and do something with ip
+        orchestrator: ansible
+        hosts: host01
+        ansible_options:
+          extra_vars:
+            priv_ip: { host01.ip_address.private }
+
+      - name: scripts/configure_task_02.sh
+        description: run configure bash script and do something with metadata
+        orchestrator: ansible
+        hosts: host01
+        ansible_script: True
+        ansible_options:
+          extra_args: X={ host01.metadata.key1 } Y={ host01.metadata.key2 }
+
+
+Carbon will evaluate these parameters and inject the correct data before passing
+these on as parameters for Ansible to use.
+
+
 Execute
 -------
 
@@ -143,4 +219,4 @@ resource.
     use the data-passthrough in this situation you would do something like the
     following:
 
-    { host01.public.ip_address }
+    { host01.ip_address.public }

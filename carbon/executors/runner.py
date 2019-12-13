@@ -203,6 +203,8 @@ class RunnerExecutor(CarbonExecutor):
         extra_vars = {}
         if self.options and 'extra_vars' in self.options and self.options['extra_vars']:
             extra_vars.update(self.options['extra_vars'])
+            # inject data into extra_vars
+            extra_vars = self.injector.inject_dictionary(extra_vars)
 
         if self._hosts:
             extra_vars["localhost"] = False
