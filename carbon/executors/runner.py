@@ -658,7 +658,7 @@ class RunnerExecutor(CarbonExecutor):
             # call the method associated to the execute resource attribute
             try:
                 getattr(self, '__%s__' % attr)()
-            except ArchiveArtifactsError as ex:
+            except (ArchiveArtifactsError, CarbonExecuteError) as ex:
                 # test execution failed, test artifacts may still have been
                 # generated. lets go ahead and archive these for debugging
                 # purposes
