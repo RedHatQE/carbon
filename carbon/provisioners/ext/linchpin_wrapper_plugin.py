@@ -82,6 +82,8 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
         self.data_folder = path.realpath(getattr(host, 'data_folder'))
         self.linchpin_api = LinchpinAPI(self._init_context())
         self.linchpin_api.setup_rundb()
+        # use the settings for the disable progress bar and multiprocessing
+        self.linchpin_api.setup_pbar()
         self._create_pinfile()
         self._load_credentials()
         self._create_inv = False
@@ -104,6 +106,9 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
         context.set_cfg('lp', 'distill_data', True)
         context.set_evar('generate_resources', False)
         context.set_evar('debug_mode', True)
+        # Settings to disable progress bar and multiprocessing
+        context.set_evar('no_monitor', True)
+        context.no_monitor = True
         if self.provider == 'libvirt' and self.provider_params.get('role', False) == 'libvirt_node':
             if self.provider_params.get('libvirt_become', None) is not None:
                 context.set_evar('libvirt_become', str(self.provider_params.get('libvirt_become')))
