@@ -74,7 +74,7 @@ class AssetProvisioner(CarbonProvisioner):
     """
     __provisioner_name__ = 'asset-provisioner'
 
-    def __init__(self, host, plugin):
+    def __init__(self, host):
         """Constructor.
 
         Each host resource is linked to a provider which is the location where
@@ -116,7 +116,20 @@ class AssetProvisioner(CarbonProvisioner):
         :type host: object
         """
         super(AssetProvisioner, self).__init__(host)
-        self.plugin = plugin
+
+        # use the profile dict as a request object to the plugin
+        asset_profile = self.host.profile()
+        asset_profile.update(dict(provider_credentials=self.provider_credentials))
+
+        plugin_name = getattr(self.host, 'provisioner_plugin').__plugin_name__
+        config_params = dict()
+        for k, v in getattr(self.host, 'config').items():
+            if plugin_name.upper() in k:
+                config_params[k.lower()] = v
+
+        asset_profile.update(dict(config_params=config_params))
+
+        self.plugin = getattr(self.host, 'provisioner_plugin')(asset_profile)
 
     def print_commonly_used_attributes(self):
         """Print commonly used attributes from the class instance."""

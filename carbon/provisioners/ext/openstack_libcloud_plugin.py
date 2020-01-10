@@ -35,6 +35,7 @@ from libcloud.compute.types import InvalidCredsError, Provider
 from carbon._compat import string_types
 from carbon.core import ProvisionerPlugin
 from carbon.exceptions import OpenstackProviderError
+from carbon.helpers import gen_random_str, filter_host_name
 
 MAX_WAIT_TIME = 100
 MAX_ATTEMPTS = 3
@@ -48,12 +49,12 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
     """
     __plugin_name__ = 'openstack-libcloud'
 
-    def __init__(self, host):
+    def __init__(self, profile):
         """Constructor.
 
         :param host: The host object.
         """
-        super(OpenstackLibCloudProvisionerPlugin, self).__init__(host)
+        super(OpenstackLibCloudProvisionerPlugin, self).__init__(profile)
 
         # object place holders
         self._driver = object
@@ -83,8 +84,8 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
         # suppress insecure request warning messages
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-        provider = getattr(self.host, 'provider')
-        credentials = getattr(provider, 'credentials')
+        provider = self.provider
+        credentials = self.provider_credentials
 
         # determine region
         try:
@@ -651,31 +652,29 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
         """
         self.logger.info('Provisioning machines from %s', self.__class__)
 
-        # Check if floating ip pool was provided as part of scenario
-        try:
-            fip = getattr(self.host, 'provider_params')['floating_ip_pool']
-        except KeyError:
-            fip = None
-
         # ignore if count is given as provider parameter
         try:
-            if getattr(self.host, 'provider_params')['count']:
+            if self.provider_params.get('count', False):
                 self.logger.warn('Count parameter is found for host %s '
                                  'Count is not supported with openstack_libcloud as provisioner and will be ignored.'
-                                 % getattr(self.host, 'provider_params')['hostname'])
+                                 % self.profile.get('name'))
         except KeyError:
             pass
 
+        # determine hostname for the host
+        if 'hostname' not in self.provider_params:
+            hostname = filter_host_name(self.profile.get('name')) + '_%s' % gen_random_str(5)
+
         _ip, _id = self._create(
-            getattr(self.host, 'provider_params')['hostname'],
-            getattr(self.host, 'provider_params')['image'],
-            getattr(self.host, 'provider_params')['flavor'],
-            getattr(self.host, 'provider_params')['networks'],
-            getattr(self.host, 'provider_params')['keypair'],
-            fip
+            self.provider_params.get('hostname', hostname),
+            self.provider_params.get('image'),
+            self.provider_params.get('flavor'),
+            self.provider_params.get('networks'),
+            self.provider_params.get('keypair'),
+            self.provider_credentials.get('floating_ip_pool', None)
         )
-        setattr(self.host, 'ip_address', str(_ip))
-        getattr(self.host, 'provider_params')['node_id'] = str(_id)
+
+        return [dict(hostname=hostname, node_id=_id, ip=_ip)]
 
     def delete(self):
         """Delete a node in openstack.
@@ -685,4 +684,4 @@ class OpenstackLibCloudProvisionerPlugin(ProvisionerPlugin):
         """
         self.logger.info('Tearing down machines from %s', self.__class__)
 
-        self._delete(getattr(self.host, 'provider_params')['hostname'])
+        self._delete(self.provider_params.get('hostname'))

@@ -115,7 +115,10 @@ def asset(request, config):
 
 @pytest.fixture
 def linchpin_wrapper_plugin(asset):
-    return LinchpinWrapperProvisionerPlugin(asset)
+    profile = asset.profile()
+    profile.update(provider_credentials=getattr(getattr(
+        asset, 'provider'), 'credentials'), config_params={})
+    return LinchpinWrapperProvisionerPlugin(profile)
 
 
 class TestLinchpinWrapperProvisionerPlugin(object):

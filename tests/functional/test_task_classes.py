@@ -175,15 +175,6 @@ class TestProvisionTask(object):
         assert host_res is 'Test Create Success'
 
     @staticmethod
-    def test_create_with_provisioner_no_plugin():
-        asset = mock.MagicMock(spec=Asset, is_static=False, provisioner_plugin=None, provisioner=CarbonProvisioner,
-                              provider_params='test-provider-param')
-        with mock.patch('carbon.core.Inventory.__init__') as mock_inv:
-            mock_inv.return_value = None
-            pt = ProvisionTask('provision task', asset=asset)
-            assert pt.provision
-
-    @staticmethod
     def test_create_with_provisioner_plugin():
         asset = mock.MagicMock(spec=Asset, is_static=False, provisioner_plugin=ProvisionerPlugin,
                                provisioner=AssetProvisioner, provider_params='test-provider-param')

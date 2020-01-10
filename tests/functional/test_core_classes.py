@@ -106,7 +106,9 @@ def report_profile():
 
 @pytest.fixture
 def provisioner_plugin(host):
-    return ProvisionerPlugin(host)
+    profile = host.profile()
+    profile.update(provider_credentials={}, config_params={})
+    return ProvisionerPlugin(profile)
 
 @pytest.fixture(scope='class')
 def executor_plugin():

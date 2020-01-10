@@ -41,7 +41,7 @@ except ImportError:
     pass
 from carbon.core import ProvisionerPlugin
 from carbon.exceptions import CarbonProvisionerError, CarbonProviderError
-from ...helpers import LinchpinResourceBuilder, lookup_ip_of_hostname, exec_local_cmd
+from ...helpers import LinchpinResourceBuilder, lookup_ip_of_hostname, exec_local_cmd, get_provider_plugin_class
 
 
 '''class CarbonContext(LinchpinContext):
@@ -77,9 +77,8 @@ class Logger(object):
 class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
     __plugin_name__ = 'linchpin-wrapper'
 
-    def __init__(self, host):
-        super(LinchpinWrapperProvisionerPlugin, self).__init__(host)
-        self.data_folder = path.realpath(getattr(host, 'data_folder'))
+    def __init__(self, profile):
+        super(LinchpinWrapperProvisionerPlugin, self).__init__(profile)
         self.linchpin_api = LinchpinAPI(self._init_context())
         self.linchpin_api.setup_rundb()
         # use the settings for the disable progress bar and multiprocessing
@@ -119,7 +118,7 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
 
         # setup the default_ssh_key_location to be the scenario workspace for libvirt and aws
         context.set_evar('default_ssh_key_path', os.path.join(
-            os.path.abspath(getattr(self.host, 'workspace')), 'keys'))
+            os.path.abspath(self.workspace), 'keys'))
         return(context)
 
     def _load_credentials(self):
@@ -204,9 +203,8 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
         with open(tpath, 'r') as template:
             pindict = yaml.safe_load(template)
 
-        host_profile = self.host.profile()
         resource_def = LinchpinResourceBuilder.build_linchpin_resource_definition(
-            getattr(self.host, 'provider'), host_profile)
+            get_provider_plugin_class(self.provider)(), self.profile)
 
         resource_grp = {
             'resource_group_name': 'carbon',
@@ -215,16 +213,16 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
         }
         pindict['carbon']['topology']['resource_groups'] = [resource_grp]
         pindict['carbon']['layout']['inventory_layout']['vars'].update(
-            getattr(self.host, 'ansible_params'))
-        pindict['carbon']['layout']['inventory_layout']['vars']['hostname'] = getattr(self.host, 'name')
+            self.profile.get('ansible_params'))
+        pindict['carbon']['layout']['inventory_layout']['vars']['hostname'] = self.profile.get('name')
 
         host_groups = ''
         try:
-            host_groups = getattr(self.host, 'role')
-        except AttributeError:
+            host_groups = self.profile.get('role')
+        except KeyError:
             try:
-                host_groups = getattr(self.host, 'groups')
-            except AttributeError:
+                host_groups = self.profile.get('groups')
+            except KeyError:
                 pass
         if host_groups:
             pindict['carbon']['layout']['inventory_layout']['hosts']['node']['host_groups'].extend(host_groups)
@@ -253,20 +251,20 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
                 pass
             else:
                 raise
-        full_path = path.join(inv_path, 'carbon-%s.inventory' % (getattr(self.host, 'name')))
+        full_path = path.join(inv_path, 'carbon-%s.inventory' % (self.profile.get('name', 'topo')))
         with open(full_path, 'w+') as inv_file:
             inv_file.write(inv)
 
     def _create(self):
-        host = getattr(self.host, 'name', 'carbon-name')
+        host = self.profile.get('name', 'carbon-name')
         code, results = self._lp_action()
         self.logger.debug(json.dumps(results))
         if code:
             raise CarbonProvisionerError("Failed to provision asset %s" % host)
         try:
-            if getattr(self.host, 'provider_params')['count'] > 1:
+            if self.provider_params.get('count', 1) > 1:
                 self.logger.info('Successfully created %s host resources'
-                                 % getattr(self.host, 'provider_params')['count'])
+                                 % self.provider_params.get('count'))
             else:
                 self.logger.info('Successfully created asset %s' % host)
         except KeyError:
@@ -312,7 +310,6 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
             # TODO update how multiple IPs are captured once Linchpin libvirt multinetwork fixed
             for lib_vm in resource:
                 if self.provider_params.get('role', False) != 'libvirt_node':
-                    del getattr(self.host, 'provider_params')['hostname']
                     res.append({'tx_id': tx_id})
                 else:
                     res.append({'ip': str(lib_vm['ip']),
@@ -323,14 +320,13 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
         if self.provider == 'aws':
             for aws_res in resource:
                 if self.provider_params.get('role', False) != 'aws_ec2':
-                    del getattr(self.host, 'provider_params')['hostname']
                     res.append({'tx_id': tx_id})
 
                 if self.provider_params.get('role', False) == 'aws_ec2_key':
                     # the Linchpin resource generates the private key and dumps to the box
                     # but it doesn't change the permissions on it so it will fail when used
                     # later on during orchestrate/execute
-                    key = os.path.join(os.path.join(getattr(self.host, 'workspace'), 'keys'),
+                    key = os.path.join(os.path.join(self.workspace, 'keys'),
                                        aws_res.get('key').get('name'))
                     if os.path.exists(key):
                         # set permission of the key
@@ -371,8 +367,8 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
 
         Provision the host supplied.
         """
-        host = getattr(self.host, 'name')
-        self.logger.info('Provisioning Asset %s in %s.' % (host, self.host.provider))
+        host = self.profile.get('name')
+        self.logger.info('Provisioning Asset %s in %s.' % (host, self.provider))
         res = self._create()
         # TODO change this log message to something else
         if res and res[-1].get('hostname', False):
@@ -387,9 +383,9 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
 
         Teardown the host supplied.
         """
-        host = getattr(self.host, 'name')
+        host = self.provider_params.get('name')
         try:
-            txid = getattr(self.host, 'provider_params')['tx_id']
+            txid = self.provider_params.get('tx_id')
         except KeyError:
             txid = None
             self.logger.warning('No tx_id found for Asset: %s, this could mean it was not successfully'

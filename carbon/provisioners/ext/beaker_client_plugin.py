@@ -52,16 +52,15 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
     __plugin_name__ = "beaker-client"
     __plugin_prefix__ = 'bkr_'
 
-    def __init__(self, host):
+    def __init__(self, profile):
         """Constructor.
 
         :param host: The host object.
         :type host: object
         """
-        super(BeakerClientProvisionerPlugin, self).__init__(host)
-        self.data_folder = getattr(host, 'data_folder')
-        self.workspace = getattr(host, 'workspace')
-        self.job_xml = 'bkrjob_%s.xml' % getattr(host, 'name')
+        super(BeakerClientProvisionerPlugin, self).__init__(profile)
+
+        self.job_xml = 'bkrjob_%s.xml' % self.profile['name']
         self.bkr_xml = BeakerXML()
         self.conf_dir = '%s/.beaker_client' % os.path.expanduser('~')
         self.conf = '%s/config' % self.conf_dir
@@ -76,14 +75,12 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         This method will build the configuration file based on the type of
         authentication method (username/password or kerberos).
         """
-        credentials = getattr(getattr(self.host, 'provider'), 'credentials')
-
         # create conf directory
         if not os.path.isdir(self.conf_dir):
             os.makedirs(self.conf_dir)
 
-        if 'hub_url' in credentials and credentials['hub_url']:
-            self.url = credentials['hub_url']
+        if 'hub_url' in self.provider_credentials and self.provider_credentials['hub_url']:
+            self.url = self.provider_credentials['hub_url']
 
         if os.path.isfile(self.conf):
             self.logger.info('Beaker config already exists, skip creation.')
@@ -95,28 +92,28 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         conf_obj.write('HUB_URL = "%s"\n' % self.url)
 
         # write the path to beaker trusted ssl certs if specified.
-        if 'ca_cert' in credentials and credentials['ca_cert']:
-            self.logger.debug('ca_cert was provided %s' % credentials['ca_cert'])
-            conf_obj.write('CA_CERT = "%s"\n' % credentials['ca_cert'])
+        if 'ca_cert' in self.provider_credentials and self.provider_credentials['ca_cert']:
+            self.logger.debug('ca_cert was provided %s' % self.provider_credentials['ca_cert'])
+            conf_obj.write('CA_CERT = "%s"\n' % self.provider_credentials['ca_cert'])
 
-        if 'username' in credentials and credentials['username'] \
-                and 'password' in credentials and credentials['password']:
+        if 'username' in self.provider_credentials and self.provider_credentials['username'] \
+                and 'password' in self.provider_credentials and self.provider_credentials['password']:
             self.logger.debug('Authentication by username/password.')
 
             conf_obj.write('AUTH_METHOD = "password"\n')
-            conf_obj.write('USERNAME = "%s"\n' % credentials['username'])
-            conf_obj.write('PASSWORD = "%s"\n' % credentials['password'])
-        elif 'keytab' in credentials and credentials['keytab'] \
-                and 'keytab_principal' in credentials \
-                and credentials["keytab_principal"]:
+            conf_obj.write('USERNAME = "%s"\n' % self.provider_credentials['username'])
+            conf_obj.write('PASSWORD = "%s"\n' % self.provider_credentials['password'])
+        elif 'keytab' in self.provider_credentials and self.provider_credentials['keytab'] \
+                and 'keytab_principal' in self.provider_credentials \
+                and self.provider_credentials["keytab_principal"]:
             self.logger.debug('Authentication by keytab.')
 
             conf_obj.write('AUTH_METHOD = "krbv"\n')
 
-            keytab = os.path.join(self.workspace, credentials['keytab'])
+            keytab = os.path.join(self.workspace, self.provider_credentials['keytab'])
 
             conf_obj.write('KRB_KEYTAB = "%s"\n' % keytab)
-            conf_obj.write('KRB_PRINCIPAL = "%s"\n' % credentials[
+            conf_obj.write('KRB_PRINCIPAL = "%s"\n' % self.provider_credentials[
                 'keytab_principal'])
             conf_obj.write('KRB_REALM = "REDHAT.COM"\n')
         conf_obj.close()
@@ -142,7 +139,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         bkr_xml_file = os.path.join(self.data_folder, self.job_xml)
 
         # set attributes for beaker xml object
-        for key, value in getattr(self.host, 'provider_params').items():
+        for key, value in self.provider_params.items():
             if key is not 'name':
                 if value:
                     setattr(self.bkr_xml, key, value)
@@ -202,16 +199,16 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
             # set the result as ascii instead of unicode
             job_id = mod_output[mod_output.find(
                 "[") + 2:mod_output.find("]") - 1]
-            getattr(self.host, 'provider_params')['job_id'] = job_id
             job_url = os.path.join(self.url, 'jobs', job_id[2:])
-            getattr(self.host, 'provider_params')['job_url'] = job_url
 
             self.logger.info('Beaker job ID: %s.' % job_id)
             self.logger.info('Beaker job URL: %s.' % job_url)
 
-        self.logger.info('Successfully submitted beaker XML!')
+            self.logger.info('Successfully submitted beaker XML!')
 
-    def wait_for_bkr_job(self):
+            return job_id, job_url
+
+    def wait_for_bkr_job(self, job_id):
         """Wait for submitted beaker job to have complete status.
 
         This method will wait for the beaker job to be complete depending on
@@ -219,7 +216,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         wait indefinitely for the machine to be provisioned.
         """
         # set max wait time (default is 8 hours)
-        wait = getattr(self.host, 'bkr_timeout', None)
+        wait = self.provider_params.get('bkr_timeout', None)
         if wait is None:
             wait = 28800
 
@@ -235,7 +232,6 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
                              '%s.' % (attempt, total_attempts))
 
             # setup beaker job results command
-            job_id = getattr(self.host, 'provider_params')['job_id']
             _cmd = "bkr job-results %s" % job_id
 
             self.logger.debug('Fetching beaker job status..')
@@ -264,8 +260,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
                 self.logger.info("Machine is successfully provisioned from "
                                  "Beaker!")
                 # get machine info
-                self.get_machine_info(xml_output)
-                return
+                return self.get_machine_info(xml_output)
             elif status == "fail":
                 raise BeakerProvisionerError(
                     'Beaker job %s provision failed!' % job_id
@@ -279,7 +274,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         self.logger.error('Maximum number of attempts reached!')
 
         # cancel job
-        self.cancel_job()
+        self.cancel_job(job_id)
 
         raise BeakerProvisionerError(
             'Timeout reached waiting for beaker job to finish!'
@@ -300,25 +295,26 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         self.gen_bkr_xml()
 
         # submit beaker job xml and get beaker job id
-        self.submit_bkr_xml()
+        job_id, job_url = self.submit_bkr_xml()
 
         # wait for the bkr job to be complete and return pass or failed
-        self.wait_for_bkr_job()
+        hostname, ip = self.wait_for_bkr_job(job_id)
 
         # copy ssh key to remote system
-        if 'ssh_key' in getattr(self.host, 'provider_params') and \
-                getattr(self.host, 'provider_params')['ssh_key']:
+        if 'ssh_key' in self.provider_params and self.provider_params.get('ssh_key', None):
             self.logger.info('Inject SSH key into remote machine.')
-            self.copy_ssh_key()
+            self.copy_ssh_key(hostname, ip)
         else:
             self.logger.warning('No SSH key defined, skip injecting key.')
 
-    def cancel_job(self):
+        return [dict(job_id=job_id, job_url=job_url, hostname=hostname, ip=ip)]
+
+    def cancel_job(self, job_id):
         """Cancel a existing beaker job.
 
         This method will cancel a existing beaker job using the job id.
         """
-        job_id = getattr(self.host, 'provider_params')['job_id']
+
         # setup beaker job cancel command
         _cmd = "bkr job-cancel {0}".format(job_id)
 
@@ -349,7 +345,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         self.authenticate()
 
         # cancel beaker job
-        self.cancel_job()
+        self.cancel_job(self.provider_params.get('job_id'))
 
     def get_job_status(self, xmldata):
         """Parse the beaker results.
@@ -374,7 +370,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         # verify it is a length of 1 else exception
         if len(joblist) != 1:
             raise BeakerProvisionerError(
-                'Unable to parse job results from %s.' % self.host.bkr_job_id
+                'Unable to parse job results from %s.' % self.provider_params.get('job_id')
             )
 
         mydict["job_result"] = joblist[0].getAttribute("result")
@@ -418,22 +414,23 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
                     getAttribute("value")
                 addr = socket.gethostbyname(hostname)
                 try:
-                    getattr(self.host, 'provider_params')['hostname'] = hostname.split('.')[0]
+                    hostname = hostname.split('.')[0]
                 except Exception:
-                    getattr(self.host, 'provider_params')['hostname'] = hostname
+                    pass
 
-                setattr(self.host, 'ip_address', addr)
+                # setattr(self.host, 'ip_address', addr)
+                return hostname, addr
 
-    def copy_ssh_key(self):
+    def copy_ssh_key(self, hostname, ip):
         """Copy SSH public key to remote system.
 
         This method will inject the public SSH key into remote system. It
         will create the public key content from the private key given.
         """
-        ssh_key = getattr(self.host, 'provider_params')['ssh_key']
-        username = getattr(self.host, 'provider_params')['username']
-        password = getattr(self.host, 'provider_params')['password']
-        hostname = getattr(self.host, 'provider_params')['hostname']
+
+        ssh_key = self.provider_params.get('ssh_key')
+        username = self.provider_params.get('username')
+        password = self.provider_params.get('password')
 
         # setup absolute path for private key
         private_key = os.path.join(self.workspace, ssh_key)
@@ -459,14 +456,14 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         self.logger.info('Successfully generated SSH public key from private!')
 
         self.logger.info('Send SSH key to remote system %s:%s' %
-                         (hostname, self.host.ip_address))
+                         (hostname, ip))
 
         # send the key to the beaker machine
         ssh_con = paramiko.SSHClient()
         ssh_con.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         try:
-            ssh_con.connect(hostname=self.host.ip_address,
+            ssh_con.connect(hostname=ip,
                             username=username,
                             password=password)
             sftp = ssh_con.open_sftp()
@@ -483,7 +480,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
             ssh_con.close()
 
         self.logger.debug("Successfully sent key: {0}, "
-                          "{1}".format(self.host.ip_address,
+                          "{1}".format(ip,
                                        hostname))
 
     def analyze_results(self, resultsdict):

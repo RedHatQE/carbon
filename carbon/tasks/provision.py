@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from ..provisioners import AssetProvisioner
 
 
 class ProvisionTask(CarbonTask):
@@ -46,17 +47,7 @@ class ProvisionTask(CarbonTask):
         self.provision = True
         if not asset.is_static:
             # create the provisioner object to create assets
-            try:
-                # TODO We should move this code out into the Asset Resource to instantiate there?
-                # let's try to create the provisioner plugin gateway implementation first
-                if getattr(asset, 'provisioner_plugin') is not None:
-
-                    self.provisioner = getattr(asset, 'provisioner_plugin')(asset)
-                    self.logger.debug('Asset loaded the following provisioner plugin interface: %s'
-                                      % self.provisioner.__plugin_name__)
-            except AttributeError as ex:
-                self.logger.error(ex)
-                raise
+            self.provisioner = AssetProvisioner(asset)
         else:
             self.provision = False
             self.logger.warning('Asset %s is static, provision will be '

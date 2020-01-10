@@ -25,6 +25,7 @@
 """
 from ..core import CarbonTask
 from ..exceptions import CarbonOrchestratorError
+from ..provisioners import AssetProvisioner
 
 
 class CleanupTask(CarbonTask):
@@ -90,12 +91,7 @@ class CleanupTask(CarbonTask):
         # **** TASKS BELOW ONLY SHOULD BE RELATED TO THE PROVISIONER ****
         if self.asset:
             try:
-
-                # TODO needs to modify when asset provisioner will be modified with ticket 5108
-                # Getting the provisioner_plugin as an asset package and setting it as provisioner.
-                provisioner = getattr(self.asset, 'provisioner_plugin')(self.asset)
-                self.logger.debug('Asset loaded the following provisioner plugin: %s' % provisioner.__plugin_name__)
-
+                provisioner = AssetProvisioner(self.asset)
                 # teardown the asset
                 getattr(provisioner, 'delete')()
             except AttributeError:

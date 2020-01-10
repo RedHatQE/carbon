@@ -34,21 +34,47 @@ from carbon.provisioners import AssetProvisioner
 
 
 @pytest.fixture(scope='class')
-def host():
-    host = mock.MagicMock(spec=Asset, name='Test-Asset', provider_params='Test Provider Params', provider_credentials='Test Cred Params')
-    return host
+def default_host_params():
+    params = dict(description='description',
+                  provider=dict(name='openstack',
+                                credential='openstack'
+                                ))
+    return params
+
+
+@pytest.fixture(scope='class')
+def default_profile_params():
+    params = dict(data_folder='/tmp/.results',
+                  workspace='/tmp',
+                  provider_credentials = dict(auth_url='https://test.com/osp',
+                                              username='testuser',
+                                              password='testpassword'))
+    return params
 
 
 @pytest.fixture(scope='class')
 def plugin():
-    pg = mock.MagicMock(spec=ProvisionerPlugin, create=mock.MagicMock('Test Asset-Provisioner Create Success'),
-                        delete=mock.MagicMock('Test Asset-Provisioner Delete Success'))
+    pg = mock.MagicMock(spec=ProvisionerPlugin,
+                        __plugin_name__='openstack-libcloud')
+    pg.profile = dict()
+    pg.create = mock.MagicMock(return_value=[])
+    pg.delete = mock.MagicMock(return_value=[])
     return pg
 
 
 @pytest.fixture(scope='class')
-def host_provisioner(host, plugin):
-    hp = AssetProvisioner(host, plugin)
+def host(plugin, default_host_params, default_profile_params):
+    host = mock.MagicMock(spec=Asset, name='Test-Asset', provider_params='Test Provider Params',
+                          provider_credentials='Test Cred Params')
+    host.provisioner_plugin = plugin
+    host.parameters = default_host_params
+    host.profile.return_value = default_profile_params
+    return host
+
+
+@pytest.fixture(scope='class')
+def host_provisioner(host):
+    hp = AssetProvisioner(host)
     return hp
 
 
@@ -61,12 +87,14 @@ class TestAssetProvisioner(object):
 
     @staticmethod
     def test_host_provisioner_create(host_provisioner, plugin):
+        host_provisioner.plugin = plugin
         host_provisioner.create()
         plugin.create.assert_called()
 
 
     @staticmethod
     def test_host_provisioner_delete(host_provisioner, plugin):
+        host_provisioner.plugin = plugin
         host_provisioner.delete()
         plugin.delete.assert_called()
 

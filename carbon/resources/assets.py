@@ -225,11 +225,6 @@ class Asset(CarbonResource):
                 getattr(self.provider, 'set_credentials')(item)
                 break
 
-        # determine hostname for the host
-        if 'hostname' not in self.provider_params:
-            self.provider_params['hostname'] = \
-                filter_host_name(self.name) + '_%s' % gen_random_str(5)
-
         return parameters
 
     @property

@@ -1143,7 +1143,7 @@ class ProvisionerPlugin(CarbonPlugin):
     Additional support/helper methods can be added to this class
     """
 
-    def __init__(self, host):
+    def __init__(self, profile):
 
         """Constructor.
 
@@ -1186,15 +1186,15 @@ class ProvisionerPlugin(CarbonPlugin):
         :type host: object
         """
 
-        self.host = host
+        self.profile = profile
 
-        # set commonly accessed data used by provisioners
-        self.data_folder = getattr(self.host, 'data_folder')
-        self.provider = getattr(getattr(host, 'provider'), 'name')
-        self.provider_params = getattr(host, 'provider_params')
-        self.provider_credentials = getattr(getattr(
-            host, 'provider'), 'credentials')
-        self.workspace = getattr(self.host, 'workspace')
+        # set commonly accessed data used by the importer
+        self.data_folder = self.profile['data_folder']
+        self.provider = self.profile['provider']['name']
+        self.provider_params = self.profile['provider']
+        self.provider_credentials = self.profile['provider_credentials']
+        self.workspace = self.profile['workspace']
+        self.config_params = self.profile['config_params']
 
     def create(self):
         raise NotImplementedError
