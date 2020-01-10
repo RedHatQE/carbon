@@ -30,8 +30,10 @@ from copy import copy
 from .._compat import string_types
 from ..constants import ORCHESTRATOR
 from ..core import CarbonResource
-from ..helpers import get_orchestrator_class, \
-    get_orchestrators_list
+# from ..helpers import get_orchestrator_class, \
+#     get_orchestrators_list
+from ..helpers import get_orchestrator_plugin_class, \
+    get_orchestrators_plugin_list
 from ..exceptions import CarbonActionError
 from ..tasks import OrchestrateTask, ValidateTask, CleanupTask
 from collections import OrderedDict
@@ -111,12 +113,15 @@ class Action(CarbonResource):
 
         # every action has a mandatory orchestrator, lets set it
         orchestrator = parameters.pop('orchestrator', ORCHESTRATOR)
-        if orchestrator not in get_orchestrators_list():
+        if orchestrator not in get_orchestrators_plugin_list():
             raise CarbonActionError('Orchestrator: %s is not supported!' %
                                     orchestrator)
 
+        if orchestrator not in get_orchestrators_plugin_list():
+            raise CarbonActionError('Orchestrator: %s is not supported!' %
+                                    orchestrator)
         # now that we know the orchestrator, lets get the class
-        self._orchestrator = get_orchestrator_class(orchestrator)
+        self._orchestrator = get_orchestrator_plugin_class(orchestrator)
 
         # create the orchestrator attributes in the action object
         for p in getattr(self.orchestrator, 'get_all_parameters')():

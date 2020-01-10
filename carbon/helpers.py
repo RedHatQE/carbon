@@ -55,6 +55,7 @@ from ._compat import string_types
 from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER, DEFAULT_TASK_CONCURRENCY, \
     TASKLIST
 from .exceptions import CarbonError, HelpersError
+import pkg_resources
 
 LOG = getLogger(__name__)
 
@@ -105,6 +106,9 @@ def get_core_tasks_classes():
     return tasks_list
 
 
+'''
+# TODO Need to refactor asset provisioner and remove/refactor these classes
+# TODO get_provisioners_classes, get_provisioner_class, get_default_provisioner
 def get_provisioners_classes():
     """Go through all modules within carbon.provisioners package and return
     the list of all provisioners classes within it. All provisioners within
@@ -134,34 +138,15 @@ def get_provisioners_classes():
     return provisioners_list
 
 
-def get_provisioners_plugin_classes():
-    """Go through all modules within carbon.provisioners package and return
-    the list of all provisioner gateway classes within it. All provisioners within
-    the carbon.provisioners.ext package are considered valid provisioner gateway classes
-    to be used by Carbon framework.
-    :return: List of all provisioner gateway classes"""
-
-    from .core import ProvisionerPlugin
-    from .provisioners import ext
-
-    # all task classes must
-    prefix = ext.__name__ + "."
-
-    provisioners_list = []
-
-    # Run through each module within tasks and take the list of
-    # classes that are subclass of CarbonTask but not CarbonTask itself.
-    # When you import a class within a module, it becames a member of
-    # that class
-    for importer, modname, ispkg in pkgutil.walk_packages(ext.__path__, prefix):
-        if str(modname).endswith('.ext') or str(modname).endswith('.blueprint'):
-            continue
-        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
-        for clsname, clsmember in clsmembers:
-            if (clsmember is not ProvisionerPlugin) and issubclass(clsmember, ProvisionerPlugin):
-                provisioners_list.append(clsmember)
-
-    return provisioners_list
+def get_provisioner_class(name):
+    """Return the provisioner class based on the __provisioner_name__ set
+    within the class. See ~carbon.core.CarbonProvisioner for more information.
+    :param name: The name of the provisioner
+    :return: The provisioner class
+    """
+    for provisioner in get_provisioners_classes():
+        if provisioner.__provisioner_name__ == name:
+            return provisioner
 
 
 def get_default_provisioner(provider=None):
@@ -181,10 +166,26 @@ def get_default_provisioner(provider=None):
         except KeyError:
             provisioner_name = 'linchpin-wrapper'
 
-    return get_provisioner_class(provisioner_name)
+    return get_provisioner_class(provisioner_name) '''
+
+
+# Using entry point to get the provisioners defined in carbon's setup.py file
+def get_provisioners_plugin_classes():
+    """Return all provisioner plugin classes discovered by carbon
+    :return: The list of provisioner plugin classes
+    """
+    provisioner_plugin_dict = {}
+    for entry_point in pkg_resources.iter_entry_points('provisioner_plugins'):
+        provisioner_plugin_dict[entry_point.name] = entry_point.load()
+    return provisioner_plugin_dict
 
 
 def get_default_provisioner_plugin(provider=None):
+    """Return provisioner plugin classe based on the given provider class. If provider is None linchpin_wrapper plugin
+    class is returned as the default provisioner class
+    :param provider: The provider class
+    :return: The provisioner plugin class
+    """
     if provider is not None:
         provisioners = PROVISIONERS[provider.__provider_name__]
         if isinstance(provisioners, list):
@@ -192,18 +193,7 @@ def get_default_provisioner_plugin(provider=None):
         else:
             return get_provisioner_plugin_class(provisioners)
     else:
-        return get_provisioner_plugin_class('linchpin')
-
-
-def get_provisioners_list():
-    """
-    Returns a list of all the valid provisioners.
-    :return: list of provisioners
-    """
-    valid_provisioners = []
-    for provisioner_class in get_provisioners_classes():
-        valid_provisioners.append(provisioner_class.__provisioner_name__)
-    return valid_provisioners
+        return get_provisioner_plugin_class('linchpin_wrapper')
 
 
 def get_provisioners_plugins_list():
@@ -211,21 +201,11 @@ def get_provisioners_plugins_list():
     Returns a list of all the valid provisioner gateways.
     :return: list of provisioner gateways
     """
+
     valid_provisioners = []
-    for provisioner_gateway_class in get_provisioners_plugin_classes():
+    for provisioner_gateway_class in get_provisioners_plugin_classes().values():
         valid_provisioners.append(provisioner_gateway_class.__plugin_name__)
     return valid_provisioners
-
-
-def get_provisioner_class(name):
-    """Return the provisioner class based on the __provisioner_name__ set
-    within the class. See ~carbon.core.CarbonProvisioner for more information.
-    :param name: The name of the provisioner
-    :return: The provisioner class
-    """
-    for provisioner in get_provisioners_classes():
-        if provisioner.__provisioner_name__ == name:
-            return provisioner
 
 
 def get_provisioner_plugin_class(name):
@@ -234,232 +214,133 @@ def get_provisioner_plugin_class(name):
     :param name: The name of the provisioner
     :return: The provisioner gateway class
     """
-    for provisioner in get_provisioners_plugin_classes():
+    for provisioner in get_provisioners_plugin_classes().values():
         if provisioner.__plugin_name__.startswith(name):
             return provisioner
 
 
-def get_providers_classes():
+# Using entry point to get the providers from within carbon as well as the ones coming from the external plugins
+def get_provider_plugin_classes():
+    """Return all provider plugin classes discovered by carbon
+    :return: The list of provider plugin classes
     """
-    Go through all modules within carbon.providers package and return
-    the list of all providers classes within it. All providers within the
-    carbon.providers package are considered valid providers classes to be
-    used by Carbon framework.
-    :return: List of all providers classes
-    """
-    from .core import CarbonProvider
-    from . import providers
-
-    # all task classes must
-    prefix = providers.__name__ + "."
-
-    providers_list = []
-
-    # Run through each module within tasks and take the list of
-    # classes that are subclass of CarbonTask but not CarbonTask itself.
-    # When you import a class within a module, it becames a member of
-    # that class
-    for importer, modname, ispkg in pkgutil.iter_modules(providers.__path__, prefix):
-        if str(modname).endswith('.ext'):
-            continue
-        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
-        for clsname, clsmember in clsmembers:
-            if (clsmember is not CarbonProvider) and issubclass(clsmember, CarbonProvider):
-                providers_list.append(clsmember)
-
-    return providers_list
+    provider_plugin_dict = {}
+    for entry_point in pkg_resources.iter_entry_points('provider_plugins'):
+        provider_plugin_dict[entry_point.name] = entry_point.load()
+    return provider_plugin_dict
 
 
-def get_provider_class(name):
+def get_provider_plugin_class(name):
     """
     Return the provider class based on the __provider_name__ set within
-    the class. See ~carbon.core.CarbonProvider for more information.
+    the class.
     :param name: the name of the provider
     :return: the provider class
     """
-    for provider in get_providers_classes():
+    for provider in get_provider_plugin_classes().values():
         if provider.__provider_name__ == name:
             return provider
 
 
-def get_providers_list():
+def get_provider_plugin_list():
     """
-    Return the provider class based on the __provider_name__ set within
+    Return the list of provider class based on the __provider_name__ set within
     the class.
-    :return: the provider class
+    :return: list of the the provider names
     """
-    return [provider.__provider_name__ for provider in get_providers_classes()]
+    return [provider.__provider_name__ for provider in get_provider_plugin_classes().values()]
 
 
-def get_orchestrators_classes():
-    """Go through all available orchestrator modules and return all the
-    classes.
-
-    :return: orchestrator classes
-    :rtype: list
+# Using entry point to get the orchestrators defined in carbon's setup.py file
+def get_orchestrators_plugin_classes():
+    """Return all orchestrator plugin classes discovered by carbon
+    :return: The list of orchestrator plugin classes
     """
-    from .core import CarbonOrchestrator
-    from . import orchestrators
-
-    prefix = orchestrators.__name__ + '.'
-
-    orchestrators_list = []
-
-    for importer, modname, ispkg in pkgutil.iter_modules(orchestrators.__path__, prefix):
-        if str(modname).endswith('.ext'):
-            continue
-        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
-        for clsname, clsmember in clsmembers:
-            if (clsmember is not CarbonOrchestrator) and issubclass(clsmember, CarbonOrchestrator):
-                orchestrators_list.append(clsmember)
-    return orchestrators_list
+    orchestrator_plugin_dict = {}
+    for entry_point in pkg_resources.iter_entry_points('orchestrator_plugins'):
+        orchestrator_plugin_dict[entry_point.name] = entry_point.load()
+    return orchestrator_plugin_dict.values()
 
 
-def get_orchestrator_class(name):
+def get_orchestrator_plugin_class(name):
     """Return the orchestrator class based on the __orchestrator_name__ set
-    within the class. See ~carbon.core.CarbonOrchestrator for more information.
+    within the class.
 
     :param name: the name of the orchestrator
     :return: the orchestrator class
     """
-    for orchestrator in get_orchestrators_classes():
+    for orchestrator in get_orchestrators_plugin_classes():
         if orchestrator.__orchestrator_name__ == name:
             return orchestrator
 
 
-def get_orchestrators_list():
+def get_orchestrators_plugin_list():
     """Return a list of available orchestrators.
 
     :return: orchestrators
     """
     return [orchestrator.__orchestrator_name__ for orchestrator in
-            get_orchestrators_classes()]
+            get_orchestrators_plugin_classes()]
 
 
-def get_executors_classes():
-    """Go through all available executor modules and return all the
-    classes.
+# Using entry point to get the executors defined in carbon's setup.py file
+def get_executors_plugin_classes():
 
-    :return: executor classes
-    :rtype: list
+    """Return all executor plugin classes discovered by carbon
+    :return: The list of executor plugin classes
     """
-    from .core import CarbonExecutor
-    from . import executors
-
-    prefix = executors.__name__ + '.'
-
-    executors_list = []
-
-    for importer, modname, ispkg in pkgutil.iter_modules(executors.__path__, prefix):
-        if str(modname).endswith('.ext'):
-            continue
-        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
-        for clsname, clsmember in clsmembers:
-            if (clsmember is not CarbonExecutor) and issubclass(clsmember, CarbonExecutor):
-                executors_list.append(clsmember)
-    return executors_list
+    executor_plugin_dict = {}
+    for entry_point in pkg_resources.iter_entry_points('executor_plugins'):
+        executor_plugin_dict[entry_point.name] = entry_point.load()
+    return executor_plugin_dict.values()
 
 
-def get_executor_class(name):
+def get_executor_plugin_class(name):
     """Return the executor class based on the __executor_name__ set
-    within the class. See ~carbon.core.CarbonExecutor for more information.
+    within the class.
 
     :param name: the name of the executor
     :return: the executor class
     """
-    for executor in get_executors_classes():
+    for executor in get_executors_plugin_classes():
         if executor.__executor_name__ == name:
             return executor
 
 
-def get_executors_list():
+def get_executors_plugin_list():
     """Return a list of available executors.
 
     :return: executors
     """
     return [executor.__executor_name__ for executor in
-            get_executors_classes()]
+            get_executors_plugin_classes()]
 
 
-def get_importers_classes():
-    """Go through all available importer modules and return all the
-    classes.
-
-    :return: importer classes
-    :rtype: list
-    """
-    from .core import CarbonImporter
-    from . import importers
-
-    prefix = importers.__name__ + '.'
-
-    reporters_list = []
-
-    for importer, modname, ispkg in pkgutil.iter_modules(importers.__path__, prefix):
-        if str(modname).endswith('.ext'):
-            continue
-        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
-        for clsname, clsmember in clsmembers:
-            if (clsmember is not CarbonImporter) and issubclass(clsmember, CarbonImporter):
-                reporters_list.append(clsmember)
-    return reporters_list
-
-
-def get_importer_class(name):
-    """Return the importer class based on the __importer_name__ set
-    within the class. See ~carbon.core.CarbonImporter for more information.
-
-    :param name: the name of the importer
-    :return: the importer class
-    """
-    for importer in get_importers_classes():
-        if importer.__importer_name__ == name:
-            return importer
-
-
-def get_importers_list():
-    """Return a list of available importer.
-
-    :return: importers
-    """
-    return [importer.__importer_name__ for importer in
-            get_importers_classes()]
-
-
+# Using entry point to get the importers. These methods are being used to get the importer plugins external to carbon
 def get_importers_plugin_classes():
-    """Go through all modules within carbon.provisioners package and return
-    the list of all provisioner gateway classes within it. All provisioners within
-    the carbon.provisioners.ext package are considered valid provisioner gateway classes
-    to be used by Carbon framework.
-    :return: List of all provisioner gateway classes"""
-
-    from .core import ImporterPlugin
-    from .importers import ext
-
-    # all task classes must
-    prefix = ext.__name__ + "."
-
-    reporters_list = []
-
-    # Run through each module within tasks and take the list of
-    # classes that are subclass of CarbonTask but not CarbonTask itself.
-    # When you import a class within a module, it becames a member of
-    # that class
-    for importer, modname, ispkg in pkgutil.walk_packages(ext.__path__, prefix):
-        if str(modname).endswith('.ext'):
-            continue
-        clsmembers = inspect.getmembers(sys.modules[modname], inspect.isclass)
-        for clsname, clsmember in clsmembers:
-            if (clsmember is not ImporterPlugin) and issubclass(clsmember, ImporterPlugin):
-                reporters_list.append(clsmember)
-
-    return reporters_list
-
-
-def get_importers_plugins_list():
+    """Return all importer plugin classes discovered by carbon
+    :return: The list of importer plugin classes
     """
-    Returns a list of all the valid reporter gateways.
-    :return: list of reporter plugins
+    ext_plugin_dict = {}
+    for entry_point in pkg_resources.iter_entry_points('importer_plugins'):
+        ext_plugin_dict[entry_point.name] = entry_point.load()
+    return ext_plugin_dict.values()
+
+
+def get_default_importer_plugin_class(provider):
+    """Return the importer class based on the provider name
+    :param provider: The provider class
+    :return: The importer plugin class
+    """
+    for plugin_class in get_importers_plugin_classes():
+        if plugin_class.__plugin_name__.startswith(provider.__provider_name__):
+            return plugin_class
+
+
+def get_importers_plugin_list():
+    """
+    Returns a list of all the valid importer gateways.
+    :return: list of importer plugin names
     """
     valid_reporters = []
     for reporter_plugin_class in get_importers_plugin_classes():
@@ -468,33 +349,14 @@ def get_importers_plugins_list():
 
 
 def get_importer_plugin_class(name):
-    """Return the reporter gateway class based on the __reporter_name__ set
-    within the class. See ~carbon.core.CarbonPlugin for more information.
-    :param name: The name of the reporter
-    :return: The reporter plugin class
+    """Return the importer plugin class based on the __plugin_name__ set
+    within the class.
+    :param name: The name of the importer
+    :return: The importer plugin class
     """
     for reporter in get_importers_plugin_classes():
         if reporter.__plugin_name__.startswith(name):
             return reporter
-
-
-def get_default_importer():
-
-    return get_importer_class(IMPORTER)
-
-
-def get_default_importer_plugin(provider=None):
-    """
-    Given a provider, it will return the default reporter plugin
-    :param provider: the provider value
-    :return: the default reporter plugin
-    """
-    if provider is not None:
-        for plugin_class in get_importers_plugin_classes():
-            if plugin_class.__plugin_name__.startswith(provider.__provider_name__):
-                return plugin_class
-    else:
-        return get_importer_plugin_class('ccit-router')
 
 
 def is_provider_mapped_to_provisioner(provider, provisioner):

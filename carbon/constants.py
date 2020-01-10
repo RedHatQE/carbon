@@ -123,7 +123,6 @@ LOGGING_CONFIG = {
             'level': 'INFO',
             'formatter': 'default',
             'filename': '',
-            'mode': 'w',
             'encoding': 'utf-8',
         },
         'console': {
@@ -137,9 +136,6 @@ LOGGING_CONFIG = {
         'blaster': {'handlers': ['console', 'file'],
                     'level': 'INFO',
                     'propagate': False},
-        'polar': {'handlers': ['console', 'file'],
-                  'level': 'INFO',
-                  'propagate': False},
         'lp_console': {'handlers': ['console', 'file'],
                        'level': 'INFO',
                        'propagate': False},

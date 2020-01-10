@@ -24,8 +24,4 @@
     :copyright: (c) 2017 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-
-from .beaker_client import BeakerClientProvisioner
-from .openstack_libcloud import OpenstackLibCloudProvisioner
-from .linchpin_wrapper import LinchpinWrapperProvisioner
 from .asset_provisioner import AssetProvisioner

@@ -34,8 +34,12 @@ from collections import OrderedDict
 from ..core import CarbonResource
 from ..tasks import ReportTask, ValidateTask
 from ..exceptions import CarbonReportError
-from ..helpers import get_importer_plugin_class, get_default_importer, get_default_importer_plugin, \
-    get_importers_plugins_list, get_providers_list, get_provider_class
+# from ..helpers import get_importer_plugin_class, get_default_importer, get_default_importer_plugin, \
+#     get_importers_plugins_list, get_providers_list, get_provider_class, get_default_external_importer_plugin_class, \
+#     get_external_importer_plugins
+
+from ..helpers import get_provider_plugin_list, get_provider_plugin_class, get_default_importer_plugin_class, \
+      get_importer_plugin_class, get_importers_plugin_list
 from .._compat import string_types
 
 
@@ -88,25 +92,22 @@ class Report(CarbonResource):
         self._executes = parameters.pop('executes', [])
 
         # convert the executes into list format if executes defined as str format
-        if self.executes is not None and isinstance(self.executes, string_types):
-            self.executes = [val.strip() for val in self.executes.split(',')]
+        if self._executes is not None and isinstance(self._executes, string_types):
+            self._executes = [val.strip() for val in self._executes.split(',')]
 
-        # Lets load the default importer interface
-        self._importer = get_default_importer()
         importer_name = parameters.pop('importer', importer)
 
-        # Finally check and load plugin impl
+        # Finally check and load external plugin impl
         if 'provider' in parameters:
-            # report needs to be imported, get the provider parameters
             parameters = self.__set_provider_attr__(parameters)
             if importer_name is None:
-                self._importer_plugin = get_default_importer_plugin(self._provider)
+                # Getting the importer plugin based on the name of the provider parameter
+                self._importer_plugin = get_default_importer_plugin_class(self.provider)
             else:
                 found_name = False
-                for name in get_importers_plugins_list():
+                for name in get_importers_plugin_list():
                     if name.startswith(importer_name):
                         found_name = True
-
                 if found_name:
                     self._importer_plugin = get_importer_plugin_class(importer_name)
                 else:
@@ -150,13 +151,13 @@ class Report(CarbonResource):
         provider_name = self.provider_params['name']
 
         # lets verify the provider is valid
-        if provider_name not in get_providers_list():
+        if provider_name not in get_provider_plugin_list():
             self.logger.error('Provider %s for report artifacts %s is invalid.' %
                               (provider_name, self.name))
             sys.exit(1)
 
         # now that we have the provider, lets create the provider object
-        self._provider = get_provider_class(provider_name)()
+        self._provider = get_provider_plugin_class(provider_name)()
 
         # finally lets set the provider credentials
         try:
@@ -174,8 +175,9 @@ class Report(CarbonResource):
                     getattr(self.provider, 'set_credentials')(item)
                     break
         except KeyError:
-            self.logger.error('The required credential parameters are not set correctly for the provider %s. Please '
-                              'verify the carbon config file' % provider_name)
+            self.logger.error(
+                'The required credential parameters are not set correctly for the provider %s. Please '
+                'verify the carbon config file' % provider_name)
             sys.exit(1)
 
         return parameters
@@ -203,21 +205,6 @@ class Report(CarbonResource):
         self.logger.info('Validating report %s provider optional credential '
                          'parameters.' % self.name)
         getattr(self.provider, 'validate_opt_credential_params')(self)
-
-    @property
-    def importer(self):
-        """Importer property.
-
-        :return: importer class
-        :rtype: object
-        """
-        return self._importer
-
-    @importer.setter
-    def importer(self, value):
-        """Set importer property."""
-        raise AttributeError('You cannot set the report importer after report '
-                             'class is instantiated.')
 
     @property
     def importer_plugin(self):

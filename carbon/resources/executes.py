@@ -28,8 +28,10 @@
 from .._compat import string_types
 from ..core import CarbonResource
 from ..constants import EXECUTOR
-from ..helpers import get_executor_class, \
-    get_executors_list
+# from ..helpers import get_executor_class, \
+#     get_executors_list
+from ..helpers import get_executor_plugin_class, \
+    get_executors_plugin_list
 from ..tasks import ExecuteTask, ValidateTask
 from ..exceptions import CarbonExecuteError
 from collections import OrderedDict
@@ -98,16 +100,13 @@ class Execute(CarbonResource):
         # every execute has a mandatory executor, lets set it
         executor = parameters.pop('executor', EXECUTOR)
 
-        if executor not in get_executors_list():
+        if executor not in get_executors_plugin_list():
             raise CarbonExecuteError('Executor: %s is not supported!' %
                                      executor)
 
-        self._executor = get_executor_class(executor)
+        # get the executor class
+        self._executor = get_executor_plugin_class(executor)
 
-        # each executor will have x number of hosts associated to it. lets
-        # associate the list of hosts to the execute object itself. currently
-        # the hosts are strings, when carbon builds the pipeline, they will
-        # be updated with their corresponding host object.
         self.hosts = parameters.pop('hosts')
         if self.hosts is None:
             raise CarbonExecuteError('Unable to associate hosts to executor:'

@@ -33,11 +33,13 @@
 
 import copy
 import os
+import mock
 
 import pytest
 from carbon.resources import Action, Execute, Asset, Report, Scenario
 from carbon.utils.config import Config
 from carbon._compat import ConfigParser
+from carbon.core import CarbonProvider, ImporterPlugin
 
 os.environ['CARBON_SETTINGS'] = '../assets/carbon.cfg'
 
@@ -81,6 +83,7 @@ def default_host_params():
 @pytest.fixture
 def scenario_resource():
     return Scenario(config=Config(), parameters={'k': 'v'})
+
 
 @pytest.fixture
 def scenario_resource1(config):
@@ -134,6 +137,7 @@ def asset1(default_host_params, config):
         parameters=copy.deepcopy(default_host_params)
     )
 
+
 @pytest.fixture
 def asset2(default_host_params, config):
     param =copy.deepcopy(default_host_params)
@@ -143,6 +147,7 @@ def asset2(default_host_params, config):
         config=config,
         parameters=param
     )
+
 
 @pytest.fixture
 def asset3(default_host_params, config):
@@ -154,6 +159,7 @@ def asset3(default_host_params, config):
         config=config,
         parameters=param
     )
+
 
 @pytest.fixture
 def action1():
@@ -171,6 +177,7 @@ def action1():
 def execute1():
     params = dict(description='description', hosts='test', executor='runner')
     return Execute(name='execute1', parameters=params)
+
 
 @pytest.fixture
 def execute2():
@@ -193,7 +200,13 @@ def execute_resource():
 
 
 @pytest.fixture
-def report_resource(config):
+@mock.patch('carbon.resources.reports.get_provider_plugin_list')
+@mock.patch('carbon.resources.reports.get_provider_plugin_class')
+@mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
+def report_resource(mock_importerplugin, mock_provider_class, mock_pluginlist, config):
+    mock_pluginlist.return_value = ['polarion']
+    mock_provider_class.return_value = CarbonProvider
+    mock_importerplugin.return_value = ImporterPlugin
     params = dict(description='description', executes='execute',
                   provider=dict(name='polarion',
                                 credential='polarion'

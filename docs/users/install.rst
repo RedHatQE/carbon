@@ -63,22 +63,52 @@ Carbon uses the beaker client package to provision physical machines in beaker.
     currently. Once compatibile it can be installed with carbon. Carbon is
     Python 2.7 & Python 3.6 compatible.
 
-Report Portal Requirements
-~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Carbon installs CCIT Report Portal client as an extra requirement. To know more
-about Report Portal Client, please refer
-`here <https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674>`_
+Carbon Importer Plugin Requirements
++++++++++++++++++++++++++++++++++++
 
-To install users can do the following
+Installing Carbon's Importer Plugins
+------------------------------------
 
-.. code-block:: python
+Carbon is currently supporting two importer plugins
 
-   pip install carbon[rp-preproc]
+ * 1
+   carbon_polarion_plugin
+   `repo link <https://gitlab.cee.redhat.com/ccit/carbon_polarion_plugin>`_
+ * 2
+   carbon_rppreproc_plugin
+   `repo link <https://gitlab.cee.redhat.com/ccit/carbon_rppreproc_plugin>`_
 
+These plugins have Carbon installation as a part of the setup. So if user wants to just use any of the above plugin with
+carbon, we can install only the plugin, and carbon will be installed with it as well.
+If the plugin is installed in an environment where carbon is already present , plugin will skip carbon installation
+
+Install the importer plugin from source
+---------------------------------------
+
+For Report Portal Plugin
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. NOTE::
-    The client is supported only on Python 3 environments.
+    This plugin is supported only on Python 3 environments.
+
+.. code-block:: bash
+
+    # for ansible modules requiring selinux, you will need to enable system site packages
+    $ virtualenv --system-site-packages reportportal
+    $ source reportportal/bin/activate
+    (reportportal) $ pip install carbon_rppreproc_plugin@git+https://gitlab.cee.redhat.com/ccit/carbon_rppreproc_plugin.git@master
+
+For Polarion Plugin
+~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    # for ansible modules requiring selinux, you will need to enable system site packages
+    $ virtualenv --system-site-packages polarion
+    $ source polarion/bin/activate
+    (polarion) $ pip install carbon_polarion_plugin@git+https://gitlab.cee.redhat.com/ccit/carbon_polarion_plugin.git@master
+
 
 Linchpin Requirements
 ~~~~~~~~~~~~~~~~~~~~~

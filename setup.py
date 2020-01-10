@@ -53,12 +53,9 @@ setup(
         'ruamel.yaml>=0.15.64',
         'paramiko>=2.4.2',
         'requests>=2.20.1',
-        'urllib3==1.24.3',
-        'polar@git+https://gitlab.cee.redhat.com/ccit/ccit-report-tools/polar.git@1.2.0#egg=polar'
+        'urllib3==1.24.3'
     ],
-    extras_require={'rp-preproc':
-                        ['rp-preproc@git+https://gitlab.cee.redhat.com/ccit/reportportal/rp_preproc.git@master'],
-                    'linchpin-wrapper': ['linchpin>=1.7.4.1']},
+    extras_require={'linchpin-wrapper': ['linchpin>=1.7.4.1']},
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -69,6 +66,24 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     entry_points={
-        'console_scripts': ['carbon=carbon.cli:carbon']
+        'console_scripts': ['carbon=carbon.cli:carbon'],
+        'provider_plugins': [
+            'aws_provider = carbon.providers:AwsProvider',
+            'beaker_provider = carbon.providers:BeakerProvider',
+            'libvirt_provider = carbon.providers:LibvirtProvider',
+            'openstack_provider = carbon.providers:OpenstackProvider'
+             ],
+        'provisioner_plugins': [
+            'beaker_client = carbon.provisioners.ext:BeakerClientProvisionerPlugin',
+            'linchpin_wrapper_plugin = carbon.provisioners.ext:LinchpinWrapperProvisionerPlugin',
+            'openstack_libcloud = carbon.provisioners.ext:OpenstackLibCloudProvisionerPlugin'
+        ],
+        'orchestrator_plugins': [
+            'ansible = carbon.orchestrators:AnsibleOrchestrator'
+        ],
+        'executor_plugins': [
+            'runner = carbon.executors:RunnerExecutor'
+        ]
+
     }
 )
