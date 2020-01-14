@@ -81,8 +81,12 @@ class LinchpinWrapperProvisionerPlugin(ProvisionerPlugin):
         super(LinchpinWrapperProvisionerPlugin, self).__init__(profile)
         self.linchpin_api = LinchpinAPI(self._init_context())
         self.linchpin_api.setup_rundb()
-        # use the settings for the disable progress bar and multiprocessing
-        self.linchpin_api.setup_pbar()
+        try:
+            # use the settings for the disable progress bar and multiprocessing
+            self.linchpin_api.setup_pbar()
+        except AttributeError:
+            # assume using older version of Linchpin that doesn't have this option
+            pass
         self._create_pinfile()
         self._load_credentials()
         self._create_inv = False
