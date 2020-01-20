@@ -1,3 +1,18 @@
+Version 1.4.3 (2020-01-20)
+--------------------------
+
+Enhancements
+~~~~~~~~~~~~
+* Added ability to use carbon data-passthru in orchestrate and allow data injection of extra_vars
+  in orchestrate and execute
+* Removed polarion and report portal importer classes/code from carbon. and made them available as
+  separate installs
+* Added additional CarbonExecutor error check for the executor run method
+* Disable the linchpin api progress bar and multiprocessing, and also allow backward compatibility
+  with older versions of Linchpin API
+* Refactor asset provisioner/plugin to utilize the profile dict
+
+
 Version 1.4.2 (2019-12-05)
 --------------------------
 
