@@ -147,10 +147,5 @@ Please refer to the Linchpin
 `installation guide <https://linchpin.readthedocs.io/en/latest/installation.html#linchpin-setup-automatic-dependency-
 installation>`_ for more information on the setup command.
 
-Once the dependencies are installed you will get Beaker support through Carbon for python 2 and
-Libvirt support through Carbon for python 2 and 3.
+Once the dependencies are installed you will get Beaker and Libvirt support through Carbon for python 2 and 3.
 
-.. note::
-
-   Linchpin python 3 support is still not available with Beaker. They are investigating support
-   for Beaker 27 client to enable python 3 support.

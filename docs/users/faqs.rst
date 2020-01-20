@@ -71,6 +71,26 @@ and error out on parameters that are not supported by the provisioner. Resolve
 any of the warnings and failures. Once validate passes then the scenario should
 be Linchpin compatible.
 
+... parallel provisioning fails with linchpin provisioner ?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Linchpin version 1.9.1.1 introduced issue where when provison concurrency is set to True in
+carbon.cfg file the provisioning hangs. This can be addressed by setting task concurrency to provision= False
+in the carbon.cfg. This issue is now fixed with Linchpin version 1.9.2.
+
+
+... which Linchpin version to use ?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Recommended version of linchpin to use is 1.9.2. Lower version will give errors like
+ModuleNotFoundError: No module named 'ansible.module_utils.common.json' or ansible requirements mismatch or
+concurrency issues
+
+... what versions of python are supported by Linchpin ?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Carbon uses Linchpin to provision openstack, aws, libvirt  with python 2 and 3. For beaker Linchpin
+supports python 3 only with beaker 27 client on Fedora 30 and RH8 systems.
 
 Orchestrate
 +++++++++++
