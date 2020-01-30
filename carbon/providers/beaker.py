@@ -202,7 +202,7 @@ class BeakerProvider(PhysicalProvider):
                     if 'linchpin' in provisioner_name:
                         if isinstance(param_value, list):
                             self.logger.info(msg + 'exists.')
-                        if isinstance(param_value, str):
+                        elif isinstance(param_value, str):
                             self.logger.warning(msg + 'is forward compatible '
                                                       'with the linchpin provisioner. It will be translated '
                                                       'to be in proper format for linchpin.')
