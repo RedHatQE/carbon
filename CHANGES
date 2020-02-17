@@ -1,3 +1,25 @@
+Version 1.5.0 (2020-02-17)
+--------------------------
+
+New Features
+~~~~~~~~~~~~
+* Added resource check validation feature which allows users to run their own validation playbook/scripts
+  before starting the schema validation.
+* Added a retry field to 'ansible_galaxy_options'
+* Added the ability to run shell commands within an orchestrate task
+
+Enhancements
+~~~~~~~~~~~~
+* Modified name field for orchestrate task to accept a script/playbook path OR name for the task
+* Modified how extra_args are passed for execute and orchestrate tasks under ansible_options while
+  running shell commands or scripts
+* Added keys ansible_playbook , ansible_shell to run playbook and shell commands within the orchestrate task
+
+Bug Fixes
+~~~~~~~~~
+* Fix regression causing beaker validation to fail
+
+
 Version 1.4.3 (2020-01-20)
 --------------------------
 
