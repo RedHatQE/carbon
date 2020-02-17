@@ -382,7 +382,14 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         ans_verbosity = get_ans_verbosity(self.logger, self.config)
 
         # download ansible roles (if applicable)
-        self.download_roles()
+        try:
+            self.download_roles()
+        except CarbonOrchestratorError:
+            if 'retry' in self.galaxy_options and self.galaxy_options['retry']:
+                self.logger.Info("Download failed.  Sleeping 5 seconds and \
+                                  trying again")
+                time.sleep(5)
+                self.download_roles()
 
         if self.script:
             # running a script, using the ansible script module
