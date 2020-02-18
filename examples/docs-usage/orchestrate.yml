@@ -248,3 +248,13 @@ orchestrate:
     name: ./scripts/helloworld.py Carbon_user
   ansible_options:
     extra_args: executable=python
+
+# Example 15
+---
+- name: scripts/add_two_numbers.sh
+  description: ""
+  orchestrator: ansible
+  hosts: controller
+  ansible_script: True
+  ansible_options:
+    extra_args: X=12 Y=18

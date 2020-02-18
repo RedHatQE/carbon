@@ -247,9 +247,8 @@ class AnsibleService(object):
         :return: extra args
         :rtype: str
         """
-        # here the assumption is the extra_args will only contain the params used by ansible shell/script module
-        # The arguments to be given for the shell command or script will be provided along with the name of the script/
-        # shell separated by spaces
+        # here the assumption is the extra_args can contain the params used by ansible shell/script module and/or
+        # The parameters provided for the shell command/script to run
 
         # list of params taken by the ansible script and shell module
         params = ['chdir', 'creates', 'decrypt', 'executable', 'removes', 'warn', 'stdin', 'stdin_add_newline']
@@ -261,11 +260,21 @@ class AnsibleService(object):
 
         if self.options and 'extra_args' in self.options and self.options['extra_args']:
             self.logger.warning('Deprecated way of providing extra_args under ansible_options is being used')
+
+            # inject extra_args string with any data that might require data pass-thru
+            self.options['extra_args'] = self.injector.inject(self.options['extra_args'])
+
             arg_list = self.options['extra_args'].split()
-            for index, item in enumerate(arg_list):
+            for item in arg_list:
                 if '=' in item:
                     param, val = item.split('=')
-                    extra_args += '\n        %s: %s' % (param, val)
+                    if param in params:
+                        extra_args += '\n        %s: %s' % (param, val)
+                    else:
+                        attr['name'] = attr['name'] + ' ' + item
+                        self.logger.debug('Using deprecated way of assigning script params using extra args with in '
+                                          'ansible_options. Appending it to the script name to be used as '
+                                          'script params %s' % attr['name'])
 
         return extra_args
 

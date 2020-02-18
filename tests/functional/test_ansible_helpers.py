@@ -99,14 +99,22 @@ class TestAnsibleService(object):
         assert isinstance(script_results, dict)
 
     @staticmethod
-    def test_build_ans_extra_args_1(ansible_service, script):
+    def test_build_ans_extra_args_with_script(ansible_service, script):
         res = ansible_service.build_ans_extra_args(script)
         assert 'creates' in res
 
     @staticmethod
-    def test_build_ans_extra_args_2(ansible_service, script):
+    def test_build_ans_extra_args_with_ans_options(ansible_service, script):
         ansible_service.options = {'extra_args': 'executable=python'}
         res = ansible_service.build_ans_extra_args(script)
+        assert 'executable' in res
+
+    @staticmethod
+    def test_build_ans_extra_args_params_in_ans_options(ansible_service):
+        script = {'name': './scripts/add_two_numbers.sh ', 'creates': './scripts/hello.txt'}
+        ansible_service.options = {'extra_args': 'x=10' ' executable=python'}
+        res = ansible_service.build_ans_extra_args(script)
+        assert 'x=10' in script['name']
         assert 'executable' in res
 
     @staticmethod

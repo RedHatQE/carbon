@@ -243,8 +243,15 @@ Using ansible_script
 Orchestrate task uses ansible script module to run the user provided scripts.
 The script name can be given under the name field of the orchestrator task or
 within the *name* key of the ansible_script list of dictionary.
-The script parameters can be provided along withe name of the script by separating
-it using space
+
+The script parameters can be provided along with name of the script by separating
+it using space.
+
+.. note::
+        The script parameters can also be passed using ansible_options key. But this will be deprecated in
+        the future releases
+        :ref:`Example 15<Example_15>`
+
 Extra_args for the script can be provided as a part of the ansible_script list
 of dictionary or under ansible_options. Please see
 :ref:`Extra_args<extra_args>`
@@ -601,6 +608,15 @@ Example to use ansible_script with extra arags as a part of ansible_options
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
     :lines: 242-250
 
+.. _Example_15:
+
+Example 15
+~~~~~~~~~~
+
+Example to use ansible_script and using ansible_options: extra_args to provide the script parameters
+
+.. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
+    :lines: 253-261
 Resources
 ~~~~~~~~~
 

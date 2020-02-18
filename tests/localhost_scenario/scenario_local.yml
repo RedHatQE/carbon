@@ -26,8 +26,16 @@ orchestrate:
       extra_vars:
         ip: { dummy.ip_address }
 
-  - name: scripts/add_two_numbers.sh X={ dummy.metadata.x } Y={ dummy.metadata.y }
+  - name: scripts/add_two_numbers.sh
     description: "run orchestrate step w/bash script using no real host"
+    orchestrator: ansible
+    hosts: controller
+    ansible_script: True
+    ansible_options:
+      extra_args: X={ dummy.metadata.x } Y={ dummy.metadata.y }
+
+  - name: scripts/add_two_numbers.sh X=10 Y=20
+    description: "run orchestrate step with passing params to script in the name field"
     orchestrator: ansible
     hosts: controller
     ansible_script: True
@@ -60,6 +68,15 @@ orchestrate:
     ansible_shell:
       command: bash add_two_numbers.sh X=15 Y=15
       chdir: ./scripts/
+
+  - name: orch_shell_1
+    orchestrator: ansible
+    description: "orch task to run shell commands with ansible_options"
+    hosts: localhost
+    ansible_shell:
+      command: bash add_two_numbers.sh X=15 Y=15
+    ansible_options:
+      extra_args: chdir=./scripts/
 
   - name: orch_extra_args
     orchestrator: ansible
