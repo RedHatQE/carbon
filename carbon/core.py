@@ -88,8 +88,6 @@ class LoggerMixin(object):
     @classmethod
     def setup_logger(cls, name, file_path, config=None):
 
-        log_level = 'debug'
-
         # Setting up handlers
         LOGGING_CONFIG['handlers']['file'].update({'filename': file_path})
 
@@ -105,15 +103,18 @@ class LoggerMixin(object):
                 LOGGING_CONFIG['loggers'].update({l: {'handlers': ['console', 'file'],
                                                       'level': cls._LOG_LEVELS[config['LOG_LEVEL']],
                                                       'propagate': False}})
-            if config['LOG_LEVEL'] != 'info':
-                log_level = config['LOG_LEVEL']
+            log_level = config['LOG_LEVEL']
+        else:
+            log_level = 'info' if getLogger('carbon').getEffectiveLevel() == 20 else 'debug'
 
-        for handler in LOGGING_CONFIG['handlers']:
-            LOGGING_CONFIG['handlers'][handler].update({'formatter': 'debug'})
-            LOGGING_CONFIG['handlers'][handler].update({'level': cls._LOG_LEVELS[log_level]})
+        if log_level == 'debug':
 
-        for logger in LOGGING_CONFIG['loggers']:
-            LOGGING_CONFIG['loggers'][logger].update({'level': cls._LOG_LEVELS[log_level]})
+            for handler in LOGGING_CONFIG['handlers']:
+                LOGGING_CONFIG['handlers'][handler].update({'formatter': 'debug'})
+                LOGGING_CONFIG['handlers'][handler].update({'level': cls._LOG_LEVELS[log_level]})
+
+            for logger in LOGGING_CONFIG['loggers']:
+                LOGGING_CONFIG['loggers'][logger].update({'level': cls._LOG_LEVELS[log_level]})
 
         # Configure the individual logger, name is the logger name provided during creation
         LOGGING_CONFIG['loggers'].update({name: {'handlers': ['console', 'file'],
@@ -158,7 +159,7 @@ class LoggerMixin(object):
         full_path = os.path.join(log_dir, 'carbon_scenario.log')
 
         # setup and initialize LOGGING_CONFIG
-        cls.setup_logger(name, full_path)
+        cls.setup_logger(name, full_path, config)
 
     @property
     def logger(self):
