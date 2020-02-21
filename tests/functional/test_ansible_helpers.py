@@ -140,9 +140,9 @@ class TestAnsibleService(object):
 
     @staticmethod
     def test_build_extra_vars(ansible_service):
-        ansible_service.options = {'extra_vars': {'baseurl': 'abc'}}
+        ansible_service.options = {'extra_vars': {'baseurl': 'abc', 'file': 'hello.txt'}}
         res = ansible_service.build_extra_vars()
-        assert res == {'baseurl': 'abc', 'localhost': False}
+        assert res == {'baseurl': 'abc', 'file': 'hello.txt', 'localhost': False}
 
 
 

@@ -94,6 +94,13 @@ orchestrate:
       name: scripts/hello_world.py New_user
       executable: python
 
+  - name: ansible/template_host_test_playbook_tasks.yml
+    description: "run orchestrate step using file key as extra_vars"
+    orchestrator: ansible
+    hosts: laptop
+    ansible_options:
+      extra_vars:
+        file: variable.yml
 
 execute:
   - name: Test running command

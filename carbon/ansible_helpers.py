@@ -172,9 +172,11 @@ class AnsibleController(object):
         if extra_vars is not None:
             for key in extra_vars:
                 if not isinstance(extra_vars[key], string_types):
-                    extra_var_dict = {}
+                    extra_var_dict = dict()
                     extra_var_dict[key] = extra_vars[key]
                     playbook_call += ' -e "%s" ' % extra_var_dict
+                elif key == "file":
+                    playbook_call += ' -e "@%s" ' % extra_vars[key]
                 else:
                     playbook_call += " -e %s=\"'%s'\"" % (key, extra_vars[key])
 

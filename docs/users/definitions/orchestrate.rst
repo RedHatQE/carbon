@@ -398,6 +398,42 @@ Please look here for more info
 `Ansible Script Module <https://docs.ansible.com/ansible/latest/modules/script_module.html>`_
 `Ansible Shell Module <https://docs.ansible.com/ansible/latest/modules/shell_module.html>`_
 
+Extra_vars
+~~~~~~~~~~
+
+Extra variables needed by ansible playbooks can be passed using **extra_vars** key under
+the **ansible_options** section
+
+.. code-block:: yaml
+
+    ---
+    orchestrate:
+      - name: rhsm_register.yml
+        description: "register systems under test against rhsm"
+        orchestrator: ansible
+        hosts: all
+        ansible_options:
+          extra_vars:
+            username: kingbob
+            password: minions
+            server_hostname: server01.example.com
+            auto_attach: true
+
+Use the **file** key to pass a variable file to the playbook. This file needs to present in carbon's workspace
+
+.. code-block:: yaml
+
+    ---
+    orchestrate:
+      - name: rhsm_register.yml
+        description: "register systems under test against rhsm"
+        orchestrator: ansible
+        hosts: all
+        ansible_options:
+          extra_vars:
+            file: variable_file.yml
+
+
 Ansible Galaxy Options
 ~~~~~~~~~~~~~~~~~~~~~~
 
