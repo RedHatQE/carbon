@@ -38,7 +38,7 @@ from carbon.exceptions import CarbonError, HelpersError
 from carbon.provisioners.ext import LinchpinWrapperProvisionerPlugin
 from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency, \
     mask_credentials_password, sort_tasklist, find_artifacts_on_disk, walk_results_directory, \
-    get_default_provisioner_plugin
+    get_default_provisioner_plugin, get_ans_verbosity
 
 
 @pytest.fixture(scope='class')
@@ -341,3 +341,39 @@ def test_find_artifacts_on_disk_art_location_7(data_folder):
 def test_get_default_provisioner_plugin_method(mock_method):
     mock_method.return_value = LinchpinWrapperProvisionerPlugin
     assert get_default_provisioner_plugin() == LinchpinWrapperProvisionerPlugin
+
+
+def test_ansible_verbosity_1(config):
+    """This test verifies the ansible verbosity set using carbon.cfg is valid. For this test
+    carbon.cfg under ../assets/carbon.cfg is used and has ansible_verbosity set as 'v'"""
+    assert get_ans_verbosity(config) == 'v'
+
+
+def test_ansible_verbosity_2(config):
+    """This test verifies if incorrect values for ansible_verbosity is set in carbon.cfg, then verbosity is
+     'vvvv' if carbon's logging level is debug.  For this test logging_level debug is set in ../assets/carbon.cfg"""
+    config["ANSIBLE_VERBOSITY"] ='aavv'
+    assert get_ans_verbosity(config) == 'vvvv'
+
+
+def test_ansible_verbosity_3(config):
+    """This test verifies if incorrect values for ansible_verbosity is set in carbon.cfg, verbosity is
+     None if carbon's logging level is info"""
+    config["ANSIBLE_VERBOSITY"] ='aavv'
+    config["LOG_LEVEL"] = 'info'
+    assert get_ans_verbosity(config) is None
+
+
+def test_ansible_verbosity_4(config):
+    """This test verifies if ansible_verbosity is NOT set in carbon.cfg, verbosity is
+     None if carbon's logging level is info"""
+    config["ANSIBLE_VERBOSITY"] = None
+    config["LOG_LEVEL"] = 'info'
+    assert get_ans_verbosity(config) is None
+
+
+def test_ansible_verbosity_5(config):
+    """This test verifies if ansible_verbosity is NOT set in carbon.cfg, verbosity is
+     'vvvv' if carbon's logging level is debug. For this test logging_level debug is set in ../assets/carbon.cfg"""
+    config["ANSIBLE_VERBOSITY"] = None
+    assert get_ans_verbosity(config) == 'vvvv'

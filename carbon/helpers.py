@@ -781,14 +781,23 @@ def ssh_retry(obj):
 
 
 def get_ans_verbosity(config):
-
-    ans_verbosity = None
+    """Setting ansible verbosity
+    If the verbosity is not set in carbon.cfg, then the carbon log_level is checked.
+    If it is debug then verbotity is vvvv else it is None """
 
     if "ANSIBLE_VERBOSITY" in config and \
             config["ANSIBLE_VERBOSITY"]:
-        ans_verbosity = config["ANSIBLE_VERBOSITY"]
+        ver = config["ANSIBLE_VERBOSITY"]
+        if False in [letter == 'v' for letter in ver]:
+            LOG.warning("Incorrect verbosity %s is set in carbon config file." % ver)
+            ans_verbosity = 'vvvv' if config['LOG_LEVEL'] == 'debug' else None
+            LOG.warning("Ansible logging set to %s" % ans_verbosity)
+        else:
+            ans_verbosity = ver
+    elif config['LOG_LEVEL'] == 'debug':
+        ans_verbosity = 'vvvv'
     else:
-        ans_verbosity = 'v'
+        ans_verbosity = None
 
     return ans_verbosity
 

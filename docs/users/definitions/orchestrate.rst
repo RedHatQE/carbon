@@ -208,8 +208,16 @@ config file.  The following are the settings.
 
     *   - verbosity
         - configuration option to set the verbosity of ansible.
-        - By default, carbon will set the verbosity to one V.
-          This value can be overridden by the carbon.cfg file.
+        - Carbon sets the ansible verbosity to the value provided
+          by this option. If this is not set then, carbon will
+          set the verbosity based on carbon's logging level.
+          If logging level is 'info' (default) ansible verbosity is
+          set to **None** else if logging level is 'debug' then ansible
+          verbosity is 'vvvv'.
+
+.. note::
+        If incorrect value for verbosity is set in carbon.cfg, Carbon changes the verbosity based on
+        carbon's logging level
 
 Ansible Configuration
 ~~~~~~~~~~~~~~~~~~~~~
