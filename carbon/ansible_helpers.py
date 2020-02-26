@@ -275,7 +275,11 @@ class AnsibleService(object):
                         self.logger.debug('Using deprecated way of assigning script params using extra args with in '
                                           'ansible_options. Appending it to the script name to be used as '
                                           'script params %s' % attr['name'])
-
+                else:
+                    attr['name'] = attr['name'] + ' ' + item
+                    self.logger.debug('Using deprecated way of assigning script params using extra args with in '
+                                      'ansible_options. Appending it to the script name to be used as '
+                                      'script params %s' % attr['name'])
         return extra_args
 
     def build_run_options(self):

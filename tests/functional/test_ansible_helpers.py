@@ -111,10 +111,20 @@ class TestAnsibleService(object):
 
     @staticmethod
     def test_build_ans_extra_args_params_in_ans_options(ansible_service):
+        """ extra_args with params with '=' """
         script = {'name': './scripts/add_two_numbers.sh ', 'creates': './scripts/hello.txt'}
         ansible_service.options = {'extra_args': 'x=10' ' executable=python'}
         res = ansible_service.build_ans_extra_args(script)
         assert 'x=10' in script['name']
+        assert 'executable' in res
+
+    @staticmethod
+    def test_build_ans_extra_args_params_in_ans_options_1(ansible_service):
+        """ extra_args with params without '=' """
+        script = {'name': './scripts/add_two_numbers.sh ', 'creates': './scripts/hello.txt'}
+        ansible_service.options = {'extra_args': '-x 10' ' executable=python'}
+        res = ansible_service.build_ans_extra_args(script)
+        assert '-x 10' in script['name']
         assert 'executable' in res
 
     @staticmethod

@@ -40,7 +40,7 @@ orchestrate:
     hosts: controller
     ansible_script: True
 
-  - name: scripts/hello_world.py
+  - name: scripts/hello_world.py Carbon_user
     description: "test orchestrate step w/python script"
     orchestrator: ansible
     hosts: localhost
@@ -53,6 +53,14 @@ orchestrate:
       orchestrator: ansible
       hosts: all
       ansible_script: True
+
+  - name: scripts/hello_world.py
+    description: "test orchestrate step passing param in extra args"
+    orchestrator: ansible
+    hosts: localhost
+    ansible_script: True
+    ansible_options:
+      extra_args: Random_user executable=python
 
   - name: orch_name_test
     ansible_playbook:
@@ -83,7 +91,7 @@ orchestrate:
     description: "orch task to run extra args as a part script"
     hosts: localhost
     ansible_script:
-      name: scripts/hello_world.py
+      name: scripts/hello_world.py New_user
       executable: python
 
 
