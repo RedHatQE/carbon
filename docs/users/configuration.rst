@@ -46,23 +46,50 @@ task_concurrency
 ~~~~~~~~~~~~~~~~
 
 The **task_concurrency** option is used to control how tasks are executed by Carbon. Whether it should be sequential
-or in parallel/concurrent. Right now this is used to control only the execution of the Provision or Report task.
-By default Provision and Report tasks will execute concurrently/parallel independent of each other.
+or in parallel/concurrent. Below is the default execution type of each of the Carbon tasks:
 
-There are cases when provisioning resources of different types that there might be an inter-dependency so executing
-the tasks in parallel will not suffice. In that case, set the **provision=False** and arrange the resources defined
-in the scenario descriptor file in the proper sequential order.
+.. list-table::
+    :widths: auto
+    :header-rows: 1
 
-A valid example is when you want to provision a virtual network and you want to provision a VM attached to that
-network. Arrange the resource definition so that the virtual network is provisioned first, and then the VM is
-provisioned afterwards.
+    *   - Key
+        - Concurrent
+        - Type
+
+    *   - validate
+        - True
+        - String
+
+    *   - provision
+        - True
+        - String
+
+    *   - orchestrate
+        - False
+        - String
+
+    *   - execute
+        - False
+        - String
+
+    *   - report
+        - True
+        - String
+
+There are cases where it makes sense to adjust the execution type. Below are some examples:
+
+There are cases when provisioning assets of different types that there might be an inter-dependency so executing
+the tasks in parallel will not suffice, i.e. provision a virtual network and a VM attached to that network.
+In that case, set the **provision=False** and arrange the assets in the scenario descriptor file in
+the proper sequential order.
 
 There are cases when you need to import the same test artifact into separate reporting systems but one reporting
-systems needs the data in the test artifact to be modified with metadata before it can be imported. In that case,
-set the **report=False** and arrange the resources defined in the scenario descriptor file in the
+systems needs the data in the test artifact to be modified with metadata before it can be imported.
+i.e modify and import into Polarion with Polarion metadata and then import that same artifact into Report Portal.
+In that case, set the **report=False** and arrange the resources defined in the scenario descriptor file in the
 proper sequential order.
 
-A valid example is when you want to import into Polarion but need to modify the test artifact with Polarion
-metadata and then import that same artifact into Report Portal. Arrange the resource definition so that
-either the Polarion conversion and import happens before or after the import into Report Portal.
+There could be a case where you would like to execute two different test suites concurrently because they have
+no dependency on each other or there is no affect to each other. In that case, set the **execute=True** to have
+them running concurrently.
 

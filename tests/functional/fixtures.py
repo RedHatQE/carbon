@@ -90,9 +90,10 @@ def scenario_resource1(config):
 
 
 @pytest.fixture
-def action_resource():
+def action_resource(config):
     return Action(
         name='action',
+        config=config,
         parameters=dict(
             description='description',
             hosts=['host01'],
@@ -102,9 +103,10 @@ def action_resource():
 
 
 @pytest.fixture
-def action_resource_cleanup():
+def action_resource_cleanup(config):
     return Action(
         name='action',
+        config=config,
         parameters=dict(
             description='description',
             hosts=['host01'],
@@ -161,9 +163,10 @@ def asset3(default_host_params, config):
 
 
 @pytest.fixture
-def action1():
+def action1(config):
     return Action(
         name='action',
+        config=config,
         parameters=dict(
             description='description',
             hosts=['host'],
@@ -173,15 +176,15 @@ def action1():
 
 
 @pytest.fixture
-def execute1():
+def execute1(config):
     params = dict(description='description', hosts='test', executor='runner')
-    return Execute(name='execute1', parameters=params)
+    return Execute(name='execute1', config=config, parameters=params)
 
 
 @pytest.fixture
-def execute2():
+def execute2(config):
     params = dict(description='description', hosts='group_test', executor='runner')
-    return Execute(name='execute2', parameters=params)
+    return Execute(name='execute2', config=config, parameters=params)
 
 
 @pytest.fixture
@@ -193,9 +196,9 @@ def scenario1(asset1, action1, scenario_resource1, execute1):
 
 
 @pytest.fixture
-def execute_resource():
+def execute_resource(config):
     params = dict(description='description', hosts='host01', executor='runner')
-    return Execute(name='execute', parameters=params)
+    return Execute(name='execute', config=config, parameters=params)
 
 
 @pytest.fixture
@@ -232,7 +235,8 @@ def master_child_scenario(action_resource, host, execute_resource, report_resour
         config=config,
         parameters=copy.deepcopy(default_host_params)
     )
-    execute_res2 = Execute(name='execute02', parameters=dict(description='description', hosts='host02', executor='runner'))
+    execute_res2 = Execute(name='execute02', config=config,
+                           parameters=dict(description='description', hosts='host02', executor='runner'))
     child_scenario.add_assets(host2)
     child_scenario.add_executes(execute_res2)
     scenario_resource.add_child_scenario(child_scenario)

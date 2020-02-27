@@ -69,10 +69,12 @@ ORCHESTRATOR = 'ansible'
 EXECUTOR = 'runner'
 
 # Default task concurrency settings
-DEFAULT_TASK_CONCURRENCY = dict(PROVISION='True',
+DEFAULT_TASK_CONCURRENCY = dict(VALIDATE='True',
+                                PROVISION='True',
                                 ORCHESTRATE='False',
                                 EXECUTE='False',
-                                REPORT='True')
+                                REPORT='True',
+                                CLEANUP='False')
 
 # Default config
 DEFAULT_CONFIG = {

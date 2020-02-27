@@ -129,7 +129,7 @@ class PipelineBuilder(object):
         # scenario resource
         for task in scenario_get_tasks:
             if task['task'].__task_name__ == self.name:
-                pipeline.tasks.append(task)
+                pipeline.tasks.append(set_task_class_concurrency(task, task['resource']))
 
         # asset resource
         for asset in scenario_assets:
@@ -144,7 +144,7 @@ class PipelineBuilder(object):
                 if task['task'].__task_name__ == self.name:
                     # fetch & set hosts for the given action task
                     task = fetch_assets(scenario_assets, task)
-                    pipeline.tasks.append(task)
+                    pipeline.tasks.append(set_task_class_concurrency(task, action))
 
         # execute resource
         for execute in scenario_executes:
@@ -152,7 +152,7 @@ class PipelineBuilder(object):
                 if task['task'].__task_name__ == self.name:
                     # fetch & set hosts for the given executes task
                     task = fetch_assets(scenario_assets, task)
-                    pipeline.tasks.append(task)
+                    pipeline.tasks.append(set_task_class_concurrency(task, execute))
 
         # report resource
         for report in scenario_reports:
