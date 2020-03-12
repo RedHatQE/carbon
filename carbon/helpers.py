@@ -984,78 +984,16 @@ def is_host_localhost(host_ip):
     return True
 
 
-'''
-def find_artifacts_on_disk(data_folder, path_list, art_location_found=True):
-    """
-    Use by the Artifact Importer to search a list of paths in the data folder
-    to see if they exist. If the Execute collected artifacts, it will check the
-    current runs unique data_folder/artifacts and the .results/artifacts/ specifically
-    for the artifacts.
-
-    If the Execute did not collect artifacts, it will walk the data_folder and the .results
-    looking for the artifacts
-
-    :param data_folder: the unique data_folder id
-    :type data_folder: path as a string
-    :param path_list: The list of artifacts to look for
-    :type path_list: a list containing a string of paths
-    :param art_location_found: Whether the Executes object collected artifacts
-    :type art_location_found: Boolean
-    :return: a list of artifacts that were found to be imported.
-    """
-
-    # iterate the list of paths to confirm they exist locally
-    total_paths = len(path_list)
-    fnd_paths = list()
-
-    if art_location_found:
-
-        # Check the path in data_folder first and then in .results folder
-
-        result_dir = os.path.join(os.path.dirname(data_folder), '.results')
-        for p in path_list:
-            if check_path_exists(p, data_folder):
-                fnd_paths.append(os.path.abspath(os.path.join(data_folder, p)))
-            elif check_path_exists(p, result_dir):
-                fnd_paths.append(os.path.abspath(os.path.join(result_dir, p)))
-
-    else:
-        walked_list = walk_results_directory(data_folder)
-        for p in path_list:
-            regquery = build_artifact_regex_query(p)
-            matches = [regquery.search(p) for p in walked_list]
-            fnd_paths = [m.string for m in matches if m]
-
-    if fnd_paths:
-        for f in fnd_paths:
-            LOG.info('Artifact %s has been found!' % os.path.basename(f))
-            LOG.debug('Full path to artifact on disk: %s' % f)
-
-    if not fnd_paths:
-        LOG.error('Did not find any of the artifacts on local disk. '
-                    'Import cannot occur!')
-
-    if total_paths < len(fnd_paths):
-        LOG.warning('Found %s artifacts. Will still attempt to import the'
-                    ' artifacts that were found' % len(fnd_paths))
-    else:
-        LOG.warning('Found %s out of %s artifacts. Will still attempt to import the'
-                    ' artifacts that were found' % (len(fnd_paths), total_paths))
-    return fnd_paths
-    '''
-
-
 def find_artifacts_on_disk(data_folder, report_name, art_location=[]):
     """
-    Use by the Artifact Importer to search a list of paths in the data folder
+    Use by the Artifact Importer to search a list of paths in the results folder
     to see if they exist. If the Execute collected artifacts, it will check the
-    current runs unique data_folder/artifacts and the .results/artifacts/ specifically
-    for the artifacts.
+    the .results/artifacts/ specifically for the artifacts.
 
-    If the Execute did not collect artifacts, it will walk the data_folder and the .results
+    If the Execute did not collect artifacts, it will walk the .results
     looking for the artifacts
 
-    :param data_folder: the unique data_folder id
+    :param data_folder: the results directory
     :type data_folder: path as a string
     :param path_list: The list of artifacts to look for
     :type path_list: a list containing a string of paths
@@ -1063,25 +1001,20 @@ def find_artifacts_on_disk(data_folder, report_name, art_location=[]):
     :type art_location_found: Boolean
     :return: a list of artifacts that were found to be imported.
     """
-
-    # iterate the list of paths to confirm they exist locally
-    # total_paths = len(path_list)
     fnd_paths = list()
-    path_list = list()
-
+    # build the regex query from the report_name pattern specified
     regquery = build_artifact_regex_query(report_name)
-    path_list.extend(search_artifact_location_dict(art_location, report_name, regquery))
 
-    # Check the path in data_folder first and then in .results folder
-    result_dir = os.path.join(os.path.dirname(data_folder), '.results')
-    for p in path_list:
-        if check_path_exists(p, data_folder):
-            fnd_paths.append(os.path.abspath(os.path.join(data_folder, p)))
-        elif check_path_exists(p, result_dir):
-            fnd_paths.append(os.path.abspath(os.path.join(result_dir, p)))
+    # search the artifact location dictionary if provided
+    fnd_paths.extend(search_artifact_location_dict(art_location, report_name, data_folder, regquery))
 
+    # attempt to walk the directory as well in case there was anything else the user wanted collected
     walked_list = walk_results_directory(data_folder, fnd_paths)
+
+    # check for any matches from the walked list
     matches = [regquery.search(p) for p in walked_list]
+
+    # Add any matches from walked list to the found artifacts list
     fnd_paths.extend([m.string for m in matches if m])
 
     if fnd_paths:
@@ -1101,7 +1034,7 @@ def check_path_exists(element, dir):
     return os.path.exists(os.path.abspath(os.path.join(dir, element)))
 
 
-def search_artifact_location_dict(art_locations, report_name, reg_query):
+def search_artifact_location_dict(art_locations, report_name, data_folder, reg_query):
     """
     Use by the Artifact Importer to search a list of collected
     artifacts by the Execute phase using regex to search for the report name
@@ -1110,6 +1043,8 @@ def search_artifact_location_dict(art_locations, report_name, reg_query):
     :type art_locations: list of string paths
     :param report_name: The artifact to look for
     :type report_name: a string of an artifact name, can contain regex
+    :param data_folder: the directory to look in if path are found
+    :type: data_folder: string
     :param reg_query: The regex query to use to search the artifact_location
     :type reg_query: regexquery object
     :return: a list containing the artifacts found
@@ -1126,16 +1061,20 @@ def search_artifact_location_dict(art_locations, report_name, reg_query):
         for fn in artifacts_path:
             LOG.debug('Found the following artifact, %s, that matched %s in artifact_location' % (fn, report_name))
 
+        # Check the path in data_folder
+        artifacts_path = [os.path.abspath(os.path.join(data_folder, p))
+                          for p in artifacts_path if check_path_exists(p, data_folder)]
+
     return artifacts_path
 
 
 def walk_results_directory(dir, path_list):
     """
-    Used to walk the data directory and .results directory
+    Used to walk the .results directory
     when the artifact in question is not in the list of
     artifacts collected by Execute
 
-    :param dir: The data_folder dir
+    :param dir: The directory to walk
     :type dir: string dir path
     :param path_list: The list of pathes that was found in artifact_locations
     :type path_list: List
@@ -1157,23 +1096,13 @@ def walk_results_directory(dir, path_list):
                 LOG.debug(p)
                 data_dir_list.append(p)
 
-    # iterate over the results folder next
-    result_dir = os.path.join(os.path.dirname(dir), '.results')
-    for root, dirs, files in os.walk(result_dir):
-        # Excluding carbon specific folders
-        dirs[:] = [d for d in dirs if d not in exclude]
-        for f in files:
-            p = os.path.abspath(os.path.join(root, f))
-            if p not in path_list:
-                data_dir_list.append(p)
-
     return data_dir_list
 
 
 def build_artifact_regex_query(name):
     """
     Used to build a regex query from the artifact
-    name which could contain file matching pattern.
+    name which could contain shell file matching pattern.
 
     :param name: The artifact name
     :type name: string

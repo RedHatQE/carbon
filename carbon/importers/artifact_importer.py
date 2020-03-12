@@ -76,19 +76,19 @@ class ArtifactImporter(CarbonImporter):
                 if not execute.artifact_locations:
                     self.logger.warning('The specified execute, %s, does not have any artifacts '
                                         'with it.' % execute.name)
-                    self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
+                    self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.config.get('RESULTS_FOLDER'),
                                                                       report_name=self.report_name))
                 else:
 
                     # Perform check to walk the data directory
-                    self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
+                    self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.config.get('RESULTS_FOLDER'),
                                                                       report_name=self.report_name,
                                                                       art_location=self.injector.inject_dictionary(
                                                                           execute.artifact_locations)
                                                                       )
                                                )
         else:
-            self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.data_folder,
+            self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.config.get('RESULTS_FOLDER'),
                                                               report_name=self.report_name))
         if not self.artifact_paths:
             raise CarbonImporterError('No artifact could be found on the Carbon controller data folder.')

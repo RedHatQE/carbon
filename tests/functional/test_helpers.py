@@ -112,11 +112,13 @@ def aws_creds():
 
 @pytest.fixture(scope='class')
 def data_folder():
-    data_folder = '/tmp/1'
-    os.system('mkdir /tmp/1 /tmp/1/artifacts /tmp/1/artifacts/localhosts /tmp/1/artifacts/localhosts/payload_eg '
-              '/tmp/1/artifacts/localhosts/payload_eg/results /tmp/.results /tmp/.results/artifacts /tmp/.results/logs')
-    os.system('touch /tmp/1/artifacts/localhosts/payload_eg/results/junit_example.xml '
-              '/tmp/.results/junit2.xml /tmp/1/junit3.xml')
+    data_folder = '/tmp/.results'
+    os.system('mkdir /tmp/1 /tmp/.results /tmp/.results/artifacts /tmp/.results/logs '
+              '/tmp/.results/artifacts/localhosts '
+              '/tmp/.results/artifacts/localhosts/payload_eg '
+              '/tmp/.results/artifacts/localhosts/payload_eg/results')
+    os.system('touch /tmp/.results/artifacts/localhosts/payload_eg/results/junit_example.xml '
+              '/tmp/.results/junit2.xml /tmp/.results/junit3.xml')
     return data_folder
 
 
@@ -279,58 +281,103 @@ def test_mask_credentials_password_key_param(aws_creds):
     creds = mask_credentials_password(aws_creds)
     assert '*' in creds.get('aws_secret_access_key') and len(creds.get('aws_secret_access_key')) == key_len
 
+
 def test_sort_tasklist():
     user_task = ['orchestrate', 'report', 'validate', 'cleanup', 'execute', 'provision']
     assert sort_tasklist(user_task) == TASKLIST
 
 
 def test_find_artifacts_on_disk_no_art_location_1(data_folder):
+    """
+    This test verifies that no artifact locations is given we walk the results
+    looking for all xml files.
+    """
     assert len(find_artifacts_on_disk(data_folder, '*xml')) == 3
 
+
 def test_find_artifacts_on_disk_no_art_location_2(data_folder):
+    """
+    This test verifies that no artifact locations is given we walk the results
+    looking for specific xml file.
+    """
     assert len(find_artifacts_on_disk(data_folder, 'junit2.xml')) == 1
 
+
 def test_find_artifacts_on_disk_no_art_location_3(data_folder):
+    """
+    This test verifies that no artifact locations is given we walk the results
+    looking for specific files in a subdirectory of results folder.
+    """
     assert len(find_artifacts_on_disk(data_folder, 'payload_eg/*')) == 1
 
 
 def test_find_artifacts_on_disk_art_location_1(data_folder):
+    """
+    This test verifies that with artifact locations we check the location and walk the results
+    directory looking for a file using specific pattern.
+    """
     art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
                                              'payload_eg/results/junit_example.xml']}
     assert len(find_artifacts_on_disk(data_folder, 'junit_*.xml', art_location)) == 1
 
 
 def test_find_artifacts_on_disk_art_location_2(data_folder):
+    """
+    This test verifies that with artifact locations we check the location and walk the results
+    directory looking for all files using a pattern.
+    """
     art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
                                              'payload_eg/results/junit_example.xml']}
     assert len(find_artifacts_on_disk(data_folder, '*.xml', art_location)) == 3
 
 
 def test_find_artifacts_on_disk_art_location_3(data_folder):
+    """
+    This test verifies that with artifact locations we check the location and walk the results
+    directory looking for a specific file.
+    """
     art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
                                              'payload_eg/results/junit_example.xml']}
     assert len(find_artifacts_on_disk(data_folder, 'junit3.xml', art_location)) == 1
 
 
 def test_find_artifacts_on_disk_art_location_4(data_folder):
+    """
+    This test verifies that with artifact locations we check the location and walk the results
+    directory looking for a file that doesn't exist.
+    """
     art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
                                              'payload_eg/results/junit_example.xml']}
     assert len(find_artifacts_on_disk(data_folder, 'hello.xml', art_location)) == 0
 
 
 def test_find_artifacts_on_disk_art_location_5(data_folder):
+    """
+    This test verifies that with artifact locations we check the location and walk the results
+    directory looking for a files using * within a specific subdirectory. The regex generated
+    will match all three items in art_locations dictionary.
+    """
     art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
                                              'payload_eg/results/junit_example.xml']}
     assert len(find_artifacts_on_disk(data_folder, 'payload_eg/*', art_location)) == 3
 
 
 def test_find_artifacts_on_disk_art_location_6(data_folder):
+    """
+    This test verifies that with artifact locations we check the location and walk the results
+    directory looking for a specific subdirectory. The regex generated will only match payload_eg
+    """
     art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
                                              'payload_eg/results/junit_example.xml']}
     assert len(find_artifacts_on_disk(data_folder, 'payload_eg/', art_location)) == 1
 
 
 def test_find_artifacts_on_disk_art_location_7(data_folder):
+    """
+    This test verifies that with artifact locations we check the location and walk the results
+    directory looking for a specific file that is in results directory but the results directory
+    was also specified in the art_locations.
+    """
     art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
                                              'payload_eg/results/junit_example.xml'],
                     '.results': ['junit2.xml']}

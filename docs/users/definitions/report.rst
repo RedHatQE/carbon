@@ -102,10 +102,9 @@ scope of the search. How carbon performs the search is by the following
  * If no **execute** key is defined, or an execute with no **artifact_location**
    key is used, or the artifacts is not shown as one of the items contained in the
    the artifact_location key, or the item location in the artifact_location key is
-   no longer valid, it proceeds to walk the *data_folder/unique_run_folder*
-   generated for the current run and the *data_folder/.results* folder.
+   no longer valid, it proceeds to walk the *data_folder/.results* folder.
 
- * If no artifacts are found after walking the two directories, carbon will abort the
+ * If no artifacts are found after walking the *data_folder/.results*, carbon will abort the
    import process.
 
  * If artifacts are found, the list of artifacts will be processed and imported into

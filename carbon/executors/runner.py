@@ -211,7 +211,7 @@ class RunnerExecutor(CarbonExecutor):
         """
 
         # local path on disk to save artifacts
-        destination = os.path.join(self.datadir, 'artifacts')
+        destination = os.path.join(self.config.get('RESULTS_FOLDER'), 'artifacts')
 
         # create artifacts location (if needed)
         if not os.path.exists(destination):
