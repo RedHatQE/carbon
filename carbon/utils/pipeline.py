@@ -139,7 +139,10 @@ class PipelineBuilder(object):
 
         # action resource
         # get action resource based on if its status
-        for action in get_actions_failed_status(scenario_actions):
+        # check if cleanup task do NOT filter by status
+        if self.name != 'cleanup':
+            scenario_actions = get_actions_failed_status(scenario_actions)
+        for action in scenario_actions:
             for task in action.get_tasks():
                 if task['task'].__task_name__ == self.name:
                     # fetch & set hosts for the given action task

@@ -122,6 +122,18 @@ class TestPipelineBuilder(object):
         assert getattr(pipeline, 'type') is CleanupTask
 
     @staticmethod
+    def test_build_cleanup_task_pipeline_failed_orch_status(scenario1, action_resource_cleanup):
+        """Validate that orchestrate tasks with a failed status aren't getting filtered for cleanup"""
+        setattr(action_resource_cleanup, 'status', 1)
+        scenario1.add_actions(action_resource_cleanup)
+        builder = PipelineBuilder(name='cleanup')
+        pipeline = builder.build(scenario1)
+        assert getattr(pipeline, 'name') == 'cleanup'
+        assert isinstance(getattr(pipeline, 'tasks'), list)
+        assert getattr(pipeline, 'type') is CleanupTask
+        assert len([task for task in getattr(pipeline, 'tasks') if 'package' in task]) == 2
+
+    @staticmethod
     def test_multiple_scenario_pipeline_01(master_child_scenario):
         builder = PipelineBuilder(name='provision')
         pipeline = builder.build(master_child_scenario)
@@ -161,5 +173,3 @@ class TestPipelineBuilder(object):
         assert getattr(scenario1, 'executes')[0].hosts == []
         assert len(getattr(scenario1, 'executes')[1].hosts) == 1
         assert getattr(getattr(scenario1, 'executes')[1].hosts[0], 'name') == 'host_3'
-
-
