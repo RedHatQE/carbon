@@ -1,3 +1,20 @@
+Version 1.5.1 (2020-03-24)
+--------------------------
+
+Enhancements
+~~~~~~~~~~~~
+* Added support for var_files(variable files) under extra_args( like '-e @file.yml' option in ansible	)
+* Modify the ansible verbosity
+* Enabled the ability for users to set the task concurrency in the carbon.cfg for the rest of the carbon tasks
+
+Bug Fixes
+~~~~~~~~~
+* The logger is defaulting to always using DEBUG log format
+* Orchestrate task fails running a script using pre-1.5.0 extra_args options
+* Orchestrate fails when parameters to script are passed in extra_args without '='
+* Cleanup Task Intermittently Ignores Cleanup tasks when orchestrate task fails
+* Running carbon's execute and report phase in the same process results in artifact files being processed twice.
+
 Version 1.5.0 (2020-02-17)
 --------------------------
 
