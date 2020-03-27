@@ -9,6 +9,7 @@ sufficient; however, please read through the options you have.
 
 Where it is loaded from (using precedence low to high):
 
+#. /etc/carbon/carbon.cfg
 #. ./carbon.cfg (current working directory)
 #. CARBON_SETTINGS environment variable to the location of the file
 
@@ -16,7 +17,7 @@ Where it is loaded from (using precedence low to high):
 
    It is important to realize if you have a configuration file set using
    both options, the configuration files will be combined, and common
-   key values will be overrided by the higher precedent option, which will
+   key values will be overridden by the higher precedent option, which will
    be the CARBON_SETTINGS environment variable.
 
 Configuration example (with all options):

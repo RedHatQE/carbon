@@ -190,7 +190,7 @@ Carbon Ansible Configuration
 
 In the carbon configuration file, you can set some options related to ansible.
 These values should be set in the **[orchestrator:ansible]** section of the
-config file.  The following are the settings.
+carbon.cfg file.  The following are the settings.
 
 .. list-table::
     :widths: auto

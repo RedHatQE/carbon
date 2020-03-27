@@ -27,15 +27,19 @@ Carbon Object
 -------------
 
 As we just learned from the `basics <architecture.html#basics>`_ section,
-the carbon object contains resources. Each resource has a list of associated
-tasks to it. Those tasks will execute the resoures asscoiated to it.
+the carbon object contains resources. The core resource which makes up the
+carbon compound is a scenario resource. A scenario resource consists of multiple
+compounds of 'resources' which derive tasks for the scenario to be processed.
+Each resource has a list of associated tasks to it. When carbon executes these
+tasks the resources associated to that task are used.
 
 Lets see a diagram with the available resources for a carbon object. The carbon
-object is directly the entire scenario.
+object is made up of scenario resource and the scenario resource comprises of
+other resources(asset, action, execute, report).
 
 .. image:: ../_static/cbn_scenario_resource.png
 
-The diagram above shows the resources that make up a scenario. The table
+The diagram above shows the resources that make up a scenario resource. The table
 below describes each resource in more detail.
 
 .. list-table::
@@ -44,6 +48,10 @@ below describes each resource in more detail.
 
     *   - Resource
         - Description
+
+    *   - Scenario
+        - The core resource which makes up the carbon compound. The scenario
+          resource holds the other resources(asset, action, execute and report)
 
     *   - Asset
         - The asset resources define the system resources for the scenario.
@@ -67,7 +75,7 @@ below describes each resource in more detail.
           import test artifacts generated during the execution phase.
 
 Now that we have knowledge about how a carbon object is constructed. Which
-includes a number of resources. Lets dive depper into the resources. What do
+includes a number of resources. Lets dive deeper into the resources. What do
 we mean by this? Every resource has a number of tasks that it can correspond
 to.
 
@@ -75,15 +83,18 @@ to.
 
 The diagram above shows the carbon object with resources defined. Each of
 those resources then have a list of tasks associated to it. This means that
-when carbon runs a scenario, for each task to be processed. It will run the
+when carbon runs a scenario, for each task to be processed it will run the
 given resources associated to that given task.
 
-i.e. The host resource has a validate, provision and clean up task. This means
-that when carbon runs the validate task it will process that host resource.
-When it goes to the provision task, it will process that host resource and
+e.g. The scenario resource has validate task. This means that when carbon runs
+the validate task it will process the scenario resource.
+
+e.g. The asset resource has a validate, provision and clean up task. This means
+that when carbon runs the validate task it will process that asset resource.
+When it goes to the provision task, it will process that asset resource and
 the same for clean up task.
 
-i.e. The action resource has a validate and orchestrate task. This means that
+e.g. The action resource has a validate and orchestrate task. This means that
 when carbon runs the validate task it will process that action resource. When
 it goes to the orchestrate task, it will process that action resource.
 
