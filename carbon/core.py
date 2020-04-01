@@ -397,6 +397,9 @@ class CarbonResource(LoggerMixin, TimeMixin):
         # every resource can have a optional description
         self._description = None
 
+        # every resource can have optional labels
+        self._labels = list()
+
     @property
     def name(self):
         return self._name
@@ -451,6 +454,34 @@ class CarbonResource(LoggerMixin, TimeMixin):
         """Set data folder."""
         raise AttributeError('You cannot set the data folder directly. Only '
                              'the carbon object can.')
+
+    @property
+    def labels(self):
+        """labels property for the resource"""
+        return self._labels
+
+    @labels.setter
+    def labels(self, value):
+        """set labels property"""
+        self._labels = self._set_labels(value)
+
+    @labels.deleter
+    def labels(self):
+        """
+        delete the labels property
+        """
+        del self._labels
+
+    def _set_labels(self, labels):
+        """
+        Checks if the input is a comma separated string/string and converts it to a list
+        :param labels: string of labels provided in the SDF
+        :type labels: string or comma separated strings
+        :rtype: list
+        """
+        if isinstance(labels, string_types):
+            labels = labels.replace(' ', '').split(',')
+        return labels
 
     def _add_task(self, t):
         """

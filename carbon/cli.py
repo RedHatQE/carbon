@@ -33,6 +33,7 @@ from . import __version__
 from .carbon import Carbon
 from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES
 from .helpers import template_render, validate_render_scenario
+from ._compat import string_types
 from .exceptions import HelpersError, CarbonError
 
 
@@ -80,11 +81,29 @@ def create():
               default=None,
               metavar="",
               help="Pass in variable data to template the scenario. Can be a file or raw json.")
+# @click.pass_context
+# def validate(ctx, scenario, data_folder, log_level, workspace, vars_data):
+# =======
+@click.option("-l", "--labels",
+              default=None,
+              metavar="",
+              multiple=True,
+              type=str,
+              help="Use only the resources associated with labels for running the tasks. "
+                   "labels and skip_labels are mutually exclusive")
+@click.option("-sl", "--skip-labels",
+              default=None,
+              metavar="",
+              type=str,
+              multiple=True,
+              help="Skip the resources associated with skip_labels for running the tasks. "
+                   "labels and skip_labels are mutually exclusive")
 @click.pass_context
-def validate(ctx, scenario, data_folder, log_level, workspace, vars_data):
+def validate(ctx, scenario, data_folder, log_level, workspace, vars_data, labels, skip_labels):
     """Validate a scenario configuration."""
+
     # Make sure the file exists and gets its absolute path
-    if os.path.isfile(scenario):
+    if scenario is not None and os.path.isfile(scenario):
         scenario = os.path.abspath(scenario)
     else:
         click.echo('You have to provide a valid scenario file.')
@@ -104,11 +123,18 @@ def validate(ctx, scenario, data_folder, log_level, workspace, vars_data):
         click.echo('Error loading updated included scenario data!')
         ctx.exit()
 
+    # checking if labels or skip_labels both are set
+    if labels and skip_labels:
+        click.echo('Labels and skip_labels are mutually exclusive. Only one of them can be used')
+        ctx.exit()
+
     cbn = Carbon(
         __name__,
         log_level=log_level,
         data_folder=data_folder,
-        workspace=workspace
+        workspace=workspace,
+        labels=labels,
+        skip_labels=skip_labels
     )
 
     # This is the easiest way to configure a full scenario.
@@ -145,8 +171,22 @@ def validate(ctx, scenario, data_folder, log_level, workspace, vars_data):
               default=None,
               metavar="",
               help="Pass in variable data to template the scenario. Can be a file or raw json.")
+@click.option("-l", "--labels",
+              default=None,
+              metavar="",
+              multiple=True,
+              type=str,
+              help="Use only the resources associated with labels for running the tasks. "
+                   "labels and skip_labels are mutually exclusive")
+@click.option("-sl", "--skip-labels",
+              default=None,
+              metavar="",
+              type=str,
+              multiple=True,
+              help="Skip the resources associated with skip_labels for running the tasks. "
+                   "labels and skip_labels are mutually exclusive")
 @click.pass_context
-def run(ctx, task, scenario, log_level, data_folder, workspace, vars_data):
+def run(ctx, task, scenario, log_level, data_folder, workspace, vars_data, labels, skip_labels):
     """Run a scenario configuration."""
     print_header()
 
@@ -171,12 +211,19 @@ def run(ctx, task, scenario, log_level, data_folder, workspace, vars_data):
         click.echo('Error loading updated included scenario data!')
         ctx.exit()
 
+    # checking if labels or skip_labels both are set
+    if labels and skip_labels:
+        click.echo('Labels and skip_labels are mutually exclusive. Only one of them can be used')
+        ctx.exit()
+
     # Create a new carbon compound
     cbn = Carbon(
         __name__,
         log_level=log_level,
         data_folder=data_folder,
-        workspace=workspace
+        workspace=workspace,
+        labels=labels,
+        skip_labels=skip_labels
     )
 
     # Sending the list of scenario streams to the carbon object

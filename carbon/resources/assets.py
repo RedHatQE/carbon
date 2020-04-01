@@ -63,6 +63,7 @@ class Asset(CarbonResource):
         'ip_address',
         'metadata',
         'ansible_params',
+        'labels'
     ]
 
     def __init__(self,
@@ -144,6 +145,8 @@ class Asset(CarbonResource):
         # since that already gets set.
         parameters.pop('workspace', None)
         parameters.pop('data_folder', None)
+
+        setattr(self, 'labels', parameters.pop('labels', []))
 
         # determine if the host is a static machine already provisioned
         # how? if the ip_address param is defined and provider & provisioner is not defined

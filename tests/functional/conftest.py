@@ -28,7 +28,7 @@
 from fixtures import action_resource, action_resource_cleanup, scenario, \
     report_resource, execute_resource, host, default_host_params, \
     scenario_resource, config, master_child_scenario, scenario1, asset1, asset3, action1,\
-    scenario_resource1, execute1, execute2, asset2
+    scenario_resource1, execute1, execute2, asset2, action2, scenario_labels
 
 __all__ = [
     action_resource,
@@ -43,10 +43,12 @@ __all__ = [
     asset2,
     asset3,
     action1,
+    action2,
     report_resource,
     scenario,
     scenario1,
     scenario_resource,
     scenario_resource1,
+    scenario_labels,
     master_child_scenario
 ]

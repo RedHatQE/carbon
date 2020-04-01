@@ -412,6 +412,21 @@ class TestCarbonResource(object):
     def test_get_tasks(carbon_resource):
         assert carbon_resource.get_tasks() == []
 
+    @staticmethod
+    def test_get_labels(carbon_resource):
+        assert carbon_resource.labels == []
+
+    @staticmethod
+    def test_set_labels_single_string(carbon_resource):
+        """To test if single string values get set as an array"""
+        setattr(carbon_resource, 'labels',' label1')
+        assert carbon_resource.labels == ['label1']
+
+    @staticmethod
+    def test_set_labels(carbon_resource):
+        """To test if comma separated string get set as an array"""
+        setattr(carbon_resource, 'labels', 'label1,label2')
+        assert carbon_resource.labels == ['label1', 'label2']
 
 class TestCarbonProvider(object):
     @staticmethod

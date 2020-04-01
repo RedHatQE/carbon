@@ -138,3 +138,57 @@ class TestCli(object):
                      '-d', '/tmp', '--vars-data', json.dumps(dict(asset_name='unit_test'))]
         )
         assert results.exit_code == 0
+
+    @staticmethod
+    def test_run_mutually_exclusive_label_skiplabel_option(runner):
+        """ this tests if cli exits in case both labels and skip labels are present during carbon run"""
+        results = runner.invoke(carbon, ['run', '-s', '../assets/common.yml', '-l', 'label1', '-sl', 'label2'])
+        assert 'Labels and skip_labels are mutually exclusive. Only one of them can be used' in results.output
+
+    @staticmethod
+    def test_validate_mutually_exclusive_label_skiplabel_option(runner):
+        """ this tests if cli exits in case both labels and skip labels are present during carbon validate"""
+        results = runner.invoke(carbon, ['validate', '-s', '../assets/common.yml', '-l', 'label1', '-sl', 'label2'])
+        assert 'Labels and skip_labels are mutually exclusive. Only one of them can be used' in results.output
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_run_label_option(mock_method, runner):
+        """This is for testing use of label option with carbon run"""
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['run', '-s', '../assets/descriptor.yml', '-t', 'validate', '-l', 'label1', '-d', '/tmp']
+        )
+        assert results.exit_code == 0
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_run_skiplabel_option(mock_method, runner):
+        """This is for testing use of skip_label option with carbon run"""
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['run', '-s', '../assets/descriptor.yml', '-t', 'validate', '-sl', 'label1', '-d', '/tmp']
+        )
+        assert results.exit_code == 0
+
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_validate_label_option(mock_method, runner):
+        """This is for testing use of label option with carbon validate"""
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['validate', '-s', '../assets/descriptor.yml', '-l', 'label1', '-d', '/tmp']
+        )
+        assert results.exit_code == 0
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_validate_skiplabel_option(mock_method, runner):
+        """This is for testing use of skip_label option with carbon validate"""
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['validate', '-s', '../assets/descriptor.yml', '-sl', 'label1', '-d', '/tmp']
+        )
+        assert results.exit_code == 0
+

@@ -28,6 +28,7 @@
 import pytest
 import os
 import mock
+from carbon import Carbon
 from carbon.constants import TASKLIST
 from carbon.resources.assets import Asset
 from carbon.resources.reports import Report
@@ -38,7 +39,7 @@ from carbon.exceptions import CarbonError, HelpersError
 from carbon.provisioners.ext import BeakerClientProvisionerPlugin
 from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency, \
     mask_credentials_password, sort_tasklist, find_artifacts_on_disk, \
-    get_default_provisioner_plugin, get_ans_verbosity, schema_validator
+    get_default_provisioner_plugin, get_ans_verbosity, schema_validator, filter_resources_labels
 
 
 @pytest.fixture(scope='class')
@@ -120,6 +121,12 @@ def data_folder():
     os.system('touch /tmp/.results/artifacts/localhosts/payload_eg/results/junit_example.xml '
               '/tmp/.results/junit2.xml /tmp/.results/junit3.xml')
     return data_folder
+
+
+@pytest.fixture(scope='class')
+def carbon1():
+    carbon = Carbon(data_folder='/tmp', workspace='/tmp', labels=('label1', 'label2'))
+    return carbon
 
 
 class TestDataInjector(object):
@@ -442,3 +449,26 @@ def test_schema_validator_failure():
     params = dict(key1=1, key2=['val2', 'val3'])
     with pytest.raises(Exception):
         schema_validator(schema_data=params, schema_files=[os.path.abspath('../assets/schemas/schema_test.yml')])
+
+
+def test_filter_resources_01(carbon1, asset2, asset3):
+    """ this test verifies only resources which match the labels provided are picked"""
+    res_list = [asset2, asset3]
+    res = filter_resources_labels(res_list, carbon1.carbon_options)
+    assert res[0] == asset2
+
+
+def test_filter_resources_02(carbon1, asset2, asset3):
+    """ this test verifies resources which match the skip_labels are skipped"""
+    res_list = [asset2, asset3]
+    carbon1.carbon_options.update(labels=tuple(), skip_labels=('label2',))
+    res = filter_resources_labels(res_list, carbon1.carbon_options)
+    assert res[0] == asset3
+
+
+def test_filter_resources_03(asset2, asset3):
+    """ this test verifies resource list is sent back when no labels or skip_labels are matched"""
+    res_list = [asset2, asset3]
+    res = filter_resources_labels(res_list, {})
+    assert asset2 in res
+    assert asset3 in res

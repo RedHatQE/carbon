@@ -34,11 +34,9 @@ import pytest
 import yaml
 
 from carbon import Carbon
-from carbon._compat import ConfigParser
-from carbon.constants import RESULTS_FILE, DEFAULT_CONFIG
+from carbon.constants import RESULTS_FILE
 from carbon.exceptions import CarbonError
 from carbon.helpers import template_render
-from carbon.resources import Asset, Scenario
 
 
 class TestCarbon(object):
@@ -54,9 +52,18 @@ class TestCarbon(object):
 
     @staticmethod
     def test_create_carbon_instance_03():
+        """verifies carbon instance is created when data folder and workspace is provided and kwargs in none"""
         carbon = Carbon(data_folder='/tmp', workspace='/tmp')
         assert '/tmp' in carbon.config['DATA_FOLDER']
         assert carbon.workspace == '/tmp'
+        assert carbon.carbon_options == {}
+
+    @staticmethod
+    def test_create_carbon_instance_with_labels():
+        """this test is to verify carbon instance gets created when labels/skip_labels are passed"""
+        carbon = Carbon(data_folder='/tmp', workspace='/tmp', labels=('lab1', 'lab2'), skip_labels=('lab3',))
+        assert carbon.carbon_options['labels'] == ('lab1', 'lab2')
+        assert carbon.carbon_options['skip_labels'] == ('lab3', )
 
     @staticmethod
     @mock.patch.object(os, 'makedirs')
@@ -144,6 +151,22 @@ class TestCarbon(object):
         carbon = Carbon(import_name='__main__', data_folder='/tmp')
         assert carbon.static_inv_dir == '/tmp/inventory'
 
+    @staticmethod
+    def test_validate_labels_01(scenario_labels):
+        """ this test verifies validate_labels throws error when wrong labels is provided"""
+        carbon = Carbon(data_folder='/tmp', workspace='/tmp', labels=('lab1',))
+        carbon.scenario = scenario_labels
+        with pytest.raises(CarbonError) as ex:
+            carbon._validate_labels()
+        assert "No resources were found corresponding to the label/skip_label lab1. " \
+               "Please check the labels provided during the run match the ones in "\
+               "scenario descriptor file" in ex.value.args
 
-
-
+    def test_validate_labels_02(scenario_labels):
+        """ this test verifies validate_labels throws error when wrong skip_labels is provided"""
+        carbon = Carbon(data_folder='/tmp', workspace='/tmp', skip_labels=('lab1','label2'))
+        with pytest.raises(CarbonError) as ex:
+            carbon._validate_labels()
+        assert "No resources were found corresponding to the label/skip_label lab1. " \
+               "Please check the labels provided during the run match the ones in "\
+               "scenario descriptor file" in ex.value.args

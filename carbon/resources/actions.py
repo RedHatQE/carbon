@@ -54,7 +54,7 @@ class Action(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'orchestrate', 'cleanup']
-    _fields = ['name', 'description', 'hosts']
+    _fields = ['name', 'description', 'hosts', 'labels']
 
     def __init__(self,
                  config=None,
@@ -131,6 +131,9 @@ class Action(CarbonResource):
         # set up status code
         self._status = parameters.pop('status', 0)
 
+        # set labels
+        setattr(self, 'labels', parameters.pop('labels', []))
+
         # ******** CLEANUP ACTIONS ******** #
         # check if the action requires any cleanup actions prior to host
         # deletion
@@ -202,6 +205,9 @@ class Action(CarbonResource):
         # Update profile with all the parameters for the orchestrator
         if not isinstance(self.orchestrator, string_types):
             profile.update(getattr(self.orchestrator, 'build_profile')(self))
+
+        # set labels
+        profile.update({'labels': self.labels})
 
         profile.update({'cleanup': self.cleanup_def})
         profile.update({'status': self.status})

@@ -92,6 +92,9 @@ mapping:
           ansible_params:
             type: map
             allowempty: True
+          labels:
+            type: any
+            func: type_str_list
           metadata:
             allowempty: True
             type: map
@@ -160,6 +163,9 @@ mapping:
           ansible_galaxy_options:
             allowempty: True
             type: map
+          labels:
+            type: any
+            func: type_str_list
 
   execute:
     sequence:
@@ -272,6 +278,9 @@ mapping:
             func: type_str_list
           ignore_rc:
             type: bool
+          labels:
+            type: any
+            func: type_str_list
 
   report:
     sequence:
@@ -287,3 +296,6 @@ mapping:
           type: any
           func: type_str_list
           required: False
+        labels:
+          type: any
+          func: type_str_list

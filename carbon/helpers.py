@@ -66,7 +66,7 @@ LOG = getLogger(__name__)
 _missing = object()
 
 
-def get_actions_failed_status(action_list):
+def filter_actions_failed_status(action_list):
     """
     Go through the action_list and return actions with failed status.
     If no action with failed status is found the original list is returned
@@ -555,6 +555,30 @@ class CustomDict(dict):
 
     def __setattr__(self, key, value):
         self.__setitem__(key, value)
+
+
+def filter_resources_labels(res_list, carbon_options):
+    """ this method filters out the resources which match the labels provided during carbon run
+    or skips all the resources which match the skip_labels provided during carbon run
+    :param res_list: list of resources
+    :type res_list: list
+    :param carbon_options: extra options set during carbon run
+    :type carbon_options: dict
+    :return: filtered resource list
+    :rtype: list
+    """
+    filtered_res_list = list()
+    if not carbon_options or not res_list:
+        return res_list
+    elif carbon_options.get('labels', ()):
+        filtered_res_list.extend([res for res in res_list for label in carbon_options.get('labels')
+                                  if label in getattr(res, 'labels')])
+
+    elif carbon_options.get('skip_labels', ()):
+        filtered_res_list.extend([res for res in res_list if
+                                  not set(getattr(res, 'labels')).intersection(set(carbon_options.get('skip_labels')))])
+
+    return filtered_res_list
 
 
 def fetch_assets(hosts, task, all_hosts=True):

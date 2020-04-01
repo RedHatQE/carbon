@@ -34,7 +34,6 @@ from carbon._compat import string_types
 from carbon.resources import Asset
 
 
-
 @pytest.fixture(scope='class')
 def pipe_builder():
     return PipelineBuilder(name='validate')
@@ -77,7 +76,7 @@ class TestPipelineBuilder(object):
     @staticmethod
     def test_build_validate_task_pipeline(scenario):
         builder = PipelineBuilder(name='validate')
-        pipeline = builder.build(scenario)
+        pipeline = builder.build(scenario, carbon_options={})
         assert getattr(pipeline, 'name') == 'validate'
         assert isinstance(getattr(pipeline, 'tasks'), list)
         assert getattr(pipeline, 'type') is ValidateTask
@@ -85,7 +84,7 @@ class TestPipelineBuilder(object):
     @staticmethod
     def test_build_provision_task_pipeline(scenario):
         builder = PipelineBuilder(name='provision')
-        pipeline = builder.build(scenario)
+        pipeline = builder.build(scenario, carbon_options={})
         assert getattr(pipeline, 'name') == 'provision'
         assert isinstance(getattr(pipeline, 'tasks'), list)
         assert getattr(pipeline, 'type') is ProvisionTask
@@ -93,7 +92,7 @@ class TestPipelineBuilder(object):
     @staticmethod
     def test_build_orchestrate_task_pipeline(scenario):
         builder = PipelineBuilder(name='orchestrate')
-        pipeline = builder.build(scenario)
+        pipeline = builder.build(scenario, carbon_options={})
         assert getattr(pipeline, 'name') == 'orchestrate'
         assert isinstance(getattr(pipeline, 'tasks'), list)
         assert getattr(pipeline, 'type') is OrchestrateTask
@@ -101,7 +100,7 @@ class TestPipelineBuilder(object):
     @staticmethod
     def test_build_execute_task_pipeline(scenario):
         builder = PipelineBuilder(name='execute')
-        pipeline = builder.build(scenario)
+        pipeline = builder.build(scenario, carbon_options={})
         assert getattr(pipeline, 'name') == 'execute'
         assert isinstance(getattr(pipeline, 'tasks'), list)
         assert getattr(pipeline, 'type') is ExecuteTask
@@ -109,7 +108,7 @@ class TestPipelineBuilder(object):
     @staticmethod
     def test_build_report_task_pipeline(scenario):
         builder = PipelineBuilder(name='report')
-        pipeline = builder.build(scenario)
+        pipeline = builder.build(scenario, carbon_options={})
         assert getattr(pipeline, 'name') == 'report'
         assert isinstance(getattr(pipeline, 'tasks'), list)
         assert getattr(pipeline, 'type') is ReportTask
@@ -117,7 +116,7 @@ class TestPipelineBuilder(object):
     @staticmethod
     def test_build_cleanup_task_pipeline(scenario):
         builder = PipelineBuilder(name='cleanup')
-        pipeline = builder.build(scenario)
+        pipeline = builder.build(scenario, carbon_options={})
         assert getattr(pipeline, 'name') == 'cleanup'
         assert isinstance(getattr(pipeline, 'tasks'), list)
         assert getattr(pipeline, 'type') is CleanupTask
@@ -128,7 +127,7 @@ class TestPipelineBuilder(object):
         setattr(action_resource_cleanup, 'status', 1)
         scenario1.add_actions(action_resource_cleanup)
         builder = PipelineBuilder(name='cleanup')
-        pipeline = builder.build(scenario1)
+        pipeline = builder.build(scenario1, carbon_options={})
         assert getattr(pipeline, 'name') == 'cleanup'
         assert isinstance(getattr(pipeline, 'tasks'), list)
         assert getattr(pipeline, 'type') is CleanupTask
@@ -137,21 +136,21 @@ class TestPipelineBuilder(object):
     @staticmethod
     def test_multiple_scenario_pipeline_01(master_child_scenario):
         builder = PipelineBuilder(name='provision')
-        pipeline = builder.build(master_child_scenario)
+        pipeline = builder.build(master_child_scenario, carbon_options={})
         tasks = getattr(pipeline, 'tasks')
         assert len(tasks) == 2
 
     @staticmethod
     def test_multiple_scenario_pipeline_02(master_child_scenario):
         builder = PipelineBuilder(name='execute')
-        pipeline = builder.build(master_child_scenario)
+        pipeline = builder.build(master_child_scenario, carbon_options={})
         tasks = getattr(pipeline, 'tasks')
         assert len(tasks) == 2
 
     @staticmethod
     def test_pipeline_with_asset_count_for_action(scenario1):
         builder = PipelineBuilder(name='orchestrate')
-        pipeline = builder.build(scenario1)
+        pipeline = builder.build(scenario1, carbon_options={})
         tasks = getattr(pipeline, 'tasks')
         assert isinstance(getattr(tasks[0].get('package'), 'hosts')[-1], Asset)
         assert len(getattr(tasks[0].get('package'), 'hosts')) == 1
@@ -162,7 +161,7 @@ class TestPipelineBuilder(object):
     def test_pipeline_with_asset_count_using_role_for_execute(scenario1, asset2):
         scenario1.add_assets(asset2)
         builder = PipelineBuilder(name='execute')
-        pipeline = builder.build(scenario1)
+        pipeline = builder.build(scenario1, carbon_options={})
         tasks = getattr(pipeline, 'tasks')
         assert isinstance(getattr(tasks[-1].get('package'), 'hosts')[-1], Asset)
         assert len(getattr(tasks[-1].get('package'), 'hosts')) == 1
@@ -173,8 +172,27 @@ class TestPipelineBuilder(object):
         scenario1.add_assets(asset3)
         scenario1.add_executes(execute2)
         builder = PipelineBuilder(name='execute')
-        pipeline = builder.build(scenario1)
+        pipeline = builder.build(scenario1, carbon_options={})
         tasks = getattr(pipeline, 'tasks')
         assert isinstance(getattr(scenario1, 'executes')[0].hosts[-1], string_types)
         assert len(getattr(tasks[1].get('package'), 'hosts')) == 1
         assert getattr(getattr(tasks[1].get('package'), 'hosts')[-1], 'name') == 'host_3'
+
+    @staticmethod
+    def test_pipeline_with_label(scenario_labels):
+        builder = PipelineBuilder(name='orchestrate')
+        pipeline = builder.build(scenario_labels, carbon_options={'labels': ('label3',)})
+        tasks = getattr(pipeline, 'tasks')
+        assert isinstance(getattr(tasks[0].get('package'), 'hosts')[-1], Asset)
+        assert len(getattr(tasks[0].get('package'), 'hosts')) == 1
+        assert getattr(getattr(tasks[0].get('package'), 'hosts')[-1], 'name') == 'host_3'
+
+
+    @staticmethod
+    def test_pipeline_with_skip_label(scenario_labels):
+        builder = PipelineBuilder(name='execute')
+        pipeline = builder.build(scenario_labels, carbon_options={'skip_labels': ('label2',)})
+        tasks = getattr(pipeline, 'tasks')
+        assert isinstance(getattr(tasks[0].get('package'), 'hosts')[-1], Asset)
+        assert len(getattr(tasks[0].get('package'), 'hosts')) == 1
+        assert getattr(getattr(tasks[0].get('package'), 'hosts')[-1], 'name') == 'host_3'

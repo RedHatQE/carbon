@@ -143,6 +143,7 @@ def asset1(default_host_params, config):
 def asset2(default_host_params, config):
     param =copy.deepcopy(default_host_params)
     param.update(role='test')
+    param.update(labels='label2')
     return Asset(
         name='host_1',
         config=config,
@@ -155,6 +156,7 @@ def asset3(default_host_params, config):
     param =copy.deepcopy(default_host_params)
     param.pop('role')
     param.update(groups='group_test')
+    param.update(labels='label3')
     return Asset(
         name='host_3',
         config=config,
@@ -170,20 +172,34 @@ def action1(config):
         parameters=dict(
             description='description',
             hosts=['host'],
-            orchestrator='ansible'
+            orchestrator='ansible',
+            labels='label2'
+        )
+    )
+
+@pytest.fixture
+def action2(config):
+    return Action(
+        name='action',
+        config=config,
+        parameters=dict(
+            description='description',
+            hosts=['host_3'],
+            orchestrator='ansible',
+            labels = 'label3'
         )
     )
 
 
 @pytest.fixture
 def execute1(config):
-    params = dict(description='description', hosts='test', executor='runner')
+    params = dict(description='description', hosts='test', executor='runner', labels='label2')
     return Execute(name='execute1', config=config, parameters=params)
 
 
 @pytest.fixture
 def execute2(config):
-    params = dict(description='description', hosts='group_test', executor='runner')
+    params = dict(description='description', hosts='group_test', executor='runner', labels='label3')
     return Execute(name='execute2', config=config, parameters=params)
 
 
@@ -245,3 +261,14 @@ def master_child_scenario(action_resource, host, execute_resource, report_resour
     scenario_resource.add_executes(execute_resource)
     scenario_resource.add_reports(report_resource)
     return scenario_resource
+
+
+@pytest.fixture
+def scenario_labels(asset2, asset3, action1, action2, scenario_resource1, execute1, execute2):
+    scenario_resource1.add_assets(asset2)
+    scenario_resource1.add_assets(asset3)
+    scenario_resource1.add_actions(action1)
+    scenario_resource1.add_actions(action2)
+    scenario_resource1.add_executes(execute1)
+    scenario_resource1.add_executes(execute2)
+    return scenario_resource1

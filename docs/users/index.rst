@@ -23,6 +23,7 @@ Detailed Information
    best_practices
    localhost
    variable_data
+   resource_labels
    faqs
 
 

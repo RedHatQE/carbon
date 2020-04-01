@@ -49,7 +49,7 @@ class Report(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'report']
-    _fields = ['name', 'description', 'importer', 'execute_name', 'import_results']
+    _fields = ['name', 'description', 'importer', 'execute_name', 'import_results', 'labels']
 
     def __init__(self,
                  config=None,
@@ -121,6 +121,9 @@ class Report(CarbonResource):
             self.do_import = False
 
         self._import_results = parameters.pop('import_results', [])
+
+        # set labels
+        setattr(self, 'labels', parameters.pop('labels', []))
 
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
@@ -281,6 +284,9 @@ class Report(CarbonResource):
             profile['importer'] = self.importer_plugin
         if self.provider:
             profile['provider'] = self.provider_params
+
+        # set the labels for report resource
+        profile['labels'] = self.labels
 
         # set the report's executes
         if all(isinstance(item, string_types) for item in self.executes):

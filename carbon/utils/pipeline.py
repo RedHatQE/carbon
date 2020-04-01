@@ -30,8 +30,8 @@ from collections import namedtuple
 
 from ..constants import TASKLIST
 from ..exceptions import CarbonError
-from ..helpers import fetch_assets, get_core_tasks_classes, fetch_executes, get_actions_failed_status, \
-    set_task_class_concurrency
+from ..helpers import fetch_assets, get_core_tasks_classes, fetch_executes, filter_actions_failed_status, \
+    set_task_class_concurrency, filter_resources_labels
 from ..tasks import CleanupTask
 
 
@@ -83,10 +83,12 @@ class PipelineBuilder(object):
                 return cls
         raise CarbonError('Unable to lookup task %s class.' % self.name)
 
-    def build(self, scenario):
+    def build(self, scenario, carbon_options):
         """Build carbon pipeline.
 
-        This method first collects scenario tasks and resources for each scenario(child and master)
+        This method first collects scenario tasks and resources for each scenario(child and master). It filters out
+        specific resources for the scenario based on if labels or skip_labels are provided in carbon options.
+        If no labels/ skip_labels are provided all resources for that scenario are picked.
         Then for each of the resource/scenario task the method checks if that resource/scenario tasks has any tasks
         with name matching the name for self.task(the task for which the pipeline is getting built). If it has then that
         tasks gets added to the pipeline and that gets returned
@@ -94,9 +96,12 @@ class PipelineBuilder(object):
         :param scenario: carbon scenario object containing all scenario
                data.
         :type scenario: scenario object
+        :param carbon_options: extra options provided during carbon run
+        :type carbon_options: dict
         :return: carbon pipeline to run for the given task for all the scenarios
         :rtype: namedtuple
         """
+
         # pipeline init
         pipeline = self.pipeline_template(
             self.name,
@@ -110,21 +115,19 @@ class PipelineBuilder(object):
         scenario_executes = list()
         scenario_reports = list()
 
-        # Check if there are any child/included scenarios
+        # Get all tasks for the scenario and its included scenarios
         if scenario.child_scenarios:
             for sc in scenario.child_scenarios:
                 scenario_get_tasks.extend([item for item in getattr(sc, 'get_tasks')()])
-                scenario_assets.extend([item for item in getattr(sc, 'assets')])
-                scenario_actions.extend([item for item in getattr(sc, 'actions')])
-                scenario_executes.extend([item for item in getattr(sc, 'executes')])
-                scenario_reports.extend([item for item in getattr(sc, 'reports')])
-
         # only master scenario no child scenarios
         scenario_get_tasks.extend([item for item in getattr(scenario, 'get_tasks')()])
-        scenario_assets.extend([item for item in getattr(scenario, 'assets')])
-        scenario_actions.extend([item for item in getattr(scenario, 'actions')])
-        scenario_executes.extend([item for item in getattr(scenario, 'executes')])
-        scenario_reports.extend([item for item in getattr(scenario, 'reports')])
+
+        # get all resources for scenario/included scenario validated and filtered using labels
+        scenario_assets.extend([item for item in filter_resources_labels(scenario.get_all_assets(), carbon_options)])
+        scenario_actions.extend([item for item in filter_resources_labels(scenario.get_all_actions(), carbon_options)])
+        scenario_executes.extend([item for item in filter_resources_labels(scenario.get_all_executes(),
+                                                                           carbon_options)])
+        scenario_reports.extend([item for item in filter_resources_labels(scenario.get_all_reports(), carbon_options)])
 
         # scenario resource
         for task in scenario_get_tasks:
@@ -141,7 +144,7 @@ class PipelineBuilder(object):
         # get action resource based on if its status
         # check if cleanup task do NOT filter by status
         if self.name != 'cleanup':
-            scenario_actions = get_actions_failed_status(scenario_actions)
+            scenario_actions = filter_actions_failed_status(scenario_actions)
         for action in scenario_actions:
             for task in action.get_tasks():
                 if task['task'].__task_name__ == self.name:

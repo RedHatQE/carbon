@@ -72,7 +72,7 @@ class Carbon(LoggerMixin, TimeMixin):
     config = Config()
 
     def __init__(self, import_name=__carbon_name__, log_level=None,
-                 data_folder=None, workspace=None):
+                 data_folder=None, workspace=None, **kwargs):
         """Constructor.
 
         :param import_name: module name
@@ -92,6 +92,14 @@ class Carbon(LoggerMixin, TimeMixin):
 
         # load configuration settings
         self.config.load()
+
+        # assigning cli options to carbon_options property
+        self._carbon_options = dict()
+        for key, value in kwargs.items():
+            if key == 'labels' and value:
+                self._carbon_options['labels'] = value
+            if key == 'skip_labels' and value:
+                self._carbon_options['skip_labels'] = value
 
         if log_level:
             self.config['LOG_LEVEL'] = log_level
@@ -201,6 +209,10 @@ class Carbon(LoggerMixin, TimeMixin):
     def results_file(self):
         return os.path.join(self.data_folder, RESULTS_FILE)
 
+    @property
+    def carbon_options(self):
+        return self._carbon_options
+
     def _populate_scenario_resources(self, scenario_obj, scenario_stream):
 
         scenario_data = yaml.safe_load(scenario_stream)
@@ -255,6 +267,33 @@ class Carbon(LoggerMixin, TimeMixin):
                 self._populate_scenario_resources(ch_scenario, scenario_stream)
                 self.scenario.add_child_scenario(ch_scenario)
 
+        # Validating labels provided at the cli
+        self._validate_labels()
+
+    def _validate_labels(self):
+        """This method validates that the labels provided by the users are mentioned withing the SDF. If no labels match
+        any used by the resources in the SDF/scenario an error is raised
+        """
+        if self.carbon_options:
+            res_label_list = list()
+            user_labels = list()
+            # labels present in all res
+            res_label_list.extend([lab for res in self.scenario.get_all_assets() for lab in getattr(res, 'labels')])
+            res_label_list.extend([lab for res in self.scenario.get_all_actions() for lab in getattr(res, 'labels')])
+            res_label_list.extend([lab for res in self.scenario.get_all_executes() for lab in getattr(res, 'labels')])
+            res_label_list.extend([lab for res in self.scenario.get_all_reports() for lab in getattr(res, 'labels')])
+            # labels provided by user at cli
+            user_labels.extend([lab for lab in
+                                self.carbon_options.get('labels') or self.carbon_options.get('skip_labels')])
+            for label in user_labels:
+                if label in res_label_list:
+                    continue
+                else:
+                    raise CarbonError("No resources were found corresponding to the label/skip_label %s."
+                                      " Please check the labels provided during the run match the ones in "
+                                      "scenario descriptor file" % label)
+        return
+
     def run(self, tasklist=TASKLIST):
         """
         This function assumes there are zero or more tasks to be
@@ -307,7 +346,7 @@ class Carbon(LoggerMixin, TimeMixin):
                     continue
 
                 # build task pipeline
-                pipeline = pipe_builder.build(self.scenario)
+                pipeline = pipe_builder.build(self.scenario, self.carbon_options)
 
                 self.logger.info('.' * 50)
                 self.logger.info('Starting tasks on pipeline: %s',
@@ -381,7 +420,7 @@ class Carbon(LoggerMixin, TimeMixin):
                         pipe_builder = PipelineBuilder(task)
 
                         # build task pipeline
-                        pipeline = pipe_builder.build(self.scenario)
+                        pipeline = pipe_builder.build(self.scenario, self.carbon_options)
 
                         # create blaster object with pipeline to run
                         blast = blaster.Blaster(pipeline.tasks)

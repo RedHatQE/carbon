@@ -223,14 +223,28 @@ class Scenario(CarbonResource):
         """
         count = 0
         filtered_task_list = list()
+        non_task_assets = list()
+        non_task_reports = list()
+
         filtered_task_list.extend(
             [task for task in tasks if task.get('asset') and getattr(task.get('asset'), 'name')
              in [h.name for h in self.assets]]
         )
         filtered_task_list.extend(
-            [task for task in tasks if isinstance(task.get('package'), Report) and getattr(task.get('package'), 'name')
-             in [r.name for r in self.reports]]
+            [task for task in tasks if isinstance(task.get('package'), Report) and (getattr(task.get('package'), 'name')
+             in [r.name for r in self.reports])]
         )
+
+        # using labels in SDF will have only specific resources selected. So collecting the non task related
+        # assets and report resources to be added back to the scenario resources. This is being done in order to
+        # put the non provisioned asset and non imported report resources into results.yml
+        non_task_assets.extend([asset for asset in self.assets if asset.name not in
+                                [getattr(task.get('asset'), 'name') for task in filtered_task_list
+                                 if task.get('asset')]])
+
+        non_task_reports.extend([report for report in self.reports if report.name not in
+                                 [getattr(task.get('package'), 'name') for task in filtered_task_list if
+                                  isinstance(task.get('package'), Report) and (getattr(task.get('package'), 'name'))]])
 
         for res, rvalue in [(res, item['rvalue']) for task in filtered_task_list
                             for res in [task.get(r) for r in ['asset', 'package'] if r in task.keys()]
@@ -250,6 +264,18 @@ class Scenario(CarbonResource):
                 if rvalue is not None:
                     self.load_resources(Asset, rvalue)
                 else:
+                    self.add_resource(res)
+
+        if count > 0:
+            task_keys = list()
+            task_keys.extend([k for task in tasks for k in task.keys()])
+            if 'asset' in task_keys:
+                # Adding assets which were not part of the labels used
+                for res in non_task_assets:
+                    self.add_resource(res)
+            elif 'package' in task_keys:
+                # Adding reports which were not part of the labels used
+                for res in non_task_reports:
                     self.add_resource(res)
 
         return
@@ -291,7 +317,7 @@ class Scenario(CarbonResource):
 
     @assets.setter
     def assets(self, value):
-        """Set hosts property."""
+        """Set asset property."""
         raise ValueError('You can not set assets directly.'
                          'Use function ~Scenario.add_assets')
 
@@ -486,10 +512,10 @@ class Scenario(CarbonResource):
         list it calls ~self.scenario.add_resource for each item in the
         list of the given resources.
 
-        For example, if we call load_resources(Asset, hosts_list), the
+        For example, if we call load_resources(Asset, asset_list), the
         function will go through each item in the list, create the
         resource with Asset(parameter=item) and load it within the list
-        ~self.hosts.
+        ~self.asset.
 
         :param res_type: The type of resources the function will load into its
             list

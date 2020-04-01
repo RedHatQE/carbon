@@ -133,6 +133,28 @@ def task_list_host(host1, host):
 
 
 @pytest.fixture
+def task_list_host_1(host1):
+
+    param1 = copy.deepcopy(host1.profile())
+    param1.update(name='host_count_0')
+    param2 = copy.deepcopy(host1.profile())
+    param2.update(name='host_count_1')
+
+    task_result_list = [
+        {'status': 0,
+         'task': 'carbontaskobj1',
+         'methods': [{'status': 0, 'rvalue': [param1, param2], 'name':'run'}],
+         'bid': 123,
+         'asset': host1,
+         'msg': 'hostcreation1'
+         }
+
+    ]
+
+    return task_result_list
+
+
+@pytest.fixture
 def task_list_report(report1):
 
     task_result_list = [
@@ -548,6 +570,13 @@ class TestScenarioResource(object):
     def test_reload_method_reports_tasks(task_list_report, scenario_res1):
         scenario_res1.reload_resources(task_list_report)
         assert len(scenario_res1.reports) == 1
+
+    @staticmethod
+    def test_reload_method_assets_tasks_using_labels(task_list_host_1, scenario_res1):
+        """This is to test if assets which are not picked up for a task still get added to the scenario to populate
+         the results.yml"""
+        scenario_res1.reload_resources(task_list_host_1)
+        assert len(scenario_res1.assets) == 3
 
 
 class TestAssetResource(object):
