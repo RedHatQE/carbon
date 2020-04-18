@@ -346,7 +346,7 @@ class BeakerClientProvisionerPlugin(ProvisionerPlugin):
         self.authenticate()
 
         # cancel beaker job
-        self.cancel_job(getattr(self.host, 'asset_id'))
+        self.cancel_job(getattr(self.asset, 'asset_id'))
 
     def validate(self):
         schema_validator(schema_data=self.build_profile(self.asset), schema_files=[self.__schema_file_path__])
