@@ -118,8 +118,20 @@ def show(ctx, scenario, list_labels):
               multiple=True,
               help="Skip the resources associated with skip_labels for running the tasks. "
                    "labels and skip_labels are mutually exclusive")
+@click.option("-sn", "--skip-notify",
+              default=None,
+              metavar="",
+              type=str,
+              multiple=True,
+              help="Skip triggering the specific notification defined for the scenario."
+              )
+@click.option("-nn", "--no-notify",
+              is_flag=True,
+              metavar="",
+              help="Disable sending an notifications defined for the scenario."
+              )
 @click.pass_context
-def validate(ctx, scenario, data_folder, log_level, workspace, vars_data, labels, skip_labels):
+def validate(ctx, scenario, data_folder, log_level, workspace, vars_data, labels, skip_labels, skip_notify, no_notify):
     """Validate a scenario configuration."""
 
     scenario_stream = validate_cli_scenario_option(ctx, scenario, vars_data)
@@ -135,7 +147,9 @@ def validate(ctx, scenario, data_folder, log_level, workspace, vars_data, labels
         data_folder=data_folder,
         workspace=workspace,
         labels=labels,
-        skip_labels=skip_labels
+        skip_labels=skip_labels,
+        skip_notify=skip_notify,
+        no_notify=no_notify
     )
 
     # This is the easiest way to configure a full scenario.
@@ -186,8 +200,20 @@ def validate(ctx, scenario, data_folder, log_level, workspace, vars_data, labels
               multiple=True,
               help="Skip the resources associated with skip_labels for running the tasks. "
                    "labels and skip_labels are mutually exclusive")
+@click.option("-sn", "--skip-notify",
+              default=None,
+              metavar="",
+              type=str,
+              multiple=True,
+              help="Skip triggering the specific notification defined for the scenario."
+              )
+@click.option("-nn", "--no-notify",
+              is_flag=True,
+              metavar="",
+              help="Disable sending an notifications defined for the scenario."
+              )
 @click.pass_context
-def run(ctx, task, scenario, log_level, data_folder, workspace, vars_data, labels, skip_labels):
+def run(ctx, task, scenario, log_level, data_folder, workspace, vars_data, labels, skip_labels, skip_notify, no_notify):
     """Run a scenario configuration."""
     print_header()
 
@@ -205,7 +231,9 @@ def run(ctx, task, scenario, log_level, data_folder, workspace, vars_data, label
         data_folder=data_folder,
         workspace=workspace,
         labels=labels,
-        skip_labels=skip_labels
+        skip_labels=skip_labels,
+        skip_notify=skip_notify,
+        no_notify=no_notify
     )
 
     # Sending the list of scenario streams to the carbon object
@@ -220,3 +248,61 @@ def run(ctx, task, scenario, log_level, data_folder, workspace, vars_data, label
     # The scenario will start the main pipeline and run through the task
     # pipelines declared. See :function:`~carbon.Carbon.run` for more details.
     cbn.run(tasklist=task)
+
+
+@carbon.command()
+@click.option("-s", "--scenario",
+              default=None,
+              metavar="",
+              help="Scenario definition file to be executed.")
+@click.option("-d", "--data-folder",
+              default=None,
+              metavar="",
+              help="Directory for saving carbon runtime files.")
+@click.option("-w", "--workspace",
+              default=None,
+              metavar="",
+              help="Scenario workspace.")
+@click.option("--log-level",
+              type=click.Choice(TASK_LOGLEVEL_CHOICES),
+              default=None,
+              help="Select logging level. (default=info)")
+@click.option("--vars-data",
+              default=None,
+              metavar="",
+              help="Pass in variable data to template the scenario. Can be a file or raw json.")
+@click.option("-sn", "--skip-notify",
+              default=None,
+              metavar="",
+              type=str,
+              multiple=True,
+              help="Skip triggering the specific notification defined for the scenario."
+              )
+@click.option("-nn", "--no-notify",
+              is_flag=True,
+              metavar="",
+              help="Disable sending an notifications defined for the scenario."
+              )
+@click.pass_context
+def notify(ctx, scenario, log_level, data_folder, workspace, vars_data, skip_notify, no_notify):
+    """Trigger notifications marked on demand for a scenario configuration."""
+    print_header()
+
+    scenario_stream = validate_cli_scenario_option(ctx, scenario, vars_data)
+
+    # Create a new carbon compound
+    cbn = Carbon(
+        __name__,
+        log_level=log_level,
+        data_folder=data_folder,
+        workspace=workspace,
+        skip_notify=skip_notify,
+        no_notify=no_notify
+    )
+
+    # Sending the list of scenario streams to the carbon object
+    cbn.load_from_yaml(scenario_stream)
+
+    # The scenario will start the main pipeline and run through the task
+    # pipelines declared. See :function:`~carbon.Carbon.run` for more details.
+    cbn.notify('on_demand')

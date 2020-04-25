@@ -41,7 +41,7 @@ Once carbon is installed, you can run the carbon command to view its options:
       --help         Show this message and exit.
 
     Commands:
-      create    Create a scenario configuration.
+      notify    Trigger notifications for a scenario configuration on demand.
       run       Run a scenario configuration.
       validate  Validate a scenario configuration.
 
@@ -66,9 +66,21 @@ select. Below are the available run command options.
       -s, --scenario                  Scenario definition file to be executed.
       -d, --data-folder               Directory for saving carbon runtime files.
       -w, --workspace                 Scenario workspace.
-      --log-level [debug|info|warning|error|critical]
-                                      Select logging level. (default=info)
+      --log-level [debug|info]        Select logging level. (default=info)
+      --vars-data                     Pass in variable data to template the
+                                      scenario. Can be a file or raw json.
+      -l, --labels                    Use only the resources associated with
+                                      labels for running the tasks. labels and
+                                      skip_labels are mutually exclusive
+      -sl, --skip-labels              Skip the resources associated with
+                                      skip_labels for running the tasks. labels
+                                      and skip_labels are mutually exclusive
+      -sn, --skip-notify              Skip triggering the specific notification
+                                      defined for the scenario.
+      -nn, --no-notify                Disable sending any notifications defined for
+                                      the scenario.
       --help                          Show this message and exit.
+
 
 .. note::
    
@@ -181,12 +193,58 @@ The validate command validates the scenario descriptor.
       Validate a scenario configuration.
 
     Options:
+      -t, --task [validate|provision|orchestrate|execute|report|cleanup]
+                                      Select task to run. (default=all)
       -s, --scenario                  Scenario definition file to be executed.
       -d, --data-folder               Directory for saving carbon runtime files.
       -w, --workspace                 Scenario workspace.
-      --log-level [debug|info|warning|error|critical]
-                                      Select logging level. (default=info)
+      --log-level [debug|info]        Select logging level. (default=info)
+      --vars-data                     Pass in variable data to template the
+                                      scenario. Can be a file or raw json.
+      -l, --labels                    Use only the resources associated with
+                                      labels for running the tasks. labels and
+                                      skip_labels are mutually exclusive
+      -sl, --skip-labels              Skip the resources associated with
+                                      skip_labels for running the tasks. labels
+                                      and skip_labels are mutually exclusive
+      -sn, --skip-notify              Skip triggering the specific notification
+                                      defined for the scenario.
+      -nn, --no-notify                Disable sending any notifications defined for
+                                      the scenario.
       --help                          Show this message and exit.
+
+Notify
+++++++
+
+Trigger notifications marked on demand for a scenario configuration.
+
+This is useful when there is a break in the workflow, between when the scenario
+completes and the triggering of the notification.
+
+.. code-block:: bash
+
+    carbon notify --help
+    Usage: carbon notify [OPTIONS]
+
+        Trigger notifications marked on demand for a scenario configuration.
+
+    Options:
+        -s, --scenario            Scenario definition file to be executed.
+        -d, --data-folder         Directory for saving carbon runtime files.
+        -w, --workspace           Scenario workspace.
+        --log-level [debug|info]  Select logging level. (default=info)
+        --vars-data               Pass in variable data to template the scenario.
+                                  Can be a file or raw json.
+        -sn, --skip-notify        Skip triggering the specific notification
+                                  defined for the scenario.
+        -nn, --no-notify          Disable sending any notifications defined for the
+                                  scenario.
+        --help                    Show this message and exit.
+
+
+.. code-block:: bash
+
+    carbon notify -s data_folder/.results/results.yml -w .
 
 Getting Started Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~

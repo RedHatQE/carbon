@@ -274,3 +274,15 @@ class ReportPortalImporterError(CarbonImporterError):
         :type message: str
         """
         super(ReportPortalImporterError, self).__init__(message)
+
+
+class CarbonNotifierError(CarbonResourceError):
+    """Notifier's base exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: error message
+        :type message: str
+        """
+        super(CarbonNotifierError, self).__init__(message)

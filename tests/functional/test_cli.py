@@ -171,6 +171,26 @@ class TestCli(object):
         )
         assert results.exit_code == 0
 
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_run_skip_notify(mock_method, runner):
+        """This is for testing use of skip_label option with carbon validate"""
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['run', '-s', '../assets/descriptor.yml', '-d', '/tmp', '-sn', 'test_note_02']
+        )
+        assert results.exit_code == 0
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'run')
+    def test_run_no_notify(mock_method, runner):
+        """This is for testing use of skip_label option with carbon validate"""
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['run', '-s', '../assets/descriptor.yml', '-d', '/tmp', '-nn']
+        )
+        assert results.exit_code == 0
+
 
     @staticmethod
     @mock.patch.object(Carbon, 'run')
@@ -193,6 +213,7 @@ class TestCli(object):
         assert results.exit_code == 0
 
     @staticmethod
+
     def test_invalid_show(runner):
         results = runner.invoke(carbon, ['show', '-s', 'cdf.yml'])
         assert 'You have to provide a valid scenario file.' in results.output
@@ -213,3 +234,32 @@ class TestCli(object):
         )
         assert mock_method.called
 
+    @staticmethod
+    @mock.patch.object(Carbon, 'notify')
+    def test_notify(mock_method, runner):
+        """This is for testing use of skip_label option with carbon validate"""
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['notify', '-s', '../assets/descriptor.yml', '-d', '/tmp']
+        )
+        assert results.exit_code == 0
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'notify')
+    def test_notify_no_notify(mock_method, runner):
+        """This is for testing use of skip_label option with carbon validate"""
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['notify', '-s', '../assets/descriptor.yml', '-d', '/tmp', '-nn']
+        )
+        assert results.exit_code == 0
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'notify')
+    def test_notify_skip_notify(mock_method, runner):
+        """This is for testing use of skip_label option with carbon validate"""
+        mock_method.return_value = 0
+        results = runner.invoke(
+            carbon, ['notify', '-s', '../assets/descriptor.yml', '-d', '/tmp', '-sn', 'test_note_02']
+        )
+        assert results.exit_code == 0

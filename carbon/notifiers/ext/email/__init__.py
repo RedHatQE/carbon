@@ -15,18 +15,14 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+
 """
-    carbon.resources
+    carbon.notifiers.email
 
-    Package containing carbon resource modules.
+    Carbon's default email notifier.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2018 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
-from .actions import Action
-from .executes import Execute
-from .assets import Asset
-from .reports import Report
-from .scenario import Scenario
-from .notification import Notification
+from .email_notification_plugin import EmailNotificationPlugin

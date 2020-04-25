@@ -28,8 +28,8 @@
 import pytest
 from carbon.exceptions import CarbonError
 from carbon.tasks import CleanupTask, ExecuteTask, ProvisionTask, \
-    OrchestrateTask, ReportTask, ValidateTask
-from carbon.utils.pipeline import PipelineBuilder
+    OrchestrateTask, ReportTask, ValidateTask, NotificationTask
+from carbon.utils.pipeline import PipelineBuilder, NotificationPipelineBuilder, PipelineFactory
 from carbon._compat import string_types
 from carbon.resources import Asset
 
@@ -42,6 +42,28 @@ def pipe_builder():
 @pytest.fixture(scope='class')
 def invalid_pipe_builder():
     return PipelineBuilder(name='null')
+
+@pytest.fixture(scope='class')
+def notify_pipe_builder():
+    return NotificationPipelineBuilder(trigger='on_start')
+
+
+@pytest.fixture(scope='class')
+def notify_invalid_pipe_builder():
+    return NotificationPipelineBuilder(trigger='null')
+
+
+class TestPipelineFactory(object):
+
+    @staticmethod
+    def test_get_default_pipeline():
+        pb = PipelineFactory.get_pipeline('validate')
+        assert isinstance(pb, PipelineBuilder)
+
+    @staticmethod
+    def test_get_notify_pipeline():
+        pb = PipelineFactory.get_pipeline('on_start')
+        assert isinstance(pb, NotificationPipelineBuilder)
 
 
 class TestPipelineBuilder(object):
@@ -196,3 +218,122 @@ class TestPipelineBuilder(object):
         assert isinstance(getattr(tasks[0].get('package'), 'hosts')[-1], Asset)
         assert len(getattr(tasks[0].get('package'), 'hosts')) == 1
         assert getattr(getattr(tasks[0].get('package'), 'hosts')[-1], 'name') == 'host_3'
+
+
+class TestNotificationPipelineBuilder(object):
+    @staticmethod
+    def test_constructor(notify_pipe_builder):
+        assert isinstance(notify_pipe_builder, NotificationPipelineBuilder)
+
+    @staticmethod
+    def test_name_property(notify_pipe_builder):
+        assert notify_pipe_builder.name == 'notify'
+
+    @staticmethod
+    def test_verify_task_is_valid(notify_pipe_builder):
+        assert notify_pipe_builder.is_task_valid()
+
+    @staticmethod
+    def test_verify_task_is_invalid(notify_invalid_pipe_builder):
+        assert not notify_invalid_pipe_builder.is_task_valid()
+
+    @staticmethod
+    def test_valid_task_class_lookup(notify_pipe_builder):
+        cls = notify_pipe_builder.task_cls_lookup()
+        assert getattr(cls, '__task_name__') == notify_pipe_builder.name
+
+    @staticmethod
+    def test_build_on_start_notify_task_pipeline(scenario):
+        setattr(scenario, 'overall_status', 0)
+        setattr(scenario, 'passed_tasks', ['validate'])
+        setattr(scenario, 'failed_tasks', [])
+        builder = NotificationPipelineBuilder(trigger='on_start')
+        pipeline = builder.build(scenario, carbon_options={})
+        assert getattr(pipeline, 'name') == 'notify'
+        assert isinstance(getattr(pipeline, 'tasks'), list)
+        assert len(getattr(pipeline, 'tasks')) == 1
+        assert getattr(pipeline, 'type') is NotificationTask
+
+    @staticmethod
+    def test_build_on_complete_mixed_success_notify_task_pipeline(scenario):
+        setattr(scenario, 'overall_status', 0)
+        setattr(scenario, 'passed_tasks', ['validate'])
+        setattr(scenario, 'failed_tasks', [])
+        builder = NotificationPipelineBuilder(trigger='on_complete')
+        pipeline = builder.build(scenario, carbon_options={})
+        assert getattr(pipeline, 'name') == 'notify'
+        assert isinstance(getattr(pipeline, 'tasks'), list)
+        assert len(getattr(pipeline, 'tasks')) == 1
+        assert getattr(pipeline, 'type') is NotificationTask
+
+    @staticmethod
+    def test_build_on_complete_mixed_failure_notify_task_pipeline(scenario):
+        setattr(scenario, 'overall_status', 0)
+        setattr(scenario, 'passed_tasks', [])
+        setattr(scenario, 'failed_tasks', ['validate'])
+        builder = NotificationPipelineBuilder(trigger='on_complete')
+        pipeline = builder.build(scenario, carbon_options={})
+        assert getattr(pipeline, 'name') == 'notify'
+        assert isinstance(getattr(pipeline, 'tasks'), list)
+        assert len(getattr(pipeline, 'tasks')) == 1
+        assert getattr(pipeline, 'type') is NotificationTask
+
+    @staticmethod
+    def test_build_on_complete_on_success_notify_task_pipeline(scenario):
+        setattr(scenario, 'overall_status', 0)
+        setattr(scenario, 'passed_tasks', ['provision'])
+        setattr(scenario, 'failed_tasks', [])
+        builder = NotificationPipelineBuilder(trigger='on_complete')
+        pipeline = builder.build(scenario, carbon_options={})
+        assert getattr(pipeline, 'name') == 'notify'
+        assert isinstance(getattr(pipeline, 'tasks'), list)
+        assert len(getattr(pipeline, 'tasks')) == 1
+        assert getattr(pipeline, 'type') is NotificationTask
+
+    @staticmethod
+    def test_build_on_complete_on_success_multi_notify_task_pipeline(scenario):
+        setattr(scenario, 'overall_status', 0)
+        setattr(scenario, 'passed_tasks', ['validate', 'provision'])
+        setattr(scenario, 'failed_tasks', [])
+        builder = NotificationPipelineBuilder(trigger='on_complete')
+        pipeline = builder.build(scenario, carbon_options={})
+        assert getattr(pipeline, 'name') == 'notify'
+        assert isinstance(getattr(pipeline, 'tasks'), list)
+        assert len(getattr(pipeline, 'tasks')) == 2
+        assert getattr(pipeline, 'type') is NotificationTask
+
+    @staticmethod
+    def test_build_on_complete_on_failure_notify_task_pipeline(scenario):
+        setattr(scenario, 'overall_status', 0)
+        setattr(scenario, 'passed_tasks', [])
+        setattr(scenario, 'failed_tasks', ['report'])
+        builder = NotificationPipelineBuilder(trigger='on_complete')
+        pipeline = builder.build(scenario, carbon_options={})
+        assert getattr(pipeline, 'name') == 'notify'
+        assert isinstance(getattr(pipeline, 'tasks'), list)
+        assert len(getattr(pipeline, 'tasks')) == 1
+        assert getattr(pipeline, 'type') is NotificationTask
+
+    @staticmethod
+    def test_build_on_complete_on_failure_multi_notify_task_pipeline(scenario):
+        setattr(scenario, 'overall_status', 0)
+        setattr(scenario, 'passed_tasks', [])
+        setattr(scenario, 'failed_tasks', ['validate', 'report'])
+        builder = NotificationPipelineBuilder(trigger='on_complete')
+        pipeline = builder.build(scenario, carbon_options={})
+        assert getattr(pipeline, 'name') == 'notify'
+        assert isinstance(getattr(pipeline, 'tasks'), list)
+        assert len(getattr(pipeline, 'tasks')) == 2
+        assert getattr(pipeline, 'type') is NotificationTask
+
+    @staticmethod
+    def test_build_on_demand_notify_task_pipeline(scenario):
+        setattr(scenario, 'overall_status', 0)
+        setattr(scenario, 'passed_tasks', ['validate'])
+        setattr(scenario, 'failed_tasks', [])
+        builder = NotificationPipelineBuilder(trigger='on_demand')
+        pipeline = builder.build(scenario, carbon_options={})
+        assert getattr(pipeline, 'name') == 'notify'
+        assert isinstance(getattr(pipeline, 'tasks'), list)
+        assert len(getattr(pipeline, 'tasks')) == 1
+        assert getattr(pipeline, 'type') is NotificationTask

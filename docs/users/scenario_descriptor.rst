@@ -82,6 +82,7 @@ into further detail explaining the different sections.
     definitions/orchestrate
     definitions/execute
     definitions/report
+    definitions/notifications
 
 When we put all of these sections together, we have a complete scenario to
 provide to carbon. You can see an example of a complete scenario descriptor

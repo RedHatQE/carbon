@@ -35,7 +35,7 @@ import copy
 import os
 import mock
 import pytest
-from carbon.resources import Action, Execute, Asset, Report, Scenario
+from carbon.resources import Action, Execute, Asset, Report, Scenario, Notification
 from carbon.utils.config import Config
 from carbon._compat import ConfigParser
 from carbon.core import CarbonProvider, ImporterPlugin
@@ -77,6 +77,56 @@ def default_host_params():
             networks=['network']
         )
     )
+
+
+@pytest.fixture
+def default_note_params():
+    params = dict(
+        description='description goes here.',
+        notifier='email-notifier',
+        to=['jimmy@who.com'],
+        credential='email'
+    )
+    params.setdefault('from','tommy@who.com')
+
+    return params
+
+
+@pytest.fixture
+def notification_on_start_resource(default_note_params, config):
+    params = copy.deepcopy(default_note_params)
+    params['on_start'] = True
+    return Notification(name='note01', parameters=params, config=config)
+
+
+@pytest.fixture
+def notification_default_resource(default_note_params, config):
+    params = copy.deepcopy(default_note_params)
+    params['on_tasks'] = ['validate']
+    return Notification(name='note02', parameters=params, config=config)
+
+
+@pytest.fixture
+def notification_on_success_resource(default_note_params, config):
+    params = copy.deepcopy(default_note_params)
+    params['on_tasks'] = ['provision']
+    params['on_success'] = True
+    return Notification(name='note03', parameters=params, config=config)
+
+
+@pytest.fixture
+def notification_on_failure_resource(default_note_params, config):
+    params = copy.deepcopy(default_note_params)
+    params['on_tasks'] = ['report']
+    params['on_failure'] = True
+    return Notification(name='note04', parameters=params, config=config)
+
+
+@pytest.fixture
+def notification_on_demand_resource(default_note_params, config):
+    params = copy.deepcopy(default_note_params)
+    params['on_demand'] = True
+    return Notification(name='note05', parameters=params, config=config)
 
 
 @pytest.fixture
@@ -236,11 +286,17 @@ def report_resource(mock_plugin_class, mock_plugin_list, config):
 
 @pytest.fixture
 def scenario(action_resource, host, execute_resource, report_resource,
-             scenario_resource):
+             scenario_resource, notification_on_start_resource, notification_default_resource,
+             notification_on_demand_resource, notification_on_failure_resource, notification_on_success_resource):
     scenario_resource.add_assets(host)
     scenario_resource.add_actions(action_resource)
     scenario_resource.add_executes(execute_resource)
     scenario_resource.add_reports(report_resource)
+    scenario_resource.add_notifications(notification_on_start_resource)
+    scenario_resource.add_notifications(notification_default_resource)
+    scenario_resource.add_notifications(notification_on_demand_resource)
+    scenario_resource.add_notifications(notification_on_success_resource)
+    scenario_resource.add_notifications(notification_on_failure_resource)
     return scenario_resource
 
 

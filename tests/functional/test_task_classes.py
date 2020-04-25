@@ -28,9 +28,9 @@
 import mock
 import pytest
 
-from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError, CarbonProvisionerError
+from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError, CarbonProvisionerError, CarbonNotifierError
 from carbon.tasks import CleanupTask, ExecuteTask, OrchestrateTask, \
-    ProvisionTask, ReportTask, ValidateTask
+    ProvisionTask, ReportTask, ValidateTask, NotificationTask
 
 from carbon.core import  ProvisionerPlugin, Inventory
 from carbon.provisioners import AssetProvisioner
@@ -75,6 +75,12 @@ def cleanup_task():
     asset = mock.MagicMock()
     package = mock.MagicMock()
     return CleanupTask(msg='cleanup task', asset=asset, package=package)
+
+@pytest.fixture(scope='class')
+def notification_task():
+    note = mock.MagicMock()
+    package = mock.MagicMock()
+    return NotificationTask(msg='triggering notification', resource=note)
 
 
 class TestValidateTask(object):
@@ -237,3 +243,22 @@ class TestCleanupTask(object):
         cleanup_task.run()
         mock_method.assert_not_called()
 
+
+class TestNotificationTask(object):
+
+    @staticmethod
+    def test_constructor(notification_task):
+        assert isinstance(notification_task, NotificationTask)
+
+    @staticmethod
+    def test_run(notification_task):
+        notification_task.run()
+
+    @staticmethod
+    @mock.patch.object(NotificationTask, 'get_formatted_traceback')
+    def test_run_notify_failure(mock_method, notification_task):
+        mock_method.return_value = 'Traceback'
+        mock_notifier = mock.MagicMock(notify=mock.MagicMock(side_effect=CarbonNotifierError('e')))
+        notification_task.notifier = mock_notifier
+        with pytest.raises(CarbonNotifierError):
+            notification_task.run()

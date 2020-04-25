@@ -247,3 +247,51 @@ that references this credential:
           :lines: 89-96
 
 
+Email Credentials
+-----------------
+
+For email-notifier, the following table is a list of required and optional keys for
+your credential section in your carbon.cfg file.
+
+.. list-table::
+    :widths: auto
+    :header-rows: 1
+
+    *   - Key
+        - Description
+        - Type
+        - Required
+
+    *   - smtp_host
+        - The SMTP Server should be used to send emails.
+        - String
+        - True
+
+    *   - smtp_port
+        - The port number to use if not using the default port number.
+        - String
+        - False
+
+    *   - smtp_user
+        - The username to connect to your SMTP Server if authentication required
+        - String
+        - False
+
+    *   - smtp_password
+        - The password of the SMTP user to authenticate if required.
+        - String
+        - False
+
+    *   - smtp_starttls
+        - Whether to put the connection in TLS mode.
+        - Boolean
+        - False
+
+.. code-block:: bash
+
+  [credentials:email-creds]
+  smtp_host=<smtp server fqdn>
+  smtp_port=<port number>
+  smtp_user=<user>
+  smtp_password=<password>
+  smtp_starttls=<True/False>

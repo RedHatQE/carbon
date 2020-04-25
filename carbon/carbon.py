@@ -33,9 +33,9 @@ from . import __name__ as __carbon_name__
 from .constants import TASKLIST, RESULTS_FILE
 from .core import CarbonError, LoggerMixin, TimeMixin, Inventory
 from .helpers import file_mgmt, gen_random_str, sort_tasklist
-from .resources import Scenario, Asset, Action, Report, Execute
+from .resources import Scenario, Asset, Action, Report, Execute, Notification
 from .utils.config import Config
-from .utils.pipeline import PipelineBuilder
+from .utils.pipeline import PipelineFactory
 
 
 class Carbon(LoggerMixin, TimeMixin):
@@ -100,6 +100,10 @@ class Carbon(LoggerMixin, TimeMixin):
                 self._carbon_options['labels'] = value
             if key == 'skip_labels' and value:
                 self._carbon_options['skip_labels'] = value
+            if key == 'skip_notify' and value:
+                self._carbon_options['skip_notify'] = value
+            if key == 'no_notify' and value:
+                self._carbon_options['no_notify'] = value
 
         if log_level:
             self.config['LOG_LEVEL'] = log_level
@@ -221,6 +225,7 @@ class Carbon(LoggerMixin, TimeMixin):
         exe_items = scenario_data.pop('execute', None)
         rpt_items = scenario_data.pop('report', None)
         inc_items = scenario_data.pop('include', None)
+        notify_items = scenario_data.pop('notifications', None)
 
         scenario_obj.load(scenario_data)
 
@@ -228,6 +233,7 @@ class Carbon(LoggerMixin, TimeMixin):
         scenario_obj.load_resources(Action, orc_items)
         scenario_obj.load_resources(Execute, exe_items)
         scenario_obj.load_resources(Report, rpt_items)
+        scenario_obj.load_resources(Notification, notify_items)
 
     def load_from_yaml(self, filedata):
         """
@@ -322,7 +328,7 @@ class Carbon(LoggerMixin, TimeMixin):
             res_label_list.extend([lab for res in self.scenario.get_all_resources() for lab in getattr(res, 'labels')])
             # labels provided by user at cli
             user_labels.extend([lab for lab in
-                                self.carbon_options.get('labels') or self.carbon_options.get('skip_labels')])
+                                self.carbon_options.get('labels', []) or self.carbon_options.get('skip_labels', [])])
             for label in user_labels:
                 if label in res_label_list:
                     continue
@@ -349,8 +355,6 @@ class Carbon(LoggerMixin, TimeMixin):
         # lists to control which tasks passed or failed
         passed_tasks = list()
         failed_tasks = list()
-        # list to collect the included scenario result files
-        child_result_list = list()
 
         # initialize overall status
         status = 0
@@ -358,51 +362,18 @@ class Carbon(LoggerMixin, TimeMixin):
         # save start time
         self.start()
 
-        self.logger.info('\n')
-        self.logger.info('CARBON RUN (START)'.center(79))
-        self.logger.info('-' * 79)
-        self.logger.info(' * Data Folder           : %s' % self.data_folder)
-        self.logger.info(' * Workspace             : %s' % self.workspace)
-        self.logger.info(' * Log Level             : %s' % self.config['LOG_LEVEL'])
-        self.logger.info(' * Tasks                 : %s' % tasklist)
-        self.logger.info(' * Scenario              : %s' % getattr(self.scenario, 'name'))
-        if self.scenario.child_scenarios:
-            self.logger.info(' * Included Scenario(s)  : %s' % [getattr(sc, 'name') for sc in
-                                                                self.scenario.child_scenarios])
-        self.logger.info('-' * 79 + '\n')
+        self._print_header(tasklist)
 
         try:
             for task in sort_tasklist(tasklist):
                 self.logger.info(' * Task    : %s' % task)
 
-                # create a pipeline builder object
-                pipe_builder = PipelineBuilder(task)
+                # initially update list of passed tasks
+                passed_tasks.append(task)
+                if not self.carbon_options.get('no_notify', False):
+                    self.notify('on_start', status, passed_tasks, failed_tasks)
+                data = self._run_pipeline(task)
 
-                # check if carbon supports the task
-                if not pipe_builder.is_task_valid():
-                    self.logger.warning('Task %s is not valid by carbon.', task)
-                    continue
-
-                # build task pipeline
-                pipeline = pipe_builder.build(self.scenario, self.carbon_options)
-
-                self.logger.info('.' * 50)
-                self.logger.info('Starting tasks on pipeline: %s',
-                                 pipeline.name)
-
-                # check if pipeline has tasks to be run
-                if not pipeline.tasks:
-                    self.logger.warning('... no tasks to be executed ...')
-                    continue
-
-                # create blaster object with pipeline to run
-                blast = blaster.Blaster(pipeline.tasks)
-
-                # blast off the pipeline list of tasks reload_resources
-                data = blast.blastoff(
-                    serial=not pipeline.type.__concurrent__,
-                    raise_on_failure=True
-                )
                 # reload resource objects
                 self.scenario.reload_resources(data)
 
@@ -427,12 +398,13 @@ class Carbon(LoggerMixin, TimeMixin):
                     except Exception as ex:
                         raise CarbonError("Error while creating the master inventory %s" % ex)
 
-                # update list of passed tasks
-                passed_tasks.append(task)
                 self.logger.info("." * 50)
         except Exception as ex:
             # set overall status
             status = 1
+
+            # pop task from passed list since it failed
+            passed_tasks.pop(-1)
 
             # update list of failed tasks
             failed_tasks.append(task)
@@ -449,25 +421,14 @@ class Carbon(LoggerMixin, TimeMixin):
             if 'cleanup' in tasklist and [item for item in failed_tasks if item != 'cleanup']:
                 if [item for item in passed_tasks if item == 'provision'] \
                         or [item for item in failed_tasks if item == 'provision']:
-                    self.logger.info("\n")
-                    self.logger.warning("A failure occured before running the cleanup task. "
+                    self.logger.info("\n\n")
+                    self.logger.warning("A failure occurred before running the cleanup task. "
                                         "Attempting to run the cleanup task to roll back all provisioned resources.")
                     task = tasklist[tasklist.index('cleanup')]
+
                     try:
-                        # create a pipeline builder object
-                        pipe_builder = PipelineBuilder(task)
 
-                        # build task pipeline
-                        pipeline = pipe_builder.build(self.scenario, self.carbon_options)
-
-                        # create blaster object with pipeline to run
-                        blast = blaster.Blaster(pipeline.tasks)
-
-                        # blast off the pipeline list of tasks
-                        data = blast.blastoff(
-                            serial=not pipeline.type.__concurrent__,
-                            raise_on_failure=True
-                        )
+                        data = self._run_pipeline(task)
 
                         # reload resource objects
                         self.scenario.reload_resources(data)
@@ -476,6 +437,7 @@ class Carbon(LoggerMixin, TimeMixin):
                         passed_tasks.append(task)
                     except Exception as ex:
                         self.logger.error(ex)
+    #                    if pipe_builder.name == 'cleanup':
                         self.logger.error("There was a problem running the cleanup task to roll back the "
                                           "resources. You may need to manually cleanup any provisioned resources")
                         failed_tasks.append(task)
@@ -486,47 +448,169 @@ class Carbon(LoggerMixin, TimeMixin):
             # determine state
             state = 'FAILED' if status else 'PASSED'
 
-            # check if child scenario exist, update the new child_result and append to ch_result_list.
-            if self.scenario.child_scenarios:
-                for sc in self.scenario.child_scenarios:
-                    ch_result_file_name = sc.name + '_results.yml'
-                    ch_result_abs_name = os.path.join(self.data_folder, sc.name + '_results.yml')
-                    file_mgmt('w', ch_result_abs_name, sc.profile())
-                    # Adding child_result_list with results file in the RESULTS_FOLDER instead of absolute path
-                    child_result_list.append(os.path.join(self.config['RESULTS_FOLDER'], ch_result_file_name))
+            # finally send out any notifications
+            if not self.carbon_options.get('no_notify', False):
+                self.notify('on_complete', status, passed_tasks, failed_tasks)
 
-                # Add the child_result_list to the included_scenario_names property
-                self.scenario.__setattr__('included_scenario_names', child_result_list)
+            self._write_out_results()
 
-            # Write the main scenario results
-            file_mgmt('w', self.results_file, self.scenario.profile())
+            self._print_footer(passed_tasks, failed_tasks, state)
 
-            self.logger.info('\n')
-            self.logger.info('SCENARIO RUN (END)'.center(79))
-            self.logger.info('-' * 79)
-            self.logger.info(' * Duration                       : %dh:%dm:%ds' %
-                             (self.hours, self.minutes, self.seconds))
-            if passed_tasks.__len__() > 0:
-                self.logger.info(' * Passed Tasks                   : %s' %
-                                 passed_tasks)
-            if failed_tasks.__len__() > 0:
-                self.logger.info(' * Failed Tasks                   : %s' %
-                                 failed_tasks)
-            self.logger.info(' * Results Folder                 : %s' %
-                             self.config['RESULTS_FOLDER'])
-            self.logger.info(' * Included Scenario Definition   : %s' % child_result_list)
-            self.logger.info(' * Final Scenario Definition      : %s' % os.path.join(self.config['RESULTS_FOLDER'],
-                                                                                     RESULTS_FILE))
-            self.logger.info('-' * 79)
-            self.logger.info('CARBON RUN (RESULT=%s)' % state)
-
-            # archive everything from the data folder into the results folder
-            os.system('cp -r %s/* %s' % (self.data_folder, self.config['RESULTS_FOLDER']))
-
-            # also archive the inventory file if a static inventory directory is specified
-            if self.static_inv_dir and os.path.exists(self.static_inv_dir):
-                if os.listdir(self.static_inv_dir):
-                    inv_results_dir = os.path.join(self.config['RESULTS_FOLDER'], 'inventory')
-                    os.system('cp -r %s/* %s' % (self.static_inv_dir, inv_results_dir))
+            self._archive_results()
 
             sys.exit(status)
+
+    def notify(self, task, status=0, passed_tasks=None, failed_tasks=None):
+
+        setattr(self.scenario, 'overall_status', status)
+        setattr(self.scenario, 'passed_tasks', [])
+        setattr(self.scenario, 'failed_tasks', [])
+
+        if passed_tasks:
+            setattr(self.scenario, 'passed_tasks', passed_tasks)
+
+        if failed_tasks:
+            setattr(self.scenario, 'failed_tasks', failed_tasks)
+
+        if task == 'on_demand':
+            self.start()
+            self._print_header(['notify'])
+            self.logger.info(' * Task    : notify')
+
+        # blast off the pipeline list of tasks
+        try:
+
+            self.logger.info('Sending out any notifications that are registered.')
+            data = self._run_pipeline(task)
+
+            # reload resource objects
+            self.scenario.reload_resources(data)
+
+            if self.scenario.child_scenarios:
+                [sc.reload_resources(data) for sc in self.scenario.child_scenarios]
+        except Exception as ex:
+            status = 1
+            self.logger.error(ex)
+            self.logger.error('One or more notifications failed. Refer to the scenario.log')
+
+            # reload resource objects
+            self.scenario.reload_resources(ex.results)
+
+            if self.scenario.child_scenarios:
+                [sc.reload_resources(ex.results) for sc in self.scenario.child_scenarios]
+        finally:
+            if task == 'on_demand':
+                # save end time
+                self.end()
+                # determine state
+                state = 'FAILED' if status else 'PASSED'
+
+                self._write_out_results()
+
+                self._print_footer(getattr(self.scenario, 'passed_tasks'),
+                                   getattr(self.scenario, 'failed_tasks'),
+                                   state)
+
+                self._archive_results()
+
+                sys.exit(status)
+
+    def _run_pipeline(self, task):
+
+        data = {}
+
+        # create a pipeline builder object
+        pipe_builder = PipelineFactory.get_pipeline(task)
+
+        # check if carbon supports the task
+        if not pipe_builder.is_task_valid():
+            self.logger.warning('Task %s is not valid by carbon.', task)
+            return data
+
+        pipeline = pipe_builder.build(self.scenario, self.carbon_options)
+
+        self.logger.info('.' * 50)
+        self.logger.info('Starting tasks on pipeline: %s',
+                         pipeline.name)
+
+        # check if pipeline has tasks to be run
+        if not pipeline.tasks:
+            self.logger.warning('... no tasks to be executed ...')
+            return data
+
+        # create blaster object with pipeline to run
+        blast = blaster.Blaster(pipeline.tasks)
+
+        # blast off the pipeline list of tasks reload_resources
+        data = blast.blastoff(
+            serial=not pipeline.type.__concurrent__,
+            raise_on_failure=True
+        )
+
+        return data
+
+    def _print_header(self, tasklist):
+
+        self.logger.info('\n')
+        self.logger.info('CARBON RUN (START)'.center(79))
+        self.logger.info('-' * 79)
+        self.logger.info(' * Data Folder           : %s' % self.data_folder)
+        self.logger.info(' * Workspace             : %s' % self.workspace)
+        self.logger.info(' * Log Level             : %s' % self.config['LOG_LEVEL'])
+        self.logger.info(' * Tasks                 : %s' % tasklist)
+        self.logger.info(' * Scenario              : %s' % getattr(self.scenario, 'name'))
+        if self.scenario.child_scenarios:
+            self.logger.info(' * Included Scenario(s)  : %s' % [getattr(sc, 'name') for sc in
+                                                                self.scenario.child_scenarios])
+        self.logger.info('-' * 79 + '\n')
+
+    def _write_out_results(self):
+
+        # check if child scenario exist, update the new child_result and append to ch_result_list.
+        if self.scenario.child_scenarios:
+            child_result_list = []
+            for sc in self.scenario.child_scenarios:
+                ch_result_file_name = sc.name + '_results.yml'
+                ch_result_abs_name = os.path.join(self.data_folder, sc.name + '_results.yml')
+                file_mgmt('w', ch_result_abs_name, sc.profile())
+                # Adding child_result_list with results file in the RESULTS_FOLDER instead of absolute path
+                child_result_list.append(os.path.join(self.config['RESULTS_FOLDER'], ch_result_file_name))
+
+            # Add the child_result_list to the included_scenario_names property
+            self.scenario.__setattr__('included_scenario_names', child_result_list)
+
+        # Write the main scenario results
+        file_mgmt('w', self.results_file, self.scenario.profile())
+
+    def _print_footer(self, passed_tasks, failed_tasks, state):
+
+        self.logger.info('\n')
+        self.logger.info('SCENARIO RUN (END)'.center(79))
+        self.logger.info('-' * 79)
+        self.logger.info(' * Duration                       : %dh:%dm:%ds' %
+                         (self.hours, self.minutes, self.seconds))
+        if passed_tasks.__len__() > 0:
+            self.logger.info(' * Passed Tasks                   : %s' %
+                             passed_tasks)
+        if failed_tasks.__len__() > 0:
+            self.logger.info(' * Failed Tasks                   : %s' %
+                             failed_tasks)
+        self.logger.info(' * Results Folder                 : %s' %
+                         self.config['RESULTS_FOLDER'])
+
+        self.logger.info(' * Included Scenario Definition   : %s' % self.scenario.included_scenario_names)
+        self.logger.info(' * Final Scenario Definition      : %s' % os.path.join(self.config['RESULTS_FOLDER'],
+                                                                                 RESULTS_FILE))
+        self.logger.info('-' * 79)
+        self.logger.info('CARBON RUN (RESULT=%s)' % state)
+
+    def _archive_results(self):
+
+        # archive everything from the data folder into the results folder
+        os.system('cp -r %s/* %s' % (self.data_folder, self.config['RESULTS_FOLDER']))
+
+        # also archive the inventory file if a static inventory directory is specified
+        if self.static_inv_dir and os.path.exists(self.static_inv_dir):
+            if os.listdir(self.static_inv_dir):
+                inv_results_dir = os.path.join(self.config['RESULTS_FOLDER'], 'inventory')
+                os.system('cp -r %s/* %s' % (self.static_inv_dir, inv_results_dir))

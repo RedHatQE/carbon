@@ -30,3 +30,4 @@ from .orchestrate import OrchestrateTask
 from .provision import ProvisionTask
 from .report import ReportTask
 from .validate import ValidateTask
+from .notification import NotificationTask

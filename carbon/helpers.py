@@ -54,7 +54,7 @@ from paramiko.ssh_exception import SSHException, BadHostKeyException, \
     AuthenticationException
 from ._compat import string_types
 from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER, DEFAULT_TASK_CONCURRENCY, \
-    TASKLIST
+    TASKLIST, NOTIFYSTATES
 from .exceptions import CarbonError, HelpersError
 from pykwalify.core import Core
 from pykwalify.errors import CoreError, SchemaError
@@ -66,19 +66,6 @@ LOG = getLogger(__name__)
 
 # sentinel
 _missing = object()
-
-
-def filter_actions_failed_status(action_list):
-    """
-    Go through the action_list and return actions with failed status.
-    If no action with failed status is found the original list is returned
-    :return: List of actions based on its status
-    """
-    for index, action_item in enumerate(action_list):
-        if action_item.status == 1:
-            new_list = action_list[index:]
-            return new_list
-    return action_list
 
 
 def get_core_tasks_classes():
@@ -331,6 +318,38 @@ def is_provider_mapped_to_provisioner(provider, provisioner):
     return False
 
 
+def get_notification_plugin_list():
+    """Return a list of available notifications.
+
+    :return: notifications
+    """
+    return [notifier.__plugin_name__ for notifier in
+            get_notifiers_plugin_classes()]
+
+
+def get_notifiers_plugin_classes():
+    """Return all notification plugin classes discovered by carbon
+    :return: The list of notification plugin classes
+    """
+    notifier_plugin_dict = {}
+    for entry_point in pkg_resources.iter_entry_points('notification_plugins'):
+        notifier_plugin_dict[entry_point.name] = entry_point.load()
+    return notifier_plugin_dict.values()
+
+
+def get_notifier_plugin_class(name):
+    """
+    Return the notification class based on the __plugin_name__ set within
+    the class.
+    :param name: the name of the notification
+    :return: the notification class
+    """
+    for notification in get_notifiers_plugin_classes():
+        if notification.__plugin_name__ == name or \
+                notification.__plugin_name__.startswith(name):
+            return notification
+
+
 def schema_validator(schema_data, schema_files, schema_creds=None, schema_ext_files=None):
     """
 
@@ -488,7 +507,7 @@ def template_render(filepath, env_dict):
     """
     path, filename = os.path.split(filepath)
     return jinja2.Environment(loader=jinja2.FileSystemLoader(
-        path)).get_template(filename).render(env_dict)
+        path), lstrip_blocks=True, trim_blocks=True).get_template(filename).render(env_dict)
 
 
 def exec_local_cmd(cmd):
@@ -559,6 +578,76 @@ class CustomDict(dict):
         self.__setitem__(key, value)
 
 
+def filter_actions_on_failed_status(action_list):
+    """
+    Go through the action_list and return actions with failed status.
+    If no action with failed status is found the original list is returned
+    :return: List of actions based on its status
+    """
+    for index, action_item in enumerate(action_list):
+        if action_item.status == 1:
+            new_list = action_list[index:]
+            return new_list
+    return action_list
+
+
+def filter_notifications_to_skip(notify_list, carbon_options):
+    """
+    Go through the notify_list and return notifications with which were skipped.
+    If no notification with on_demand is found the original list is returned
+    :return: List of notifications based on_demand
+    """
+
+    if carbon_options and carbon_options.get('skip_notify', False):
+        return [res for res in notify_list
+                if not set([getattr(res, 'name')]).intersection(set(carbon_options.get('skip_notify')))]
+    else:
+        return notify_list
+
+
+def filter_notifications_on_trigger(state, notify_list, passed_tasks, failed_tasks):
+    """
+    Go through the notify_list and return notifications with which were skipped.
+    If no notification with on_demand is found the original list is returned
+    :return: List of notifications based on_demand
+    """
+    if state == 'on_demand':
+        return [res for res in notify_list if getattr(res, 'on_demand')]
+    else:
+        # filter out all on_demand notifications
+        notify_list = [res for res in notify_list if not getattr(res, 'on_demand')]
+
+    if state == 'on_start':
+        return [res for res in notify_list if getattr(res, 'on_start') and len(set(getattr(res, 'on_tasks', [])).
+                                                                               intersection(passed_tasks)) != 0]
+    elif state == 'on_complete':
+        ocl = list()
+
+        # filter out all on_start notifications
+        nl = [res for res in notify_list if not getattr(res, 'on_start')]
+
+        # not executing if on_success but there are failed tasks
+        passed = [nt for nt in nl if getattr(nt, 'on_success') is True and getattr(nt, 'on_failure') is False]
+        passed = [nt for nt in passed if len(failed_tasks) == 0 and len(set(getattr(nt, 'on_tasks')).
+                                                                        intersection(passed_tasks)) != 0]
+        ocl.extend(passed)
+
+        # not executing if on_failure but there are passed tasks
+        failed = [nt for nt in nl if getattr(nt, 'on_failure') is True and getattr(nt, 'on_success') is False]
+        failed = [nt for nt in failed if len(passed_tasks) == 0 and len(set(getattr(nt, 'on_tasks')).
+                                                                        intersection(failed_tasks)) != 0]
+        ocl.extend(failed)
+
+        # not executing if on_failure or on_success
+        mixed = [nt for nt in nl if getattr(nt, 'on_success') is True and getattr(nt, 'on_failure') is True]
+        mixed = [nt for nt in mixed if len(set(getattr(nt, 'on_tasks')).
+                                           intersection(failed_tasks)) != 0 or len(set(getattr(nt, 'on_tasks')).
+                                                                                   intersection(passed_tasks)) != 0]
+        ocl.extend(mixed)
+
+        return ocl
+
+
 def filter_resources_labels(res_list, carbon_options):
     """ this method filters out the resources which match the labels provided during carbon run
     or skips all the resources which match the skip_labels provided during carbon run
@@ -569,18 +658,15 @@ def filter_resources_labels(res_list, carbon_options):
     :return: filtered resource list
     :rtype: list
     """
-    filtered_res_list = list()
-    if not carbon_options or not res_list:
+
+    if carbon_options and carbon_options.get('labels', ()):
+        return [res for res in res_list for label in carbon_options.get('labels')
+                if label in getattr(res, 'labels')]
+    elif carbon_options and carbon_options.get('skip_labels', ()):
+        return [res for res in res_list
+                if not set(getattr(res, 'labels')).intersection(set(carbon_options.get('skip_labels')))]
+    else:
         return res_list
-    elif carbon_options.get('labels', ()):
-        filtered_res_list.extend([res for res in res_list for label in carbon_options.get('labels')
-                                  if label in getattr(res, 'labels')])
-
-    elif carbon_options.get('skip_labels', ()):
-        filtered_res_list.extend([res for res in res_list if
-                                  not set(getattr(res, 'labels')).intersection(set(carbon_options.get('skip_labels')))])
-
-    return filtered_res_list
 
 
 def fetch_assets(hosts, task, all_hosts=True):
@@ -1162,20 +1248,19 @@ def validate_render_scenario(scenario, temp_data=None):
     :rtype: list of data streams
     """
     scenario_stream_list = list()
-    if not temp_data:
-        temp_data = {}
-        temp_data.update(os.environ)
 
-    elif os.path.isfile(temp_data):
-        temp_data = file_mgmt('r', temp_data)
-    else:
-        temp_data = json.loads(temp_data)
-        temp_data.update(os.environ)
+    if temp_data:
+        if os.path.isfile(temp_data):
+            temp_data = file_mgmt('r', temp_data)
+        else:
+            temp_data = json.loads(temp_data)
+
+        os.environ.update(temp_data)
 
     try:
-        data = yaml.safe_load(template_render(scenario, temp_data))
+        data = yaml.safe_load(template_render(scenario, os.environ))
         # adding master scenario as the first scenario data stream
-        scenario_stream_list.append(template_render(scenario, temp_data))
+        scenario_stream_list.append(template_render(scenario, os.environ))
         if 'include' in data.keys():
             include_item = data['include']
             include_template = list()
@@ -1185,8 +1270,8 @@ def validate_render_scenario(scenario, temp_data=None):
                         item = os.path.abspath(item)
                         # check to verify the data in included scenario is valid
                         try:
-                            yaml.safe_load(template_render(item, temp_data))
-                            include_template.append(template_render(item, temp_data))
+                            yaml.safe_load(template_render(item, os.environ))
+                            include_template.append(template_render(item, os.environ))
                         except yaml.YAMLError:
                             # raising Carbon error to differentiate the yaml issue is with included scenario
                             raise CarbonError('Error loading updated included scenario data!')
@@ -1317,7 +1402,10 @@ def sort_tasklist(user_tasks):
     :return: Array of tasks
     """
 
-    return sorted(user_tasks, key=TASKLIST.index)
+    try:
+        return sorted(user_tasks, key=TASKLIST.index)
+    except IndexError:
+        return sorted(user_tasks, key=NOTIFYSTATES.index)
 
 
 def validate_cli_scenario_option(ctx, scenario, vars_data=None):

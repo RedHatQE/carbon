@@ -19,3 +19,18 @@ orchestrate:
 execute:
 
 report:
+
+notifications:
+  - name: test_note_01
+    notifier: email-notifier
+    to: jsmit@redhat.com
+    from: qe-team@redhta.com
+    subjet: test_01
+    on_demand: true
+
+  - name: test_note_02
+    notifier: email-notifier
+    to: jsmit@redhat.com
+    from: qe-team@redhta.com
+    subjet: test_02
+    on_demand: true

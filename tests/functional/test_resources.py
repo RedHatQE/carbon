@@ -39,9 +39,10 @@ from carbon.executors import RunnerExecutor
 from carbon.orchestrators import AnsibleOrchestrator
 from carbon.providers import OpenstackProvider
 from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin
-from carbon.resources import Action, Execute, Asset, Report, Scenario
+from carbon.resources import Action, Execute, Asset, Report, Scenario, Notification
 from carbon.utils.config import Config
 from carbon.core import ImporterPlugin, CarbonProvider
+from carbon.notifiers.ext import EmailNotificationPlugin
 
 
 @pytest.fixture(scope='class')
@@ -736,3 +737,256 @@ class TestAssetResource(object):
             host.provisioner = 'null'
         assert 'You cannot set the asset provisioner plugin after asset class ' \
                'is instantiated.' in ex.value.args
+
+
+class TestNotificationResource(object):
+
+    @staticmethod
+    def test_create_notification_with_name():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier'
+        )
+        note = Notification(name='note', parameters=params)
+        assert isinstance(note, Notification)
+
+    @staticmethod
+    def test_create_notification_without_name():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier'
+        )
+
+        with pytest.raises(CarbonResourceError):
+            Notification(parameters=params)
+
+    @staticmethod
+    def test_create_notification_with_name_in_parameters():
+        params = dict(
+            name='note',
+            description='description goes here.',
+            notifier='email-notifier'
+        )
+
+        note = Notification(parameters=params)
+        assert note.name == 'note'
+
+    @staticmethod
+    def test_create_notification_without_notifier():
+        params = dict(
+            name='note',
+            description='description goes here.'
+        )
+        note = Notification(parameters=params)
+        assert note.notifier
+
+    @staticmethod
+    def test_create_notification_unregistered_notifier():
+        params = dict(
+            name='note',
+            description='description goes here.',
+            notifier='blah'
+        )
+        with pytest.raises(CarbonResourceError) as ex:
+            Notification(parameters=params)
+
+    @staticmethod
+    def test_notification_set_notifier():
+        params = dict(
+            name='note',
+            description='description goes here.',
+        )
+        note = Notification(parameters=params)
+        with pytest.raises(AttributeError) as ex:
+            note.notifier = 'blah'
+
+    @staticmethod
+    def test_create_notification_default_triggers():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier'
+        )
+        note = Notification(name='note', parameters=params)
+        assert note.on_success
+        assert note.on_failure
+
+    @staticmethod
+    def test_create_notification_on_success():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_success=True
+        )
+        note = Notification(name='note', parameters=params)
+        assert note.on_success
+
+    @staticmethod
+    def test_notification_set_on_success():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_success=True
+        )
+        note = Notification(name='note', parameters=params)
+        with pytest.raises(AttributeError):
+            note.on_success = False
+
+    @staticmethod
+    def test_create_notification_on_failure():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_failure=True
+        )
+        note = Notification(name='note', parameters=params)
+        assert note.on_failure
+
+    @staticmethod
+    def test_notification_set_on_failure():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_failure=True
+        )
+        note = Notification(name='note', parameters=params)
+        with pytest.raises(AttributeError):
+            note.on_failure = False
+
+    @staticmethod
+    def test_create_notification_on_success_and_failure():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_success=True,
+            on_failure=False
+        )
+        note = Notification(name='note', parameters=params)
+        assert note.on_success
+        assert not note.on_failure
+
+    @staticmethod
+    def test_create_notification_on_tasks():
+        tasks = ['validate', 'provision']
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_tasks=tasks
+        )
+        note = Notification(name='note', parameters=params)
+        assert note.on_tasks
+        assert set(note.on_tasks).intersection(tasks)
+
+    @staticmethod
+    def test_notification_set_on_tasks():
+        tasks = ['validate', 'provision']
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_tasks=tasks
+        )
+        note = Notification(name='note', parameters=params)
+        with pytest.raises(AttributeError):
+            note.on_tasks = tasks
+
+    @staticmethod
+    def test_create_notification_on_start():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_start=True
+        )
+        note = Notification(name='note', parameters=params)
+        assert note.on_start
+        assert getattr(note, 'on_success') is None
+
+    @staticmethod
+    def test_notification_set_on_start():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_start=True
+        )
+        note = Notification(name='note', parameters=params)
+        with pytest.raises(AttributeError):
+            note.on_start = False
+
+    @staticmethod
+    def test_create_notification_on_demand():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_demand=True
+        )
+        note = Notification(name='note', parameters=params)
+        assert note.on_demand
+        assert getattr(note, 'on_start') is None
+
+    @staticmethod
+    def test_notification_set_on_demand():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_demand=True
+        )
+        note = Notification(name='note', parameters=params)
+        with pytest.raises(AttributeError):
+            note.on_demand = False
+
+    @staticmethod
+    def test_notification_no_credential():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier'
+        )
+        note = Notification(name='note', parameters=params)
+        assert not note.credential
+
+    @staticmethod
+    def test_notification_credential(config):
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier'
+        )
+        note = Notification(name='note', parameters=params, config=config)
+        assert note.credential is None
+
+    @staticmethod
+    def test_notification_set_credential():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier'
+        )
+        note = Notification(name='note', parameters=params)
+        with pytest.raises(AttributeError):
+            note.credential = 'gmail'
+
+    @staticmethod
+    def test_notification_set_scenario(scenario1):
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_start=True
+        )
+        note = Notification(name='note', parameters=params)
+        note.scenario = scenario1
+        assert note.scenario
+
+    @staticmethod
+    def test_notification_build_profile():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            on_start=True
+        )
+        note = Notification(name='note', parameters=params)
+        assert isinstance(note.profile(), dict)
+
+    @staticmethod
+    def test_notification_load_params():
+        params = dict(
+            description='description goes here.',
+            notifier='email-notifier',
+            foo='bar'
+        )
+        note = Notification(name='note', parameters=params)
+        assert note.foo

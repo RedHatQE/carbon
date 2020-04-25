@@ -42,6 +42,12 @@ TASKLIST = [
     "cleanup"
 ]
 
+NOTIFYSTATES = [
+    'on_start',
+    'on_complete',
+    'on_demand'
+]
+
 TASK_LOGLEVEL_CHOICES = [
     "debug",
     "info"
@@ -87,7 +93,8 @@ DEFAULT_CONFIG = {
     'TASK_CONCURRENCY': DEFAULT_TASK_CONCURRENCY,
     'TOGGLES': [],
     'CREDENTIALS': [],
-    'SETUP_LOGGER': []
+    'SETUP_LOGGER': [],
+    'NOTIFICATIONS': []
 }
 
 # Default config sections

@@ -82,6 +82,9 @@ setup(
         ],
         'executor_plugins': [
             'runner = carbon.executors:RunnerExecutor'
+        ],
+        'notification_plugins': [
+            'email-notifier = carbon.notifiers.ext:EmailNotificationPlugin'
         ]
 
     }

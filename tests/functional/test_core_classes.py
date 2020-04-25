@@ -38,7 +38,7 @@ import pytest
 from carbon.core import CarbonOrchestrator, CarbonProvider, \
     CarbonResource, CarbonTask, LoggerMixin, TimeMixin, CarbonExecutor, \
     CarbonPlugin, ProvisionerPlugin, ExecutorPlugin, ImporterPlugin, OrchestratorPlugin, FileLockMixin, \
-    Inventory
+    Inventory, NotificationPlugin
 from carbon.resources import Asset
 from carbon.provisioners import AssetProvisioner
 from carbon.exceptions import CarbonError, LoggerMixinError
@@ -88,9 +88,11 @@ def carbon_orchestrator():
 def carbon_executor():
     return CarbonExecutor()
 
+
 @pytest.fixture(scope='class')
 def carbon_plugin():
     return CarbonPlugin()
+
 
 @pytest.fixture(scope='class')
 def report_profile():
@@ -109,6 +111,7 @@ def report_profile():
 @pytest.fixture
 def provisioner_plugin(host):
     return ProvisionerPlugin(host)
+
 
 @pytest.fixture
 def provisioner_plugin_no_provider(default_host_params):
@@ -183,6 +186,11 @@ def inv_host(default_host_params, config):
 def inventory(inv_host):
     return Inventory(hosts=[inv_host], all_hosts=[inv_host],
                      data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'])
+
+
+@pytest.fixture
+def notifier_plugin(notification_default_resource):
+    return NotificationPlugin(notification_default_resource)
 
 
 class TestFileLockMixin(object):
@@ -673,7 +681,7 @@ class TestCarbonCorePlugins(object):
             importer_plugin.aggregate_artifacts()
 
     @staticmethod
-    def test_importer_plugin_push(importer_plugin):
+    def test_importer_plugin_import(importer_plugin):
         with pytest.raises(NotImplementedError):
             importer_plugin.import_artifacts()
 
@@ -691,6 +699,24 @@ class TestCarbonCorePlugins(object):
     def test_orchestrator_plugin_run(orchestrator_plugin):
         with pytest.raises(NotImplementedError):
             orchestrator_plugin.run()
+
+    @staticmethod
+    def test_notifier_plugin_notify(notifier_plugin):
+        with pytest.raises(NotImplementedError):
+            notifier_plugin.notify()
+
+    @staticmethod
+    def test_notifier_plugin_validate(notifier_plugin):
+        with pytest.raises(NotImplementedError):
+            notifier_plugin.validate()
+
+    @staticmethod
+    def test_notifier_plugin_get_config_params(notifier_plugin):
+        assert not notifier_plugin.get_config_params()
+
+    @staticmethod
+    def test_notifier_plugin_get_credential_params(notifier_plugin):
+        assert notifier_plugin.get_credential_params()
 
 
 class TestInventory(object):

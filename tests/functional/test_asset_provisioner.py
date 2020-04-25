@@ -172,7 +172,6 @@ class TestAssetProvisioner(object):
         host_provisioner.print_commonly_used_attributes()
         mock_logger.debug.assert_called()
 
-
     @staticmethod
     def test_asset_provisioner_create_exception(plugin, host_provisioner):
         plugin.create.side_effect = Exception('Mock Create Failure')

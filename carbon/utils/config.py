@@ -165,6 +165,24 @@ class Config(dict):
 
         self.__setitem__('SETUP_LOGGER', _logging_settings)
 
+    def __set_notifications__(self):
+        """Set the notification configuration settings."""
+        notifications = []
+
+        for section in getattr(self.parser, '_sections'):
+            if not section.startswith('notifier'):
+                continue
+
+            _notifications = {}
+
+            for option in self.parser.options(section):
+                _notifications[option] = \
+                    self.parser.get(section, option)
+            _notifications['name'] = section.split(':')[-1]
+            notifications.append(_notifications)
+
+        self.__setitem__('NOTIFICATIONS', notifications)
+
     def load(self):
         """Load configuration settings.
 

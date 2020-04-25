@@ -1292,6 +1292,47 @@ class ExecutorPlugin(CarbonPlugin):
         raise NotImplementedError
 
 
+class NotificationPlugin(CarbonPlugin):
+    """Carbon notification plugin class.
+
+    Each notification implementation added into carbon requires that they
+    inherit the carbon notification plugin class. This enforces that the
+    required methods are implemented in the new plugin class.
+    Additional support/helper methods can be added to this class.
+    """
+
+    def __init__(self, notification):
+        self.notification = notification
+        self.config = getattr(notification, 'config')
+
+    def notify(self):
+        raise NotImplementedError
+
+    def validate(self):
+        raise NotImplementedError
+
+    def get_credential_params(self):
+
+        crd = dict()
+
+        if getattr(self.notification, 'credential'):
+            for item in self.config['CREDENTIALS']:
+                if item['name'] == getattr(self.notification, 'credential'):
+                    crd = item
+                    break
+
+        return crd
+
+    def get_config_params(self):
+
+        cfg = dict()
+        for item in self.config['NOTIFICATIONS']:
+            if item['name'] == getattr(self.notification, 'notifier').__plugin_name__:
+                cfg = item
+                break
+        return cfg
+
+
 class Inventory(LoggerMixin, FileLockMixin):
     """Inventory.
 

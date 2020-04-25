@@ -28,7 +28,9 @@
 from fixtures import action_resource, action_resource_cleanup, scenario, \
     report_resource, execute_resource, host, default_host_params, \
     scenario_resource, config, master_child_scenario, scenario1, asset1, asset3, action1,\
-    scenario_resource1, execute1, execute2, asset2, action2, scenario_labels
+    scenario_resource1, execute1, execute2, asset2, action2, scenario_labels, notification_default_resource, \
+    notification_on_start_resource, notification_on_demand_resource, notification_on_success_resource, \
+    notification_on_failure_resource, default_note_params
 
 __all__ = [
     action_resource,
@@ -50,5 +52,11 @@ __all__ = [
     scenario_resource,
     scenario_resource1,
     scenario_labels,
-    master_child_scenario
+    master_child_scenario,
+    notification_default_resource,
+    notification_on_start_resource,
+    notification_on_demand_resource,
+    notification_on_success_resource,
+    notification_on_failure_resource,
+    default_note_params
 ]

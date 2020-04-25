@@ -16,17 +16,18 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-    carbon.resources
+    Pykwalify extensions module for email plugin.
 
-    Package containing carbon resource modules.
+    Module containing custom validation functions used for schema checking.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
-from .actions import Action
-from .executes import Execute
-from .assets import Asset
-from .reports import Report
-from .scenario import Scenario
-from .notification import Notification
+
+def valid_email_combos(value, rule_obj, path):
+    """Verify valid combinations of email parameters."""
+    if set(['message_template', 'message_body']).issubset(value.keys()):
+        raise AssertionError('Message_body and message_template are mutually exclusive.')
+
+    return True

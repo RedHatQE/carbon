@@ -3,6 +3,10 @@ include carbon/files/schema.yml
 include carbon/files/extensions.py
 include carbon/provisioners/ext/bkr_client_plugin/schema.yml
 include carbon/provisioners/ext/os_libcloud_plugin/schema.yml
+include carbon/notifiers/ext/email/schema/schema.yml
+include carbon/notifiers/ext/email/schema/email_extensions.py
+include carbon/notifiers/ext/email/templates/email_on_start_txt_template.jinja
+include carbon/notifiers/ext/email/templates/email_txt_template.jinja
 exclude setup.cfg
 prune docs/_build
 prune docs/.ropeproject

@@ -308,3 +308,33 @@ mapping:
         labels:
           type: any
           func: type_str_list
+
+  notifications:
+    sequence:
+    - type: map
+      allowempty: True
+      mapping:
+        name:
+          type: str
+        description:
+          type: str
+        notifier:
+          required: True
+          type: str
+        on_start:
+          required: False
+          type: bool
+        on_success:
+          required: False
+          type: bool
+        on_failure:
+          required: False
+          type: bool
+        on_demand:
+          required: False
+          type: bool
+        on_tasks:
+          required: False
+          type: seq
+          sequence:
+            - type: str

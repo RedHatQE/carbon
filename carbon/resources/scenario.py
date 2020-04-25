@@ -35,6 +35,7 @@ from .actions import Action
 from .executes import Execute
 from .assets import Asset
 from .reports import Report
+from .notification import Notification
 from ..constants import SCENARIO_SCHEMA, SCHEMA_EXT, \
     SET_CREDENTIALS_OPTIONS
 from ..core import CarbonResource
@@ -59,6 +60,7 @@ class Scenario(CarbonResource):
         'name',         # the name of the scenario
         'description',  # a brief description of what the scenario is,
         'resource_check',    # external dependency check resources
+        'overall_status'
     ]
 
     def __init__(self,
@@ -99,6 +101,7 @@ class Scenario(CarbonResource):
         self._actions = list()
         self._executes = list()
         self._reports = list()
+        self._notifications = list()
         self._yaml_data = dict()
         # Properties to take care of included scenarios
         self._child_scenarios = list()
@@ -171,6 +174,15 @@ class Scenario(CarbonResource):
             return all_reports
         return getattr(self, 'reports')
 
+    def get_all_notifications(self):
+        if self.child_scenarios:
+            all_notifications = list()
+            for sc in self.child_scenarios:
+                all_notifications.extend([item for item in getattr(sc, 'notifications')])
+            all_notifications.extend([item for item in getattr(self, 'notifications')])
+            return all_notifications
+        return getattr(self, 'notifications')
+
     def add_resource(self, item):
         """Add a scenario resource to its corresponding list.
 
@@ -185,6 +197,8 @@ class Scenario(CarbonResource):
             self._executes.append(item)
         elif isinstance(item, Report):
             self._reports.append(item)
+        elif isinstance(item, Notification):
+            self._notifications.append(item)
         else:
             raise ValueError('Resource must be of a valid Resource type.'
                              'Check the type of the given item: %s' % item)
@@ -211,6 +225,8 @@ class Scenario(CarbonResource):
             self._executes = list()
         elif isinstance(item, Report):
             self._reports = list()
+        elif isinstance(item, Notification):
+            self._notifications = list()
         else:
             raise ValueError('Resource must be of a valid Resource type.'
                              'Check the type of the given item: %s' % item)
@@ -458,6 +474,31 @@ class Scenario(CarbonResource):
             raise ValueError('Execute must be of type %s ' % type(Execute))
         self._reports.append(report)
 
+    @property
+    def notifications(self):
+        """Notifications property.
+
+        :return: notification resources associated to the scenario
+        :rtype: list
+        """
+        return self._notifications
+
+    @notifications.setter
+    def notifications(self, value):
+        """Set executes property."""
+        raise ValueError('You can not set notifications directly.'
+                         'Use function ~Scenario.add_notifications')
+
+    def add_notifications(self, notification):
+        """Add notifications resources to the scenario.
+
+        :param notification: notifications resource
+        :type notification: object
+        """
+        if not isinstance(notification, Notification):
+            raise ValueError('Execute must be of type %s ' % type(Notification))
+        self._notifications.append(notification)
+
     def validate(self):
         """Validate the scenario based on the default schema."""
         self.logger.debug('Validating scenario YAML file')
@@ -494,6 +535,9 @@ class Scenario(CarbonResource):
         profile['orchestrate'] = [action.profile() for action in self.actions]
         profile['execute'] = [execute.profile() for execute in self.executes]
         profile['report'] = [report.profile() for report in self.reports]
+        profile['notifications'] = [notification.profile() for notification in self.notifications]
+        if hasattr(self, 'overall_status'):
+            profile['overall_status'] = getattr(self, 'overall_status')
 
         return profile
 

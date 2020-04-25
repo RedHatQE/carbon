@@ -28,11 +28,21 @@
 
 from collections import namedtuple
 
-from ..constants import TASKLIST
+from ..constants import TASKLIST, NOTIFYSTATES
 from ..exceptions import CarbonError
-from ..helpers import fetch_assets, get_core_tasks_classes, fetch_executes, filter_actions_failed_status, \
-    set_task_class_concurrency, filter_resources_labels
+from ..helpers import fetch_assets, get_core_tasks_classes, fetch_executes, filter_actions_on_failed_status, \
+    set_task_class_concurrency, filter_resources_labels, filter_notifications_to_skip, filter_notifications_on_trigger
 from ..tasks import CleanupTask
+
+
+class PipelineFactory(object):
+
+    @staticmethod
+    def get_pipeline(task):
+        if task in TASKLIST:
+            return PipelineBuilder(task)
+        else:
+            return NotificationPipelineBuilder(task)
 
 
 class PipelineBuilder(object):
@@ -129,6 +139,10 @@ class PipelineBuilder(object):
                                                                            carbon_options)])
         scenario_reports.extend([item for item in filter_resources_labels(scenario.get_all_reports(), carbon_options)])
 
+        # get notifications
+        scenario_notifications = [item for item in filter_notifications_to_skip(scenario.get_all_notifications(),
+                                                                                carbon_options)]
+
         # scenario resource
         for task in scenario_get_tasks:
             if task['task'].__task_name__ == self.name:
@@ -144,7 +158,7 @@ class PipelineBuilder(object):
         # get action resource based on if its status
         # check if cleanup task do NOT filter by status
         if self.name != 'cleanup':
-            scenario_actions = filter_actions_failed_status(scenario_actions)
+            scenario_actions = filter_actions_on_failed_status(scenario_actions)
         for action in scenario_actions:
             for task in action.get_tasks():
                 if task['task'].__task_name__ == self.name:
@@ -171,5 +185,80 @@ class PipelineBuilder(object):
         # reverse the order of the tasks to be executed for cleanup task
         if self.name == CleanupTask.__task_name__:
             pipeline.tasks.reverse()
+
+        # notification resource
+        for notification in scenario_notifications:
+            for task in notification.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    task['resource'].scenario = scenario
+                    pipeline.tasks.append(task)
+
+        return pipeline
+
+
+class NotificationPipelineBuilder(PipelineBuilder):
+
+    """
+    The primary class for building carbons notification pipelines to execute.
+    """
+
+    def __init__(self, trigger):
+
+        super(NotificationPipelineBuilder, self).__init__('notify')
+        self.trigger = trigger
+
+    def is_task_valid(self):
+        """Check if the pipeline task name is valid for carbon.
+
+        :return: whether task is valid or not.
+        :rtype: bool
+        """
+        try:
+            NOTIFYSTATES.index(self.trigger)
+        except ValueError:
+            return False
+        return True
+
+    def build(self, scenario, carbon_options):
+        """Build carbon notification pipeline.
+
+        This method first collects scenario tasks and resources for each scenario(child and master). It filters out
+        specific resources for the scenario based on if labels or skip_labels are provided in carbon options.
+        If no labels/ skip_labels are provided all resources for that scenario are picked.
+        Then for each of the resource/scenario task the method checks if that resource/scenario tasks has any tasks
+        with name matching the name for self.task(the task for which the pipeline is getting built). If it has then that
+        tasks gets added to the pipeline and that gets returned
+
+        :param scenario: carbon scenario object containing all scenario
+               data.
+        :type scenario: scenario object
+        :param carbon_options: extra options provided during carbon run
+        :type carbon_options: dict
+        :return: carbon notification pipeline to run for the given task for all the scenarios
+        :rtype: namedtuple
+        """
+
+        # pipeline init
+        pipeline = self.pipeline_template(
+            self.name,
+            self.task_cls_lookup(),
+            list()
+        )
+
+        # get notifications
+        scenario_notifications = [item for item in filter_notifications_to_skip(scenario.get_all_notifications(),
+                                                                                carbon_options)]
+        scenario_notifications = [item for item in
+                                  filter_notifications_on_trigger(self.trigger, scenario_notifications,
+                                                                  getattr(scenario, 'passed_tasks'),
+                                                                  getattr(scenario, 'failed_tasks'))
+                                  ]
+
+        # notification resource
+        for notification in scenario_notifications:
+            for task in notification.get_tasks():
+                if task['task'].__task_name__ == self.name:
+                    task['resource'].scenario = scenario
+                    pipeline.tasks.append(task)
 
         return pipeline
