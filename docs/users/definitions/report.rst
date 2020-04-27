@@ -220,8 +220,8 @@ and *testcaseid* fields. This file is used in conjunction with a lookup-method. 
 field is enabled by default in Polarion but is not available in the Form UI until it has been
 explicitly enabled by a project administrator. Once enabled the field should contain the name
 of the xUnit test case in the format of **<testclassname>.<name attribute>**.  For more
-information about the *testcaseid* field refer to the following Polarion
-documentation `<https://mojo.redhat.com/docs/DOC-1073077#jive_content_id_Polarion_Configuration>`_
+information about the *testcaseid* field refer to the following `Polarion
+documentation <https://mojo.redhat.com/docs/DOC-1073077#jive_content_id_Polarion_Configuration>`_
 
 If no lookup method is specified in the testsuite_properties the Polarion xUnit Importer will
 default to looking for test cases using its id. Carbon will parse the *testcaseid* from the csv file
@@ -370,15 +370,15 @@ Credentials
 +++++++++++
 
 To authenticate with Report Portal, you will need to have your Report Portal credentials
-in your carbon.cfg file, see `Report Portal Credentials
-<credentials.html#report-portal-credentials>`_ for more details.
+in your carbon.cfg file, see `Report Portal Credentials <credentials.html#report-portal-credentials>`_
+for more details.
 
 CCIT  Report Portal Client
 ++++++++++++++++++++++++++
 
 Carbon uses CCIT Report Portal client to import artifacts to the Report Portal instance.
 To know more about Report Portal Client, please refer
-`here <https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674>`_
+`here <https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674>`__
 
 Carbon Report Portal Configuration
 ++++++++++++++++++++++++++++++++++
@@ -491,8 +491,8 @@ section of the report section in the SDF.
 
 Please refer report portal config section in the Report Portal client documentation to understand
 more about the config json file
-`here
-<https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674#CCITReportPortalUser'sGuide[EADraft]-ConfiguringtheClient>`_
+`here <https://docs.engineering.redhat.com/pages/viewpage.action?
+pageId=81876674#CCITReportPortalUser'sGuide-rp_preproc>`__
 
 Example for json config:
 
@@ -583,9 +583,8 @@ It needs all the xml files(test cases) to be in a folder named *results* and any
 logs to be in a folder named *attachments*. The results folder is required. The attachments folder is optional,
 it is needed only when related items like pictures/logs need to be sent to Report Portal. The attachments folder
 also has a set of rules regarding sub-folder structure. Please refer to the Report Portal Payload Directory structure
-`here
-Payload Structure <https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674#CCITReportPortalUser's
-Guide[EADraft]-payloaddirectoryPayloadDirectory>`_
+`Payload Structure
+<https://docs.engineering.redhat.com/pages/viewpage.action?pageId=81876674#CCITReportPortalUser'sGuide-payloaddirectory>`_
 
 
 There are a few ways Carbon can handle this:

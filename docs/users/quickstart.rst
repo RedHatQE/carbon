@@ -200,28 +200,26 @@ Provision
 +++++++++
 
 Please visit the following `page <https://gitlab.cee.redhat.com/qeet/carbon/
-examples/tree/master/provision>`_ for complete examples on using carbons
+examples/tree/master/provision>`__ for complete examples on using carbons
 provision task.
 
 Orchestrate
 +++++++++++
 
 Please visit the following `page <https://gitlab.cee.redhat.com/qeet/carbon/
-examples/tree/master/orchestrate>`_ for complete examples on using carbons
+examples/tree/master/orchestrate>`__ for complete examples on using carbons
 orchestrate task.
 
 Execute
 +++++++
 
 Please visit the following `page <https://gitlab.cee.redhat.com/qeet/carbon/
-examples/tree/master/execute>`_ for complete examples on using carbons
+examples/tree/master/execute>`__ for complete examples on using carbons
 execute task.
 
 Report
 ++++++
 
 Please visit the following `page <https://gitlab.cee.redhat.com/qeet/carbon/
-examples/tree/master/report>`_ for complete examples on using carbons
+examples/tree/master/report>`__ for complete examples on using carbons
 report task.
-
-.. note::

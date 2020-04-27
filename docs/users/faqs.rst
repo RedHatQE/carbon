@@ -14,14 +14,13 @@ Provision
 
 You need to define the machine as a static machine in the carbon definition
 file.  See `Defining Static Machines
-<definitions/provision.html#definining-static-machines>`_ for details.
+<definitions/provision.html#defining-static-machines>`_ for details.
 
 ... run scripts on my local system?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You need to define your local system as a static resource.
-See `The localhost example for provisioning
-<definitions/provision.html#localhost-example>`_ for details.
+See `The localhost example <localhost.html>`_ for details.
 
 ... run carbon and not delete my machines at the end of the run?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -53,7 +52,7 @@ supported in Python 3.
 ... install Linchpin to use the Linchpin provisioner?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Refer to the `Linchpin Requirements section <install.html>`_
+Refer to the `Linchpin Requirements section <install.html#linchpin-requirements>`_
 to install Linchpin and it's dependencies.
 
 ... know if my current scenarios will work with the new Linchpin provisioner?
@@ -116,7 +115,8 @@ When crafting your complex commands you need to consider a couple items:
 You can refer to any online YAML validator to make sure the test command
 is valid YAML syntax. Then you need to remember to make sure you have proper
 shell escaping syntax to make sure the test command is interpreted properly.
-Refer to the `Using Shell Parameter for Test Execution <execute.html>`_  section
+Refer to the `Using Shell Parameter for Test Execution
+<definitions/execute.html#using-shell-parameter-for-test-execution>`_  section
 in the Execute page.
 
 
@@ -129,7 +129,7 @@ Report
 You can place the file(s) or folder(s) in the *<data_folder>/.results*
 and let carbon search for it or once in the results directory
 define in it in the *artifact_locations* key telling carbon where to look.
-Refer to the `Finding the right artifacts <definitions/report.html>`_ section
+Refer to the `Finding the right artifacts <definitions/report.html#finding-the-right-artifacts>`_ section
 in the Report page.
 
 ... stop finding duplicate artifacts during the import?
@@ -146,7 +146,7 @@ You can restrict the search to a particular instance by doing something like
 to look in that particular directory for the artifact.
 
 For more information on the different patterns that can be used in the name field
-refer to some of the `examples <definitions/report.html>`_ under Polarion and Report Portal
+refer to some of the `examples <definitions/report.html#examples>`_ under Polarion and Report Portal
 in the Report page.
 
 

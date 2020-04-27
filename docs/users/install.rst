@@ -74,10 +74,10 @@ Carbon is currently supporting two importer plugins
 
  * 1
    carbon_polarion_plugin
-   `repo link <https://gitlab.cee.redhat.com/ccit/carbon_polarion_plugin>`_
+   `repo link <https://gitlab.cee.redhat.com/ccit/carbon_polarion_plugin>`__
  * 2
    carbon_rppreproc_plugin
-   `repo link <https://gitlab.cee.redhat.com/ccit/carbon_rppreproc_plugin>`_
+   `repo link <https://gitlab.cee.redhat.com/ccit/carbon_rppreproc_plugin>`__
 
 These plugins have Carbon installation as a part of the setup. So if user wants to just use any of the above plugin with
 carbon, we can install only the plugin, and carbon will be installed with it as well.
