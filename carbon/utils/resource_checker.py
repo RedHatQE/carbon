@@ -63,7 +63,7 @@ class ResourceChecker(object):
         # provisioning is started
 
         # creating ansible service class object
-        self.ans_service = AnsibleService(self.config, hosts=[], all_hosts=[], ansible_options=None)
+        self.ans_service = AnsibleService(self.config, hosts=['localhost'], all_hosts=[], ansible_options=None)
         LOG.info("Running validation using user provided playbook/scripts")
         for type in ['playbook', 'script']:
             if not self.scenario.resource_check.get(type, None):
