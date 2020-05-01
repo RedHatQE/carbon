@@ -756,6 +756,11 @@ def ssh_retry(obj):
             server_user = sys_vars['ansible_user']
             server_key_file = sys_vars['ansible_ssh_private_key_file']
 
+            if sys_vars.get('ansible_port', None):
+                server_ssh_port = sys_vars['ansible_port']
+            else:
+                server_ssh_port = 22
+
             # Perform SSH checks
             attempt = 1
             while attempt <= MAX_ATTEMPTS:
@@ -765,6 +770,7 @@ def ssh_retry(obj):
 
                     # Test ssh connection
                     ssh.connect(server_ip,
+                                port=server_ssh_port,
                                 username=server_user,
                                 key_filename=server_key_file,
                                 timeout=5)
