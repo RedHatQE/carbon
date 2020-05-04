@@ -1,3 +1,23 @@
+Version 1.6.0 (2020-05-04)
+--------------------------
+
+New Features
+~~~~~~~~~~~~
+* Carbon_linchpin_plugin to allow use of linchpin to provision resources.
+* Resource Label feature to pick or skip resources for different Carbon tasks based on labels
+* A new command line option to pass jinja template data
+
+Enhancements
+~~~~~~~~~~~~
+* Support the new implicit localhost creation
+* Allow non-default SSH ports when validating the SSH connection
+
+Bug Fixes
+~~~~~~~~~
+* Documentation bug on Faq page
+* Carbon alters XML artifacts after running the report stage (Polar 1.2.1 has a patch fix)
+* Fix to allow create_creds=False when using reportportal (Carbon_rppreprc_plugin 1.0.1 has the fix)
+
 Version 1.5.1 (2020-03-24)
 --------------------------
 
