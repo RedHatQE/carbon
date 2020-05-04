@@ -45,11 +45,13 @@ the Python packages used for development.
 
     (carbon) $ pip install -r carbon/test-requirements.txt
 
-Let's create our new branch from develop
+Let's create our new branch from develop. Do this step from carbon's root folder
 
 .. code-block:: bash
 
+    (carbon) $ cd carbon
     (carbon) $ git checkout -b <new branch>
+    (carbon) $ cd ..
 
 Finally install the carbon package itself using editable mode.
 
