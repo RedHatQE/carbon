@@ -108,7 +108,7 @@ in the test resource. Here is how you could do that
         hosts: host01
         ansible_options:
           extra_vars:
-            priv_ip: { host01.ip_address.private }
+            priv_ip: '{ host01.ip_address.private }'
 
       - name: scripts/configure_task_02.sh
         description: run configure bash script and do something with metadata
@@ -121,6 +121,12 @@ in the test resource. Here is how you could do that
 
 Carbon will evaluate these parameters and inject the correct data before passing
 these on as parameters for Ansible to use.
+
+.. note::
+
+   extra_vars used under ansible_options is a dictionary , hence the value being injected needs to be in single or
+   double quotes else data injection will not take place
+   e.g. '{  host01.ip_address.private }' or "{ host01.ip_address.private }"
 
 
 Execute

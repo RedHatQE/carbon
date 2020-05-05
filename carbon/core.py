@@ -1012,6 +1012,14 @@ class CarbonExecutor(LoggerMixin, TimeMixin):
         return (param for param in cls._all_parameters_set())
 
     @classmethod
+    def get_execute_types(cls):
+        """
+        Return the list of all execute_types for the executor.
+        :return: a list with all execute_types
+        """
+        return cls._execute_types
+
+    @classmethod
     def build_profile(cls, execute):
         """Builds a dictionary with all the parameters for the executor.
 
@@ -1022,7 +1030,11 @@ class CarbonExecutor(LoggerMixin, TimeMixin):
         """
         profile = OrderedDict()
         for param in cls.get_all_parameters():
-            profile.update({param: getattr(execute, param, None)})
+            if getattr(execute, param, None):
+                profile.update({param: getattr(execute, param)})
+        for param in cls.get_execute_types():
+            if getattr(execute, param, None):
+                profile.update({param: getattr(execute, param)})
         return profile
 
 

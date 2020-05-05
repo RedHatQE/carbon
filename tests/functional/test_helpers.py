@@ -39,7 +39,8 @@ from carbon.exceptions import CarbonError, HelpersError
 from carbon.provisioners.ext import BeakerClientProvisionerPlugin
 from carbon.helpers import DataInjector, validate_render_scenario, set_task_class_concurrency, \
     mask_credentials_password, sort_tasklist, find_artifacts_on_disk, \
-    get_default_provisioner_plugin, get_ans_verbosity, schema_validator, filter_resources_labels
+    get_default_provisioner_plugin, get_ans_verbosity, schema_validator, filter_resources_labels,\
+    create_individual_testrun_results, create_aggregate_testrun_results
 
 
 @pytest.fixture(scope='class')
@@ -472,3 +473,44 @@ def test_filter_resources_03(asset2, asset3):
     res = filter_resources_labels(res_list, {})
     assert asset2 in res
     assert asset3 in res
+
+
+@mock.patch('carbon.helpers.search_artifact_location_dict')
+def test_create_individual_testrun_results(mock_method):
+    mock_method.return_value = ['../assets/artifacts/host03/sample.xml']
+    res = create_individual_testrun_results({}, {})
+    assert res[0]['sample.xml'] == {'total_tests': 4, 'failed_tests': 0, 'skipped_tests': 0, 'passed_tests': 4}
+
+@mock.patch('carbon.helpers.search_artifact_location_dict')
+def test_create_individual_testrun_results_1(mock_method):
+    """this test verifies xmls with tag testsuite and testsuites work correctly"""
+    mock_method.return_value = ['../assets/artifacts/host03/sample1.xml', '../assets/artifacts/host03/sample.xml' ]
+    res = create_individual_testrun_results({}, {})
+    assert res[0]['sample1.xml'] == {'total_tests': 2, 'failed_tests': 0, 'skipped_tests': 0, 'passed_tests': 2}
+    assert res[1]['sample.xml'] == {'total_tests': 4, 'failed_tests': 0, 'skipped_tests': 0, 'passed_tests': 4}
+
+
+@mock.patch('carbon.helpers.search_artifact_location_dict')
+def test_create_individual_testrun_results_with_wrong_xml(mock_method):
+    mock_method.return_value = ['../assets/artifacts/host01/sample1.xml']
+    with pytest.raises(CarbonError) as ex:
+        create_individual_testrun_results({}, {})
+        assert "The xml file ../assets/artifacts/host01/sample1.xml is malformed" in ex.value.args
+
+
+@mock.patch('carbon.helpers.search_artifact_location_dict')
+def test_create_individual_testrun_results_with_incorrect_root_tag(mock_method):
+    """The test case verifies that if the root tag is not testsuites or testsuite, it skips that xml with a warning"""
+    mock_method.return_value = ['../assets/artifacts/host03/sample2.xml']
+    res = create_individual_testrun_results({}, {})
+    assert res == []
+
+
+def test_create_aggregate_testrun_results():
+    ind_res = [
+                {'sample.xml': {'total_tests': 2, 'failed_tests': 0, 'skipped_tests': 0, 'passed_tests': 2}},
+                {'sample1.xml': {'total_tests': 4, 'failed_tests': 2, 'skipped_tests': 0, 'passed_tests': 2}}
+               ]
+    res = create_aggregate_testrun_results(ind_res)
+    assert res['aggregate_testrun_results']['total_tests'] == 6
+    assert res['aggregate_testrun_results']['failed_tests'] == 2

@@ -58,6 +58,7 @@ from .constants import PROVISIONERS, RULE_HOST_NAMING, IMPORTER, DEFAULT_TASK_CO
 from .exceptions import CarbonError, HelpersError
 from pykwalify.core import Core
 from pykwalify.errors import CoreError, SchemaError
+from xml.etree import cElementTree as ET
 
 import pkg_resources
 
@@ -1017,7 +1018,7 @@ def is_host_localhost(host_ip):
 
 def find_artifacts_on_disk(data_folder, report_name, art_location=[]):
     """
-    Use by the Artifact Importer to search a list of paths in the results folder
+    Used by the Artifact Importer to to search a list of paths in the results folder
     to see if they exist. If the Execute collected artifacts, it will check the
     the .results/artifacts/ specifically for the artifacts.
 
@@ -1341,3 +1342,104 @@ def validate_cli_scenario_option(ctx, scenario, vars_data=None):
     except CarbonError:
         click.echo('Error loading updated included scenario data!')
         ctx.exit()
+
+
+def create_individual_testrun_results(artifact_locations, config):
+    """this method creates a summary of total tests passed, failed, skipped for all the xml files found
+    as artifacts
+     :param artifact_locations: dict of paths of artifacts where root dir is the key and artifact names are values
+     :type artifact_locations: dict
+     :param config: config parameter used by execute resource
+     :type config: dict
+     :return testruns: a dictionary of test results summary for individual xml files as well as aggregate of all xml
+                       files found
+     :rtype testruns: dict
+    """
+    fnd_paths = list()
+    individual_res = list()
+    # build the regex query to get only xml files
+    regquery = build_artifact_regex_query('*.xml')
+    # search the artifact location dictionary provided to search in the .results folder
+    fnd_paths.extend(search_artifact_location_dict(artifact_locations, '*.xml', config.get('RESULTS_FOLDER'), regquery))
+    try:
+        for path in fnd_paths:
+            trun = dict()
+            trun['total_tests'] = 0
+            trun['failed_tests'] = 0
+            trun['skipped_tests'] = 0
+            trun['passed_tests'] = 0
+            tree = ET.parse(path)
+            root = tree.getroot()
+            temp = list()
+            # if root.tag is testsuites then collect all the element which are 'testsuite'
+            # if root.tag is testsuite then just collect that element
+            if root.tag == "testsuites":
+                temp.extend(root.findall('testsuite'))
+            elif root.tag == "testsuite":
+                temp.append(root)
+            if temp:
+                for test in temp:
+                    trun['total_tests'] = trun['total_tests'] + len(test.findall('testcase'))
+                    trun['failed_tests'] = trun['failed_tests'] + len([testcase.find('failure')
+                                                                        for testcase in test.findall('testcase')
+                                                                        if testcase.findall('failure')])
+                    trun['skipped_tests'] = trun['skipped_tests'] + len([testcase.find('skipped')
+                                                                         for testcase in test.findall('testcase')
+                                                                         if testcase.findall('skipped')])
+                    trun['passed_tests'] = trun['total_tests'] - trun['failed_tests'] - trun['skipped_tests']
+                individual_res.append({os.path.basename(path): trun})
+            else:
+                LOG.warning("The xml file %s does not have the correct format (no 'testsuite' or 'testsuites'"
+                            " tags) to collect testrun results" % path)
+                continue
+    except ET.ParseError:
+        raise CarbonError("The xml file %s is malformed " % path)
+    return individual_res
+
+
+def create_aggregate_testrun_results(individual_results):
+    """this method creates a aggregate summary of total tests passed, failed, skipped for all the xml files found
+    as artifacts
+    :param individual_results: list of individual test summaries of xml files found as artifacts
+    :type: individual_results: list
+    :return agg_results: summary of aggregate of all individual summaries of xml files found as artifacts
+    :rtype agg_results: dict
+    """
+    total_tests = 0
+    failed_tests = 0
+    skipped_tests = 0
+    passed_tests = 0
+    agg_results = dict()
+
+    for run in individual_results:
+        for val in run.values():
+            total_tests += val['total_tests']
+            failed_tests += val['failed_tests']
+            skipped_tests += val['skipped_tests']
+            passed_tests += val['passed_tests']
+
+    agg_results.update(aggregate_testrun_results=dict(total_tests=total_tests,
+                                                      failed_tests=failed_tests,
+                                                      skipped_tests=skipped_tests,
+                                                      passed_tests=passed_tests
+                                                      ))
+    return agg_results
+
+
+def create_testrun_results(artifact_locations, config):
+    """This method goes through the artifact_locations or paths provided and finds only the xmls. Using these
+    xmls, generates a testrun_results dictionary which is a summary of total tests passed, failed, skipped. It
+    generates the aggregate as well as individual xml summary
+     :param artifact_locations: dict of paths of artifacts where root dir is the key and artifact names are values
+     :type artifact_locations: dict
+     :param config: config parameter used by execute resource
+     :type config: dict
+     :return testruns: a dictionary of test results summary for individual xml files as well as aggregate of all xml
+                       files found
+     :rtype testruns: dict
+     """
+    testruns = dict()
+    individual_results = create_individual_testrun_results(artifact_locations, config)
+    testruns.update(create_aggregate_testrun_results(individual_results))
+    testruns.update(individual_results=individual_results)
+    return testruns

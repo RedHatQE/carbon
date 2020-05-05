@@ -88,6 +88,20 @@ class Config(dict):
                     self.parser.get(section, option)
                 )
 
+    def __set_executor__(self):
+        """Set the executor configuration settings."""
+        for section in getattr(self.parser, '_sections'):
+            if not section.startswith('executor'):
+                continue
+
+            executor = section.split(':')[-1]
+
+            for option in self.parser.options(section):
+                self.__setitem__(
+                    (executor + '_' + option).upper(),
+                    self.parser.get(section, option)
+                )
+
     def __set_importer__(self):
         """Set the importer configuration settings."""
         for section in getattr(self.parser, '_sections'):

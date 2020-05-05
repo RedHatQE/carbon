@@ -30,8 +30,6 @@ from copy import copy
 from .._compat import string_types
 from ..constants import ORCHESTRATOR
 from ..core import CarbonResource
-# from ..helpers import get_orchestrator_class, \
-#     get_orchestrators_list
 from ..helpers import get_orchestrator_plugin_class, \
     get_orchestrators_plugin_list
 from ..exceptions import CarbonActionError

@@ -34,7 +34,7 @@ import json
 from ..core import CarbonExecutor
 from .._compat import string_types
 from ..exceptions import ArchiveArtifactsError, CarbonExecuteError, AnsibleServiceError
-from ..helpers import DataInjector, get_ans_verbosity, is_host_localhost
+from ..helpers import DataInjector, get_ans_verbosity, is_host_localhost, create_testrun_results
 from ..ansible_helpers import AnsibleService
 
 
@@ -243,7 +243,8 @@ class RunnerExecutor(CarbonExecutor):
                     extra_vars['localhost'] = True
                 elif isinstance(h, string_types) and h == 'localhost':
                     extra_vars['localhost'] = True
-
+        # data injection
+        extra_vars = self.injector.inject_dictionary(extra_vars)
         results = self.ans_service.run_artifact_playbook(extra_vars)
 
         if results[0] != 0:
@@ -303,6 +304,46 @@ class RunnerExecutor(CarbonExecutor):
                 self.logger.warning('Could not find artifact(s), %s, on %s. Make sure the file exists '
                                     'and defined properly in the definition file.' % (r['artifact'], r['host']))
 
+        if self.config.get('RUNNER_TESTRUN_RESULTS') and self.config.get('RUNNER_TESTRUN_RESULTS').lower() == 'false':
+            self.execute.testrun_results = {}
+        else:
+            # data injection in artifact locations if any
+            self.execute.testrun_results = create_testrun_results(self.injector.inject_dictionary
+                                                                  (self.execute.artifact_locations), self.config)
+        # printing out the testrun results on the console
+        self._print_testrun_results()
+
+    def _print_testrun_results(self):
+        self.logger.info('\n')
+        self.logger.info('-' * 79)
+        self.logger.info('TESTRUN RESULTS SUMMARY'.center(79))
+        self.logger.info('-' * 79)
+        if self.execute.testrun_results:
+            self.logger.info(' * AGGREGATE RESULTS * '.center(79))
+            self.logger.info('-' * 79)
+            self.logger.info(' * Total Tests             : %s' %
+                             self.execute.testrun_results['aggregate_testrun_results']['total_tests'])
+            self.logger.info(' * Failed Tests            : %s' %
+                             self.execute.testrun_results['aggregate_testrun_results']['failed_tests'])
+            self.logger.info(' * Skipped Tests           : %s' %
+                             self.execute.testrun_results['aggregate_testrun_results']['skipped_tests'])
+            self.logger.info(' * Passed Tests            : %s' %
+                             self.execute.testrun_results['aggregate_testrun_results']['passed_tests'])
+            self.logger.info('-' * 79)
+            self.logger.info(' * INDIVIDUAL RESULTS * '.center(79))
+            self.logger.info('-' * 79)
+            for res in self.execute.testrun_results.get('individual_results'):
+                for keys, values in res.items():
+                    self.logger.info(' * File Name               : %s' % keys)
+                    self.logger.info(' * Total Tests             : %s' % values['total_tests'])
+                    self.logger.info(' * Failed Tests            : %s' % values['failed_tests'])
+                    self.logger.info(' * Skipped Tests           : %s' % values['skipped_tests'])
+                    self.logger.info(' * Passed Tests            : %s' % values['passed_tests'])
+                    self.logger.info('-' * 79)
+        else:
+            self.logger.info(' No artifacts were collected ')
+            self.logger.info('-' * 79 + '\n')
+
     def run(self):
         """Run.
 
@@ -324,8 +365,9 @@ class RunnerExecutor(CarbonExecutor):
                 # purposes
                 self.logger.error(ex.message)
                 if (attr != 'git' or attr != 'artifacts') and self.artifacts is not None:
-                    self.logger.info('Fetching test generated artifacts')
+                    self.logger.info('Test Execution has failed but still fetching any test generated artifacts')
                     self.__artifacts__()
+                    self.status = 1
 
                 if self.status:
                     raise CarbonExecuteError('Test execution failed to run '

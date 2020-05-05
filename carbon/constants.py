@@ -92,7 +92,7 @@ DEFAULT_CONFIG = {
 
 # Default config sections
 DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator', 'feature_toggles', 'importer',
-                           'task_concurrency', 'setup_logger']
+                           'task_concurrency', 'setup_logger', 'executor']
 
 # options on how credentials can be set
 SET_CREDENTIALS_OPTIONS = ['config', 'scenario']

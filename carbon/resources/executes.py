@@ -41,7 +41,6 @@ class Execute(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'execute']
-
     # The fields (ansible_options, git, shell, and script) could have been
     # optional parameters for the runner executor; however, since this is
     # planned to be the main executor, it made sense to define them here
@@ -51,13 +50,14 @@ class Execute(CarbonResource):
         'name',
         'description',
         'hosts',
-        'artifacts',
         'ansible_options',
         'git',
         'ignore_rc',
         'valid_rc',
-        'artifacts_location',
-        'labels'
+        'artifacts',
+        'artifact_locations',
+        'labels',
+        'testrun_results',
     ]
 
     def __init__(self,
@@ -116,7 +116,6 @@ class Execute(CarbonResource):
             self.hosts = self.hosts.replace(' ', '').split(',')
 
         # set labels
-
         setattr(self, 'labels', parameters.pop('labels', []))
 
         self.artifacts = parameters.pop('artifacts', None)
@@ -126,15 +125,17 @@ class Execute(CarbonResource):
 
         self.artifact_locations = parameters.pop('artifact_locations', None)
 
+        self.testrun_results = dict()
+
         # create the executor attributes in the execute object
         if self.executor:
             for p in getattr(self.executor, 'get_all_parameters')():
                 setattr(self, p, parameters.get(p, {}))
-            # update fields attr with executor types
+            # get the execute_types for the executor
             for item in getattr(self.executor, '_execute_types'):
-                self._fields.append(item)
+                setattr(self, item, parameters.get(item, {}))
         else:
-            self._executor = executor
+            raise CarbonExecuteError('Could not find appropriate Executor: %s' % executor)
 
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
@@ -175,10 +176,6 @@ class Execute(CarbonResource):
         else:
             profile.update({'executor': getattr(self.executor, '__executor_name__')})
 
-        for item in getattr(self, '_fields'):
-            if getattr(self, item, None):
-                profile.update({item: getattr(self, item)})
-
         # set the execute's hosts
         if all(isinstance(item, string_types) for item in self.hosts):
             profile.update(hosts=[host for host in self.hosts])
@@ -189,11 +186,11 @@ class Execute(CarbonResource):
         if not isinstance(self.executor, string_types):
             profile.update(getattr(self.executor, 'build_profile')(self))
 
-        # set labels in profile
-        profile.update({'labels': self.labels})
-
-        if self.artifact_locations:
-            profile.update({'artifact_locations': self.artifact_locations})
+        for item in getattr(self, '_fields'):
+            if item == 'hosts':
+                continue
+            elif getattr(self, item, None):
+                profile.update({item: getattr(self, item)})
 
         return profile
 

@@ -409,6 +409,79 @@ is a sub directory and artifacts/test1.log  is a file in another sub directory
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 235-255
 
+Testrun Results for Artifacts collected during the Execute block:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Carbon generates a testrun results summary for all the **xml files** it collects as a part of artifacts OR
+artifact_locations in an execute block. This summary can be seen in the results.xml as weel as is printed out
+on the console. The summary shows aggregate summary of all xmls collected and individual summary
+of each xml file. The summary contains **number of tests passed, failed, skipped and the total tests.**
+
+.. code-block:: yaml
+
+    - name: junit
+      description: execute junit test on client
+      executor: runner
+      hosts:
+      - laptop
+      shell:
+      - chdir: /home/client1/junit/tests
+        command: javac Sample.java; javac UnitTestRunner.java; javac CustomExecutionListener.java; javac SampleTest.java; java UnitTestRunner SampleTest
+      git:
+      - repo: https://gitlab.cee.redhat.com/ccit/carbon/junit-example.git
+        version: master
+        dest: /home/client1/junit
+      artifacts:
+      - /home/client1/junit/tests/*.log
+      - /home/client1/junit/tests/*.xml
+      artifact_locations:
+        dir1:
+        - junit_example.xml
+        artifacts/client1:
+        - junit_example.xml
+        - ocp_edge_deploment_integration_results.xml
+        - SampleTest.xml
+      testrun_results:
+        aggregate_testrun_results:
+          total_tests: 22
+          failed_tests: 9
+          skipped_tests: 0
+          passed_tests: 13
+        individual_results:
+        - junit_example.xml:
+            total_tests: 6
+            failed_tests: 2
+            skipped_tests: 0
+            passed_tests: 4
+        - junit_example.xml:
+            total_tests: 6
+            failed_tests: 2
+            skipped_tests: 0
+            passed_tests: 4
+        - ocp_edge_deploment_integration_results.xml:
+            total_tests: 8
+            failed_tests: 5
+            skipped_tests: 0
+            passed_tests: 3
+        - SampleTest.xml:
+            total_tests: 2
+            failed_tests: 0
+            skipped_tests: 0
+            passed_tests: 2
+
+This is the default behavior of Carbon. If a user does not want this summary generated, user can change the
+following setting to False in the carbon.cfg
+
+.. code-block:: bash
+
+   [executor:runner]
+   testrun_results=False
+
+.. note::
+
+   Carbon expects the xmls collected to have the **<testsuites>** tag  OR **<testsuite>** as its root tag,
+   else it skips those xml files for testrun summary generation
+
 Common Examples
 ---------------
 

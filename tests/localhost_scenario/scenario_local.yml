@@ -141,8 +141,8 @@ execute:
         command: ls -lrta
       - chdir: {{ WORKSPACE }}/sample_artifacts
         command: |
-           cp SampleTest.xml  SampleTest_'{ dummy.ip_address }'.xml
-           cp SampleTest_'{ dummy.ip_address }'.xml ../.carbon/{{ PY_VERSION }}/.results/
+           cp SampleTest.xml  SampleTest_{ dummy.ip_address }.xml
+           cp SampleTest_{ dummy.ip_address }.xml ../.carbon/{{ PY_VERSION }}/.results/
       - chdir: {{ WORKSPACE }}/sample_artifacts
         command: |
           cp SampleTest.log SampleDummy.log
@@ -151,7 +151,7 @@ execute:
       - {{ WORKSPACE }}/sample_artifacts/SampleTest.*
     artifact_locations:
       .results:
-         - SampleTest_'{ dummy.ip_address }'.xml
+         - SampleTest_{ dummy.ip_address }.xml
 
 report:
   - name: '*.xml'
