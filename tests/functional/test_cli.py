@@ -110,13 +110,13 @@ class TestCli(object):
     @staticmethod
     def test_empty_include_section(runner):
         results = runner.invoke(carbon, ['run', '-s', '../assets/descriptor.yml'])
-        assert 'Included File is invalid or Include section is empty .You have to provide valid scenario files ' \
+        assert 'Included File is invalid or Include section is empty.You have to provide valid scenario files ' \
                'to be included.' in results.output
 
     @staticmethod
     def test_invalid_include_section(runner):
         results = runner.invoke(carbon, ['run', '-s', '../assets/wrong_include_descriptor.yml'])
-        assert 'Included File is invalid or Include section is empty .You have to provide valid scenario files ' \
+        assert 'Included File is invalid or Include section is empty.You have to provide valid scenario files ' \
                'to be included.' in results.output
 
     @staticmethod
@@ -191,4 +191,25 @@ class TestCli(object):
             carbon, ['validate', '-s', '../assets/descriptor.yml', '-sl', 'label1', '-d', '/tmp']
         )
         assert results.exit_code == 0
+
+    @staticmethod
+    def test_invalid_show(runner):
+        results = runner.invoke(carbon, ['show', '-s', 'cdf.yml'])
+        assert 'You have to provide a valid scenario file.' in results.output
+
+    @staticmethod
+    def test_valid_show(runner):
+        results = runner.invoke(
+            carbon, ['show', '-s', '../assets/no_include.yml']
+        )
+        assert "An option needs to be given. See help" in results.output
+
+    @staticmethod
+    @mock.patch.object(Carbon, 'list_labels')
+    def test_valid_show_list_labels(mock_method, runner):
+        """This test when --list-labels option is used correct method is called"""
+        results = runner.invoke(
+            carbon, ['show', '-s', '../assets/no_include.yml', '--list-labels']
+        )
+        assert mock_method.called
 

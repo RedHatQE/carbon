@@ -35,6 +35,7 @@ import string
 import subprocess
 import sys
 import time
+import click
 import warnings
 from logging import getLogger
 import fnmatch
@@ -1316,3 +1317,27 @@ def sort_tasklist(user_tasks):
     """
 
     return sorted(user_tasks, key=TASKLIST.index)
+
+
+def validate_cli_scenario_option(ctx, scenario, vars_data=None):
+    # Make sure the file exists and gets its absolute path
+    if scenario is not None and os.path.isfile(scenario):
+        scenario = os.path.abspath(scenario)
+    else:
+        click.echo('You have to provide a valid scenario file.')
+        ctx.exit()
+
+    # Checking if include section is present and getting validated scenario stream/s
+    try:
+        scenario_stream = validate_render_scenario(scenario, vars_data)
+        return scenario_stream
+    except yaml.YAMLError:
+        click.echo('Error loading updated scenario data!')
+        ctx.exit()
+    except HelpersError:
+        click.echo('Included File is invalid or Include section is empty.'
+                   'You have to provide valid scenario files to be included.')
+        ctx.exit()
+    except CarbonError:
+        click.echo('Error loading updated included scenario data!')
+        ctx.exit()

@@ -126,3 +126,73 @@ Here Carbon will throw an error and exit as it does not find the label prod_c
 .. code-block:: bash
 
    carbon run -s resource_labels.yml --labels prod_c -labels prod_a -t provision -w . --log-level info
+
+
+Listing out labels in a SDF
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Carbon has a show command with **--list-labels** option which lists out all the labels that have been defined
+in the SDF
+
+.. code-block:: bash
+
+    $ carbon --help
+      Usage: carbon [OPTIONS] COMMAND [ARGS]...
+
+      Carbon - Interoperability Testing Framework
+
+    Options:
+      -v, --verbose  Add verbosity to the commands.
+      --version      Show the version and exit.
+      --help         Show this message and exit.
+
+    Commands:
+      run       Run a scenario configuration.
+      show      Show information about the scenario.
+      validate  Validate a scenario configuration.
+    $ carbon show --help
+      Usage: carbon show [OPTIONS]
+
+      Show info about the scenario.
+
+    Options:
+      -s, --scenario   Scenario definition file to be executed.
+      --list-labels    List all the labels and associated resources in the SDF
+      --help           Show this message and exit.
+
+.. code-block:: bash
+
+   $ carbon show -s resource_labels.yml --list-labels
+
+    --------------------------------------------------
+    Carbon Framework v1.6.0
+    Copyright (C) 2017 Red Hat, Inc.
+    --------------------------------------------------
+    2020-05-07 01:06:37,235 WARNING Scenario workspace was not set, therefore the workspace is automatically assigned to the current working directory. You may experience problems if files needed by carbon do not exists in the scenario workspace.
+    2020-05-07 01:06:37,260 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,260 INFO                                 SCENARIO LABELS
+    2020-05-07 01:06:37,261 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,261 INFO PROVISION SECTION
+    2020-05-07 01:06:37,261 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,262 INFO Resource Name        | Labels
+    2020-05-07 01:06:37,262 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,262 INFO laptop               | ['4.5']
+    2020-05-07 01:06:37,263 INFO laptop_1             | ['prod_b']
+    2020-05-07 01:06:37,263 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,263 INFO ORCHESTRATE SECTION
+    2020-05-07 01:06:37,264 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,264 INFO Resource Name        | Labels
+    2020-05-07 01:06:37,264 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,265 INFO orchestrate_1        | ['prod_a']
+    2020-05-07 01:06:37,265 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,266 INFO EXECUTE SECTION
+    2020-05-07 01:06:37,266 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,266 INFO Resource Name        | Labels
+    2020-05-07 01:06:37,267 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,267 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,267 INFO REPORT SECTION
+    2020-05-07 01:06:37,268 INFO -------------------------------------------------------------------------------
+    2020-05-07 01:06:37,268 INFO Resource Name        | Labels
+    2020-05-07 01:06:37,268 INFO -------------------------------------------------------------------------------
+
+

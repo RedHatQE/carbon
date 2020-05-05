@@ -127,6 +127,14 @@ class Scenario(CarbonResource):
         if parameters:
             self.load(parameters)
 
+    def get_all_resources(self):
+        all_resources = list()
+        all_resources.extend([item for item in self.get_all_assets()])
+        all_resources.extend([item for item in self.get_all_actions()])
+        all_resources.extend([item for item in self.get_all_executes()])
+        all_resources.extend([item for item in self.get_all_reports()])
+        return all_resources
+
     def get_all_assets(self):
         if self.child_scenarios:
             all_assets = list()

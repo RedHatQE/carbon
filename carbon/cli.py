@@ -25,16 +25,11 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-import os
-
 import click
-import yaml
 from . import __version__
 from .carbon import Carbon
 from .constants import TASKLIST, TASK_LOGLEVEL_CHOICES
-from .helpers import template_render, validate_render_scenario
-from ._compat import string_types
-from .exceptions import HelpersError, CarbonError
+from .helpers import validate_cli_scenario_option
 
 
 def print_header():
@@ -65,6 +60,34 @@ def create():
               default=None,
               metavar="",
               help="Scenario definition file to be executed.")
+@click.option("--list-labels",
+              default=None,
+              metavar="",
+              is_flag=True,
+              help="List all the labels and associated resources in the SDF")
+@click.pass_context
+def show(ctx, scenario, list_labels):
+    """Show information about the scenario."""
+    print_header()
+    scenario_stream = validate_cli_scenario_option(ctx, scenario)
+    # Create a new carbon compound
+    cbn = Carbon(__name__)
+
+    # Sending the list of scenario streams to the carbon object
+    cbn.load_from_yaml(scenario_stream)
+
+    if list_labels:
+        cbn.list_labels()
+    else:
+        click.echo('An option needs to be given. See help')
+        ctx.exit()
+
+
+@carbon.command()
+@click.option("-s", "--scenario",
+              default=None,
+              metavar="",
+              help="Scenario definition file to be executed.")
 @click.option("-d", "--data-folder",
               default=None,
               metavar="",
@@ -81,9 +104,6 @@ def create():
               default=None,
               metavar="",
               help="Pass in variable data to template the scenario. Can be a file or raw json.")
-# @click.pass_context
-# def validate(ctx, scenario, data_folder, log_level, workspace, vars_data):
-# =======
 @click.option("-l", "--labels",
               default=None,
               metavar="",
@@ -102,26 +122,7 @@ def create():
 def validate(ctx, scenario, data_folder, log_level, workspace, vars_data, labels, skip_labels):
     """Validate a scenario configuration."""
 
-    # Make sure the file exists and gets its absolute path
-    if scenario is not None and os.path.isfile(scenario):
-        scenario = os.path.abspath(scenario)
-    else:
-        click.echo('You have to provide a valid scenario file.')
-        ctx.exit()
-
-    # Checking if include section is present and getting validated scenario stream/s
-    try:
-        scenario_stream = validate_render_scenario(scenario, vars_data)
-    except yaml.YAMLError:
-        click.echo('Error loading updated scenario data!')
-        ctx.exit()
-    except HelpersError:
-        click.echo('Included File is invalid or Include section is empty .'
-                   'You have to provide valid scenario files to be included.')
-        ctx.exit()
-    except CarbonError:
-        click.echo('Error loading updated included scenario data!')
-        ctx.exit()
+    scenario_stream = validate_cli_scenario_option(ctx, scenario, vars_data)
 
     # checking if labels or skip_labels both are set
     if labels and skip_labels:
@@ -190,26 +191,7 @@ def run(ctx, task, scenario, log_level, data_folder, workspace, vars_data, label
     """Run a scenario configuration."""
     print_header()
 
-    # Make sure the file exists and gets its absolute path
-    if scenario is not None and os.path.isfile(scenario):
-        scenario = os.path.abspath(scenario)
-    else:
-        click.echo('You have to provide a valid scenario file.')
-        ctx.exit()
-
-    # Checking if include section is present and getting validated scenario stream/s
-    try:
-        scenario_stream = validate_render_scenario(scenario, vars_data)
-    except yaml.YAMLError:
-        click.echo('Error loading updated scenario data!')
-        ctx.exit()
-    except HelpersError:
-        click.echo('Included File is invalid or Include section is empty .'
-                   'You have to provide valid scenario files to be included.')
-        ctx.exit()
-    except CarbonError:
-        click.echo('Error loading updated included scenario data!')
-        ctx.exit()
+    scenario_stream = validate_cli_scenario_option(ctx, scenario, vars_data)
 
     # checking if labels or skip_labels both are set
     if labels and skip_labels:

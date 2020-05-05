@@ -267,8 +267,49 @@ class Carbon(LoggerMixin, TimeMixin):
                 self._populate_scenario_resources(ch_scenario, scenario_stream)
                 self.scenario.add_child_scenario(ch_scenario)
 
-        # Validating labels provided at the cli
         self._validate_labels()
+
+    def list_labels(self):
+        """This method displays all the labels in the scenario"""
+        res_label_dict = dict()
+        # getting all labels from all resources in the scenario
+        for res in self.scenario.get_all_resources():
+            res_label_dict[res] = dict(name=getattr(res, 'name'),
+                                       labels=[lab for lab in getattr(res, 'labels')])
+        self.logger.info('-' * 79)
+        self.logger.info('SCENARIO LABELS'.center(79))
+        self.logger.info('-' * 79)
+        self.logger.info('PROVISION SECTION')
+        self.logger.info('-' * 79)
+        self.logger.info("{:<20} | {}".format('Resource Name', 'Labels'))
+        self.logger.info('-' * 79)
+        for key, value in res_label_dict.items():
+            if isinstance(key, Asset):
+                self.logger.info("{:<20} | {}".format(value['name'], value['labels']))
+        self.logger.info('-' * 79)
+        self.logger.info('ORCHESTRATE SECTION')
+        self.logger.info('-' * 79)
+        self.logger.info("{:<20} | {}".format('Resource Name', 'Labels'))
+        self.logger.info('-' * 79)
+        for key, value in res_label_dict.items():
+            if isinstance(key, Action):
+                self.logger.info("{:<20} | {}".format(value['name'], value['labels']))
+        self.logger.info('-' * 79)
+        self.logger.info('EXECUTE SECTION')
+        self.logger.info('-' * 79)
+        self.logger.info("{:<20} | {}".format('Resource Name', 'Labels'))
+        self.logger.info('-' * 79)
+        for key, value in res_label_dict.items():
+            if isinstance(key, Execute):
+                self.logger.info("{:<20} | {}".format(value['name'], value['labels']))
+        self.logger.info('-' * 79)
+        self.logger.info('REPORT SECTION')
+        self.logger.info('-' * 79)
+        self.logger.info("{:<20} | {}".format('Resource Name', 'Labels'))
+        self.logger.info('-' * 79)
+        for key, value in res_label_dict.items():
+            if isinstance(key, Report):
+                self.logger.info("{:<20} | {}".format(value['name'], value['labels']))
 
     def _validate_labels(self):
         """This method validates that the labels provided by the users are mentioned withing the SDF. If no labels match
@@ -278,10 +319,7 @@ class Carbon(LoggerMixin, TimeMixin):
             res_label_list = list()
             user_labels = list()
             # labels present in all res
-            res_label_list.extend([lab for res in self.scenario.get_all_assets() for lab in getattr(res, 'labels')])
-            res_label_list.extend([lab for res in self.scenario.get_all_actions() for lab in getattr(res, 'labels')])
-            res_label_list.extend([lab for res in self.scenario.get_all_executes() for lab in getattr(res, 'labels')])
-            res_label_list.extend([lab for res in self.scenario.get_all_reports() for lab in getattr(res, 'labels')])
+            res_label_list.extend([lab for res in self.scenario.get_all_resources() for lab in getattr(res, 'labels')])
             # labels provided by user at cli
             user_labels.extend([lab for lab in
                                 self.carbon_options.get('labels') or self.carbon_options.get('skip_labels')])
