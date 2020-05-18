@@ -103,7 +103,8 @@ class LoggerMixin(object):
             # at a better way through the plugins
             for logger in config['SETUP_LOGGER']:
                 LOGGING_CONFIG['loggers'].update({logger: {'handlers': ['console', 'file'],
-                                                  'level': cls._LOG_LEVELS[config['LOG_LEVEL']], 'propagate': False}})
+                                                           'level': cls._LOG_LEVELS[config['LOG_LEVEL']],
+                                                           'propagate': False}})
             log_level = config['LOG_LEVEL']
         else:
             log_level = 'info' if getLogger('carbon').getEffectiveLevel() == 20 else 'debug'

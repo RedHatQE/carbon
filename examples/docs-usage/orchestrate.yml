@@ -61,7 +61,7 @@ orchestrate:
       - host01
       - host02
     ansible_galaxy_options:
-      role_file: requirements.yml
+      role_file: roles.yml
 
 ---
 orchestrate:
@@ -75,9 +75,6 @@ orchestrate:
       roles:
         - oasis-roles.rhsm
         - git+https://gitlab.cee.redhat.com/oasis-roles/coreos_infra.git,master,oasis_roles.coreos_infra
-      collections:
-        - geerlingguy.php_roles
-        - geerlingguy.k8s
 
 ---
 orchestrate:

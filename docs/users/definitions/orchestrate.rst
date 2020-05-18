@@ -150,7 +150,7 @@ on your selected orchestrator.Lets dive into them..
 
     *   - ansible_galaxy_options
         - Additional options to provide to the ansible orchestrator regarding
-          ansible roles and collections
+          ansible roles
         - Dictionary
         - No
         - n/a
@@ -438,12 +438,12 @@ Use the **file** key to pass a variable file to the playbook. This file needs to
 Ansible Galaxy Options
 ~~~~~~~~~~~~~~~~~~~~~~
 
-These are additional options provided to the ansible orchestrator regarding the ansible roles and collections
+These are additional options provided to the ansible orchestrator regarding the ansible roles
 
 Retry
 +++++
 
-To make sure ansible roles and collections are downloaded correctly, 'retry' ansible galaxy option is used
+To make sure ansible roles are downloaded correctly, 'retry' ansible galaxy option is used
 
 .. code-block:: yaml
 
@@ -506,42 +506,34 @@ Example 5
 You have a playbook which needs to run against x number of hosts and requires
 an ansible role to be downloaded.
 
-.. note::
-         Although the option is called *role_file:* but it relates both, roles and collections.
-
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
     :lines: 55-64
 
-Content of requirements.yml:
+Content of roles.yml:
 
 .. code-block:: yaml
 
     ---
-    roles:
     - src: oasis-roles.rhsm
 
-    collections:
-    - name: geerlingguy.php_roles
-    - geerlingguy.k8s
-
-As you can see we defined the role_file key. This defines the ansible
+As you can see we defined the role_file key. This defines the ansible role
 requirements filename. Carbon will consume that file and download all the
-roles and collections defined within.
+roles defined within.
 
-An alternative to using the requirements file is you can directly define them using
-the roles or collections key.
+An alternative to using the role file is you can directly define them using
+the roles key.
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 66-80
+    :lines: 66-76
 
-It is possible to define both role_file and direct definitions. Carbon will install the
-roles and collections first from the role_file and then the roles and collections defined using the keys. It is up to the
+It is possible to define both role_file and roles. Carbon will install the
+roles first from the role file and then the roles defined. It is up to the
 scenario to ensure no problems may occur if both are defined.
 
 .. note::
 
-    If your scenario directory has roles and collections already defined, you do not need to
-    define them. This is only if you want carbon to download roles or collections from sites
+    If your scenario directory has roles already defined, you do not need to
+    define them. This is only if you want carbon to download roles from sites
     such as ansible galaxy, external web servers, etc.
 
 Example 6
@@ -559,12 +551,12 @@ ansible roles to be downloaded and requires additional extra variables.
     file. This provides the scenario with the flexibility to easily control
     portions of ansible.
 
-    If you are using the ability to download roles or collections by carbon, you need to set
-    the *roles_path* or the *collections_paths* within your ansible.cfg. If this is not set, problems will
-    occur and carbon will fail. Due to being unable to locate the roles and collections within
+    If you are using the ability to download roles by carbon, you need to set
+    the roles path within your ansible.cfg. If this is not set, problems will
+    occur and carbon will fail. Due to being unable to locate the roles within
     the playbook its executing.
 
-    Here is an example ansible.cfg setting the roles_path and collections_paths to a relative path
+    Here is an example ansible.cfg setting the roles_path to a relative path
     within the scenario directory.
 
     .. code-block:: bash
@@ -573,7 +565,6 @@ ansible roles to be downloaded and requires additional extra variables.
         host_key_checking = False
         retry_files_enabled = False
         roles_path = ./roles
-        collections_paths = ./collections
 
 Example 7
 ~~~~~~~~~
