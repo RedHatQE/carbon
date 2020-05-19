@@ -38,7 +38,7 @@ from ansible.vars.manager import VariableManager
 from shutil import copyfile
 from ansible.config.manager import ConfigManager
 from ._compat import string_types
-from .helpers import ssh_retry, exec_local_cmd_pipe, DataInjector, get_ans_verbosity, is_host_localhost
+from .helpers import ssh_retry, exec_local_cmd_pipe, DataInjector, get_ans_verbosity, is_host_localhost, file_mgmt
 from .static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK, \
     ADHOC_SHELL_PLAYBOOK, ADHOC_SCRIPT_PLAYBOOK
 from .core import Inventory
@@ -380,7 +380,7 @@ class AnsibleService(object):
             yaml.dump(yaml.load(playbook_str), f)
 
     def download_roles(self):
-        """Download ansible roles defined for the given action."""
+        """Download ansible roles and collections defined for the given action."""
         flag = 0
 
         if self.galaxy_options is None:
@@ -391,16 +391,35 @@ class AnsibleService(object):
 
             f = os.path.join(self.config['WORKSPACE'],
                              self.galaxy_options['role_file'])
-            self.logger.info('Installing roles using req. file: %s' % f)
-
-            cmd = 'ansible-galaxy install -r %s' % f
-            results = exec_local_cmd_pipe(cmd, self.logger)
-
-            if results[0] != 0:
-                raise AnsibleServiceError(
-                    'A problem occurred while installing roles using req. file'
-                    ' %s' % f)
-            self.logger.info('Roles installed successfully from: %s!' % f)
+            file_output = file_mgmt('r', f)
+            if isinstance(file_output, list):
+                cmd = 'ansible-galaxy role install -r %s' % f
+                self.logger.info('Installing roles using req. file: %s' % f)
+                results = exec_local_cmd_pipe(cmd, self.logger)
+                if results[0] != 0:
+                    raise AnsibleServiceError(
+                        'A problem occurred while installing roles using req. file'
+                        ' %s' % f)
+                self.logger.info('Roles installed successfully from: %s!' % f)
+            elif isinstance(file_output, dict):
+                if 'roles' in file_output:
+                    cmd = 'ansible-galaxy role install -r %s' % f
+                    self.logger.info('Installing roles using req. file: %s' % f)
+                    results = exec_local_cmd_pipe(cmd, self.logger)
+                    if results[0] != 0:
+                        raise AnsibleServiceError(
+                            'A problem occurred while installing roles using req. file'
+                            ' %s' % f)
+                    self.logger.info('Roles installed successfully from: %s!' % f)
+                if 'collections' in file_output:
+                    cmd = 'ansible-galaxy collection install -r %s' % f
+                    self.logger.info('Installing collections using req. file: %s' % f)
+                    results = exec_local_cmd_pipe(cmd, self.logger)
+                    if results[0] != 0:
+                        raise AnsibleServiceError(
+                            'A problem occurred while installing collections using req. file'
+                            ' %s' % f)
+                    self.logger.info('Collections installed successfully from: %s!' % f)
 
         if 'roles' in self.galaxy_options:
             if flag >= 1:
@@ -416,6 +435,21 @@ class AnsibleService(object):
                         'A problem occurred while installing role: %s' % item
                     )
                 self.logger.info('Role: %s successfully installed!' % item)
+
+        if 'collections' in self.galaxy_options:
+            if flag >= 1:
+                self.logger.warning('FYI collections were already installed using a'
+                                    ' requirements file. Problems may occur.')
+
+            for item in self.galaxy_options['collections']:
+                cmd = 'ansible-galaxy collection install %s' % item
+                results = exec_local_cmd_pipe(cmd, self.logger)
+
+                if results[0] != 0:
+                    raise AnsibleServiceError(
+                        'A problem occurred while installing collection: %s' % item
+                    )
+                self.logger.info('Collection: %s successfully installed!' % item)
 
     def get_default_config(self, key=None):
         """getting the default configuration defined by ansible.cfg
