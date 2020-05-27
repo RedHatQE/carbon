@@ -16,28 +16,20 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-from ..core import CarbonImporter
+from ..core import LoggerMixin, TimeMixin
 from ..exceptions import CarbonImporterError
-from .._compat import string_types
 from ..helpers import find_artifacts_on_disk, DataInjector
 
 
-class ArtifactImporter(CarbonImporter):
+class ArtifactImporter(LoggerMixin, TimeMixin):
 
     __importer_name__ = 'artifact-importer'
 
     def __init__(self, report):
 
-        super(ArtifactImporter, self).__init__(report)
-
+        self.report = report
         self.artifact_paths = []
-
-        # use the profile dict as a request object to the plugin
-        report_profile = self.report.profile()
-        report_profile.update(dict(data_folder=self.data_folder, workspace=self.workspace,
-                                   provider_credentials=self.provider_credentials,
-                                   artifacts=[]))
+        self.plugin = getattr(self.report, 'importer_plugin')(report)
 
         # check if user specified data pass-through injection
         host_list = [host for execute in self.report.executes for host in execute.all_hosts]
@@ -48,21 +40,8 @@ class ArtifactImporter(CarbonImporter):
             # method fetch_executes added an attribute 'all_hosts'
             # to the report object
             self.injector = DataInjector(self.report.all_hosts)
+
         self.report_name = self.injector.inject(self.report.name)
-        report_profile['name'] = self.report_name
-
-        # build the config params that might be useful to plugin and instantiate
-        if self.report.do_import:
-            plugin_name = getattr(self.report, 'importer_plugin').__plugin_name__
-            config_params = dict()
-            for k, v in self.config.items():
-                if plugin_name.upper() in k:
-                    config_params[k.lower()] = v
-
-            report_profile.update(dict(config_params=config_params))
-
-            # setup plugin with profile dict
-            self.plugin = getattr(self.report, 'importer_plugin')(report_profile)
 
     def validate_artifacts(self):
 
@@ -76,19 +55,21 @@ class ArtifactImporter(CarbonImporter):
                 if not execute.artifact_locations:
                     self.logger.warning('The specified execute, %s, does not have any artifacts '
                                         'with it.' % execute.name)
-                    self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.config.get('RESULTS_FOLDER'),
-                                                                      report_name=self.report_name))
+                    self.artifact_paths.extend(find_artifacts_on_disk
+                                               (data_folder=self.report.config.get('RESULTS_FOLDER'),
+                                                report_name=self.report_name))
                 else:
 
                     # Perform check to walk the data directory
-                    self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.config.get('RESULTS_FOLDER'),
-                                                                      report_name=self.report_name,
-                                                                      art_location=self.injector.inject_dictionary(
-                                                                          execute.artifact_locations)
-                                                                      )
+                    self.artifact_paths.extend(find_artifacts_on_disk
+                                               (data_folder=self.report.config.get('RESULTS_FOLDER'),
+                                                report_name=self.report_name,
+                                                art_location=self.injector.inject_dictionary
+                                                (execute.artifact_locations)
+                                                )
                                                )
         else:
-            self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.config.get('RESULTS_FOLDER'),
+            self.artifact_paths.extend(find_artifacts_on_disk(data_folder=self.report.config.get('RESULTS_FOLDER'),
                                                               report_name=self.report_name))
         if not self.artifact_paths:
             raise CarbonImporterError('No artifact could be found on the Carbon controller data folder.')
@@ -102,3 +83,15 @@ class ArtifactImporter(CarbonImporter):
             self.logger.error(ex)
             setattr(self.report, 'import_results', getattr(self.plugin, 'import_results'))
             raise CarbonImporterError('Failed to import artifact %s' % self.report.name)
+
+    def validate(self):
+        """
+        validate the params provided are supported by the plugin
+        :return:
+        """
+        try:
+            self.plugin.validate()
+        except Exception:
+            raise
+        else:
+            self.logger.info('successfully validated scenario Report against the schema!')

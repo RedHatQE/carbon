@@ -69,6 +69,18 @@ def default_report_params():
                   )
     return params
 
+
+@pytest.fixture
+def report_params_np():
+    params = dict(
+                  description='description',
+                  executes='execute',
+                  importer='polarion',
+                  credential='polarion'
+                  )
+    return params
+
+
 @pytest.fixture
 def host1(default_host_params, config):
     host1 = Asset(name='host_count', config=config, parameters=copy.deepcopy(default_host_params))
@@ -76,13 +88,11 @@ def host1(default_host_params, config):
 
 
 @pytest.fixture
-@mock.patch('carbon.resources.reports.get_provider_plugin_list')
-@mock.patch('carbon.resources.reports.get_provider_plugin_class')
-@mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
-def report1(mock_importerplugin, mock_provider_class, mock_pluginlist, default_report_params, config):
-    mock_pluginlist.return_value = ['polarion']
-    mock_provider_class.return_value = CarbonProvider
-    mock_importerplugin.return_value = ImporterPlugin
+@mock.patch('carbon.resources.reports.get_importers_plugin_list')
+@mock.patch('carbon.resources.reports.get_importer_plugin_class')
+def report1(mock_plugin_class, mock_plugin_list, default_report_params, config):
+    mock_plugin_list.return_value = ['polarion']
+    mock_plugin_class.return_value = ImporterPlugin
     return Report(name='SampleTest.xml', parameters=default_report_params, config=config)
 
 
@@ -287,41 +297,34 @@ class TestReportResource(object):
         report = Report(name='test.xml', parameters=params, config=config)
         assert isinstance(report.executes, list)
 
-
     @staticmethod
-    @mock.patch('carbon.resources.reports.get_provider_plugin_list')
-    @mock.patch('carbon.resources.reports.get_provider_plugin_class')
-    @mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
-    def test_create_report_without_executes(mock_importerplugin, mock_provider_class, mock_pluginlist, default_report_params, config):
+    @mock.patch('carbon.resources.reports.get_importers_plugin_list')
+    @mock.patch('carbon.resources.reports.get_importer_plugin_class')
+    def test_create_report_without_executes(mock_plugin_class, mock_plugin_list, default_report_params, config):
         params = copy.deepcopy(default_report_params)
         del params['executes']
-        mock_pluginlist.return_value = ['polarion']
-        mock_provider_class.return_value = CarbonProvider
-        mock_importerplugin.return_value = ImporterPlugin
+        mock_plugin_list.return_value = ['polarion']
+        mock_plugin_class.return_value = ImporterPlugin
         report = Report(name='test.xml', parameters=params, config=config)
         assert isinstance(report.executes, list)
 
     @staticmethod
-    @mock.patch('carbon.resources.reports.get_provider_plugin_list')
-    @mock.patch('carbon.resources.reports.get_provider_plugin_class')
-    @mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
-    def test_create_report_with_executes_as_str(mock_importerplugin, mock_provider_class, mock_pluginlist , default_report_params, config):
+    @mock.patch('carbon.resources.reports.get_importers_plugin_list')
+    @mock.patch('carbon.resources.reports.get_importer_plugin_class')
+    def test_create_report_with_executes_as_str(mock_plugin_class, mock_plugin_list, default_report_params, config):
         default_report_params['executes'] = 'execute01, execute02'
-        mock_pluginlist.return_value = ['polarion']
-        mock_provider_class.return_value = CarbonProvider
-        mock_importerplugin.return_value = ImporterPlugin
+        mock_plugin_list.return_value = ['polarion']
+        mock_plugin_class.return_value = ImporterPlugin
         report = Report(name='test.xml', parameters=default_report_params, config=config)
         assert isinstance(report.executes, list)
 
     @staticmethod
-    @mock.patch('carbon.resources.reports.get_provider_plugin_list')
-    @mock.patch('carbon.resources.reports.get_provider_plugin_class')
-    @mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
-    def test_create_report_with_executes_as_str_1(mock_importerplugin, mock_provider_class, mock_pluginlist , default_report_params, config):
+    @mock.patch('carbon.resources.reports.get_importers_plugin_list')
+    @mock.patch('carbon.resources.reports.get_importer_plugin_class')
+    def test_create_report_with_executes_as_str_1(mock_plugin_class, mock_plugin_list, default_report_params, config):
         default_report_params['executes'] = 'execute 01,execute 02, execute03'
-        mock_pluginlist.return_value = ['polarion']
-        mock_provider_class.return_value = CarbonProvider
-        mock_importerplugin.return_value = ImporterPlugin
+        mock_plugin_list.return_value = ['polarion']
+        mock_plugin_class.return_value = ImporterPlugin
         report = Report(name='test.xml', parameters=default_report_params, config=config)
         assert isinstance(report.executes, list)
         assert len(report.executes) == 3
@@ -336,6 +339,16 @@ class TestReportResource(object):
         execute.name = 'execute02'
         report_resource.executes = [execute]
         assert isinstance(report_resource.profile(), dict)
+
+    @staticmethod
+    @mock.patch('carbon.resources.reports.get_importers_plugin_list')
+    @mock.patch('carbon.resources.reports.get_importer_plugin_class')
+    def test_create_report_without_provider_key(mock_plugin_class, mock_plugin_list, report_params_np, config):
+        """The test is to verify that when report params are passed correctly  without the provider dictionary"""
+        mock_plugin_list.return_value = ['polarion']
+        mock_plugin_class.return_value = ImporterPlugin
+        report = Report(name='test.xml', parameters=report_params_np, config=config)
+        assert report.credential['name'] == 'polarion'
 
 
 class TestExecuteResource(object):

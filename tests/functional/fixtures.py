@@ -218,18 +218,20 @@ def execute_resource(config):
 
 
 @pytest.fixture
-@mock.patch('carbon.resources.reports.get_provider_plugin_list')
-@mock.patch('carbon.resources.reports.get_provider_plugin_class')
-@mock.patch('carbon.resources.reports.get_default_importer_plugin_class')
-def report_resource(mock_importerplugin, mock_provider_class, mock_pluginlist, config):
-    mock_pluginlist.return_value = ['polarion']
-    mock_provider_class.return_value = CarbonProvider
-    mock_importerplugin.return_value = ImporterPlugin
+@mock.patch('carbon.resources.reports.get_importers_plugin_list')
+@mock.patch('carbon.resources.reports.get_importer_plugin_class')
+def report_resource(mock_plugin_class, mock_plugin_list, config):
+    mock_plugin_list.return_value = ['polarion']
+    mock_plugin_class.return_value = ImporterPlugin
     params = dict(description='description', executes='execute',
                   provider=dict(name='polarion',
                                 credential='polarion'
-                                ))
-    return Report(name='text.xml', parameters=params, config=config)
+                                ),
+                  do_import=False)
+    report = Report(name='text.xml', parameters=params, config=config)
+    # setting this to false since no actual importer is present
+    report.do_import = False
+    return report
 
 
 @pytest.fixture

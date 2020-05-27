@@ -154,22 +154,4 @@ execute:
          - SampleTest_{ dummy.ip_address }.xml
 
 report:
-  - name: '*.xml'
-    description: "Test importing all found xml files."
-    executes: "Test collecting artifacts"
-    importer: dummy
-
-  - name: SampleTest_{ dummy.ip_address }.xml
-    description: "Test importing xml files with data-passthrough"
-    executes: "Test collecting artifacts"
-    importer: dummy
-
-  - name: SampleDummy.log
-    description: "Test importing all found xml file"
-    importer: dummy
-
-  - name: localhost/SampleTest.log
-    description: "Test importing all log using directory/file path"
-    executes: "Test collecting artifacts"
-    importer: dummy 
 

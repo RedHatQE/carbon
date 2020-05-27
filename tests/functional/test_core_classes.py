@@ -105,6 +105,7 @@ def report_profile():
                    provider={'name': 'test'})
     return profile
 
+
 @pytest.fixture
 def provisioner_plugin(host):
     return ProvisionerPlugin(host)
@@ -122,9 +123,9 @@ def executor_plugin():
     return ExecutorPlugin()
 
 
-@pytest.fixture(scope='class')
-def importer_plugin(report_profile):
-    return ImporterPlugin(report_profile)
+@pytest.fixture
+def importer_plugin(report_resource):
+    return ImporterPlugin(report_resource)
 
 
 @pytest.fixture(scope='class')

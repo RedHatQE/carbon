@@ -6,7 +6,7 @@ Overview
 
 Carbon's report section declares which test artifacts collected during execution 
 are to be imported into a Report & Analysis system. The input for artifact import
-will depend on the destination system. The current support for Reporting systems are:
+will depend on the destination system. The Reporting systems currently supported are:
 :ref:`Polarion<polarion_importing>` and :ref:`Report Portal<report_portal_importing>`
 
 .. attention::
@@ -26,6 +26,13 @@ First, let's go over the basic structure that defines a Report resource.
         executes: <execute>
         importer: <importer>
         provider: <dict_key_values>
+
+.. attention::
+   **Starting with Carbon version 1.7.0 the use of Provider will be deprecated. All the attributes which were
+   put under provider dictionary can be set as a key under the report block. When provider key is not being used,
+   it is mandatory to use the importer key to state which importer needs to be used**
+
+
 
 .. list-table::
     :widths: auto
@@ -57,16 +64,18 @@ First, let's go over the basic structure that defines a Report resource.
     *   - importer
         - The name of the importer to perform the import process.
         - String
-        - False
+        - True (False if provider key is used)
 
     *   - provider
         - Dictionary of the specific provider key/values.
         - Dict
-        - True
+        - False
 
 If you are familiar with the structure of Provision then the same
 concept of Provider has been utilized in the Report. We will dive 
 into the different report providers further below.
+
+.. note:: Starting Carbon 1.7.0 use of provider is deprecated
 
 
 Executes
@@ -128,6 +137,24 @@ Polarion Artifact
 The following shows all the possible keys for defining the artifact import
 for the Polarion xUnit Importer:
 
+Without Provider :
+
+.. code-block:: yaml
+
+    ---
+    report:
+      - name: <name>
+        description: <description>
+        executes: <execute name>
+        importer: polarion
+        credential: polarion-creds
+        project_id: <project_id>
+        testsuite_properties: <ts_properties>
+        testcase_properties: <tc_properties>
+        testcase_csv_file: <path_to_csv>
+
+With Provider :
+
 .. code-block:: yaml
 
     ---
@@ -156,7 +183,7 @@ for the Polarion xUnit Importer:
     *   - name
         - The name of the provider (polarion).
         - String
-        - True
+        - True(Only when Provider is being used)
 
     *   - credential
         - The name of the credentials to use to import the artifact
@@ -291,7 +318,7 @@ config file.  The following are the settings.
 Examples
 ++++++++
 
-Lets dive into a couple different examples.
+Lets dive into a couple different examples. These examples show use of both provider key and no provider key
 
 Example 1
 +++++++++
@@ -300,7 +327,7 @@ You have an xUnit artifact that has already gone through conversion as part of
 the test process and needs to be imported into Polarion.
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-    :lines: 1-8
+    :lines: 1-7
 
 Example 2
 +++++++++
@@ -309,7 +336,7 @@ You have an xUnit artifact that needs just some testsuite properties applied,
 where the lookup method is set to name. Then the artifact is imported afterwards.
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-    :lines: 10-23
+    :lines: 9-21
 
 Example 3
 +++++++++
@@ -319,7 +346,7 @@ imported afterwards. No lookup method is supplied because the id for the
 test case has been explicitly defined and an iteration.
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-    :lines: 25-41
+    :lines: 23-40
 
 Example 4
 +++++++++
@@ -329,7 +356,7 @@ the execute phase that needs to have some testsuite properties applied to it and
 imported afterwards.
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-    :lines: 43-54
+    :lines: 41-52
 
 Example 5
 +++++++++
@@ -338,7 +365,7 @@ You have a set of xUnit files that have already gone through conversion
 during the test process and just need to be bulk imported.
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-    :lines: 56-63
+    :lines: 54-60
 
 Example 6
 +++++++++
@@ -348,7 +375,7 @@ that have already gone through conversion during the test process
 but you only need one from a specific host in carbon's artifact directory.
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-    :lines: 65-72
+    :lines: 62-69
 
 Example 7
 +++++++++
@@ -358,7 +385,7 @@ properties and the testcases should dynamically tagged with their polarion
 id using the contents of the csv file. Then imported afterwards.
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 74-87
+   :lines: 71-83
 
 
 .. _report_portal_importing:
@@ -385,6 +412,30 @@ Carbon Report Portal Configuration
 
 The following shows all the possible keys for defining the artifact import
 for the Report Portal Importer:
+
+Without Provider:
+
+.. code-block:: yaml
+
+    ---
+    report:
+      - name: <name>
+        description: <description>
+        executes: <execute name>
+        importer: reportportal
+        credential: reportportal-creds
+        rp_project: <project_name>
+        launch_name: <launch_name>
+        launch_description: <launch_description>
+        simple_xml: <to just import XML file directly>
+        auto_dashboard: <create dashboard>
+        merge_launches: <merge multiple launches into single true/false>
+        tags:
+        - <tag1>
+        - <tag2>
+        json_path: <relative path for report portal config file>
+
+With Provider:
 
 .. code-block:: yaml
 
@@ -420,7 +471,7 @@ for the Report Portal Importer:
     *   - name
         - The name of the provider (reportportal).
         - String
-        - True
+        - True (Only when Provider is used)
 
     *   - credential
         - The name of the credentials to use to import the artifact
@@ -477,7 +528,7 @@ for the Report Portal Importer:
           is used, the rest of the provider params are ignored. User can set all the above
           params in a json config file and provide ts path here.
         - String
-        - True
+        - False
 
 .. NOTE::
    At this time Report Portal Client can create a dashboard for the launches using a single widget 
@@ -556,7 +607,7 @@ remaining params and creates the json file *rp_config_file.json* in the workspac
 to pass paylaod to the Report Portal Client
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 264-280
+   :lines: 256-271
 
 **Example 2**
 
@@ -564,7 +615,7 @@ In the following example, json_path is provided. Here Carbon uses the user provi
 the payload to the Report Portal Client
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 282-292
+   :lines: 273-282
 
 
 **Example 3**
@@ -573,7 +624,7 @@ In the following example both json_path and other params are given. Here since j
 it will be used as the config file to send the payload, the other params are ignored
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 294-310
+   :lines: 284-300
 
 Setting up payload directory for Report Portal Client
 +++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -628,7 +679,7 @@ structure. The report name in this case is a pattern payload/* to consider teh p
 to be sent to the Report Portal Client
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 98-123
+   :lines: 93-117
 
 Use Case 2
 ++++++++++
@@ -652,7 +703,7 @@ In the below example the payload_example_medium is a directory placed under *.re
 directory structure of results and attachments folder under it. The name of the report used is payload_example/medium/*
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 125-152
+   :lines: 119-145
 
 Use Case 3
 ++++++++++
@@ -674,7 +725,7 @@ this folder, copies all the xml files and puts them under .carbon/<data folder>/
 **.carbon/<data folder>/rp_payload** is the payload directory path given to the Report Portal client
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 154-179
+   :lines: 147-171
 
 Use Case 4
 ++++++++++
@@ -694,7 +745,7 @@ directory rp_payload as .carbon/<data folder>/rp_payload/results and copy all th
 .carbon/.results/payload_carbon/. The payload directory sent to report portal client will be **.carbon/.results/rp_payload**
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 181-205
+   :lines: 173-197
 
 Use Case 5
 ++++++++++
@@ -717,7 +768,7 @@ In the below example the artifacts collected during execute phase are present un
 during execute are under artifact_locations and stored under Carbon's *.results* folder
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 207-237
+   :lines: 199-229
 
 Use Case 6
 ++++++++++
@@ -738,4 +789,4 @@ In the below example the  data folder directory and .results directory are walke
 is  matched with files found in there. xml files are selected from the matched paths/files and added to the payload directory.
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
-   :lines: 239-262
+   :lines: 231-254

@@ -296,6 +296,15 @@ mapping:
           type: any
           func: type_str_list
           required: False
+        provider:
+          type: map
+          allowempty: True
+          mapping:
+            name:
+              required: True
+              type: str
+        importer:
+          type: str
         labels:
           type: any
           func: type_str_list

@@ -3,24 +3,22 @@ report:
 - name: suite1_results.xml
   description: import suite1 results to polarion
   executes: pytest execution
-  provider:
-    credential: polarion-creds
-    name: polarion
+  importer: polarion
+  credential: polarion-creds
 
 ---
 report:
 - name: suite1_results.xml
   description: import suite1 results to polarion
   executes: pytest execution
-  provider:
-    credential: polarion-creds
-    name: polarion
-    project_id: Carbon1
-    testsuite_properties:
-      polarion-lookup-method: name
-      polarion-custom-os: RHEL 8
-      polarion-testrun-id: PolId-123
-      polarion-testrun-title: Sample Test Run
+  importer: polarion
+  credential: polarion-creds
+  project_id: Carbon1
+  testsuite_properties:
+    polarion-lookup-method: name
+    polarion-custom-os: RHEL 8
+    polarion-testrun-id: PolId-123
+    polarion-testrun-title: Sample Test Run
 
 ---
 report:
@@ -58,9 +56,8 @@ report:
 - name: '*.xml'
   description: import suite1 results to polarion
   executes: pytest execution
-  provider:
-    credential: polarion-creds
-    name: polarion
+  importer: polarion
+  credential: polarion-creds
 
 ---
 report:
@@ -76,24 +73,22 @@ report:
 - name: suite1_results.xml
   description: import suite1 results to polarion
   executes: pytest execution
-  provider:
-    credential: polarion-creds
-    name: polarion
-    project_id: Carbon1
-    testsuite_properties:
-      polarion-lookup-method: custom
-      polarion-testrun-id: PolId-123
-      polarion-testrun-title: Sample Test Run
-    testcase_csv_file: polarion/workitems.csv
+  importer: polarion
+  credential: polarion-creds
+  project_id: Carbon1
+  testsuite_properties:
+    polarion-lookup-method: custom
+    polarion-testrun-id: PolId-123
+    polarion-testrun-title: Sample Test Run
+  testcase_csv_file: polarion/workitems.csv
 
 ---
 report:
   - name: payload_example_medium/*
     description: To test rp path
     executes: rp_execute_test
-    provider:
-      name: reportportal
-      credential: reportportal-creds
+    importer: reportportal
+    credential: reportportal-creds
 # rp uc1
 ---
 execute:
@@ -111,16 +106,15 @@ report:
   - name: payload_eg/*
     description: To test rp path
     executes: rp_execute_test
-    provider:
-      name: reportportal
-      credential: reportportal-creds
-      rp_project: carbon_1
-      launch_name: carbon_launch
-      launch_description: carbon_launch_desc
-      tags:
-      - tag1
-      - tag2
-      merge_launches: True
+    importer: reportportal
+    credential: reportportal-creds
+    rp_project: carbon_1
+    launch_name: carbon_launch
+    launch_description: carbon_launch_desc
+    tags:
+    - tag1
+    - tag2
+    merge_launches: True
 #rp uc2
 ---
 execute:
@@ -140,16 +134,15 @@ report:
   - name: payload_example_medium/*
     description: To test rp path
     executes: rp_execute_test
-    provider:
-      name: reportportal
-      credential: reportportal-creds
-      rp_project: carbon_1
-      launch_name: carbon_launch
-      launch_description: carbon_launch_desc
-      tags:
-      - tag1
-      - tag2
-      merge_launches: False
+    importer: reportportal
+    credential: reportportal-creds
+    rp_project: carbon_1
+    launch_name: carbon_launch
+    launch_description: carbon_launch_desc
+    tags:
+    - tag1
+    - tag2
+    merge_launches: False
 #rp uc3
 ---
 execute:
@@ -167,16 +160,15 @@ report:
   - name: '*.xml'
     description: To test rp path
     executes: rp_execute_test
-    provider:
-      name: reportportal
-      credential: reportportal-creds
-      rp_project: carbon_1
-      launch_name: carbon_launch
-      launch_description: carbon_launch_desc
-      tags:
-      - tag1
-      - tag2
-      merge_launches: False
+    importer: reportportal
+    credential: reportportal-creds
+    rp_project: carbon_1
+    launch_name: carbon_launch
+    launch_description: carbon_launch_desc
+    tags:
+    - tag1
+    - tag2
+    merge_launches: False
 #rp uc4
 ---
 execute:
@@ -266,30 +258,28 @@ report:
   - name: payload_example_medium/*
     description: To test rp path
     executes: rp_execute_test
-    provider:
-      name: reportportal
-      credential: reportportal-creds
-      rp_project: carbon_1
-      launch_name: carbon_launch
-      launch_description: carbon_launch_desc
-      tags:
-      - tag1
-      - tag2
-      merge_launches: False
-      simple_xml: False
-      auto_dashboard: True
+    importer:reportportal
+    credential: reportportal-creds
+    rp_project: carbon_1
+    launch_name: carbon_launch
+    launch_description: carbon_launch_desc
+    tags:
+    - tag1
+    - tag2
+    merge_launches: False
+    simple_xml: False
+    auto_dashboard: True
 #rp_json_eg2
 ---
 report:
   - name: payload_example_medium/*
     description: To test rp path
     executes: rp_execute_test
-    provider:
-      name: reportportal
-      credential: reportportal-creds
-      rp_project: carbon_1
-      launch_name: carbon_launch
-      json_path: rp_config_1.json
+    importer: reportportal
+    credential: reportportal-creds
+    rp_project: carbon_1
+    launch_name: carbon_launch
+    json_path: rp_config_1.json
 #rp_json_eg3
 ---
 report:

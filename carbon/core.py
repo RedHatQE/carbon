@@ -1218,19 +1218,38 @@ class ImporterPlugin(CarbonPlugin):
     Additional support/helper methods can be added to this class.
     """
 
-    def __init__(self, profile):
+    def __init__(self, report):
 
-        self.profile = profile
-
-        # set commonly accessed data used by the importer
-        self.data_folder = self.profile['data_folder']
-        self.provider = self.profile['provider']['name']
-        self.provider_params = self.profile['provider']
-        self.provider_credentials = self.profile['provider_credentials']
-        self.workspace = self.profile['workspace']
-        self.artifacts = self.profile['artifacts']
+        # set commonly accessed data used by importer_plugin
+        self.report = report
+        self.report_name = getattr(report, 'name')
+        self.data_folder = getattr(report, 'data_folder')
         self.import_results = []
-        self.config_params = self.profile['config_params']
+
+        # provider_params are plugin specific parameters
+        # for backward compatibility, if provider key was used in the SDF get the provider attribute from report profile
+        # if no provider key was used create teh provider_params  using the _fields attribute from report profile
+        if hasattr(report, 'provider'):
+            self.provider_params = self.report.profile().get('provider')
+        else:
+            self.provider_params = {k: v for k, v in self.report.profile().items()
+                                    if k not in getattr(self.report, '_fields')}
+
+        # credentials specific to plugin
+        self.provider_credentials = getattr(self.report, 'credential', {})
+        self.workspace = getattr(self.report, 'workspace')
+        self.artifacts = []
+        self.config = getattr(self.report, 'config')
+        # build the config params that might be useful to plugin and instantiate
+        if report.do_import:
+            plugin_name = getattr(self.report, 'importer_plugin').__plugin_name__
+            config_params = dict()
+            for k, v in self.config.items():
+                if plugin_name.upper() in k:
+                    config_params[k.lower()] = v
+            self.config_params = config_params
+        else:
+            self.config_params = {}
 
     def aggregate_artifacts(self):
         raise NotImplementedError

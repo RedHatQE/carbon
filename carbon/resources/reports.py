@@ -25,21 +25,12 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import sys
-import re
-import fnmatch
-import glob
-from os import path
 from collections import OrderedDict
-
 from ..core import CarbonResource
 from ..tasks import ReportTask, ValidateTask
 from ..exceptions import CarbonReportError
-# from ..helpers import get_importer_plugin_class, get_default_importer, get_default_importer_plugin, \
-#     get_importers_plugins_list, get_providers_list, get_provider_class, get_default_external_importer_plugin_class, \
-#     get_external_importer_plugins
-
-from ..helpers import get_provider_plugin_list, get_provider_plugin_class, get_default_importer_plugin_class, \
-      get_importer_plugin_class, get_importers_plugin_list
+from ..importers import ArtifactImporter
+from ..helpers import get_importer_plugin_class, get_importers_plugin_list
 from .._compat import string_types
 
 
@@ -49,7 +40,7 @@ class Report(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'report']
-    _fields = ['name', 'description', 'importer', 'execute_name', 'import_results', 'labels']
+    _fields = ['name', 'description', 'importer', 'executes', 'import_results', 'labels']
 
     def __init__(self,
                  config=None,
@@ -97,28 +88,29 @@ class Report(CarbonResource):
 
         importer_name = parameters.pop('importer', importer)
 
-        # Finally check and load external plugin impl
-        if 'provider' in parameters:
-            parameters = self.__set_provider_attr__(parameters)
-            if importer_name is None:
-                # Getting the importer plugin based on the name of the provider parameter
-                self._importer_plugin = get_default_importer_plugin_class(self.provider)
+        parameters = self.__set_provider_attr__(parameters)
+
+        # Finally check and load external plugin implementation
+        # if provider key was provided and importer_name was not provided , provider_name is used as importer name and
+        # external importer plugins are searched used this name
+        # if provider is not used importer name is must
+        if importer_name is None:
+            if self.has_provider:
+                importer_name = self.provider
             else:
-                found_name = False
-                for name in get_importers_plugin_list():
-                    if name.startswith(importer_name):
-                        found_name = True
-                if found_name:
-                    self._importer_plugin = get_importer_plugin_class(importer_name)
-                else:
-                    self.logger.error('Importer %s for report artifacts %s is invalid.'
-                                      % (importer_name, self.name))
-                    sys.exit(1)
+                raise CarbonReportError('Importer or Provider name has to be provided')
+
+        found_name = False
+        for name in get_importers_plugin_list():
+            if name.startswith(importer_name):
+                found_name = True
+        if found_name:
+            self._importer_plugin = get_importer_plugin_class(importer_name)
             self.do_import = True
         else:
-            self._importer_plugin = importer_name
-            self._provider = None
-            self.do_import = False
+            self.logger.error('Importer %s for report artifacts %s is invalid.'
+                              % (importer_name, self.name))
+            sys.exit(1)
 
         self._import_results = parameters.pop('import_results', [])
 
@@ -144,71 +136,36 @@ class Report(CarbonResource):
         :return: updated parameters
         :rtype: dict"""
 
-        try:
-            self.provider_params = parameters.pop('provider')
-        except KeyError:
-            self.logger.error('Provider parameter is required for reports being'
-                              ' imported.')
-            sys.exit(1)
+        # this is for backward compatibility, in case the provider key is used in the SDF
+        self._provider = {}
+        if parameters.get('provider', False):
+            creds = parameters.get('provider').pop('credential', None)
+            for p, v in parameters.pop('provider').items():
+                if p == 'name':
+                    self._provider = v
+                    continue
+                setattr(self, p, v)
+            self.has_provider = True
+        else:
+            # set no provider object
+            creds = parameters.pop('credential', None)
+            for p, v in parameters.items():
+                setattr(self, p, v)
+            del self.provider
+            self.has_provider = False
 
-        provider_name = self.provider_params['name']
-
-        # lets verify the provider is valid
-        if provider_name not in get_provider_plugin_list():
-            self.logger.error('Provider %s for report artifacts %s is invalid.' %
-                              (provider_name, self.name))
-            raise CarbonReportError('Could not find a valid provider. '
-                                    'Make sure the appropriate plugin has been registered')
-
-        # now that we have the provider, lets create the provider object
-        self._provider = get_provider_plugin_class(provider_name)()
-
-        # finally lets set the provider credentials
-        try:
-            self._credential = self.provider_params['credential']
-            self.logger.debug(self._credential)
-            provider_credentials = self.config['CREDENTIALS']
-        except KeyError:
-            self.logger.error('A credential must be set for the provider %s.'
-                              % provider_name)
-            sys.exit(1)
-
-        try:
-            for item in provider_credentials:
-                if item['name'] == self._credential:
-                    getattr(self.provider, 'set_credentials')(item)
+        # lets set the credentials if any
+        if creds:
+            for item in self.config['CREDENTIALS']:
+                if item['name'] == creds:
+                    self._credential = item
                     break
-        except KeyError:
-            self.logger.error(
-                'The required credential parameters are not set correctly for the provider %s. Please '
-                'verify the carbon config file' % provider_name)
-            sys.exit(1)
 
         return parameters
 
     def validate(self):
-        """
-        Only validating provider attributes
-        """
-        if not self.do_import:
-            self.logger.debug('Validation is not required for imports without a provider!')
-            return
-        # validate provider properties
-        self.logger.info('Validating report %s provider required parameters.' %
-                         self.name)
-        getattr(self.provider, 'validate_req_params')(self)
-
-        self.logger.info('Validating report %s provider optional parameters.' %
-                         self.name)
-        getattr(self.provider, 'validate_opt_params')(self)
-
-        self.logger.info('Validating report %s provider required credential '
-                         'parameters.' % self.name)
-        getattr(self.provider, 'validate_req_credential_params')(self)
-
-        self.logger.info('Validating report %s provider optional credential '
-                         'parameters.' % self.name)
-        getattr(self.provider, 'validate_opt_credential_params')(self)
+        """Validate the report."""
+        getattr(ArtifactImporter(self), 'validate')()
 
     @property
     def importer_plugin(self):
@@ -240,6 +197,15 @@ class Report(CarbonResource):
         raise AttributeError('You cannot set the report provider after report '
                              'class is instantiated.')
 
+    @provider.deleter
+    def provider(self):
+        """delete Provider property.
+
+        :return: provider class
+        :rtype: string
+        """
+        del self._provider
+
     @property
     def executes(self):
         """Execute resource property.
@@ -268,12 +234,37 @@ class Report(CarbonResource):
         """Set the import_results property."""
         self._import_results = value
 
+    @property
+    def credential(self):
+        """Report credential property.
+
+        :return: credential
+        :rtype: dict
+        """
+        return self._credential
+
+    @credential.setter
+    def credential(self, value):
+        """Set credential property."""
+        raise AttributeError('You cannot set the report credential after report '
+                             'class is instantiated.')
+
+    @credential.deleter
+    def credential(self):
+        """
+        delete the credential property
+        :return:
+        """
+        del self._credential
+
     def profile(self):
         """Builds a profile for the report resource.
 
         :return: the report profile
         :rtype: OrderedDict
         """
+        filtered_attr = {k: v for k, v in vars(self).items() if not k.startswith('_') and k not in
+                         ['do_import', 'has_provider', 'all_hosts']}
         profile = OrderedDict()
         profile['name'] = self.name
         profile['description'] = self.description
@@ -282,8 +273,12 @@ class Report(CarbonResource):
                            self.importer_plugin, '__plugin_name__')
         else:
             profile['importer'] = self.importer_plugin
-        if self.provider:
-            profile['provider'] = self.provider_params
+        if hasattr(self, 'provider') and len(getattr(self, 'provider', {})) != 0:
+            profile.update(OrderedDict(provider={}))
+            profile.get('provider').update(name=self.provider)
+            profile.get('provider').update(filtered_attr)
+        else:
+            profile.update(filtered_attr)
 
         # set the labels for report resource
         profile['labels'] = self.labels

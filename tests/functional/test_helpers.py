@@ -29,6 +29,7 @@ import pytest
 import os
 import mock
 from carbon import Carbon
+from carbon.core import ImporterPlugin
 from carbon.constants import TASKLIST
 from carbon.resources.assets import Asset
 from carbon.resources.reports import Report
@@ -87,13 +88,20 @@ def task_host(task_concurrency_config):
 
 
 @pytest.fixture(scope='class')
-def task_report(task_concurrency_config):
+@mock.patch('carbon.resources.reports.get_importers_plugin_list')
+@mock.patch('carbon.resources.reports.get_importer_plugin_class')
+def task_report(mock_plugin_class, mock_plugin_list, task_concurrency_config):
     e_params = dict(description='description', hosts='test', executor='runner')
     ex = Execute(name='dummy_execute', parameters=e_params)
-    r_params=dict(importer='dummy', executes=[ex])
-    report = Report(name='/tmp/dummy.xml',
-                 config=task_concurrency_config,
-                 parameters=r_params)
+    mock_plugin_list.return_value = ['polarion']
+    mock_plugin_class.return_value = ImporterPlugin
+    params = dict(description='description', executes=[ex],
+                  provider=dict(name='polarion',
+                                credential='polarion'
+                                ),
+                  do_import=False)
+    report = Report(name='/tmp/dummy.xml', parameters=params, config=task_concurrency_config)
+    report.do_import = False
     return report
 
 
@@ -432,6 +440,7 @@ def test_ansible_verbosity_5(config):
      'vvvv' if carbon's logging level is debug. For this test logging_level debug is set in ../assets/carbon.cfg"""
     config["ANSIBLE_VERBOSITY"] = None
     assert get_ans_verbosity(config) == 'vvvv'
+
 
 def test_schema_validator_no_creds():
     params = dict(key1='val1', key2=['val2', 'val3'])

@@ -30,7 +30,7 @@ import pytest
 import os
 
 from carbon.resources import Report, Execute
-from carbon.core import ImporterPlugin, CarbonImporter
+from carbon.core import ImporterPlugin
 from carbon.utils.config import Config
 from carbon.importers import ArtifactImporter
 from carbon.exceptions import CarbonImporterError
@@ -108,7 +108,7 @@ def report(default_report_params, plugin, report_config,
 
 @pytest.fixture(scope='class')
 def artifact_importer(report):
-    importer = ArtifactImporter(report=report)
+    importer = ArtifactImporter(report)
     return importer
 
 
@@ -116,7 +116,7 @@ class TestArtifactImporter(object):
 
     @staticmethod
     def test_artifact_importer_constructor(artifact_importer):
-        assert isinstance(artifact_importer, CarbonImporter)
+        assert isinstance(artifact_importer, ArtifactImporter)
 
     @staticmethod
     @mock.patch('carbon.importers.artifact_importer.find_artifacts_on_disk')
