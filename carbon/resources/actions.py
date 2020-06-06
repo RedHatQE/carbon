@@ -52,7 +52,7 @@ class Action(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'orchestrate', 'cleanup']
-    _fields = ['name', 'description', 'hosts', 'labels']
+    _fields = ['name', 'description', 'hosts', 'labels', 'orchestrate_timeout', 'cleanup_timeout', 'validate_timeout']
 
     def __init__(self,
                  config=None,
@@ -92,6 +92,36 @@ class Action(CarbonResource):
                                         ' field missing!')
         else:
             self._name = name
+
+        # set the timeout for VALIDATE
+        try:
+            if parameters.get('validate_timeout') is not None:
+                self._validate_timeout = parameters.pop("validate_timeout")
+            else:
+                self._validate_timeout = config["TIMEOUT"]["VALIDATE"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._validate_timeout = 0
+
+        # set the timeout for ORCHESTRATE
+        try:
+            if parameters.get('orchestrate_timeout') is not None:
+                self._orchestrate_timeout = parameters.pop("orchestrate_timeout")
+            else:
+                self._orchestrate_timeout = config["TIMEOUT"]["ORCHESTRATE"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._orchestrate_timeout = 0
+
+        # set the timeout for cleanup
+        try:
+            if parameters.get('cleanup_timeout') is not None:
+                self._cleanup_timeout = parameters.pop("cleanup_timeout")
+            else:
+                self._cleanup_timeout = config["TIMEOUT"]["CLEANUP"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._cleanup_timeout = 0
 
         # set the action description
         self._description = parameters.pop('description', None)
@@ -226,7 +256,8 @@ class Action(CarbonResource):
             'task': self._validate_task_cls,
             'name': str(self.name),
             'resource': self,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            'timeout': self._validate_timeout
         }
         return task
 
@@ -242,7 +273,8 @@ class Action(CarbonResource):
             'package': self,
             'msg': '   running orchestration %s for %s' % (
                 self.name, self.hosts),
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "time_out": self._orchestrate_timeout
         }
         return task
 
@@ -258,6 +290,7 @@ class Action(CarbonResource):
             'package': self,
             'msg': '   running clean up %s for %s' % (
                 self.name, self.hosts),
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timeout": self._cleanup_timeout
         }
         return task

@@ -40,7 +40,8 @@ class Report(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'report']
-    _fields = ['name', 'description', 'importer', 'executes', 'import_results', 'labels']
+    _fields = ['name', 'description', 'importer', 'executes',
+                    'import_results', 'labels', 'report_timeout', "validate_timeout"]
 
     def __init__(self,
                  config=None,
@@ -66,6 +67,26 @@ class Report(CarbonResource):
         :type kwargs: dict
         """
         super(Report, self).__init__(config=config, name=name, **kwargs)
+
+        # set the timeout for VALIDATE
+        try:
+            if parameters.get('validate_timeout') is not None:
+                self._validate_timeout = parameters.pop("validate_timeout")
+            else:
+                self._validate_timeout = config["TIMEOUT"]["VALIDATE"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._validate_timeout = 0
+
+        # set the timeout for report
+        try:
+            if parameters.get('report_timeout') is not None:
+                self._report_timeout = parameters.pop("report_timeout")
+            else:
+                self._report_timeout = config["TIMEOUT"]["REPORT"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._report_timeout = 0
 
         # set the report resource name
         if name is None:
@@ -305,7 +326,8 @@ class Report(CarbonResource):
             'task': self._validate_task_cls,
             'name': str(self.name),
             'resource': self,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timeout": self._validate_timeout
         }
         return task
 
@@ -320,6 +342,7 @@ class Report(CarbonResource):
             'name': str(self.name),
             'package': self,
             'msg': '   reporting %s' % self.name,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timeout": self._report_timeout
         }
         return task

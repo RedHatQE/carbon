@@ -30,7 +30,10 @@ from fixtures import action_resource, action_resource_cleanup, scenario, \
     scenario_resource, config, master_child_scenario, scenario1, asset1, asset3, action1,\
     scenario_resource1, execute1, execute2, asset2, action2, scenario_labels, notification_default_resource, \
     notification_on_start_resource, notification_on_demand_resource, notification_on_success_resource, \
-    notification_on_failure_resource, default_note_params
+    notification_on_failure_resource, default_note_params,\
+    scenario_resource1, execute1, execute2, asset2, action2, scenario_labels,\
+    timeout_param_provision, timeout_param_execute,\
+    timeout_param_report, timeout_param_orchestrate
 
 __all__ = [
     action_resource,
@@ -58,5 +61,9 @@ __all__ = [
     notification_on_demand_resource,
     notification_on_success_resource,
     notification_on_failure_resource,
-    default_note_params
+    default_note_params,
+    timeout_param_provision,
+    timeout_param_execute,
+    timeout_param_report,
+    timeout_param_orchestrate
 ]

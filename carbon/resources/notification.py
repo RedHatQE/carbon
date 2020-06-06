@@ -48,7 +48,9 @@ class Notification(CarbonResource):
         'on_failure',
         'on_tasks',
         'on_start',
-        'on_demand'
+        'on_demand',
+        "validate_timeout",
+        "notification_timeout"
     ]
 
     def __init__(self,
@@ -72,6 +74,25 @@ class Notification(CarbonResource):
         :type kwargs: dict
         """
         super(Notification, self).__init__(config=config, name=name, **kwargs)
+        # set the timeout for VALIDATE
+        try:
+            if parameters.get('validate_timeout') is not None:
+                self._validate_timeout = parameters.pop("validate_timeout")
+            else:
+                self._validate_timeout = config["TIMEOUT"]["VALIDATE"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._validate_timeout = 0
+
+        # set the timeout for NOTIFICATION
+        try:
+            if parameters.get('notification_timeout') is not None:
+                self._notification_timeout = parameters.pop("notification_timeout")
+            else:
+                self._notification_timeout = config["TIMEOUT"]["NOTIFICATION"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._notification_timeout = 0
 
         # set the resource name
         if name is None:
@@ -330,7 +351,8 @@ class Notification(CarbonResource):
             'task': self._validate_task_cls,
             'name': str(self.name),
             'resource': self,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timeout": self._validate_timeout
         }
         return task
 
@@ -345,6 +367,7 @@ class Notification(CarbonResource):
             'name': str(self.name),
             'resource': self,
             'msg': 'triggering %s' % self.name,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timeout": self._notification_timeout
         }
         return task

@@ -27,7 +27,7 @@
 import os
 
 from .._compat import RawConfigParser
-from ..constants import DEFAULT_CONFIG, DEFAULT_CONFIG_SECTIONS, DEFAULT_TASK_CONCURRENCY
+from ..constants import DEFAULT_CONFIG, DEFAULT_CONFIG_SECTIONS, DEFAULT_TASK_CONCURRENCY, DEFAULT_TIMEOUT
 
 
 class Config(dict):
@@ -200,6 +200,25 @@ class Config(dict):
             provisioner_options.append(_provisioner_options)
 
         self.__setitem__('PROVISIONER_OPTIONS', provisioner_options)
+
+    def __set_timeout__(self):
+        """
+        Set timeout for each tasks. The task will be terminated within the time
+        you set up from carbon.cfg [timrout] section
+        e.x.:
+        [timeout]
+        provision=500
+        orchestrate=500
+        cleanup=700
+        report=100
+        """
+        _timeout = DEFAULT_TIMEOUT
+        for section in getattr(self.parser, "_sections"):
+            if not section.startswith("timeout"):
+                continue
+            for option in self.parser.options(section):
+                _timeout.update({option.upper(): int(self.parser.get(section, option))})
+        self.__setitem__('TIMEOUT', _timeout)
 
     def load(self):
         """Load configuration settings.

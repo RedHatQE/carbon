@@ -63,7 +63,10 @@ class Asset(CarbonResource):
         'ip_address',
         'metadata',
         'ansible_params',
-        'labels'
+        'labels',
+        'cleanup_timeout',
+        "provision_timeout",
+        "validate_timeout"
     ]
 
     def __init__(self,
@@ -96,6 +99,35 @@ class Asset(CarbonResource):
         :type kwargs: dict
         """
         super(Asset, self).__init__(config=config, name=name, **kwargs)
+
+        # set the timeout for VALIDATE
+        try:
+            if parameters.get('validate_timeout') is not None:
+                self._validate_timeout = parameters.pop("validate_timeout")
+            else:
+                self._validate_timeout = config["TIMEOUT"]["VALIDATE"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._validate_timeout = 0
+
+        # set the timeout for provsion
+        try:
+            if parameters.get('provision_timeout') is not None:
+                self._provision_timeout = parameters.pop("provision_timeout")
+            else:
+                self._provision_timeout = config["TIMEOUT"]["PROVISION"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._provision_timeout = 0
+        # set the timeout for cleanup
+        try:
+            if parameters.get('cleanup_timeout') is not None:
+                self._cleanup_timeout = parameters.pop("cleanup_timeout")
+            else:
+                self._cleanup_timeout = config["TIMEOUT"]["CLEANUP"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._cleanup_timeout = 0
 
         # set name attribute & apply filter
         if name is None:
@@ -527,7 +559,8 @@ class Asset(CarbonResource):
             'task': self._validate_task_cls,
             'name': str(self.name),
             'resource': self,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timeout": self._validate_timeout
         }
         return task
 
@@ -542,7 +575,8 @@ class Asset(CarbonResource):
             'name': str(self.name),
             'asset': self,
             'msg': '   provisioning asset %s' % self.name,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timeout": self._provision_timeout
         }
         return task
 
@@ -557,6 +591,7 @@ class Asset(CarbonResource):
             'name': str(self.name),
             'asset': self,
             'msg': '   cleanup asset %s' % self.name,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timeout": self._cleanup_timeout
         }
         return task

@@ -58,6 +58,9 @@ class Execute(CarbonResource):
         'artifact_locations',
         'labels',
         'testrun_results',
+        'artifacts_location',
+        "execute_timeout",
+        "validate_timeout"
     ]
 
     def __init__(self,
@@ -83,6 +86,26 @@ class Execute(CarbonResource):
         :type kwargs: dict
         """
         super(Execute, self).__init__(config=config, name=name, **kwargs)
+
+        # set the timeout for VALIDATE
+        try:
+            if parameters.get('validate_timeout') is not None:
+                self._validate_timeout = parameters.pop("validate_timeout")
+            else:
+                self._validate_timeout = config["TIMEOUT"]["VALIDATE"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._validate_timeout = 0
+
+        # set the timeout for execution
+        try:
+            if parameters.get('execute_timeout') is not None:
+                self._execute_timeout = parameters.pop("execute_timeout")
+            else:
+                self._execute_timeout = config["TIMEOUT"]["EXECUTE"]
+        except TypeError:
+            self.logger.error("No carbon.cfg found,  so no timeout will be set")
+            self._execute_timeout = 0
 
         # set the execute resource name
         if name is None:
@@ -204,7 +227,8 @@ class Execute(CarbonResource):
             'task': self._validate_task_cls,
             'name': str(self.name),
             'resource': self,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timeout": self._validate_timeout
         }
         return task
 
@@ -219,6 +243,7 @@ class Execute(CarbonResource):
             'name': str(self.name),
             'package': self,
             'msg': '   executing %s' % self.name,
-            'methods': self._req_tasks_methods
+            'methods': self._req_tasks_methods,
+            "timout": self._execute_timeout
         }
         return task

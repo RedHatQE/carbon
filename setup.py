@@ -45,7 +45,7 @@ setup(
     install_requires=[
         'ansible>=2.5.0',
         'apache-libcloud==2.2.0',
-        'blaster>=0.1.8',
+        "blaster==0.3.0",
         'Click>=6.7',
         'Jinja2>=2.10',
         'pykwalify>=1.6.0',

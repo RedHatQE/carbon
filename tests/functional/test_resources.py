@@ -191,6 +191,20 @@ class TestActionResource(object):
         assert isinstance(action, Action)
 
     @staticmethod
+    def test_timeout_from_scenario(timeout_param_orchestrate):
+        action = Action(name='action', parameters=timeout_param_orchestrate)
+        assert action._orchestrate_timeout is 20
+    
+    @staticmethod
+    def test_timeout_from_cfg(config):
+        params = dict(
+            description='description goes here.',
+            hosts=['host01']
+        )
+        action = Action(name='action', parameters=params, config=config)
+        assert action._orchestrate_timeout is 25
+
+    @staticmethod
     def test_create_action_without_name():
         params = dict(
             description='description goes here.',
@@ -280,6 +294,25 @@ class TestReportResource(object):
         assert isinstance(report_resource.profile(), dict)
 
     @staticmethod
+    @mock.patch('carbon.resources.reports.get_importers_plugin_list')
+    @mock.patch('carbon.resources.reports.get_importer_plugin_class')
+    def test_timeout_from_scenario(mock_plugin_class, mock_plugin_list, timeout_param_report, config):
+        mock_plugin_list.return_value = ['polarion']
+        mock_plugin_class.return_value = ImporterPlugin
+        params = copy.deepcopy(timeout_param_report)
+        report = Report(name='report', parameters=params, config=config)
+        assert report._report_timeout is 20
+
+    @staticmethod
+    @mock.patch('carbon.resources.reports.get_importers_plugin_list')
+    @mock.patch('carbon.resources.reports.get_importer_plugin_class')
+    def test_timeout_from_cfg(mock_plugin_class, mock_plugin_list, config, report_params_np):
+        mock_plugin_list.return_value = ['polarion']
+        mock_plugin_class.return_value = ImporterPlugin
+        report = Report(name='test.xml', parameters=report_params_np, config=config)
+        assert report._report_timeout is 25
+
+    @staticmethod
     def test_create_report_with_name(report1):
         assert isinstance(report1, Report)
 
@@ -365,6 +398,16 @@ class TestExecuteResource(object):
             Execute()
         assert 'Unable to build execute object. Name field missing!' in \
             ex.value.args
+    @staticmethod
+    def test_timeout_from_scenario(timeout_param_execute):
+        execute = Execute(name='action', parameters=timeout_param_execute)
+        assert execute._execute_timeout is 20
+    
+    @staticmethod
+    def test_timeout_from_cfg(config, default_host_params):
+        params = dict(hosts=['host01'], key='value')
+        execute = Execute(name='action', parameters=params, config=config)
+        assert execute._execute_timeout is 25
 
     @staticmethod
     def test_create_execute_with_invalid_executor():
@@ -597,6 +640,17 @@ class TestAssetResource(object):
     @staticmethod
     def __get_params_copy__(params):
         return copy.deepcopy(params)
+
+    @staticmethod
+    def test_timeout_from_scenario(timeout_param_provision, config):
+        asset = Asset(name='Asset', parameters=timeout_param_provision, config=config)
+        assert asset._provision_timeout is 20
+    
+    @staticmethod
+    def test_timeout_from_cfg(default_host_params, config):
+        params = default_host_params
+        asset = Asset(name='asset', config=config, parameters=params)
+        assert asset._provision_timeout is 25
 
     def test_create_host_with_name(self, default_host_params, config):
         params = self.__get_params_copy__(default_host_params)

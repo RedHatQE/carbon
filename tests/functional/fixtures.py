@@ -78,6 +78,44 @@ def default_host_params():
         )
     )
 
+@pytest.fixture
+def timeout_param_provision():
+    return dict(
+        role='client',
+        provider=dict(
+            name='openstack',
+            credential='openstack',
+            image='image',
+            flavor='small',
+            networks=['network']),
+            provision_timeout=20
+        )
+@pytest.fixture
+def timeout_param_execute():
+    return dict(description='description', hosts='test',\
+         executor='runner', labels='label2', execute_timeout=20)
+
+@pytest.fixture
+def timeout_param_report():
+    return dict(
+                  description='description',
+                  executes='execute',
+                  provider=dict(name='polarion',
+                                credential='polarion'
+                                ),
+                                report_timeout=20
+                  )
+
+@pytest.fixture
+def timeout_param_orchestrate(config):
+        return dict(
+            description='description',
+            hosts=['host_3'],
+            orchestrator='ansible',
+            labels = 'label3',
+            orchestrate_timeout = 20
+        )
+
 
 @pytest.fixture
 def default_note_params():

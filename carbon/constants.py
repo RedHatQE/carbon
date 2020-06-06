@@ -82,6 +82,19 @@ DEFAULT_TASK_CONCURRENCY = dict(VALIDATE='True',
                                 REPORT='True',
                                 CLEANUP='False')
 
+# This is the default timeout for each tasks,
+# set to be 0 when nothing defined in carbon.cfg,
+# 0 means no timeout time set
+DEFAULT_TIMEOUT = {
+    "PROVISION": 0,
+    "ORCHESTRATE": 0,
+    "CLEANUP": 0,
+    "REPORT": 0,
+    "EXECUTE": 0,
+    "VALIDATE": 0,
+    "NOTIFICATION": 0
+}
+
 # Default config
 DEFAULT_CONFIG = {
     'ANSIBLE_LOG_REMOVE': True,
@@ -94,12 +107,13 @@ DEFAULT_CONFIG = {
     'TOGGLES': [],
     'CREDENTIALS': [],
     'SETUP_LOGGER': [],
-    'NOTIFICATIONS': []
+    'NOTIFICATIONS': [],
+    "TIMEOUT": DEFAULT_TIMEOUT
 }
 
 # Default config sections
 DEFAULT_CONFIG_SECTIONS = ['defaults', 'credentials', 'orchestrator', 'feature_toggles', 'importer',
-                           'task_concurrency', 'setup_logger', 'executor', 'provisioner']
+                           'task_concurrency', 'setup_logger', 'executor', 'timeout', 'provisioner']
 
 # options on how credentials can be set
 SET_CREDENTIALS_OPTIONS = ['config', 'scenario']
