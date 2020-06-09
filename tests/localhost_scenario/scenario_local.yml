@@ -141,16 +141,17 @@ execute:
         command: ls -lrta
       - chdir: {{ WORKSPACE }}/sample_artifacts
         command: |
+           mkdir ../.carbon/{{ PY_VERSION }}/.results/artifacts/
            cp SampleTest.xml  SampleTest_{ dummy.ip_address }.xml
-           cp SampleTest_{ dummy.ip_address }.xml ../.carbon/{{ PY_VERSION }}/.results/
+           cp SampleTest_{ dummy.ip_address }.xml ../.carbon/{{ PY_VERSION }}/.results/artifacts/
       - chdir: {{ WORKSPACE }}/sample_artifacts
         command: |
           cp SampleTest.log SampleDummy.log
-          cp SampleDummy.log ../.carbon/{{ PY_VERSION }}/.results/
+          cp SampleDummy.log ../.carbon/{{ PY_VERSION }}/.results/artifacts/
     artifacts:
       - {{ WORKSPACE }}/sample_artifacts/SampleTest.*
     artifact_locations:
-      .results:
+      artifacts:
          - SampleTest_{ dummy.ip_address }.xml
 
 report:
