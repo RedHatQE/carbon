@@ -160,7 +160,6 @@ class Report(CarbonResource):
                 if item['name'] == creds:
                     self._credential = item
                     break
-
         return parameters
 
     def validate(self):
@@ -276,8 +275,10 @@ class Report(CarbonResource):
         if hasattr(self, 'provider') and len(getattr(self, 'provider', {})) != 0:
             profile.update(OrderedDict(provider={}))
             profile.get('provider').update(name=self.provider)
+            profile.get('provider').update(credential=self.credential.get('name'))
             profile.get('provider').update(filtered_attr)
         else:
+            profile.update(credential=self.credential.get('name'))
             profile.update(filtered_attr)
 
         # set the labels for report resource

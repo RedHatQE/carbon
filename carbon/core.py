@@ -1234,7 +1234,6 @@ class ImporterPlugin(CarbonPlugin):
         else:
             self.provider_params = {k: v for k, v in self.report.profile().items()
                                     if k not in getattr(self.report, '_fields')}
-
         # credentials specific to plugin
         self.provider_credentials = getattr(self.report, 'credential', {})
         self.workspace = getattr(self.report, 'workspace')
