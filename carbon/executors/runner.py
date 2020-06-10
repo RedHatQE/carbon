@@ -277,13 +277,17 @@ class RunnerExecutor(CarbonExecutor):
                 self.logger.error('Failed to copy the artifact(s), %s, from %s' % (r['artifact'], r['host']))
             if r['rc'] == 0 and not r['skipped']:
                 temp_list = r['artifact'].replace('[', '').replace(']', '').replace("'", "").split(',')
+                # TODO Will need to change this temp fix for getting correct path and art_list, when working on CID 5481
+                res_folder_parts = self.config['RESULTS_FOLDER'].split('/')
+                dest_path_parts = r['destination'].split('/')
+
                 if not extra_vars['localhost']:
                     art_list = [a[11:] for a in temp_list if 'cd+' not in a]
                     path = '/'.join(r['destination'].split('/')[-3:])
                 else:
-                    path = '/'.join(r['destination'].split('/')[2:-1])
-                    art_list = ['/'.join(a.replace('’', "").split('->')[-1].split('/')[4:]) for a in temp_list]
-
+                    path = '/'.join(r['destination'].split('/')[len(res_folder_parts):-1])
+                    art_list = ['/'.join(a.replace('’', "").split('->')[-1].split('/')[(len(dest_path_parts) - 1):])
+                                for a in temp_list]
                 self.logger.info('Copied the artifact(s), %s, from %s' % (art_list, r['host']))
 
                 # Update the execute resource with the location of artifacts
