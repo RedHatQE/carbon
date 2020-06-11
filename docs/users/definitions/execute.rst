@@ -191,6 +191,7 @@ and the call overides it:
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
     :lines: 197-217
 
+.. _using_shell:
 
 Using Shell Parameter for Test Execution
 ----------------------------------------

@@ -12,8 +12,7 @@ will depend on the destination system. The Reporting systems currently supported
 .. attention::
    To be able to use Polarion and Report Portal with carbon, new carbon_polarion_plugin and carbon_rppreproc_plugin will
    have to be installed in your workspace prior to running any scenarios. Please see
-   `Carbon Importer Plugin Requirements <../install.html#carbon-importer-plugin-requirements>`_ for installation
-   process
+   :ref:`Carbon Importer Plugin Requirements <cbn_importer_plugin>` for installation process
 
 First, let's go over the basic structure that defines a Report resource.
 
@@ -30,7 +29,9 @@ First, let's go over the basic structure that defines a Report resource.
 .. attention::
    **Starting with Carbon version 1.7.0 the use of Provider will be deprecated. All the attributes which were
    put under provider dictionary can be set as a key under the report block. When provider key is not being used,
-   it is mandatory to use the importer key to state which importer needs to be used**
+   it is mandatory to use the importer key to state which importer needs to be used
+   Also see :ref:`Carbon Plugin Matrix <cbn_plugin_matrix>` to see find the correct plugin versions supported by
+   Carbon**
 
 
 
@@ -90,6 +91,7 @@ for two reasons:
    templating if a data-passthru string is being used in the name key
    as search criteria.
 
+.. _finding_artifacts:
 
 Finding the right artifacts
 ---------------------------
@@ -314,6 +316,7 @@ config file.  The following are the settings.
         - By default this is set to True to perform the different
           actions concurrently.
 
+.. _report_examples:
 
 Examples
 ++++++++
