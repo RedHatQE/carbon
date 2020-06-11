@@ -63,6 +63,7 @@ Carbon uses the beaker client package to provision physical machines in beaker.
     currently. Once compatibile it can be installed with carbon. Carbon is
     Python 2.7 & Python 3.6 compatible.
 
+.. _cbn_importer_plugin:
 
 Carbon Importer Plugin Requirements
 +++++++++++++++++++++++++++++++++++
@@ -129,3 +130,40 @@ some providers that require a few more dependencies to be installed. Refer to th
 `post-install section <https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_linchpin_plugin/blob/develop/docs/user.md#post-install>`__
 of the plugin document for methods on how to install those dependencies.
 
+.. _cbn_plugin_matrix:
+
+Carbon Matrix for Plugins
++++++++++++++++++++++++++
+
+The table below lists out the released Carbon version and supported carbon plugin versions. This matrix will track
+n and n-1 carbon releases
+
+.. list-table:: Carbon plugin matrix for n and n-1 releases
+    :widths: auto
+    :header-rows: 1
+    :stub-columns: 1
+
+    *   - Carbon Release
+        - 1.7.0
+        - 1.6.0
+
+
+    *   - Rppreproc Plugin
+        - 1.1.0
+        - 1.0.1
+
+    *   - Polarion Plugin
+        - 1.1.0
+        - 1.0.1
+
+    *   - Linchpin Plugin
+        - 1.0.0
+        - 1.0.0
+
+    *   - Polar
+        - 1.2.1
+        - 1.2.1
+
+    *   - Ansible
+        - latest
+        - 2.9.2
