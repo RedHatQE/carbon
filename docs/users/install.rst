@@ -80,10 +80,6 @@ Carbon is currently supporting two importer plugins
    carbon_rppreproc_plugin
    `repo link <https://gitlab.cee.redhat.com/ccit/carbon_rppreproc_plugin>`__
 
-These plugins have Carbon installation as a part of the setup. So if user wants to just use any of the above plugin with
-carbon, we can install only the plugin, and carbon will be installed with it as well.
-If the plugin is installed in an environment where carbon is already present , plugin will skip carbon installation
-
 Install the importer plugin from source
 ---------------------------------------
 
@@ -141,29 +137,27 @@ n and n-1 carbon releases
 .. list-table:: Carbon plugin matrix for n and n-1 releases
     :widths: auto
     :header-rows: 1
-    :stub-columns: 1
 
     *   - Carbon Release
-        - 1.7.0
-        - 1.6.0
+        - Rppreproc Plugin
+        - Polarion Plugin
+        - Linchpin Plugin
+        - Polar
+        - Rp_preproc
+        - Ansible
 
-
-    *   - Rppreproc Plugin
+    *   - **1.7.0**
         - 1.1.0
-        - 1.0.1
-
-    *   - Polarion Plugin
         - 1.1.0
+        - 1.0.0
+        - 1.2.1
+        - 0.1.3
+        - >=2.5.0
+
+    *   - **1.6.0**
         - 1.0.1
-
-    *   - Linchpin Plugin
+        - 1.0.1
         - 1.0.0
-        - 1.0.0
-
-    *   - Polar
         - 1.2.1
-        - 1.2.1
-
-    *   - Ansible
-        - latest
-        - 2.9.2
+        - 0.1.3
+        - >=2.5.0, <=2.9.0
