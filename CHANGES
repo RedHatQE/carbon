@@ -1,3 +1,20 @@
+Version 1.7.0 (2020-06-15)
+--------------------------
+
+New Features
+~~~~~~~~~~~~
+* Support for Email Notifications
+* Carbon show as a new cli command
+
+Enhancements
+~~~~~~~~~~~~
+* Using Ansible>=2.5.0 with Carbon
+* Support for using ansible collections
+* Providing test run results summary for xml artifacts under Carbon's execute section
+* Removal of Carbon Provider Class for Carbon's importer plugins
+* Supports version 1.1.0 for carbon_rppreproc_plugin
+* Supports version 1.1.0 for carbon_polarion_plugin
+
 Version 1.6.0 (2020-05-04)
 --------------------------
 
