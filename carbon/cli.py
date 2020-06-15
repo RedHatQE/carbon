@@ -35,7 +35,7 @@ from .helpers import validate_cli_scenario_option
 def print_header():
     click.echo("-" * 50)
     click.echo("Carbon Framework v%s" % __version__)
-    click.echo("Copyright (C) 2017 Red Hat, Inc.")
+    click.echo("Copyright (C) 2020, Red Hat, Inc.")
     click.echo("-" * 50)
 
 

@@ -29,11 +29,11 @@ First, let's go over the basic structure that defines a Report resource.
 .. attention::
    **Starting with Carbon version 1.7.0 the use of Provider will be deprecated. All the attributes which were
    put under provider dictionary can be set as a key under the report block. When provider key is not being used,
-   it is mandatory to use the importer key to state which importer needs to be used
-   Also see :ref:`Carbon Plugin Matrix <cbn_plugin_matrix>` to see find the correct plugin versions supported by
-   Carbon**
+   it is mandatory to use the importer key to state which importer needs to be used**
 
-
+.. attention::
+   Also see :ref:`Carbon Matrix for Plugins <cbn_plugin_matrix>` to find the correct plugin versions supported by
+   Carbon
 
 .. list-table::
     :widths: auto
