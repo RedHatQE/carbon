@@ -564,7 +564,7 @@ You have a playbook which needs to run against x number of hosts, requires
 ansible roles to be downloaded and requires additional extra variables.
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 78-93
+    :lines: 82-97
 
 .. attention::
 
@@ -596,7 +596,7 @@ deleting the configured hosts. You want to run a playbook to do some post
 tasks.
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 123-143
+    :lines: 127-147
 
 
 Example 8
@@ -607,17 +607,17 @@ example of a script running on the localhost. For localhost usage refer
 to the`localhost <../localhost.html>`_ page.
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 150-156
+    :lines: 154-160
 
 Example 9
 ~~~~~~~~~
 
 The following builds on the previous example, by showing how a user
 can add options to the script they are executing (In the example below,
-the script is run with options as **create_dir.sh -c -e 12**.
+the script is run with options as **create_dir.sh -c -e 12**).
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 158-166
+    :lines: 162-170
 
 Example 10
 ~~~~~~~~~~
@@ -632,7 +632,7 @@ To see all script options see ansible's documentation `here
 <https://docs.ansible.com/ansible/latest/modules/script_module.html>`_.
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 168-177
+    :lines: 172-181
 
 Example 11
 ~~~~~~~~~~
@@ -641,7 +641,7 @@ You have a playbook which needs to run against x number of hosts and requires
 skipping tasks with a tag set to ssh_auth and requires extra variables.
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 179-192
+    :lines: 183-196
 
 .. _eg_12:
 
@@ -651,7 +651,7 @@ Example 12
 Example to run playbooks, scripts and shell command as a part of orchestrate task
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 206-228
+    :lines: 210-232
 
 .. _Example_13:
 
@@ -662,7 +662,7 @@ Example to use ansible_script with extra arags with in the ansible_script
 list of dictionary and its paramter in the name field
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 232-239
+    :lines: 236-243
 
 ----
 
@@ -674,7 +674,7 @@ Example 14
 Example to use ansible_script with extra arags as a part of ansible_options
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 242-250
+    :lines: 246-254
 
 .. _Example_15:
 
@@ -685,7 +685,7 @@ Example to use ansible_script and using ansible_options: extra_args to
 provide the script parameters
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 254-260
+    :lines: 257-264
 
 Resources
 ~~~~~~~~~
