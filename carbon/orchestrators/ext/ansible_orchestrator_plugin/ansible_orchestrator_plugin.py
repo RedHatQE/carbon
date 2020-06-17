@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2017 Red Hat, Inc.
+# Copyright (C) 2020 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,46 +17,33 @@
 #
 
 """
-    carbon.orchestrators._ansible
 
-    Carbon's ansible orchestrator module which contains all the necessary
-    classes to process ansible actions defined within the scenario descriptor
+    Carbon's ansible orchestrator plugin which contains all the necessary
+    methods to process ansible actions defined within the scenario descriptor
     file.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
 import os
 import time
-from ..core import CarbonOrchestrator
-from ..exceptions import CarbonOrchestratorError, AnsibleServiceError
-from ..helpers import DataInjector
-from ..ansible_helpers import AnsibleService
+from carbon.core import OrchestratorPlugin
+from carbon.exceptions import CarbonOrchestratorError, AnsibleServiceError
+from carbon.helpers import schema_validator
+from carbon.ansible_helpers import AnsibleService
 
 
-class AnsibleOrchestrator(CarbonOrchestrator):
-    """Ansible orchestrator.
+class AnsibleOrchestratorPlugin(OrchestratorPlugin):
+    """Ansible orchestrator Plugin.
 
     This class primary responsibility is for processing carbon actions.
-    These actions for the ansible orchestrator could be in the form of a
+    These actions for the ansible orchestrator plugin could be in the form of a
     playbook or module call.
     """
-    __orchestrator_name__ = 'ansible'
-
-    _optional_parameters = (
-        'options',
-        'galaxy_options',
-        'script',
-        'playbook',
-        'shell'
-    )
-
-    _action_types = [
-        'ansible_script',
-        'ansible_playbook',
-        'ansible_shell'
-    ]
+    __plugin_name__ = 'ansible'
+    __schema_file_path__ = os.path.abspath(os.path.join(os.path.dirname(__file__), "files/schema.yml"))
+    __schema_ext_path__ = os.path.abspath(os.path.join(os.path.dirname(__file__), "files/extensions.py"))
 
     def __init__(self, package):
         """Constructor.
@@ -64,30 +51,19 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         :param package: action resource
         :type package: object
         """
-        super(AnsibleOrchestrator, self).__init__()
+        super(AnsibleOrchestratorPlugin, self).__init__(package)
 
-        self.action_name = getattr(package, 'name')
-        self._hosts = getattr(package, 'hosts')
-        self.desc = getattr(package, 'description')
-        self.options = getattr(package, '%s_options' % self.name)
-        self.galaxy_options = getattr(package, '%s_galaxy_options' % self.name)
-        self.config = getattr(package, 'config')
-        self.all_hosts = getattr(package, 'all_hosts')
-        self.workspace = self.config['WORKSPACE']
-        self.playbook = getattr(package, '%s_playbook' % self.name, None)
-        self.script = getattr(package, '%s_script' % self.name, None)
-        self.shell = getattr(package, '%s_shell' % self.name, None)
+        self.options = getattr(package, 'ansible_options', None)
+        self.galaxy_options = getattr(package, 'ansible_galaxy_options', None)
+        self.playbook = getattr(package, 'ansible_playbook', None)
+        self.script = getattr(package, 'ansible_script', None)
+        self.shell = getattr(package, 'ansible_shell', None)
+        self.all_hosts = getattr(package, 'all_hosts', [])
 
         # calling the method to do a backward compatibility check in case user is defining name field as a path for
         # script or playbook
         # TODO delete this if we want to remove backward compatibility for later releases
         self.backwards_compat_check()
-
-        # saving package to set status later
-        self.package = package
-
-        # ansible service object
-        self.ans_service = AnsibleService(self.config, self.hosts, self.all_hosts, self.options, self.galaxy_options)
 
     def backwards_compat_check(self):
         """ This method does the check if name field is a script/playbook path or name of the orchestrator task by
@@ -119,16 +95,21 @@ class AnsibleOrchestrator(CarbonOrchestrator):
     def validate(self):
         """Validate that script/playbook path is valid and exists."""
 
+        # schema validation for ansible_orchestrate schema
+        schema_validator(schema_data=self.build_profile(self.action), schema_files=[self.__schema_file_path__],
+                         schema_ext_files=[self.__schema_ext_path__])
+
+        # verifying when script or playbook is present in the orchestrate task, the name key provides a path that exist
         if self.script:
             if os.path.exists(self.script.get('name').split(' ', 1)[0]):
-                self.logger.debug('Found Action script %s' % self.script.get('name'))
+                self.logger.debug('Found Action resource script %s' % self.script.get('name'))
             else:
-                raise CarbonOrchestratorError('Cannot find Action script %s' % self.script.get('name'))
+                raise CarbonOrchestratorError('Cannot find Action resource script %s' % self.script.get('name'))
         elif self.playbook:
             if os.path.exists(self.playbook.get('name').split(' ', 1)[0]):
-                self.logger.debug('Found Action playbook %s' % self.playbook.get('name'))
+                self.logger.debug('Found Action resource playbook %s' % self.playbook.get('name'))
             else:
-                raise CarbonOrchestratorError('Cannot find Action playbook %s' % self.playbook.get('name'))
+                raise CarbonOrchestratorError('Cannot find Action resource playbook %s' % self.playbook.get('name'))
 
     def __playbook__(self):
         self.logger.info('Executing playbook:')
@@ -150,12 +131,13 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
     def __shell__(self):
         self.logger.info('Executing shell command:')
-        result = self.ans_service.run_shell_playbook(self.shell)
-        if result['rc'] != 0:
-            raise CarbonOrchestratorError('Command %s failed. Host=%s rc=%d Error: %s'
-                                           % (self.shell['command'], result['host'], result['rc'], result['err']))
-        else:
-            self.logger.info('Successfully completed command : %s' % self.shell['command'])
+        for shell in self.shell:
+            result = self.ans_service.run_shell_playbook(shell)
+            if result['rc'] != 0:
+                raise CarbonOrchestratorError('Command %s failed. Host=%s rc=%d Error: %s'
+                                               % (shell['command'], result['host'], result['rc'], result['err']))
+            else:
+                self.logger.info('Successfully completed command : %s' % shell['command'])
 
     def run(self):
         """Run method for orchestrator.
@@ -163,7 +145,11 @@ class AnsibleOrchestrator(CarbonOrchestrator):
         # Orchestrate supports only one action_types( playbook, script or shell) per task
         # if more than one action types are declared then the first action_type found will be executed
 
+        # ansible service object
+        self.ans_service = AnsibleService(self.config, self.hosts, self.all_hosts,
+                                          self.options, self.galaxy_options)
         flag = 0
+        res = self.action.status
         for item in ['playbook', 'script', 'shell']:
             # Orchestrate supports only one action_types( playbook, script or shell) per task
             # if more than one action types are declared then the first action_type found will be executed
@@ -182,9 +168,15 @@ class AnsibleOrchestrator(CarbonOrchestrator):
 
                     try:
                         getattr(self, '__%s__' % item)()
-                    except (CarbonOrchestratorError, AnsibleServiceError) as e:
-                        setattr(self.package, 'status', 1)
-                        raise CarbonOrchestratorError("Orchestration failed : %s" % e.message)
+                        # If every script/playbook/shell command within the each orchestrate has passed,
+                        # mark that task as successful
+                        self.logger.debug("Successful completion of orchestrate task %s with return value %s"
+                                          % (self.action_name, res))
+                        res = 0
+                    except (CarbonOrchestratorError, AnsibleServiceError, Exception) as e:
+                        res = 1
+                        self.logger.error("Orchestration failed : %s" % e)
+                        break
                     finally:
                         # get ansible logs as needed
                         self.ans_service.alog_update()
@@ -193,8 +185,4 @@ class AnsibleOrchestrator(CarbonOrchestrator):
                                         'ansible_shell )in the orchestrate task, only the first found'
                                         ' action type was executed, the rest are skipped.')
                     break
-
-        # If every script/playbook/shell command within the each orchestrate has passed, mark that task as
-        # successful with status 0
-        setattr(self.package, 'status', 0)
-        self.logger.info('Completed orchestrate action: %s.' % self.action_name)
+        return res

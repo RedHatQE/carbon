@@ -578,8 +578,10 @@ Example for json config:
    }
 
 If config json file is not provided by the user then Carbon creates the file using the
-different report portal provider parameters in the report section of the SDF. User has the option
-to save this Carbon created file for future use. By default the file gets deleted after every run.
+different report portal provider parameters in the report section of the SDF as **<uuid>.json** and stores
+it under a folder named **rp_config_files**. Here uuid is a unique id generated for every report portal block/run in
+carbon. User has the option to save this Carbon created file for future use. By default the file gets deleted after
+every run.
 
 In the carbon configuration file, user can set the following parameter in the **[importer:reportportal]**
 section to save the Carbon created reportportal config file.
@@ -600,14 +602,14 @@ section to save the Carbon created reportportal config file.
 
 .. NOTE:: 
    Even if the user provided config json file has a payload directory given, it gets overwritten 
-   by the one created/validated by Carbon create payload directory
+   by the one created/validated by Carbon
 
 
 **Example 1**
 
 In the following example, *json_path* parameter is not provided, Carbon uses the reportportal provider's 
-remaining params and creates the json file *rp_config_file.json* in the workspace directory and uses it 
-to pass paylaod to the Report Portal Client
+remaining params and creates the json file **<uuid>.json** in a directory **rp_config_files** under the workspace
+directory and uses it to pass paylaod to the Report Portal Client
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
    :lines: 256-271
@@ -633,8 +635,8 @@ Setting up payload directory for Report Portal Client
 +++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 The CCIT Report Portal client requires artifacts to be presented in a specific payload directory structure.
-It needs all the xml files(test cases) to be in a folder named *results* and any specific test case related
-logs to be in a folder named *attachments*. The results folder is required. The attachments folder is optional,
+It needs all the xml files(test cases) to be in a folder named **results** and any specific test case related
+logs to be in a folder named **attachments**. The results folder is required. The attachments folder is optional,
 it is needed only when related items like pictures/logs need to be sent to Report Portal. The attachments folder
 also has a set of rules regarding sub-folder structure. Please refer to the Report Portal Payload Directory structure
 `Payload Structure
@@ -650,7 +652,7 @@ There are a few ways Carbon can handle this:
 
  * User can pre-create the artifacts payload directory as per the Report Portal client requirements
    but they aren't collected as part of *artifacts*. Probably as an intermediate step between the
-   Execute and Report phases. The user would have to place the payload directory under the *.results* folder.
+   Execute and Report phases, the user would have to place the payload directory under the *.results* folder.
    User can then put the name of the payload folder in the *artifact_location* key or let Carbon
    walk the data_folder directories.
 
@@ -658,15 +660,18 @@ There are a few ways Carbon can handle this:
 
  * User doesn't pre-create the payload directory and collects the unstructured artifacts they need in the execute
    phase using *artifacts*. Carbon will filter the list of artifacts for any .xml files,
-   then creates a new folder under Carbon's data folder named **<data folder>/rp_paylod/results**, and place
-   the xml files in this directory.
+   then create a new folder under Carbon's data folder named **<data folder>/rp_paylods/<uuid>/results**, and place
+   the xml files in this directory. Here uuid is a unique id generated for every report portal block/run in
+   carbon
 
  * User doesn't pre-create the payload directory and doesn't collect the unstructured artifacts in the execute
    phase using *artifacts*. Probably as an intermediate step between the Execute and Report phases.
-   The user would have to place the artifacts under the *.results* folder. User can then put the name of the
+   The user would have to place the artifacts under the carbon's *.results* folder. User can then put the name of the
    payload folder in the *artifact_location* key or let Carbon walk the data_folder directories.
    Carbon will filter the list of artifacts for any .xml files, then creates a new folder under Carbon's
-   data folder named **<data folder>/rp_paylod/results**, and place the xml files in this directory.
+   data folder named **<data folder>/rp_paylods/<uuid>/results**, and place the xml files in this directory.
+   Here uuid is a unique id generated for every report portal block/run in
+   carbon
 
 Use Case 1
 ++++++++++
@@ -678,7 +683,7 @@ them in the required directory structure needed by the Report Portal Client. i.e
 logs related to the test cases under attachments folder.
 
 In the example below, the execute stage is setup to collect artifacts from location /rp_examples/payload_eg in the required
-structure. The report name in this case is a pattern payload/* to consider teh payload_eg dir rntirely as the payload
+structure. The report name in this case is a pattern payload/* to consider the payload_eg dir entirely as the payload
 to be sent to the Report Portal Client
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
@@ -696,7 +701,8 @@ Here the user can place the payload directory created separately under carbon’
 directory. In this usecase the directory structure is as per requirement.
 
 .. NOTE::
-   Please refer here to know more about using artifact_locations key under execute section of Carbon's SDF
+   Please refer :ref:`here<finding_locations>`  to know more about using artifact_locations key under execute section
+   of Carbon's SDF
 
 
 Carbon verifies that the given path has correct directory structure  and then passes that as the payload directory 
@@ -723,9 +729,9 @@ xml files are copied from artifacts in execute phase  over to rp_payload/results
    additional logs as a part of payload please look at usecase 1 or 2 examples.
 
 In the below example rp_examples/payload_uc3 is where artifacts are stored but not in correct format. Carbon looks through
-this folder, copies all the xml files and puts them under .carbon/<data folder>/rp_payload/results.
+this folder, copies all the xml files and puts them under .carbon/<data folder>/rp_payloads/<uuid>/results.
 
-**.carbon/<data folder>/rp_payload** is the payload directory path given to the Report Portal client
+**.carbon/<data folder>/rp_payloads/<uuid>** is the payload directory path given to the Report Portal client
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
    :lines: 147-171
@@ -744,8 +750,9 @@ under *.results* folder.
 
 In the below example the payload_carbon is a directory placed under carbon’s  *.results* folder and does not have
 the correct directory structure of results and attachments folder under it.Here carbon will create a separate 
-directory rp_payload as .carbon/<data folder>/rp_payload/results and copy all the xml files from 
-.carbon/.results/payload_carbon/. The payload directory sent to report portal client will be **.carbon/.results/rp_payload**
+directory rp_payloads if it is not already there and then create a folder with uuid as
+ .carbon/<data folder>/rp_payloads/<uuid>/results and copy all the xml files from .carbon/.results/payload_carbon/.
+The payload directory sent to report portal client will be **.carbon/.results/rp_payloads/uuid**
 
 .. literalinclude:: ../../../examples/docs-usage/report.yml
    :lines: 173-197
@@ -764,7 +771,7 @@ This case even is used when the artifacts and artifac_location files are unstruc
 .carbon<data folder>rp_payload/results. It will then go through the paths in artifacts and artifact_locations and
 collect all the xml files there. Any other files will be ignored.
 
-The path for payload directory is **.carbon/<data folder>/rp_payload**
+The path for payload directory is **.carbon/<data folder>/rp_payloads/<uuid>**
 
 In the below example the artifacts collected during execute phase are present under artifacts as
 /home/carbon_develop/e2e-acceptance-tests/rp_examples/payload_example_medium and the other xml files not collected 
@@ -783,10 +790,10 @@ Here if the artifacts or artifact_locations are not populated, Carbon goes throu
 and carbon’s *.results* folder to find the artifacts matching the name provided in the report section's
 name key.
 
-If found, carbon creates a directory .carbon/<data folder>/rp_payload/results and collects all the xml files
+If found, carbon creates a directory .carbon/<data folder>/rp_payloads/<uuid>/results and collects all the xml files
 from the matching artifacts list . Any other files are ignored
 
-The payload directory path given to the Report Portal client is  **.carbon/<data folder>/rp_payload**
+The payload directory path given to the Report Portal client is  **.carbon/<data folder>/rp_payloads/uuid**
 
 In the below example the  data folder directory and .results directory are walked and the pattern payload_example_medium/*
 is  matched with files found in there. xml files are selected from the matched paths/files and added to the payload directory.

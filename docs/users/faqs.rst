@@ -125,7 +125,7 @@ Report
 ... import an artifact that wasn't collected as part of Execute?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can place the file(s) or folder(s) in the *<data_folder>/.results*
+You can place the file(s) or folder(s) in the carbon's *<data_folder>/.results*
 and let carbon search for it or once in the results directory
 define in it in the *artifact_locations* key telling carbon where to look.
 Refer to the :ref:`Finding the right artifacts <finding_artifacts>` section

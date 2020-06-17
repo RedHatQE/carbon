@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2017 Red Hat, Inc.
+# Copyright (C) 2020 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,12 +20,13 @@
 
     Here you add brief description of what this module is about
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
 from ..exceptions import CarbonOrchestratorError
 from ..provisioners import AssetProvisioner
+from carbon.orchestrators import ActionOrchestrator
 
 
 class CleanupTask(CarbonTask):
@@ -63,8 +64,8 @@ class CleanupTask(CarbonTask):
         setattr(cleanup, 'all_hosts', getattr(self.package, 'all_hosts'))
         setattr(cleanup, 'hosts', getattr(self.package, 'hosts'))
 
-        # create the orchestrator object
-        return getattr(self.package, 'orchestrator')(cleanup)
+        # create the orchestrator plugin object
+        return ActionOrchestrator(cleanup)
 
     def run(self):
         """Run.

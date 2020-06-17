@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2017 Red Hat, Inc.
+# Copyright (C) 2020 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,19 +21,19 @@
 
     Unit tests for testing carbon task classes.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
 import mock
 import pytest
 
-from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError, CarbonProvisionerError, CarbonNotifierError
+from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError, CarbonNotifierError
 from carbon.tasks import CleanupTask, ExecuteTask, OrchestrateTask, \
     ProvisionTask, ReportTask, ValidateTask, NotificationTask
-
-from carbon.core import  ProvisionerPlugin, Inventory
+from carbon.core import ProvisionerPlugin
 from carbon.provisioners import AssetProvisioner
+from carbon.orchestrators import ActionOrchestrator
 from carbon.resources import Asset, Action
 
 
@@ -59,8 +59,8 @@ def execute_task():
 @pytest.fixture(scope='class')
 def orchestrate_task():
     package = mock.MagicMock()
-    package.orchestrator = mock.MagicMock()
-    return OrchestrateTask(msg='orchestrate task', package=package, name='Test-Package')
+    with mock.patch('carbon.tasks.orchestrate.ActionOrchestrator'):
+        return OrchestrateTask(msg='orchestrate task', package=package, name='Test-Package')
 
 
 @pytest.fixture(scope='class')
@@ -75,6 +75,7 @@ def cleanup_task():
     asset = mock.MagicMock()
     package = mock.MagicMock()
     return CleanupTask(msg='cleanup task', asset=asset, package=package)
+
 
 @pytest.fixture(scope='class')
 def notification_task():

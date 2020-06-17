@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2017 Red Hat, Inc.
+# Copyright (C) 2020 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 
     Unit tests for testing carbon resources classes.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
@@ -36,7 +36,7 @@ from carbon._compat import ConfigParser, string_types
 from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
     ScenarioError, CarbonError, CarbonReportError, CarbonResourceError
 from carbon.executors import RunnerExecutor
-from carbon.orchestrators import AnsibleOrchestrator
+from carbon.orchestrators.ext.ansible_orchestrator_plugin import AnsibleOrchestratorPlugin
 from carbon.providers import OpenstackProvider
 from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin
 from carbon.resources import Action, Execute, Asset, Report, Scenario, Notification
@@ -260,7 +260,7 @@ class TestActionResource(object):
 
     @staticmethod
     def test_orchestrator_property(action_resource):
-        assert action_resource.orchestrator == AnsibleOrchestrator
+        assert action_resource.orchestrator == AnsibleOrchestratorPlugin
 
     @staticmethod
     def test_orchestrator_setter(action_resource):

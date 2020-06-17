@@ -206,7 +206,7 @@ def get_orchestrator_plugin_class(name):
     :return: the orchestrator class
     """
     for orchestrator in get_orchestrators_plugin_classes():
-        if orchestrator.__orchestrator_name__ == name:
+        if orchestrator.__plugin_name__ == name:
             return orchestrator
 
 
@@ -215,7 +215,7 @@ def get_orchestrators_plugin_list():
 
     :return: orchestrators
     """
-    return [orchestrator.__orchestrator_name__ for orchestrator in
+    return [orchestrator.__plugin_name__ for orchestrator in
             get_orchestrators_plugin_classes()]
 
 

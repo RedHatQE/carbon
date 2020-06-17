@@ -20,10 +20,11 @@
 
     Here you add brief description of what this module is about
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from carbon.orchestrators import ActionOrchestrator
 
 
 class OrchestrateTask(CarbonTask):
@@ -45,7 +46,7 @@ class OrchestrateTask(CarbonTask):
         self.msg = msg
 
         # create the orchestrator object
-        self.orchestrator = getattr(package, 'orchestrator')(package)
+        self.orchestrator = ActionOrchestrator(package)
 
     def run(self):
         """Run.

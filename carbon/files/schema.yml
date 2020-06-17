@@ -110,10 +110,10 @@ mapping:
             type: any
 
   orchestrate:
+    required: False
     sequence:
       - type: map
         allowempty: True
-        func: valid_action_types
         mapping:
           name:
             required: True
@@ -122,52 +122,17 @@ mapping:
             type: str
           orchestrator:
             type: str
+            func: valid_orchestrator
           hosts:
             required: True
             type: any
             func: type_str_list
-          ansible_playbook:
-            type: map
-            mapping:
-              name:
-                required: True
-                type: str
-          ansible_script:
-            type: any
-            func: valid_ansible_script_type
-          ansible_shell:
-            type: map
-            mapping:
-              command:
-                required: True
-                type: str
-              chdir:
-                type: str
-              creates:
-                type: str
-              decrypt:
-                type: str
-              executable:
-                type: str
-              removes:
-                type: str
-              warn:
-                type: str
-              stdin:
-                type: str
-              stdin_add_newline:
-                type: str
-          ansible_options:
-            allowempty: True
-            type: map
-          ansible_galaxy_options:
-            allowempty: True
-            type: map
           labels:
             type: any
             func: type_str_list
 
   execute:
+    required: False
     sequence:
       - type: map
         allowempty: True
@@ -283,6 +248,7 @@ mapping:
             func: type_str_list
 
   report:
+    required: False
     sequence:
     - type: map
       allowempty: True
@@ -310,6 +276,7 @@ mapping:
           func: type_str_list
 
   notifications:
+    required: False
     sequence:
     - type: map
       allowempty: True

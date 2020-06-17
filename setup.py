@@ -45,7 +45,7 @@ setup(
     install_requires=[
         'ansible>=2.5.0',
         'apache-libcloud==2.2.0',
-        "blaster==0.3.0",
+        "blaster>=0.3.0",
         'Click>=6.7',
         'Jinja2>=2.10',
         'pykwalify>=1.6.0',
@@ -78,7 +78,7 @@ setup(
             'openstack_libcloud = carbon.provisioners.ext:OpenstackLibCloudProvisionerPlugin'
         ],
         'orchestrator_plugins': [
-            'ansible = carbon.orchestrators:AnsibleOrchestrator'
+            'ansible = carbon.orchestrators.ext:AnsibleOrchestratorPlugin'
         ],
         'executor_plugins': [
             'runner = carbon.executors:RunnerExecutor'

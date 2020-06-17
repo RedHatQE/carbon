@@ -395,6 +395,8 @@ of the following two examples:
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
    :lines: 192-195
 
+.. _finding_locations:
+
 Artifact Locations
 ~~~~~~~~~~~~~~~~~~
 The **artifact_locations** key is used to keep track of the artifacts that were collected using artifacts.

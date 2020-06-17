@@ -220,8 +220,10 @@ orchestrate:
   orchestrator: ansible
   hosts: localhost
   ansible_shell:
-    chdir: ./test_sample_artifacts
-    command: ls
+    - chdir: ./test_sample_artifacts
+      command: ls
+    - chdir: ./test_sample_artifacts
+      command: cp a.txt b.txt
 
 - name: orchestrate_3
   description: "orchestrate3"

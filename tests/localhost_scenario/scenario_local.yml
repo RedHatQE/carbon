@@ -74,15 +74,15 @@ orchestrate:
     description: "orch task to run shell commands"
     hosts: localhost
     ansible_shell:
-      command: bash add_two_numbers.sh X=15 Y=15
-      chdir: ./scripts/
+      - command: bash add_two_numbers.sh X=15 Y=15
+        chdir: ./scripts/
 
   - name: orch_shell_1
     orchestrator: ansible
     description: "orch task to run shell commands with ansible_options"
     hosts: localhost
     ansible_shell:
-      command: bash add_two_numbers.sh X=15 Y=15
+      - command: bash add_two_numbers.sh X=15 Y=15
     ansible_options:
       extra_args: chdir=./scripts/
 

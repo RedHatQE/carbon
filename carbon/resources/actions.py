@@ -30,6 +30,7 @@ from copy import copy
 from .._compat import string_types
 from ..constants import ORCHESTRATOR
 from ..core import CarbonResource
+from ..orchestrators import ActionOrchestrator
 from ..helpers import get_orchestrator_plugin_class, \
     get_orchestrators_plugin_list
 from ..exceptions import CarbonActionError
@@ -52,7 +53,8 @@ class Action(CarbonResource):
     """
 
     _valid_tasks_types = ['validate', 'orchestrate', 'cleanup']
-    _fields = ['name', 'description', 'hosts', 'labels', 'orchestrate_timeout', 'cleanup_timeout', 'validate_timeout']
+    _fields = ['name', 'description', 'orchestrator', 'hosts', 'labels', 'status' 'orchestrate_timeout',
+               'cleanup_timeout', 'validate_timeout']
 
     def __init__(self,
                  config=None,
@@ -140,21 +142,24 @@ class Action(CarbonResource):
             self.hosts = self.hosts.replace(' ', '').split(',')
 
         # every action has a mandatory orchestrator, lets set it
-        orchestrator = parameters.pop('orchestrator', ORCHESTRATOR)
+        orchestrator_name = parameters.pop('orchestrator', ORCHESTRATOR)
 
-        if orchestrator not in get_orchestrators_plugin_list():
+        if orchestrator_name not in get_orchestrators_plugin_list():
             raise CarbonActionError('Orchestrator: %s is not supported!' %
-                                    orchestrator)
+                                    orchestrator_name)
 
         # now that we know the orchestrator, lets get the class
-        self._orchestrator = get_orchestrator_plugin_class(orchestrator)
+        self._orchestrator = get_orchestrator_plugin_class(orchestrator_name)
 
-        # create the orchestrator attributes in the action object
+        # using plugin's method to get the schema keys and check if they are present in the parameters and then
+        # set them as action's parameters
         if self.orchestrator:
-            for p in getattr(self.orchestrator, 'get_all_parameters')():
-                setattr(self, p, parameters.get(p, {}))
+            for p in getattr(self.orchestrator, 'get_schema_keys')():
+                if parameters.get(p, None):
+                    setattr(self, p, parameters.get(p))
         else:
-            self._orchestrator = orchestrator
+            raise CarbonActionError('Orchestrator: %s plugin was not found!' %
+                                    orchestrator_name)
 
         # set up status code
         self._status = parameters.pop('status', 0)
@@ -222,8 +227,8 @@ class Action(CarbonResource):
             profile['orchestrator'] = self.orchestrator
         else:
             profile['orchestrator'] = getattr(
-                    self.orchestrator, '__orchestrator_name__')
-
+                    self.orchestrator, '__plugin_name__')
+            #
         # set the action's hosts
         if all(isinstance(item, string_types) for item in self.hosts):
             profile.update(hosts=[host for host in self.hosts])
@@ -234,17 +239,18 @@ class Action(CarbonResource):
         if not isinstance(self.orchestrator, string_types):
             profile.update(getattr(self.orchestrator, 'build_profile')(self))
 
+        if self.cleanup_def:
+            profile.update({'cleanup': self.cleanup_def})
+
         # set labels
         profile.update({'labels': self.labels})
-
-        profile.update({'cleanup': self.cleanup_def})
         profile.update({'status': self.status})
 
         return profile
 
     def validate(self):
-        """Validate the action."""
-        getattr(self._orchestrator(self), 'validate')()
+        """Validate the action object using the orchestrator plugin's validate method."""
+        getattr(ActionOrchestrator(self), 'validate')()
 
     def _construct_validate_task(self):
         """Constructs the validate task associated to the action resource.
@@ -292,5 +298,6 @@ class Action(CarbonResource):
                 self.name, self.hosts),
             'methods': self._req_tasks_methods,
             "timeout": self._cleanup_timeout
+
         }
         return task

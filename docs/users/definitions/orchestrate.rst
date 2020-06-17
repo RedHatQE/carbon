@@ -159,22 +159,22 @@ on your selected orchestrator.Lets dive into them..
         - This key can be a boolean or a dictionary
           Boolean to define if you are executing a user defined script
           (required to be set to True, if using a user defined script)
-          OR List of scripts to be run
+          OR name of the script to be run
         - Boolean or dictionary
         - (Not required; however, one of the following must be defined:
           ansible_shell/script/playbook)
         - False
 
     *   - ansible_playbook
-        - list of playbooks to be run.
+        - playbook to be run.
         - dictionary
         - (Not required; however, one of the following must be defined:
           ansible_shell/script/playbook)
         - False
 
     *   - ansible_shell
-        - list of shell commands to be run.
-        - dictionary
+        - shell commands to be run.
+        - list of dictionary
         - (Not required; however, one of the following must be defined:
           ansible_shell/script/playbook)
         - False
@@ -271,6 +271,7 @@ Using ansible_shell
 ~~~~~~~~~~~~~~~~~~~
 
 Orchestrate task uses ansible shell module to run the user provided shell commands.
+ansible_shell takes in a list of dictionaries for the different commands to be run.
 The shell command can be provided under the *command* key the ansible_shell list of
 dictionary. Extra_args for the shell command can be provided as a part of the ansible_shell
 list of dictionary or under ansible_options. Please see :ref:`Extra_args<extra_args>`
@@ -299,8 +300,8 @@ Let's go into a couple examples
 .. code-block:: yaml
 
    ansible_shell:
-     command: glusto --pytest='-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml'
-              --log /tmp/glusto_sample.log
+     - command: glusto --pytest='-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml'
+                --log /tmp/glusto_sample.log
 
 On the surface the above command will pass YAML syntax parsing but will fail when actually
 executing the command on the shell. That is because the command is not preserved properly on
@@ -311,13 +312,13 @@ preserved.
 .. code-block:: yaml
 
    ansible_shell:
-     command: glusto --pytest=\\\"-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml\\\"
-              --log /tmp/glusto_sample.log
+     - command: glusto --pytest=\\\"-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml\\\"
+                --log /tmp/glusto_sample.log
 
 
    ansible_shell:
-     command: glusto \\\"--pytest=-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml\\\"
-              --log /tmp/glusto_sample.log
+     - command: glusto \\\"--pytest=-v tests/test_sample.py --junitxml=/tmp/SampleTest.xml\\\"
+                --log /tmp/glusto_sample.log
 
 
 Here is a more complex example
@@ -325,8 +326,8 @@ Here is a more complex example
 .. code-block:: yaml
 
     ansible_shell:
-        command: if [ `echo \$PRE_GA | tr [:upper:] [:lower:]` == 'true' ];
-                 then sed -i 's/pre_ga:.*/pre_ga: true/' ansible/test_playbook.yml; fi
+        - command: if [ `echo \$PRE_GA | tr [:upper:] [:lower:]` == 'true' ];
+                   then sed -i 's/pre_ga:.*/pre_ga: true/' ansible/test_playbook.yml; fi
 
 By default this will fail to be parsed by YAML as improper syntax. The rule of thumb is
 if your unquoted YAML string has any of the following special characters :-{}[]!#|>&%@
@@ -341,13 +342,13 @@ a single quoted or double quoted YAML string
 .. code-block:: yaml
 
     ansible_shell:
-        command: 'if [ \`echo \$PRE_GA | tr [:upper:] [:lower:]\` == ''true'' ];
-                  then sed -i \"s/pre_ga:.*/pre_ga: true/\" ansible/test_playbook.yml; fi'
+        - command: 'if [ \`echo \$PRE_GA | tr [:upper:] [:lower:]\` == ''true'' ];
+                    then sed -i \"s/pre_ga:.*/pre_ga: true/\" ansible/test_playbook.yml; fi'
 
 
     ansible_shell:
-        command: "if [ \\`echo \\$PRE_GA | tr [:upper:] [:lower:]\\` == \\'true\\' ];
-                  then sed \\'s/pre_ga:.*/pre_ga: true/\\' ansible/test_playbook.yml; fi"
+        - command: "if [ \\`echo \\$PRE_GA | tr [:upper:] [:lower:]\\` == \\'true\\' ];
+                    then sed \\'s/pre_ga:.*/pre_ga: true/\\' ansible/test_playbook.yml; fi"
 
 .. note::
         It is NOT recommended to output verbose logging to standard output for long running tests as there could be
@@ -357,7 +358,7 @@ Using ansible_playbook
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Using the ansible_playbook parameter you can provide the playbook to be run
-The name of the playbook can be provided as the *name* key of teh orchestrate task
+The name of the playbook can be provided as the *name* key of the orchestrate task
 OR under the ansible_playbook list of dictionary
 
 :ref:`Example2<eg_2>`
@@ -667,7 +668,7 @@ Example 12
 Example to run playbooks, scripts and shell command as a part of orchestrate task
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 210-232
+    :lines: 210-234
 
 .. _Example_13:
 
@@ -678,7 +679,7 @@ Example to use ansible_script with extra arags with in the ansible_script
 list of dictionary and its paramter in the name field
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 236-243
+    :lines: 238-245
 
 ----
 
@@ -690,7 +691,7 @@ Example 14
 Example to use ansible_script with extra arags as a part of ansible_options
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 246-254
+    :lines: 249-256
 
 .. _Example_15:
 
@@ -701,7 +702,7 @@ Example to use ansible_script and using ansible_options: extra_args to
 provide the script parameters
 
 .. literalinclude:: ../../../examples/docs-usage/orchestrate.yml
-    :lines: 257-264
+    :lines: 259-266
 
 Resources
 ~~~~~~~~~

@@ -131,9 +131,9 @@ def importer_plugin(report_resource):
     return ImporterPlugin(report_resource)
 
 
-@pytest.fixture(scope='class')
-def orchestrator_plugin():
-    return OrchestratorPlugin()
+@pytest.fixture()
+def orchestrator_plugin(action_resource):
+    return OrchestratorPlugin(action_resource)
 
 
 @pytest.fixture(scope='class')
@@ -436,6 +436,7 @@ class TestCarbonResource(object):
         """To test if comma separated string get set as an array"""
         setattr(carbon_resource, 'labels', 'label1,label2')
         assert carbon_resource.labels == ['label1', 'label2']
+
 
 class TestCarbonProvider(object):
     @staticmethod

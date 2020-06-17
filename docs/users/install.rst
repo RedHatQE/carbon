@@ -132,9 +132,9 @@ Carbon Matrix for Plugins
 +++++++++++++++++++++++++
 
 The table below lists out the released Carbon version and supported carbon plugin versions. This matrix will track
-n and n-1 carbon releases
+n and n-2 carbon releases
 
-.. list-table:: Carbon plugin matrix for n and n-1 releases
+.. list-table:: Carbon plugin matrix for n and n-2 releases
     :widths: auto
     :header-rows: 1
 
@@ -142,14 +142,25 @@ n and n-1 carbon releases
         - Rppreproc Plugin
         - Polarion Plugin
         - Linchpin Plugin
+        - Openstack Client Plugin
         - Polar
         - Rp_preproc
         - Ansible
 
-    *   - **1.7.0**
+    *   - **1.8.0**
+        - 1.1.1
         - 1.1.0
+        - 1.0.1
+        - 0.2.0
+        - 1.2.1
+        - 0.1.3
+        - >=2.5.0
+
+    *   - **1.7.0**
+        - >=1.1.0
         - 1.1.0
         - 1.0.0
+        - --
         - 1.2.1
         - 0.1.3
         - >=2.5.0
@@ -158,6 +169,7 @@ n and n-1 carbon releases
         - 1.0.1
         - 1.0.1
         - 1.0.0
+        - --
         - 1.2.1
         - 0.1.3
         - >=2.5.0, <=2.9.0

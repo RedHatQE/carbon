@@ -794,6 +794,7 @@ class ReportProvider(CarbonProvider):
 
 
 class CarbonOrchestrator(LoggerMixin, TimeMixin):
+    # TODO Remove the carbon orchestrator class as it is no longer being used
 
     __orchestrator_name__ = None
 
@@ -1040,6 +1041,7 @@ class CarbonExecutor(LoggerMixin, TimeMixin):
 
 class CarbonImporter(LoggerMixin, TimeMixin):
 
+    # TODO Remove the carbon importer class as it is no longer being used
     # set the importer name
     __importer_name__ = None
 
@@ -1269,11 +1271,54 @@ class OrchestratorPlugin(CarbonPlugin):
     Additional support/helper methods can be added to this class.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, action):
+        """Constructor."""
+        self._action = action
+        self._hosts = self.action.hosts
+        self._status = 0
+        self.action_name = self.action.name
+        self.config = self.action.config
+        self.workspace = self.action.workspace
+
+    def validate(self):
+        raise NotImplementedError
 
     def run(self):
         raise NotImplementedError
+
+    @property
+    def name(self):
+        """Return the name of the orchestrator."""
+        return self.__plugin_name__
+
+    @name.setter
+    def name(self, value):
+        raise AttributeError('You cannot set name for the orchestrator.')
+
+    @property
+    def action(self):
+        return self._action
+
+    @action.setter
+    def action(self, value):
+        raise AttributeError('You cannot set the action the orchestrator will'
+                             ' perform.')
+
+    @property
+    def hosts(self):
+        return self._hosts
+
+    @hosts.setter
+    def hosts(self, value):
+        raise AttributeError('Hosts cannot be set once the object is created.')
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, value):
+        self._status = value
 
 
 class ExecutorPlugin(CarbonPlugin):
@@ -1375,6 +1420,7 @@ class Inventory(LoggerMixin, FileLockMixin):
                 )
             if not os.path.isdir(self.inv_dir):
                 os.makedirs(self.inv_dir)
+
         else:
             self.inv_dir = os.path.join(results_dir,
                                         'inventory')
