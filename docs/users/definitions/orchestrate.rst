@@ -399,6 +399,10 @@ Please look here for more info
 `Ansible Script Module <https://docs.ansible.com/ansible/latest/modules/script_module.html>`_
 `Ansible Shell Module <https://docs.ansible.com/ansible/latest/modules/shell_module.html>`_
 
+vault-password-file
+~~~~~~~~~~~~~~~~~~~~~
+The vault-password-file can be passed using **vault-password-file** under **ansible_options**
+
 Extra_vars
 ~~~~~~~~~~
 

@@ -62,6 +62,18 @@ class CarbonResourceError(CarbonError):
         super(CarbonResourceError, self).__init__(message)
 
 
+class AnsibleVaultError(CarbonError):
+    """Carbon's AnsibleVaultError exception class."""
+
+    def __init__(self, message):
+        """Constructor.
+
+        :param message: error message
+        :type message: str
+        """
+        super(AnsibleVaultError, self).__init__(message)
+
+
 class CarbonProvisionerError(CarbonError):
     """Carbon's provisioner base exception class."""
 

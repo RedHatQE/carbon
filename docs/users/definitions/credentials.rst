@@ -5,7 +5,39 @@ For each resource that needs to be provisioned or artifact that needs to be
 imported, credentials are required. These credentials will be set in the required 
 `carbon.cfg file <../configuration.html#carbon-configuration>`_, and the credential 
 name will be referenced in your scenario descriptor file in the provision section for each
-resource or artifact that is defined.
+resource or artifact that is defined.Or you can set the credentials from a separate file
+
+Define credential from a separate file
+--------------------------------------
+
+You can also define the credentials by creating a credential file (For example,
+credential.keys) and put all the credentials there. Users need to encrypt this
+credentials file using ansible-vault. The path for this file needs to be provided
+in the carbon.cfg as **CREDENTIAL_PATH**. The ansible-vault password needs to be provided
+in the carbon.cfg file as **VAULTPASS**. These values are present under the default
+section of the carbon.cfg file.
+
+You need to define the **CREDENTIAL_PATH** and **VAULTPASS** fields 
+in the **carbon.cfg**. 
+
+.. note::
+    **For the VAULTPASS, you can also export it to be an enviroment variable,
+    so you can protect the password**
+
+    the credentials can be either put in carbon.cfg OR put providing a separate credentials file. These are mutually exclusive
+
+Example:
+
+.. code-block:: yaml
+
+  [defaults]
+  log_level=debug
+  data_folder=carbon_data/
+  workspace=.
+  inventory_folder=css_psi_customerzero/
+  CREDENTIAL_PATH=credentials.key  
+  VAULTPASS=abc 
+
 
 Beaker Credentials
 ------------------
