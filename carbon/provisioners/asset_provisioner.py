@@ -86,18 +86,38 @@ class AssetProvisioner(LoggerMixin, TimeMixin):
             res = self.plugin.create()
             if res is None or len(res) == 0:
                 # Plugin used is either beaker_client_plugin or openstack_libcloud_plugin
-                # or empty res is libvirt_network was fals or resources other than hosts
+                # or empty res is libvirt_network was false or resources other than hosts
                 # are provisioned . Here no operation is done
                 return
             # If res is greater than one , multiple resources have been provisioned
             if len(res) > 1:
                 res_profile_list = list()
                 for i in range(0, len(res)):
+                    # res > 1 when count > 1. This is available when using linchpin plugin, os_client plugin or other
+                    # provisioner plugin which supports multiple resources is used.
+                    # With linchpin plugin, for beaker and aws resources, linchpin does not return a proper host name
+                    # To apply names to the multiple beaker/aws resources Carbon adds a number next to the given asset
+                    # name e.g. asset_name_0 , asset_name_1. The below logic is to find out if beaker/aws resources were
+                    # provisioned by linchpin plugin.
                     host_profile = copy.deepcopy(getattr(getattr(self.plugin, 'asset'), 'profile')())
-                    if 'beaker' or 'aws' in host_profile['provider']['name']:
+                    provisioner_name = ''
+                    if host_profile.get('provider'):
+                        provisioner_name = host_profile['provider']['name']
+                    elif host_profile.get('resource_group_type'):
+                        provisioner_name = host_profile.get('resource_group_type')
+                    elif host_profile.get('cfgs'):
+                        provisioner_name = host_profile.get('cfgs').keys[0]
+
+                    if any(x in provisioner_name for x in ["beaker", "aws"]):
                         host_profile['name'] = host_profile['name'] + '_' + str(i)
                     else:
-                        host_profile['name'] = res[i]['hostname']
+                        host_profile['name'] = res[i].pop('name')
+
+                    # removing the 'name' key  and its value from the results res if present.
+                    # as it can interfere with provider's name key
+                    if res[i].get('name'):
+                        del res[i]['name']
+
                     if 'ip' in res[i]:
                         host_profile['ip_address'] = res[i].pop('ip')
                     if host_profile.get('provider', False):
@@ -108,15 +128,16 @@ class AssetProvisioner(LoggerMixin, TimeMixin):
                     res_profile_list.append(host_profile)
                 self.logger.info('Successfully provisioned %s asset(s) %s :' % (len(res_profile_list),
                                                                                 [res_profile_list[i]['name']
-                                                                                for i in range(0, len(res))]))
+                                                                                 for i in range(0, len(res))]))
                 return res_profile_list
             else:
                 # Single resource has been provisioned
                 if res[-1].get('ip', False):
                     setattr(getattr(self.plugin, 'asset'), 'ip_address', res[-1].pop('ip'))
                 for k, v in res[-1].items():
-                    self.logger.info("%s: %s" % (k, v))
-                    setattr(getattr(self.plugin, 'asset'), k, v)
+                    if k != 'name':
+                        self.logger.info("%s: %s" % (k, v))
+                        setattr(getattr(self.plugin, 'asset'), k, v)
                 self.logger.info('Successfully provisioned asset %s.' % host)
                 return
 
