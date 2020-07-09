@@ -183,6 +183,24 @@ class Config(dict):
 
         self.__setitem__('NOTIFICATIONS', notifications)
 
+    def __set_provisioner__(self):
+        """Set the provisioner configuration settings."""
+        provisioner_options = []
+
+        for section in getattr(self.parser, '_sections'):
+            if not section.startswith('provisioner'):
+                continue
+
+            _provisioner_options = {}
+
+            for option in self.parser.options(section):
+                _provisioner_options[option] = \
+                    self.parser.get(section, option)
+            _provisioner_options['name'] = section.split(':')[-1]
+            provisioner_options.append(_provisioner_options)
+
+        self.__setitem__('PROVISIONER_OPTIONS', provisioner_options)
+
     def load(self):
         """Load configuration settings.
 
