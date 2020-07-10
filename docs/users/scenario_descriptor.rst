@@ -83,6 +83,7 @@ into further detail explaining the different sections.
     definitions/execute
     definitions/report
     definitions/notifications
+    definitions/timeout
 
 When we put all of these sections together, we have a complete scenario to
 provide to carbon. You can see an example of a complete scenario descriptor
