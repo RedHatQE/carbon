@@ -25,9 +25,11 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import sys
+import ansible
 
 _ver = sys.version_info
 
+ansible_ver = float('.'.join(ansible.__version__.split('.')[:2]))
 # Python 2.x?
 is_py2 = (_ver[0] == 2)
 
@@ -68,3 +70,8 @@ try:
     from ConfigParser import ConfigParser
 except Exception:
     from configparser import ConfigParser
+
+try:
+    from ansible.parsing.vault import VaultLib
+except ImportError:
+    from ansible.utils.vault import VaultLib

@@ -193,6 +193,9 @@ class AnsibleController(object):
                 elif key == "skip_tags":
                     taglist = ','.join(run_options[key])
                     playbook_call += " --skip-tags %s" % taglist
+                elif key == "vault-password-file":
+                    taglist = ','.join(run_options[key])
+                    playbook_call += " --vault-password-file %s" % taglist
                 else:
                     playbook_call += " --%s %s" % (key.replace('_', '-'), run_options[key])
 
