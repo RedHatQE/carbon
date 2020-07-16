@@ -64,11 +64,12 @@ class TestAnsibleService(object):
     @staticmethod
     @mock.patch.object(AnsibleController, 'run_playbook')
     def test_run_playbook_name_as_str(mock_method, ansible_service):
-        playbook = 'cbn_execute_script.yml'
+        playbook = 'cbn_execute_script_'+ ansible_service.uid + '.yml'
         logger = ansible_service.logger
         ans_verbosity = ansible_service.ans_verbosity
         results = ansible_service.run_playbook(playbook)
-        mock_method.assert_called_with(playbook='cbn_execute_script.yml',logger=logger, extra_vars=None,
+        mock_method.assert_called_with(playbook='cbn_execute_script_' + ansible_service.uid + '.yml',
+                                       logger=logger, extra_vars=None,
                                        run_options=None, ans_verbosity=ans_verbosity)
 
     @staticmethod
@@ -86,7 +87,8 @@ class TestAnsibleService(object):
     @staticmethod
     @mock.patch.object(AnsibleController, 'run_playbook', run_playbook)
     def test_run_shell_playbook(ansible_service):
-        os.system('cp ../assets/script-results.json ./shell-results.json ')
+        setattr(ansible_service, 'uid', 'xyz')
+        os.system('cp ../assets/script-results-xyz.json ./shell-results-xyz.json ')
         shell = {'command': 'bash ./scripts/add_two_numbers.sh X=12 X=13', 'creates': './scripts/hello.txt'}
         shell_results = ansible_service.run_shell_playbook(shell)
         assert isinstance(shell_results, dict)
@@ -94,7 +96,8 @@ class TestAnsibleService(object):
     @staticmethod
     @mock.patch.object(AnsibleController, 'run_playbook', run_playbook)
     def test_run_script_playbook(ansible_service, script):
-        os.system('cp ../assets/script-results.json ./')
+        setattr(ansible_service, 'uid', 'xyz')
+        os.system('cp ../assets/script-results-xyz.json ./')
         script_results = ansible_service.run_script_playbook(script)
         assert isinstance(script_results, dict)
 

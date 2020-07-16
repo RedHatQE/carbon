@@ -78,7 +78,7 @@ SYNCHRONIZE_PLAYBOOK = '''
         - name: copy skipped local artifacts results to file
           shell:
             echo -e "('{{ ansible_hostname }}', '{{ item.item }}', '', True, 0, )" \
-            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> {{ 'sync-results-' + uuid }}.txt
           delegate_to: localhost
           loop: "{{ found_artifacts.results }}"
           when: artifacts_found | length == 0  or item.matched == 0
@@ -88,7 +88,7 @@ SYNCHRONIZE_PLAYBOOK = '''
             echo -e "('{{ ansible_hostname }}', \'\'\'{{ item.stdout_lines | to_yaml \
             | regex_replace('[\\t|\\n|\\r|\\s]', '') | regex_replace("\\'", '') }}\'\'\', \
             '{{ item.cmd[-1] }}', False, 0, )" \
-            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> sync-results.txt
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> {{ 'sync-results-' + uuid }}.txt
           delegate_to: localhost
           when: item is success and item is not skipped
           with_items:
@@ -98,7 +98,7 @@ SYNCHRONIZE_PLAYBOOK = '''
           shell:
             echo -e "('{{ ansible_hostname }}', '{{ item.item.path | to_yaml  \
             | regex_replace('[\\t|\\n|\\r|\\s]', '') }}', '', False, 1, )" \
-            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> sync-results.txt
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> {{ 'sync-results-' + uuid }}.txt
           loop: "{{ local_sync_output.results }}"
           delegate_to: localhost
       when: localhost
@@ -132,7 +132,7 @@ SYNCHRONIZE_PLAYBOOK = '''
         - name: copy skipped artifacts results to file
           shell:
             echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', '', True, 0, )" \
-            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> sync-results.txt
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' >> {{ 'sync-results-' + uuid }}.txt
           delegate_to: localhost
           when: item is skipped
           with_items:
@@ -142,7 +142,7 @@ SYNCHRONIZE_PLAYBOOK = '''
           shell:
             echo -e "('{{ ansible_hostname }}', \'\'\'{{ item.stdout_lines | to_yaml \
             | regex_replace('[\\t|\\n|\\r|\\s]', '') }}\'\'\', '{{ item.cmd.split(' ')[-1] }}', False, 0, )" \
-            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> sync-results.txt
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r' >> {{ 'sync-results-' + uuid }}.txt
           delegate_to: localhost
           when: item is success and item is not skipped
           with_items:
@@ -152,7 +152,7 @@ SYNCHRONIZE_PLAYBOOK = '''
         - name: copy failed artifacts results to file
           shell:
             echo -e "('{{ ansible_hostname }}', '{{ item.item[1].item }}', '', False, 1, )" \
-            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r'>> sync-results.txt
+            | sed -E ':a;N;$!ba;s/\\r{0,1}\\n/\\\\n/g' | tr -d '\\r'>> {{ 'sync-results-' + uuid }}.txt
           delegate_to: localhost
           with_items:
             - "{{ sync_output.results }}"
@@ -210,7 +210,7 @@ ADHOC_SHELL_PLAYBOOK = '''
     - name: copy to shell results to a json file
       copy:
         content: "{{ ansible_play_hosts | map('extract', hostvars, 'json_str') | list | to_nice_json }}"
-        dest: ./shell-results.json
+        dest: ./{{ 'shell-results-' + uuid }}.json
       run_once: true
       delegate_to: localhost
 '''
@@ -239,7 +239,7 @@ ADHOC_SCRIPT_PLAYBOOK = '''
     - name: copy to shell results to a json file
       copy:
         content: "{{ ansible_play_hosts | map('extract', hostvars, 'json_str') | list | to_nice_json }}"
-        dest: ./script-results.json
+        dest: ./{{ 'script-results-' + uuid }}.json
       run_once: true
       delegate_to: localhost
 '''

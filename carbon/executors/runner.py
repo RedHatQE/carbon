@@ -86,7 +86,10 @@ class RunnerExecutor(CarbonExecutor):
 
         self.ans_verbosity = get_ans_verbosity(self.config)
 
-        self.ans_extra_vars = collections.OrderedDict(hosts=self.ans_service.inv.group)
+        # TODO: Remove this when ready. We won't need this anymore was refactor artifact function
+        #  since service does this already
+        self.ans_extra_vars = collections.OrderedDict(hosts=self.ans_service.inv.group,
+                                                      uuid=self.ans_service.uid)
 
         # attribute defining overall status of test execution. why is this
         # needed? when a test fails we handle the exception raised and call
@@ -211,6 +214,8 @@ class RunnerExecutor(CarbonExecutor):
                 results/
                     ..
         """
+        # TODO: Refactor a lot of this attribute/extra_vars setting logic into
+        #  AnsibleService run_artifact_playbook. Similar to the other functions
 
         # local path on disk to save artifacts
         destination = os.path.join(self.config.get('RESULTS_FOLDER'), 'artifacts')
@@ -254,7 +259,7 @@ class RunnerExecutor(CarbonExecutor):
 
         # Get results from file
         try:
-            with open('sync-results.txt') as fp:
+            with open('sync-results-' + self.ans_service.uid + '.txt') as fp:
                 lines = fp.read().splitlines()
         except (IOError, OSError) as ex:
             self.logger.error(ex)
@@ -270,7 +275,7 @@ class RunnerExecutor(CarbonExecutor):
             sync_results.append({'host': host, 'artifact': artifact, 'destination': dest, 'skipped': skipped, 'rc': rc})
 
         # remove Sync Results file
-        os.remove('sync-results.txt')
+        os.remove('sync-results-' + self.ans_service.uid + '.txt')
 
         for r in sync_results:
             if r['rc'] != 0 and not r['skipped']:

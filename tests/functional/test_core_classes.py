@@ -738,7 +738,8 @@ class TestInventory(object):
     @staticmethod
     def test_create_unique_inv(inventory, cleanup_unique_inv):
         inventory.create_unique()
-        assert glob.glob('/tmp/.results/inventory/unique-*')
+        # Keeping this for backwards compat for now
+        assert not glob.glob('/tmp/.results/inventory/unique-*')
         cleanup_unique_inv
 
     @staticmethod
@@ -750,7 +751,8 @@ class TestInventory(object):
     @staticmethod
     def test_create_all_inv(inventory, cleanup_unique_inv):
         inventory.create()
-        assert glob.glob('/tmp/.results/inventory/unique-*')
+        # keeping this for backwards compat for now
+        assert not glob.glob('/tmp/.results/inventory/unique-*')
         assert os.path.exists('/tmp/.results/inventory/master-xyz')
         inventory.delete_master()
         cleanup_unique_inv
@@ -800,6 +802,7 @@ class TestInventory(object):
 
     @staticmethod
     def test_implicit_localhost_unique_inv(inv_host, cleanup_unique_inv):
+        # Keeping this for backwards compat. Delete when ready
         data =''
         inv = Inventory(hosts=['localhost'], all_hosts=[],
                         data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
@@ -808,7 +811,7 @@ class TestInventory(object):
         for i in glob.glob('/tmp/inv/inventory/unique-*'):
             with open(i) as f:
                 data = f.read()
-        assert data.find('localhost') != -1
+        assert data.find('localhost') == -1
         cleanup_unique_inv
 
     @staticmethod

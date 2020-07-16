@@ -1384,14 +1384,17 @@ class Inventory(LoggerMixin, FileLockMixin):
         # set the master inventory
         self.master_inv = os.path.join(self.inv_dir, 'master-%s' % os.path.basename(data_dir))
 
+        # TODO: Remove this once we are sure we don't need it.
         # set the unique inventory
         self.unique_inv = os.path.join(self.inv_dir, 'unique-%s' % uuid4())
 
         # defines the custom group to run the play against
+        # This is what handles the core of the logic now to pass
+        # to the ansible-playbook command the -e hosts=<hosts>
         if self.hosts:
             join = False
             for host in self.hosts:
-                if isinstance(host, string_types) and 'localhost' not in host:
+                if isinstance(host, string_types):
                     if len(self.hosts) > 1:
                         if join:
                             self.group += ', %s' % host
@@ -1401,6 +1404,18 @@ class Inventory(LoggerMixin, FileLockMixin):
                         continue
                     else:
                         self.group = host
+                        continue
+                else:
+                    # If the hosts are Asset objects
+                    if len(self.hosts) > 1:
+                        if join:
+                            self.group += ', %s' % host.name
+                        else:
+                            self.group = host.name
+                            join = True
+                        continue
+                    else:
+                        self.group = host.name
                         continue
 
     def create_master(self):
@@ -1487,6 +1502,9 @@ class Inventory(LoggerMixin, FileLockMixin):
         for all hosts in the scenario. Along with a child group containing
         all the hosts for the action to run on.
         """
+        # TODO: This code will never create a unique inventory
+        #  with the code changes to the group attribute in __init__
+        #  Keeping for backwards compat reasons. Remove when ready.
 
         # check for any old/stale unique inventories and delete them.
         # This is incase unique inventories from previous runs were left
@@ -1529,8 +1547,8 @@ class Inventory(LoggerMixin, FileLockMixin):
             # write the inventory
             self.write_inventory(config)
 
-            self.logger.debug("Unique inventory content")
-            self.log_inventory_content(config)
+        self.logger.debug("Unique inventory content")
+        self.log_inventory_content(config)
 
     def create(self):
         """Create the inventory."""
@@ -1546,6 +1564,7 @@ class Inventory(LoggerMixin, FileLockMixin):
 
     def delete_unique(self):
         """Delete the unique inventory file generated."""
+        # TODO: Remove this once we are sure we no longer need it
         try:
             os.remove(self.unique_inv)
         except OSError as ex:
@@ -1579,6 +1598,8 @@ class Inventory(LoggerMixin, FileLockMixin):
         self.logger.debug('\n' + cfg_str)
 
     def create_implicit_localhost(self, main_section, parser):
+        # TODO: Remove this once we are sure we no longer need this
+
         parser.add_section('localhost')
         parser.set('localhost', '127.0.0.1')
         parser.add_section('localhost:vars')

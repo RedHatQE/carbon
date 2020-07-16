@@ -29,6 +29,7 @@ import collections
 import os
 import copy
 import json
+from string import Template
 from logging import getLogger
 from ruamel.yaml import YAML
 from collections import namedtuple
@@ -38,7 +39,8 @@ from ansible.vars.manager import VariableManager
 from shutil import copyfile
 from ansible.config.manager import ConfigManager
 from ._compat import string_types
-from .helpers import ssh_retry, exec_local_cmd_pipe, DataInjector, get_ans_verbosity, is_host_localhost, file_mgmt
+from .helpers import ssh_retry, exec_local_cmd_pipe, DataInjector, get_ans_verbosity, is_host_localhost, file_mgmt, \
+    gen_random_str
 from .static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK, \
     ADHOC_SHELL_PLAYBOOK, ADHOC_SCRIPT_PLAYBOOK
 from .core import Inventory
@@ -167,8 +169,14 @@ class AnsibleController(object):
         :return: A tuple (rc, sterr)
         """
 
-        playbook_call = "ansible-playbook -i %s %s" % \
-                        (self.ansible_inventory, playbook)
+        if "localhost" in extra_vars and extra_vars["localhost"]:
+            # point ansible inventory option to localhost when
+            # localhost specified as a hosts in orchestrate/execute
+            # tasks
+            playbook_call = "ansible-playbook -i localhost, %s" % (playbook)
+        else:
+            playbook_call = "ansible-playbook -i %s %s" % \
+                            (self.ansible_inventory, playbook)
         if extra_vars is not None:
             for key in extra_vars:
                 if not isinstance(extra_vars[key], string_types):
@@ -202,6 +210,10 @@ class AnsibleController(object):
         if ans_verbosity:
             playbook_call += " -%s" % ans_verbosity
 
+        # Set the connection if localhost
+        if "localhost" in extra_vars and extra_vars["localhost"]:
+            playbook_call += " -c local"
+
         logger.debug(playbook_call)
         output = exec_local_cmd_pipe(playbook_call, logger)
         return output
@@ -212,6 +224,8 @@ class AnsibleService(object):
     user_run_vals = ["become", "become_method", "become_user", "remote_user",
                      "connection", "forks", "tags", 'skip_tags']
 
+    playbook_name = Template("cbn_execute_$type$uid.yml")
+
     def __init__(self, config, hosts, all_hosts, ansible_options, galaxy_options=None):
         self.hosts = hosts
         self.all_hosts = all_hosts
@@ -220,6 +234,9 @@ class AnsibleService(object):
         self.galaxy_options = galaxy_options
         self.injector = DataInjector(self.all_hosts)
         self.logger = LOG
+        # uuid that we can append to playbook and results file in case
+        # execute/orchestrate tasks run concurrently
+        self.uid = gen_random_str(5)
 
         # Creating inv object for creating Ansible Controller obj
         self.inv = Inventory(
@@ -232,7 +249,9 @@ class AnsibleService(object):
         )
 
         self.ans_controller = AnsibleController(self.inv.inv_dir)
-        self.ans_extra_vars = collections.OrderedDict(hosts=self.inv.group)
+        # pass the uid as an extra variable to the playbooks so they can save
+        # output uniquely to disk in case of concurrent execution
+        self.ans_extra_vars = collections.OrderedDict(hosts=self.inv.group, uuid=self.uid)
         self.ans_verbosity = get_ans_verbosity(self.config)
 
     def build_ans_extra_args(self, attr):
@@ -529,8 +548,9 @@ class AnsibleService(object):
         else:
             raise AnsibleServiceError('Playbook parameter can be a string or dictionary')
 
+        # TODO: delete this when we no longer need it
         # create unique inventory
-        self.inv.create_unique()
+        # self.inv.create_unique()
 
         self.logger.info('Executing playbook : %s' % playbook_name)
 
@@ -542,15 +562,17 @@ class AnsibleService(object):
             run_options=run_options,
             ans_verbosity=self.ans_verbosity
         )
+
+        # TODO: delete this when we no longer need it
         # delete unique inventory
-        self.inv.delete_unique()
+        # self.inv.delete_unique()
 
         return results
 
     def run_artifact_playbook(self, extra_vars):
 
         # dynamic playbook
-        playbook = 'cbn_synchronize.yml'
+        playbook = self.playbook_name.safe_substitute(type='synchronize_', uid=self.uid)
 
         # build run options
         run_options = self.build_run_options()
@@ -579,7 +601,7 @@ class AnsibleService(object):
         """Execute the shell command supplied."""
 
         # dynamic playbook
-        playbook = 'cbn_execute_shell.yml'
+        playbook = self.playbook_name.safe_substitute(type='shell_', uid=self.uid)
 
         shell['command'] = self.evaluate_string(shell['command'])
 
@@ -615,7 +637,7 @@ class AnsibleService(object):
         # Get results from the json file and build results in sh_results
         try:
             sh_results = dict()
-            with open('shell-results.json') as f:
+            with open('shell-results-' + self.uid + '.json') as f:
 
                 my_json = json.load(f)
                 for item in my_json:
@@ -630,7 +652,7 @@ class AnsibleService(object):
                                       'logging in the carbon.cfg file and try again.')
 
         # remove Shell Results file
-        os.remove('shell-results.json')
+        os.remove('shell-results-' + self.uid + '.json')
 
         return sh_results
 
@@ -644,7 +666,7 @@ class AnsibleService(object):
         """
 
         # dynamic playbook
-        playbook = 'cbn_clone_git.yml'
+        playbook = self.playbook_name.safe_substitute(type='clone_', uid=self.uid)
 
         self.logger.info('Cloning git repositories.')
 
@@ -675,7 +697,7 @@ class AnsibleService(object):
         """Execute the script supplied."""
 
         # dynamic playbook
-        playbook = 'cbn_execute_script.yml'
+        playbook = self.playbook_name.safe_substitute(type='script_', uid=self.uid)
 
         self.logger.info('Executing script %s:' % script['name'])
 
@@ -710,7 +732,7 @@ class AnsibleService(object):
         # Get results from the json file and build results in script_results
         script_results = dict()
         try:
-            with open('script-results.json') as f:
+            with open('script-results-' + self.uid + '.json') as f:
                 my_json = json.load(f)
 
                 for item in my_json:
@@ -725,5 +747,5 @@ class AnsibleService(object):
                                       'logging in the carbon.cfg file and try again.')
 
         # remove Script Results file
-        os.remove('script-results.json')
+        os.remove('script-results-' + self.uid + '.json')
         return script_results

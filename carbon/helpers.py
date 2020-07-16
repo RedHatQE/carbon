@@ -826,28 +826,35 @@ def ssh_retry(obj):
         ssh_errs = False
         args[0].set_inventory()
 
-        host_group = kwargs['extra_vars']['hosts']
+        # put everything into a list for rather than doing repetative if else statements
+        # especially now that the inventory 'groups' property can be a string list of hosts
+        # in the master inventory vs what is in the unique inventory
+        host_groups = [kwargs['extra_vars']['hosts']] if kwargs['extra_vars']['hosts'].find(', ') == -1 \
+            else kwargs['extra_vars']['hosts'].split(', ')
         inv_groups = args[0].inventory.groups
-        if host_group not in inv_groups:
-            raise HelpersError(
-                'ERROR: Unexpected error - Group %s not found in inventory file!' % kwargs['extra_vars']['hosts']
-            )
+        for host_group in host_groups:
+            if is_host_localhost(host_group):
+                # Run Playbook/Module if localhost; no need to check.
+                result = obj(*args, **kwargs)
+                return result
+            if host_group not in inv_groups:
+                raise HelpersError(
+                    'ERROR: Unexpected error - Group %s not found in inventory file!' % kwargs['extra_vars']['hosts']
+                )
 
-        for group in inv_groups[host_group].child_groups:
+        def can_connect(group):
+
             sys_vars = group.vars
             server_ip = group.hosts[0].address
+            LOG.info(server_ip)
 
             # skip ssh connectivity check if server is localhost
             if is_host_localhost(server_ip):
-                continue
+                return False
 
             server_user = sys_vars['ansible_user']
             server_key_file = sys_vars['ansible_ssh_private_key_file']
-
-            if sys_vars.get('ansible_port', None):
-                server_ssh_port = sys_vars['ansible_port']
-            else:
-                server_ssh_port = 22
+            server_ssh_port = 22 if 'ansible_port' not in sys_vars else sys_vars.get('ansible_port')
 
             # Perform SSH checks
             attempt = 1
@@ -883,7 +890,22 @@ def ssh_retry(obj):
                     'Max Retries exceeded. SSH ERROR - Resource unreachable - Server %s - IP: %s!' %
                     (group, server_ip)
                 )
-                ssh_errs = True
+                return True
+            return False
+
+        for host_group in host_groups:
+            inv_group = inv_groups[host_group]
+            # This is just here for backwards compat. In case I've missed any
+            # corner case
+            if hasattr(inv_group, 'child_groups') and inv_group.child_groups:
+                LOG.debug('In the child group block')
+                for group in inv_group.child_groups:
+                    ssh_errs = can_connect(group)
+            else:
+                # Most cases should be falling into this block,
+                # based on carbon returning the actual host asset name once its
+                # done with its fetch_assets logic
+                ssh_errs = can_connect(inv_group)
 
         # Check for SSH Errors
         if ssh_errs:
