@@ -108,7 +108,8 @@ DEFAULT_CONFIG = {
     'CREDENTIALS': [],
     'SETUP_LOGGER': [],
     'NOTIFICATIONS': [],
-    "TIMEOUT": DEFAULT_TIMEOUT
+    "TIMEOUT": DEFAULT_TIMEOUT,
+    "PROVISIONER_OPTIONS": []
 }
 
 # Default config sections
