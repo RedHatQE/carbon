@@ -265,6 +265,7 @@ def action1(config):
         )
     )
 
+
 @pytest.fixture
 def action2(config):
     return Action(
@@ -274,7 +275,7 @@ def action2(config):
             description='description',
             hosts=['host_3'],
             orchestrator='ansible',
-            labels = 'label3'
+            labels='label3'
         )
     )
 

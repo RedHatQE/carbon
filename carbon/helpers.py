@@ -660,8 +660,7 @@ def filter_resources_labels(res_list, carbon_options):
     """
 
     if carbon_options and carbon_options.get('labels', ()):
-        return [res for res in res_list for label in carbon_options.get('labels')
-                if label in getattr(res, 'labels')]
+        return[res for res in res_list if set(getattr(res, 'labels')).intersection(set(carbon_options.get('labels')))]
     elif carbon_options and carbon_options.get('skip_labels', ()):
         return [res for res in res_list
                 if not set(getattr(res, 'labels')).intersection(set(carbon_options.get('skip_labels')))]
