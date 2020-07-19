@@ -1452,7 +1452,9 @@ class Inventory(LoggerMixin, FileLockMixin):
                 with open(self.master_inv) as f:
                     config.readfp(f)
 
-            for host in self.all_hosts:
+            # Sort the list of hosts so that if N number of hosts are getting
+            # added to same host group the order is predictable.
+            for host in sorted(self.all_hosts, key=lambda h: h.name):
                 section = host.name
                 section_vars = '%s:vars' % section
 
