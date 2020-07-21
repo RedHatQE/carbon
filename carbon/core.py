@@ -1484,6 +1484,8 @@ class Inventory(LoggerMixin, FileLockMixin):
                     for k, v in host.ansible_params.items():
                         if k in ['ansible_ssh_private_key_file']:
                             v = os.path.join(getattr(host, 'workspace'), v)
+                        if k == 'ansible_port':
+                            v = str(v)
                         config.set(section_vars, k, v)
 
                     # write the inventory

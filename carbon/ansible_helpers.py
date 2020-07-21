@@ -169,14 +169,8 @@ class AnsibleController(object):
         :return: A tuple (rc, sterr)
         """
 
-        if "localhost" in extra_vars and extra_vars["localhost"]:
-            # point ansible inventory option to localhost when
-            # localhost specified as a hosts in orchestrate/execute
-            # tasks
-            playbook_call = "ansible-playbook -i localhost, %s" % (playbook)
-        else:
-            playbook_call = "ansible-playbook -i %s %s" % \
-                            (self.ansible_inventory, playbook)
+        playbook_call = "ansible-playbook -i %s %s" % \
+                        (self.ansible_inventory, playbook)
         if extra_vars is not None:
             for key in extra_vars:
                 if not isinstance(extra_vars[key], string_types):
@@ -209,10 +203,6 @@ class AnsibleController(object):
 
         if ans_verbosity:
             playbook_call += " -%s" % ans_verbosity
-
-        # Set the connection if localhost
-        if "localhost" in extra_vars and extra_vars["localhost"]:
-            playbook_call += " -c local"
 
         logger.debug(playbook_call)
         output = exec_local_cmd_pipe(playbook_call, logger)
