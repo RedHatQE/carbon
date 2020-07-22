@@ -212,7 +212,7 @@ class AnsibleController(object):
 class AnsibleService(object):
 
     user_run_vals = ["become", "become_method", "become_user", "remote_user",
-                     "connection", "forks", "tags", 'skip_tags']
+                     "connection", "forks", "tags", 'skip_tags', 'vault-password-file']
 
     playbook_name = Template("cbn_execute_$type$uid.yml")
 

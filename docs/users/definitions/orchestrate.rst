@@ -403,6 +403,18 @@ vault-password-file
 ~~~~~~~~~~~~~~~~~~~~~
 The vault-password-file can be passed using **vault-password-file** under **ansible_options**
 
+.. code-block:: yaml
+
+    ---
+    orchestrate:
+      - name: rhsm_register.yml
+        description: "register systems under test against rhsm"
+        orchestrator: ansible
+        hosts: all
+        ansible_options:
+          vault-password-file: 
+            - "./vaultpass"
+
 Extra_vars
 ~~~~~~~~~~
 
