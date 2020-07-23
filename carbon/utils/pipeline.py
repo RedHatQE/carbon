@@ -32,6 +32,7 @@ from ..constants import TASKLIST, NOTIFYSTATES
 from ..exceptions import CarbonError
 from ..helpers import fetch_assets, get_core_tasks_classes, fetch_executes, filter_actions_on_failed_status, \
     set_task_class_concurrency, filter_resources_labels, filter_notifications_to_skip, filter_notifications_on_trigger
+
 from ..tasks import CleanupTask
 
 
@@ -120,11 +121,6 @@ class PipelineBuilder(object):
         )
 
         scenario_get_tasks = list()
-        scenario_assets = list()
-        scenario_actions = list()
-        scenario_executes = list()
-        scenario_reports = list()
-
         # Get all tasks for the scenario and its included scenarios
         if scenario.child_scenarios:
             for sc in scenario.child_scenarios:
@@ -132,66 +128,64 @@ class PipelineBuilder(object):
         # only master scenario no child scenarios
         scenario_get_tasks.extend([item for item in getattr(scenario, 'get_tasks')()])
 
-        # get all resources for scenario/included scenario validated and filtered using labels
-        scenario_assets.extend([item for item in filter_resources_labels(scenario.get_all_assets(), carbon_options)])
-        scenario_actions.extend([item for item in filter_resources_labels(scenario.get_all_actions(), carbon_options)])
-        scenario_executes.extend([item for item in filter_resources_labels(scenario.get_all_executes(),
-                                                                           carbon_options)])
-        scenario_reports.extend([item for item in filter_resources_labels(scenario.get_all_reports(), carbon_options)])
-
-        # get notifications
-        scenario_notifications = [item for item in filter_notifications_to_skip(scenario.get_all_notifications(),
-                                                                                carbon_options)]
-
-        # scenario resource
-        for task in scenario_get_tasks:
-            if task['task'].__task_name__ == self.name:
-                pipeline.tasks.append(set_task_class_concurrency(task, task['resource']))
-
-        # asset resource
-        for asset in scenario_assets:
-            for task in asset.get_tasks():
+        # Collecting resources based on task type
+        if self.name.lower() in ['validate', 'provision', 'cleanup']:
+            # scenario resource
+            for task in scenario_get_tasks:
                 if task['task'].__task_name__ == self.name:
-                    pipeline.tasks.append(set_task_class_concurrency(task, asset))
+                    pipeline.tasks.append(set_task_class_concurrency(task, task['resource']))
 
-        # action resource
-        # get action resource based on if its status
-        # check if cleanup task do NOT filter by status
-        if self.name != 'cleanup':
-            scenario_actions = filter_actions_on_failed_status(scenario_actions)
-        for action in scenario_actions:
-            for task in action.get_tasks():
-                if task['task'].__task_name__ == self.name:
-                    # fetch & set hosts for the given action task
-                    task = fetch_assets(scenario_assets, task)
-                    pipeline.tasks.append(set_task_class_concurrency(task, action))
+            # asset resource filtered based on labels
+            for asset in filter_resources_labels(scenario.get_all_assets(), carbon_options):
+                for task in asset.get_tasks():
+                    if task['task'].__task_name__ == self.name:
+                        pipeline.tasks.append(set_task_class_concurrency(task, asset))
 
-        # execute resource
-        for execute in scenario_executes:
-            for task in execute.get_tasks():
-                if task['task'].__task_name__ == self.name:
-                    # fetch & set hosts for the given executes task
-                    task = fetch_assets(scenario_assets, task)
-                    pipeline.tasks.append(set_task_class_concurrency(task, execute))
+        if self.name.lower() in ['validate', 'orchestrate', 'cleanup']:
+            # action resource
+            # get action resource based on if its status
+            # check if cleanup task do NOT filter by status
+            if self.name != 'cleanup':
+                scenario_actions = filter_actions_on_failed_status(scenario.get_all_actions())
+            else:
+                scenario_actions = scenario.get_all_actions()
+            # action resource filtered  based on labels
+            for action in filter_resources_labels(scenario_actions, carbon_options):
+                for task in action.get_tasks():
+                    if task['task'].__task_name__ == self.name:
+                        # fetch & set hosts for the given action task
+                        task = fetch_assets(scenario.get_all_assets(), task)
+                        pipeline.tasks.append(set_task_class_concurrency(task, action))
 
-        # report resource
-        for report in scenario_reports:
-            for task in report.get_tasks():
-                if task['task'].__task_name__ == self.name:
-                    # fetch & set hosts and executes for the given reports task
-                    task = fetch_executes(scenario_executes, scenario_assets, task)
-                    pipeline.tasks.append(set_task_class_concurrency(task, report))
+        if self.name.lower() in ['validate', 'execute']:
+            # execute resource filtered  based on labels
+            for execute in filter_resources_labels(scenario.get_all_executes(), carbon_options):
+                for task in execute.get_tasks():
+                    if task['task'].__task_name__ == self.name:
+                        # fetch & set hosts for the given executes task
+                        task = fetch_assets(scenario.get_all_assets(), task)
+                        pipeline.tasks.append(set_task_class_concurrency(task, execute))
+
+        if self.name.lower() in ['validate', 'report']:
+            # report resource filtered  based on labels
+            for report in filter_resources_labels(scenario.get_all_reports(), carbon_options):
+                for task in report.get_tasks():
+                    if task['task'].__task_name__ == self.name:
+                        # fetch & set hosts and executes for the given reports task
+                        task = fetch_executes(scenario.get_all_executes(), scenario.get_all_assets(), task)
+                        pipeline.tasks.append(set_task_class_concurrency(task, report))
+
+        if self.name.lower() in ['validate']:
+            # notification resource
+            for notification in filter_notifications_to_skip(scenario.get_all_notifications(), carbon_options):
+                for task in notification.get_tasks():
+                    if task['task'].__task_name__ == self.name:
+                        task['resource'].scenario = scenario
+                        pipeline.tasks.append(task)
 
         # reverse the order of the tasks to be executed for cleanup task
         if self.name == CleanupTask.__task_name__:
             pipeline.tasks.reverse()
-
-        # notification resource
-        for notification in scenario_notifications:
-            for task in notification.get_tasks():
-                if task['task'].__task_name__ == self.name:
-                    task['resource'].scenario = scenario
-                    pipeline.tasks.append(task)
 
         return pipeline
 
