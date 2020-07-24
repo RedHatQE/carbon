@@ -402,6 +402,23 @@ Example
 
 .. literalinclude:: ../../.examples/provision/openstack/scenario.yml
 
+Provisioning Openstack Assets using carbon_openstack_client_plugin
+------------------------------------------------------------------
+
+Starting with version 1.8.0, Carbon is offering a new plugin **carbon_openstack_client_plugin**. to provision
+openstack resources. This plugin utilizes the openstackclient to provision resources.
+
+The plugin will have to be installed separately
+
+In your scenario descriptor file specify the **provisioner** key in your provision section.
+
+.. code-block:: yaml
+
+    provisioner: openstack-client
+
+For more information on how to install plugin and setup the scenario descriptor file for using this plugin,
+please refer `here <https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_openstack_client_plugin>`__
+
 
 .. _linchpin_provisioning:
 

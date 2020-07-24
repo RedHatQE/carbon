@@ -29,26 +29,6 @@ As of 1.6.0, The use of any other arbitrary hostname will not be supported to in
 It must be *localhost* that is used as a value to *hosts* in the Orchestrate or Execute sections,
 Carbon will infer that the intended task is to be run on the localhost.
 
-This will temporarily add a localhost entry, with the appropriate Ansible host group
-variables, to the inventory which will be available to Ansible when running the task.
-An example entry might look like the following example.
-
-.. code-block:: bash
-
-    [hosts:children]
-    localhost
-
-    [localhost]
-    127.0.0.1
-
-    [localhost:vars]
-    ansible_connection=local
-    ansible_python_interpreter="{{ansible_playbook_python}}"
-
-
-Once the Orchestrate or Execute task finishes the localhost entry will be removed. It is only
-available to the single task it was specified for.
-
 Example
 +++++++
 

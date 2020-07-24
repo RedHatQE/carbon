@@ -47,22 +47,6 @@ pipeline {
                 """
             }
         }
-        stage('local scenario tests 2') {
-            steps {
-                sh """
-                source venv/bin/activate
-                make test-scenario
-                """
-            }
-        }
-        stage('local scenario tests 3') {
-            steps {
-                sh """
-                source venv/bin/activate
-                make test-scenario
-                """
-            }
-        }
     }
     post {
         always {

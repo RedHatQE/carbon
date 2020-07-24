@@ -1,6 +1,6 @@
 Timeout settings for Carbon Tasks
 ==================================
-With Carbon release 1.7.1 onwards, 
+With Carbon release 1.8.0 onwards,
 users will be able to set  a time limit for all the carbon tasks. This can be done in either of the following two ways
 
 1. defining the **timeout** fields in carbon.cfg. These values will be applied throughout the scenario descriptor file:
