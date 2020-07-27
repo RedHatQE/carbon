@@ -1,3 +1,28 @@
+Version 1.8.0 (2020-07-27)
+--------------------------
+
+New Features
+~~~~~~~~~~~~
+* Carbon_openstack_client_plugin version 1.0.0 to provision openstack resources using openstack client cli
+* Use of ansible-vault to encrypt credentials used within the carbon.cfg
+* Set timeout value for different Carbon tasks using carbon.cfg or SDF
+
+Enhancements
+~~~~~~~~~~~~
+* During Provision support a way to inform carbon which network is the public IP via carbon.cfg
+* Refactor Orchestrator as a ansible_orchestrator_plugin
+* Refactored implicit localhost used during orchestrate/execute tasks
+* Orchestrator allows ansible_shell parameter to be a list
+* Refactor carbon pipeline
+
+Bug Fixes
+~~~~~~~~~~~~
+* Carbon tasks fail when using labels/multiple lables
+* When provisioning multiple compute assets the naming/numbering is off
+* When an Orchestrate task fails the status is not getting set to 1
+* Improvement in report portal payload dir creation with carbon_rppreproc_plugin version 1.1.1
+* Fix issue when execute tasks run concurrently
+
 Version 1.7.0 (2020-06-15)
 --------------------------
 
