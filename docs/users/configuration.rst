@@ -74,7 +74,7 @@ or in parallel/concurrent. Below is the default execution type of each of the Ca
         - String
 
     *   - report
-        - True
+        - False
         - String
 
 There are cases where it makes sense to adjust the execution type. Below are some examples:

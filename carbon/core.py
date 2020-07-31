@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2017 Red Hat, Inc.
+# Copyright (C) 2020 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
     Module containing the core classes which carbon resources, tasks,
     providers, provisioners, etc inherit.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 import errno
@@ -35,7 +35,6 @@ from logging import Formatter, getLogger, StreamHandler, FileHandler, Filter
 from logging import config as log_config
 from time import time, sleep
 from collections import OrderedDict
-
 from .exceptions import CarbonError, CarbonResourceError, LoggerMixinError, \
     CarbonProvisionerError, CarbonImporterError
 from .helpers import get_core_tasks_classes
@@ -44,6 +43,7 @@ from ._compat import RawConfigParser, string_types
 from uuid import uuid4
 from sys import exc_info
 from .constants import LOGGING_CONFIG
+import threading
 
 
 class LoggerMixin(object):
@@ -276,6 +276,7 @@ class TimeMixin(object):
         self._secounds = value
 
 
+# TODO Remove this class if we do not find use for it
 class FileLockMixin(object):
     """
     The FileLockMixin is designed to
@@ -1378,95 +1379,68 @@ class NotificationPlugin(CarbonPlugin):
         return cfg
 
 
-class Inventory(LoggerMixin, FileLockMixin):
-    """Inventory.
+class SingletonMixin(object):
+    """ This class helps in creating a singleton object for a class,
+    so that object is created only once"""
 
-    This class primary responsibility is handling creating/deleting the
+    __singleton_lock = threading.Lock()
+    __singleton_instance = None
+
+    @classmethod
+    def get_instance(cls, *args, **kwargs):
+        # check for the singleton instance
+        if not cls.__singleton_instance:
+            with cls.__singleton_lock:
+                if not cls.__singleton_instance:
+                    cls.__singleton_instance = cls(*args, **kwargs)
+
+        # return the singleton instance
+        return cls.__singleton_instance
+
+
+class Inventory(LoggerMixin, FileLockMixin, SingletonMixin):
+    """This class primary responsibility is handling creating/deleting the
     ansible inventory for the carbon ansible action.
     """
 
-    def __init__(self, hosts, all_hosts, data_dir, results_dir, static_inv_dir=None, inv_dump=None):
+    def __init__(self, results_folder, static_inv_dir, uid, inv_dump=None):
         """Constructor.
-
-        :param hosts: list of hosts to create the inventory file
-        :type hosts: list
-        :param all_hosts: list of all hosts in the given scenario
-        :type all_hosts: list
-        :param data_dir: data directory of current execution
-        :type data_dir: str
-        :param results_dir: the results directory where the inventory will go
-        :type results_dir: str
         :param static_inv_dir: the static inventory folder specified in the config where inventories will go
         :type static_inv_dir: str
+        :param uid: unique id created for carbon data folder
+        :type uid: str
         :param inv_dump: multipart string from provisioners that generate their own inventory layout
         :type inv_dump: str
+        :param results_folder: the results folder for the carbon run
+        :type results_folder: str
         """
-        self.hosts = hosts
-        self.all_hosts = all_hosts
-        self.lock_file = '/tmp/cbn_%s.lock' % os.path.basename(data_dir)
+
+        self.results_folder = results_folder
+        self.uid = uid
+        self.lock_file = '/tmp/cbn_%s.lock' % self.uid
+        self.static_inv_dir = static_inv_dir
         self.inv_dump = inv_dump
-        self.group = 'hosts'
+        self._create_inv_dir()
 
-        # set & create the inventory directory
-        if static_inv_dir:
-            if 'inventory' in (os.path.basename(static_inv_dir),
-                               os.path.basename(os.path.dirname(static_inv_dir))):
-                self.inv_dir = os.path.expandvars(
-                    os.path.expanduser(static_inv_dir)
-                )
-            else:
-                self.inv_dir = os.path.expandvars(
-                    os.path.expanduser(os.path.join(static_inv_dir, 'inventory'))
-                )
-            if not os.path.isdir(self.inv_dir):
-                os.makedirs(self.inv_dir)
-
+    def _create_inv_dir(self):
+        # set & create the inventory directory if not already present
+        if 'inventory' in (os.path.basename(self.static_inv_dir),
+                           os.path.basename(os.path.dirname(self.static_inv_dir))):
+            self.inv_dir = os.path.expandvars(
+                os.path.expanduser(self.static_inv_dir)
+            )
         else:
-            self.inv_dir = os.path.join(results_dir,
-                                        'inventory')
-            if not os.path.isdir(self.inv_dir):
-                os.makedirs(self.inv_dir)
+            self.inv_dir = os.path.expandvars(
+                os.path.expanduser(os.path.join(self.static_inv_dir, 'inventory'))
+            )
+        if not os.path.isdir(self.inv_dir):
+            os.makedirs(self.inv_dir)
 
         # set the master inventory
-        self.master_inv = os.path.join(self.inv_dir, 'master-%s' % os.path.basename(data_dir))
+        self.master_inv = os.path.join(self.inv_dir, 'master-%s' % self.uid)
 
-        # TODO: Remove this once we are sure we don't need it.
-        # set the unique inventory
-        self.unique_inv = os.path.join(self.inv_dir, 'unique-%s' % uuid4())
-
-        # defines the custom group to run the play against
-        # This is what handles the core of the logic now to pass
-        # to the ansible-playbook command the -e hosts=<hosts>
-        if self.hosts:
-            join = False
-            for host in self.hosts:
-                if isinstance(host, string_types):
-                    if len(self.hosts) > 1:
-                        if join:
-                            self.group += ', %s' % host
-                        else:
-                            self.group = host
-                            join = True
-                        continue
-                    else:
-                        self.group = host
-                        continue
-                else:
-                    # If the hosts are Asset objects
-                    if len(self.hosts) > 1:
-                        if join:
-                            self.group += ', %s' % host.name
-                        else:
-                            self.group = host.name
-                            join = True
-                        continue
-                    else:
-                        self.group = host.name
-                        continue
-
-    def create_master(self):
+    def create_master(self, all_hosts):
         """Create the master ansible inventory.
-
         This method will create a master inventory which contains all the
         hosts in the given scenario. Each host will have a group/group:vars.
         """
@@ -1476,12 +1450,15 @@ class Inventory(LoggerMixin, FileLockMixin):
             self.acquire()
 
             # check for any old master inventories and delete them.
-            # This is specifically for those using the static
-            # inventory feature
-            if glob(os.path.join(self.inv_dir, 'master*')):
-                for f in glob(os.path.join(self.inv_dir, 'master*')):
-                    if f != self.master_inv:
-                        os.remove(f)
+            # Check both the static inv folder as well as the .results/inventory folder for old master inventories
+
+            inv_results_dir = os.path.join(self.results_folder, 'inventory/master*')
+            stat_inv_dir = os.path.join(self.inv_dir, 'master*')
+            for path in [stat_inv_dir, inv_results_dir]:
+                if glob(path):
+                    for f in glob(path):
+                        if f != self.master_inv:
+                            os.remove(f)
 
             if self.inv_dump:
                 self.write_inventory()
@@ -1500,7 +1477,7 @@ class Inventory(LoggerMixin, FileLockMixin):
 
             # Sort the list of hosts so that if N number of hosts are getting
             # added to same host group the order is predictable.
-            for host in sorted(self.all_hosts, key=lambda h: h.name):
+            for host in sorted(all_hosts, key=lambda h: h.name):
                 section = host.name
                 section_vars = '%s:vars' % section
 
@@ -1545,89 +1522,12 @@ class Inventory(LoggerMixin, FileLockMixin):
         self.logger.debug("Master inventory content")
         self.log_inventory_content(config)
 
-    def create_unique(self):
-        """Create the unique ansible inventory.
-
-        This method will create a unique inventory which contains placeholders
-        for all hosts in the scenario. Along with a child group containing
-        all the hosts for the action to run on.
-        """
-        # TODO: This code will never create a unique inventory
-        #  with the code changes to the group attribute in __init__
-        #  Keeping for backwards compat reasons. Remove when ready.
-
-        # check for any old/stale unique inventories and delete them.
-        # This is incase unique inventories from previous runs were left
-        # Stale unique inventories can cause issues while creating new unique ones
-        if glob(os.path.join(self.inv_dir, 'unique*')):
-            for f in glob(os.path.join(self.inv_dir, 'unique*')):
-                self.logger.debug("Found stale unique inv %s. Deleting this file" % f)
-                os.remove(f)
-
-        # create parser object, raw config parser allows keys with no values
-        config = RawConfigParser(allow_no_value=True)
-        # disable default behavior to set values to lower case
-        config.optionxform = str
-        main_section = self.group + ":children"
-
-        # add specific hosts to the group to run the action against
-        # fetch assets will provide a host as a string type value when a host doesn't exist,
-        # essentially the string is a pass-thru. If user does not specify localhost as the string type
-        # value then assume they have supplied their own inventory file.
-        # i.e. user supplied linchpin a layout for linchpin to generate the inventory files.
-        # In that case just update the host group to match the pass-thru value rather than using
-        # the default group 'hosts' that we always use. This should take care of the use case of
-        # user supplied inventories and templatized host params in user playbooks, i.e.
-        # hosts: {{ hosts }}, will be passed the appropriate host group to run against the supplied
-        # inventory
-        if self.hosts and self.group == 'hosts':
-            config.add_section(main_section)
-            for host in self.hosts:
-                if isinstance(host, string_types) and 'localhost' == host:
-                    self.create_implicit_localhost(main_section, config)
-                    break
-                config.set(main_section, host.name)
-
-        if config.has_section(main_section):
-            # add place holders for all hosts
-            for host in self.all_hosts:
-                if hasattr(host, 'role') or hasattr(host, 'groups'):
-                    config.add_section(host.name)
-
-            # write the inventory
-            self.write_inventory(config)
-
-        self.logger.debug("Unique inventory content")
-        self.log_inventory_content(config)
-
-    def create(self):
-        """Create the inventory."""
-        self.create_master()
-        self.create_unique()
-
     def delete_master(self):
         """Delete the master inventory file generated."""
         try:
             os.remove(self.master_inv)
         except OSError as ex:
             self.logger.warning(ex)
-
-    def delete_unique(self):
-        """Delete the unique inventory file generated."""
-        # TODO: Remove this once we are sure we no longer need it
-        try:
-            os.remove(self.unique_inv)
-        except OSError as ex:
-            if ex.errno != 2:
-                self.logger.warning(ex)
-                self.logger.warning('You may experience problems with future '
-                                    'ansible calls due to additional inventory '
-                                    'files in the same inventory directory.')
-
-    def delete(self):
-        """Delete all ansible inventory files."""
-        self.delete_unique()
-        self.delete_master()
 
     def log_inventory_content(self, parser):
         # log the inventory file content
@@ -1647,26 +1547,11 @@ class Inventory(LoggerMixin, FileLockMixin):
             new_section = True
         self.logger.debug('\n' + cfg_str)
 
-    def create_implicit_localhost(self, main_section, parser):
-        # TODO: Remove this once we are sure we no longer need this
-
-        parser.add_section('localhost')
-        parser.set('localhost', '127.0.0.1')
-        parser.add_section('localhost:vars')
-        parser.set('localhost:vars', 'ansible_connection', 'local')
-        parser.set('localhost:vars', 'ansible_python_interpreter', '"{{ ansible_playbook_python }}"')
-        parser.set(main_section, 'localhost')
-
     def write_inventory(self, config=None):
         # generic method to write out the inventory file
         if config:
-            if config.has_section('hosts:children'):
-                with open(self.unique_inv, 'w') as f:
-                    config.write(f)
-            else:
-                with open(self.master_inv, 'w') as f:
-                    config.write(f)
-
+            with open(self.master_inv, 'w') as f:
+                config.write(f)
         else:
             with open(self.master_inv, 'w+') as inv_file:
                 inv_file.write(self.inv_dump)

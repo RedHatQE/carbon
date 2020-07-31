@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2017 Red Hat, Inc.
+# Copyright (C) 2020 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 
     Carbon a framework to test product interoperability.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 import errno
@@ -29,8 +29,9 @@ import sys
 
 import blaster
 import yaml
+from glob import glob
 from . import __name__ as __carbon_name__
-from .constants import TASKLIST, RESULTS_FILE
+from .constants import TASKLIST, RESULTS_FILE, DATA_FOLDER, DEFAULT_INVENTORY
 from .core import CarbonError, LoggerMixin, TimeMixin, Inventory
 from .helpers import file_mgmt, gen_random_str, sort_tasklist
 from .resources import Scenario, Asset, Action, Report, Execute, Notification
@@ -116,19 +117,17 @@ class Carbon(LoggerMixin, TimeMixin):
         self.config['RESULTS_FOLDER'] = os.path.join(
             self.config['DATA_FOLDER'], '.results')
 
+        self.static_inv_dir = False
+        # Put inventory under carbon's result folder if data folder has the default config value
+        if self.config['DATA_FOLDER'] != DATA_FOLDER and self.config['INVENTORY_FOLDER'] == DEFAULT_INVENTORY:
+            self.config['INVENTORY_FOLDER'] = os.path.join(self.config['RESULTS_FOLDER'], 'inventory')
+        else:
+            # set the user defined static inventory path
+            self.static_inv_dir = True
+
         # Generate the UID for the carbon life-cycle based on data_folder
         self.config['DATA_FOLDER'] = os.path.join(self.config['DATA_FOLDER'],
                                                   self.uid)
-
-        # set the static inventory path if defined
-        self.static_inv_dir = None
-        if self.config['INVENTORY_FOLDER']:
-            inv_dir = os.path.abspath(
-                os.path.expanduser(os.path.expandvars(self.config['INVENTORY_FOLDER'])))
-            if 'inventory' in os.path.basename(inv_dir):
-                self.static_inv_dir = inv_dir
-            else:
-                self.static_inv_dir = os.path.join(inv_dir, 'inventory')
 
         # Why a results folder and a data folder? The data folder is a unique
         # folder that is created for each carbon execution. This folder will
@@ -185,6 +184,10 @@ class Carbon(LoggerMixin, TimeMixin):
         self.config['WORKSPACE'] = self.workspace
 
         self.scenario = Scenario(config=self.config)
+
+        # creating one time inventory object
+        self.cbn_inventory = Inventory.get_instance(self.config['RESULTS_FOLDER'],
+                                                    self.config['INVENTORY_FOLDER'], self._uid)
 
     @property
     def name(self):
@@ -382,19 +385,14 @@ class Carbon(LoggerMixin, TimeMixin):
 
                 # Creating inventory only when task is provision
                 if task == 'provision':
-                    inv = Inventory(hosts=list(),
-                                    all_hosts=self.scenario.get_all_assets(),
-                                    data_dir=self.config['DATA_FOLDER'],
-                                    results_dir=self.config['RESULTS_FOLDER'],
-                                    static_inv_dir=self.config['INVENTORY_FOLDER']
-                                    )
                     try:
                         # create the master inventory
                         for host in self.scenario.get_all_assets():
                             if (hasattr(host, 'role') or hasattr(host, 'groups')) and hasattr(host, 'ip_address'):
                                 self.logger.info('Populating master inventory file with host(s) %s'
                                                  % getattr(host, 'name'))
-                        inv.create_master()
+
+                        self.cbn_inventory.create_master(all_hosts=self.scenario.get_all_assets())
                     except Exception as ex:
                         raise CarbonError("Error while creating the master inventory %s" % ex)
 
@@ -437,7 +435,6 @@ class Carbon(LoggerMixin, TimeMixin):
                         passed_tasks.append(task)
                     except Exception as ex:
                         self.logger.error(ex)
-    #                    if pipe_builder.name == 'cleanup':
                         self.logger.error("There was a problem running the cleanup task to roll back the "
                                           "resources. You may need to manually cleanup any provisioned resources")
                         failed_tasks.append(task)
@@ -609,8 +606,9 @@ class Carbon(LoggerMixin, TimeMixin):
         # archive everything from the data folder into the results folder
         os.system('cp -r %s/* %s' % (self.data_folder, self.config['RESULTS_FOLDER']))
 
-        # also archive the inventory file if a static inventory directory is specified
-        if self.static_inv_dir and os.path.exists(self.static_inv_dir):
-            if os.listdir(self.static_inv_dir):
+        # also archive the inventory file if a static inventory directory differnt thant default inventory dir
+        # is specified
+        if self.static_inv_dir:
+            if os.listdir(self.config['INVENTORY_FOLDER']):
                 inv_results_dir = os.path.join(self.config['RESULTS_FOLDER'], 'inventory')
-                os.system('cp -r %s/* %s' % (self.static_inv_dir, inv_results_dir))
+                os.system('cp -r %s/* %s' % (self.config['INVENTORY_FOLDER'], inv_results_dir))

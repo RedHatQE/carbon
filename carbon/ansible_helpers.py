@@ -43,7 +43,6 @@ from .helpers import ssh_retry, exec_local_cmd_pipe, DataInjector, get_ans_verbo
     gen_random_str
 from .static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK, \
     ADHOC_SHELL_PLAYBOOK, ADHOC_SCRIPT_PLAYBOOK
-from .core import Inventory
 from .exceptions import AnsibleServiceError
 
 LOG = getLogger(__name__)
@@ -155,7 +154,7 @@ class AnsibleController(object):
 
     @ssh_retry
     def run_playbook(self, playbook, logger, extra_vars=None, run_options=None,
-                     ans_verbosity=None):
+                     ans_verbosity=None, env_var=None):
         """Run an Ansible playbook.
 
         :param playbook: Playbook to call
@@ -165,6 +164,8 @@ class AnsibleController(object):
         :param run_options: playbook run options
         :type run_options: dict
         :param ans_verbosity: ansible verbosity settings
+        :param env_var: dict of env variables to be passed
+        :type: env_var: dict
         :type ans_verbosity: str
         :return: A tuple (rc, sterr)
         """
@@ -205,7 +206,7 @@ class AnsibleController(object):
             playbook_call += " -%s" % ans_verbosity
 
         logger.debug(playbook_call)
-        output = exec_local_cmd_pipe(playbook_call, logger)
+        output = exec_local_cmd_pipe(playbook_call, logger, env_var=env_var)
         return output
 
 
@@ -224,25 +225,64 @@ class AnsibleService(object):
         self.galaxy_options = galaxy_options
         self.injector = DataInjector(self.all_hosts)
         self.logger = LOG
+        self.env_var = {}
+        self.ans_log_path = ''
         # uuid that we can append to playbook and results file in case
         # execute/orchestrate tasks run concurrently
         self.uid = gen_random_str(5)
 
-        # Creating inv object for creating Ansible Controller obj
-        self.inv = Inventory(
-            hosts=self.hosts,
-            all_hosts=self.all_hosts,
-            data_dir=self.config['DATA_FOLDER'],
-            results_dir=self.config['RESULTS_FOLDER'],
-            static_inv_dir=self.config['INVENTORY_FOLDER']
+        # passing the carbon's inventory directory to the Ansible Controller
+        self.ans_controller = AnsibleController(os.path.abspath(self.config['INVENTORY_FOLDER']))
 
-        )
-
-        self.ans_controller = AnsibleController(self.inv.inv_dir)
         # pass the uid as an extra variable to the playbooks so they can save
         # output uniquely to disk in case of concurrent execution
-        self.ans_extra_vars = collections.OrderedDict(hosts=self.inv.group, uuid=self.uid)
+        self.ans_extra_vars = collections.OrderedDict(hosts=self.create_inv_group(), uuid=self.uid)
         self.ans_verbosity = get_ans_verbosity(self.config)
+
+        # Setting ANSIBLE_LOG_PATH env variable when running actions concurrently, so each action logs gets
+        # collected in a separate file
+        if self.config['TASK_CONCURRENCY']['ORCHESTRATE'].lower() == 'true' or \
+           self.config['TASK_CONCURRENCY']['EXECUTE'].lower() == 'true':
+            ans_log = 'ansible_' + self.uid + '.log'
+            self.ans_log_path = os.path.join(self.config['WORKSPACE'], ans_log)
+            self.env_var.update({'ANSIBLE_LOG_PATH': self.ans_log_path})
+        else:
+            self.env_var = None
+
+    def create_inv_group(self):
+        """This method creates the host group for the action object to be passed as extra_vars"""
+
+        # defines the custom group to run the play against
+        # This is what handles the core of the logic now to pass
+        # to the ansible-playbook command the -e hosts=<hosts>
+        group = 'hosts'
+        if self.hosts:
+            join = False
+            for host in self.hosts:
+                if isinstance(host, string_types):
+                    if len(self.hosts) > 1:
+                        if join:
+                            group += ', %s' % host
+                        else:
+                            group = host
+                            join = True
+                        continue
+                    else:
+                        group = host
+                        continue
+                else:
+                    # If the hosts are Asset objects
+                    if len(self.hosts) > 1:
+                        if join:
+                            group += ', %s' % host.name
+                        else:
+                            group = host.name
+                            join = True
+                        continue
+                    else:
+                        group = host.name
+                    continue
+        return group
 
     def build_ans_extra_args(self, attr):
 
@@ -500,12 +540,22 @@ class AnsibleService(object):
                     returndict["connection"] = setting.value
             return returndict
 
-    def alog_update(self):
-        """move ansible logs to data folder as needed
+    def alog_update(self, folder_name=None):
+        """move ansible logs to data folder/folder_name(if provided)
+        :param folder_name: name of the folder under data folder to move the ansible logs
+        :type folder_name: str
         """
-        ans_logfile = self.get_default_config(key="DEFAULT_LOG_PATH")
+        ans_logfile = self.ans_log_path if self.ans_log_path else self.get_default_config(key="DEFAULT_LOG_PATH")
+        self.logger.debug("The ansible log file being used is : %s" % ans_logfile)
         if ans_logfile:
-            dest = os.path.join(self.config['DATA_FOLDER'], 'logs', "ansible.log")
+            if folder_name:
+                # Putting ansible logs in specific folders
+                log_folder = 'logs/' + folder_name
+                if not os.path.isdir(os.path.join(self.config['DATA_FOLDER'], log_folder)):
+                    os.makedirs(os.path.abspath(os.path.join(self.config['DATA_FOLDER'], log_folder)))
+                dest = os.path.join(self.config['DATA_FOLDER'], log_folder, "ansible.log")
+            else:
+                dest = os.path.join(self.config['DATA_FOLDER'], 'logs', "ansible.log")
             # if user wishes to keep the ansible log copy the log file
             if os.path.isfile(dest) and not self.config["ANSIBLE_LOG_REMOVE"]:
                 copyfile(ans_logfile, dest)
@@ -530,17 +580,13 @@ class AnsibleService(object):
             playbook_name = playbook.get('name')
             # update extra vars
             self.ans_extra_vars.update(self.build_extra_vars())
-            extra_vars = self.ans_extra_vars
+            extra_vars = copy.deepcopy(self.ans_extra_vars)
             # build run options
             run_options = self.build_run_options()
         elif isinstance(playbook, str):
             playbook_name = playbook
         else:
             raise AnsibleServiceError('Playbook parameter can be a string or dictionary')
-
-        # TODO: delete this when we no longer need it
-        # create unique inventory
-        # self.inv.create_unique()
 
         self.logger.info('Executing playbook : %s' % playbook_name)
 
@@ -550,16 +596,21 @@ class AnsibleService(object):
             logger=self.logger,
             extra_vars=extra_vars,
             run_options=run_options,
-            ans_verbosity=self.ans_verbosity
+            ans_verbosity=self.ans_verbosity,
+            env_var=self.env_var
         )
-
-        # TODO: delete this when we no longer need it
-        # delete unique inventory
-        # self.inv.delete_unique()
 
         return results
 
-    def run_artifact_playbook(self, extra_vars):
+    def run_artifact_playbook(self, destination, artifacts):
+
+        """Create playbook string for collecting artifacts"""
+
+        # update and set extra vars
+        self.ans_extra_vars.update(self.build_extra_vars())
+        extra_vars = copy.deepcopy(self.ans_extra_vars)
+        extra_vars['dest'] = destination
+        extra_vars['artifacts'] = artifacts
 
         # dynamic playbook
         playbook = self.playbook_name.safe_substitute(type='synchronize_', uid=self.uid)

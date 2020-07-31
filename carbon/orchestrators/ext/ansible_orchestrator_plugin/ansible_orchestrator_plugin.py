@@ -65,6 +65,10 @@ class AnsibleOrchestratorPlugin(OrchestratorPlugin):
         # TODO delete this if we want to remove backward compatibility for later releases
         self.backwards_compat_check()
 
+        # ansible service object
+        self.ans_service = AnsibleService(self.config, self.hosts, self.all_hosts,
+                                          self.options, self.galaxy_options)
+
     def backwards_compat_check(self):
         """ This method does the check if name field is a script/playbook path or name of the orchestrator task by
             checking is '/' i spresent in the string.
@@ -145,9 +149,6 @@ class AnsibleOrchestratorPlugin(OrchestratorPlugin):
         # Orchestrate supports only one action_types( playbook, script or shell) per task
         # if more than one action types are declared then the first action_type found will be executed
 
-        # ansible service object
-        self.ans_service = AnsibleService(self.config, self.hosts, self.all_hosts,
-                                          self.options, self.galaxy_options)
         flag = 0
         res = self.action.status
         for item in ['playbook', 'script', 'shell']:
@@ -179,7 +180,8 @@ class AnsibleOrchestratorPlugin(OrchestratorPlugin):
                         break
                     finally:
                         # get ansible logs as needed
-                        self.ans_service.alog_update()
+                        # providing folder_name as 'ansible_orchestrator' so all ansible logs wil be under this folder
+                        self.ans_service.alog_update(folder_name='ansible_orchestrator')
                 else:
                     self.logger.warning('Found more than one action types (ansible_playbook, ansible_script ,'
                                         'ansible_shell )in the orchestrate task, only the first found'

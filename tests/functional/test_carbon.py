@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2017 Red Hat, Inc.
+# Copyright (C) 2020 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 
     Unit tests for testing carbon module.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
@@ -149,7 +149,8 @@ class TestCarbon(object):
     @staticmethod
     def test_static_inventory_folder():
         carbon = Carbon(import_name='__main__', data_folder='/tmp')
-        assert carbon.static_inv_dir == '/tmp/inventory'
+        assert carbon.static_inv_dir
+        assert carbon.config['INVENTORY_FOLDER'] == '/tmp'
 
     @staticmethod
     def test_validate_labels_01(scenario_labels):

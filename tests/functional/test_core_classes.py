@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2017 Red Hat, Inc.
+# Copyright (C) 2020 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 
     Unit tests for testing carbon core classes.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
@@ -184,8 +184,9 @@ def inv_host(default_host_params, config):
 
 @pytest.fixture
 def inventory(inv_host):
-    return Inventory(hosts=[inv_host], all_hosts=[inv_host],
-                     data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'])
+    inv_host.config['INVENTORY_FOLDER'] = '/tmp/.results/inventory'
+    inventory = Inventory(inv_host.config['RESULTS_FOLDER'], inv_host.config['INVENTORY_FOLDER'], 'xyz')
+    return inventory
 
 
 @pytest.fixture
@@ -727,8 +728,9 @@ class TestInventory(object):
         assert isinstance(inventory, Inventory)
 
     @staticmethod
-    def test_create_master_inv(inventory):
-        inventory.create_master()
+    def test_create_master_inv(inventory, inv_host):
+        # using inventory folder as the default created by carbon
+        inventory.create_master(all_hosts=[inv_host])
         assert os.path.exists('/tmp/.results/inventory/master-xyz')
 
     @staticmethod
@@ -737,39 +739,10 @@ class TestInventory(object):
         assert not os.path.exists('/tmp/.results/inventory/master-xyz')
 
     @staticmethod
-    def test_create_unique_inv(inventory, cleanup_unique_inv):
-        inventory.create_unique()
-        # Keeping this for backwards compat for now
-        assert not glob.glob('/tmp/.results/inventory/unique-*')
-        cleanup_unique_inv
-
-    @staticmethod
-    def test_delete_unique_inv(inventory):
-        inventory.create_unique()
-        inventory.delete_unique()
-        assert not glob.glob('/tmp/.results/inventory/unique-*')
-
-    @staticmethod
-    def test_create_all_inv(inventory, cleanup_unique_inv):
-        inventory.create()
-        # keeping this for backwards compat for now
-        assert not glob.glob('/tmp/.results/inventory/unique-*')
-        assert os.path.exists('/tmp/.results/inventory/master-xyz')
-        inventory.delete_master()
-        cleanup_unique_inv
-
-    @staticmethod
-    def test_delete_all_inv(inventory):
-        inventory.create()
-        inventory.delete()
-        assert not os.path.exists('/tmp/.results/inventory/master-xyz')
-        assert not glob.glob('/tmp/.results/inventory/unique-*')
-
-    @staticmethod
-    def test_create_master_inv_err(inventory, cleanup_master):
-        inventory.create_master()
+    def test_create_master_inv_err(inventory, inv_host, cleanup_master):
+        inventory.create_master(all_hosts=[inv_host])
         with pytest.raises(Exception):
-            inventory.create_master()
+            inventory.create_master(all_hosts=[inv_host])
         cleanup_master
 
     @staticmethod
@@ -777,63 +750,25 @@ class TestInventory(object):
         inventory.delete_master()
 
     @staticmethod
-    def test_create_unique_inv_warn(inventory):
-        inventory.delete_unique()
-
-    @staticmethod
     def test_static_dir_create_master_inv(inv_host):
         inv_host_2 = Asset(name='dummy', parameters=dict(ip_address=['1.3.5.7', '2.4.5.6'],
                                                          role='dummy-role'))
         inv_host_3 = Asset(name='nummy', parameters=dict(ip_address='2.4.5.6',
                                                          role='nummy-role'))
-        inv = Inventory(hosts=[inv_host, inv_host_2, inv_host_3],
-                        all_hosts=[inv_host, inv_host_2, inv_host_3],
-                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
-                        static_inv_dir='/tmp/inv')
-        inv.create_master()
-        assert os.path.exists('/tmp/inv/inventory/master-xyz')
+        inv = Inventory(inv_host.config['RESULTS_FOLDER'], inv_host.config['INVENTORY_FOLDER'], 'm6fmviqq51')
+        inv.create_master(all_hosts=[inv_host, inv_host_2, inv_host_3] )
+        assert os.path.exists('/tmp/inventory/master-m6fmviqq51')
 
     @staticmethod
-    def test_static_dir_delete_master_inv(inv_host, cleanup_unique_inv):
-        inv = Inventory(hosts=[inv_host], all_hosts=[inv_host],
-                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
-                        static_inv_dir='/tmp/inv')
+    def test_static_dir_delete_master_inv(inv_host):
+        inv = Inventory(inv_host.config['RESULTS_FOLDER'], inv_host.config['INVENTORY_FOLDER'], 'm6fmviqq51')
         inv.delete_master()
-        assert not os.path.exists('/tmp/inv/inventory/master-xyz')
+        assert not os.path.exists('/tmp/inventory/master-m6fmviqq51')
 
-    @staticmethod
-    def test_implicit_localhost_unique_inv(inv_host, cleanup_unique_inv):
-        # Keeping this for backwards compat. Delete when ready
-        data =''
-        inv = Inventory(hosts=['localhost'], all_hosts=[],
-                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
-                        static_inv_dir='/tmp/inv')
-        inv.create_unique()
-        for i in glob.glob('/tmp/inv/inventory/unique-*'):
-            with open(i) as f:
-                data = f.read()
-        assert data.find('localhost') == -1
-        cleanup_unique_inv
-
-    @staticmethod
-    def test_group_hosts_equals_string_pass_thru(inv_host, cleanup_unique_inv):
-        inv = Inventory(hosts=['carbon_controller'], all_hosts=[],
-                       data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
-                       static_inv_dir='/tmp/inv')
-        assert inv.group == 'carbon_controller'
-
-    @staticmethod
-    def test_group_multi_hosts_equals_string_pass_thru(inv_host, cleanup_unique_inv):
-        inv = Inventory(hosts=['carbon_controller', 'dummy-host'], all_hosts=[],
-                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
-                        static_inv_dir='/tmp/inv')
-        assert inv.group == 'carbon_controller, dummy-host'
 
     @staticmethod
     def test_create_master_inv_with_dump_layout(inv_host):
-        inv = Inventory(hosts=[], all_hosts=[],
-                        data_dir='/tmp/xyz', results_dir=inv_host.config['RESULTS_FOLDER'],
-                        static_inv_dir='/tmp/inv',
+        inv = Inventory(inv_host.config['RESULTS_FOLDER'], inv_host.config['INVENTORY_FOLDER'], 'm6fmviqq51',
                         inv_dump="""
                         [example]
                         10.0.154.237 hostname=10.0.154.237 ansible_ssh_private_key_file=/tmp/demo
@@ -841,8 +776,8 @@ class TestInventory(object):
                         [all]
                         10.0.154.237 hostname=10.0.154.237 ansible_ssh_private_key_file=/tmp/demo
                         """)
-        inv.create_master()
-        for i in glob.glob('/tmp/inv/inventory/master-*'):
+        inv.create_master(all_hosts=[])
+        for i in glob.glob('/tmp/inventory/master-*'):
             with open(i) as f:
                 data = f.read()
         assert data.find('example') != -1

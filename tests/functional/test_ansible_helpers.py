@@ -70,7 +70,7 @@ class TestAnsibleService(object):
         results = ansible_service.run_playbook(playbook)
         mock_method.assert_called_with(playbook='cbn_execute_script_' + ansible_service.uid + '.yml',
                                        logger=logger, extra_vars=None,
-                                       run_options=None, ans_verbosity=ans_verbosity)
+                                       run_options=None, ans_verbosity=ans_verbosity, env_var=None)
 
     @staticmethod
     @mock.patch.object(AnsibleController, 'run_playbook')
@@ -81,7 +81,7 @@ class TestAnsibleService(object):
         ans_verbosity = ansible_service.ans_verbosity
         results = ansible_service.run_playbook(playbook)
         mock_method.assert_called_with(playbook='hello.yml',logger=logger, extra_vars=extra_vars, run_options={},
-                                       ans_verbosity=ans_verbosity)
+                                       ans_verbosity=ans_verbosity, env_var=None)
 
 
     @staticmethod
@@ -147,5 +147,15 @@ class TestAnsibleService(object):
         res = ansible_service.build_extra_vars()
         assert res == {'baseurl': 'abc', 'file': 'hello.txt', 'localhost': False}
 
+    @staticmethod
+    def test_group_hosts_equals_string_pass_thru(ansible_service):
+        group = ansible_service.create_inv_group()
+        assert group == 'host_0'
+
+    @staticmethod
+    def test_group_multi_hosts_equals_string_pass_thru(ansible_service, asset2):
+        ansible_service.hosts.append(asset2)
+        group = ansible_service.create_inv_group()
+        assert group == 'host_0, host_1'
 
 

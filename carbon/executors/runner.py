@@ -86,11 +86,6 @@ class RunnerExecutor(CarbonExecutor):
 
         self.ans_verbosity = get_ans_verbosity(self.config)
 
-        # TODO: Remove this when ready. We won't need this anymore was refactor artifact function
-        #  since service does this already
-        self.ans_extra_vars = collections.OrderedDict(hosts=self.ans_service.inv.group,
-                                                      uuid=self.ans_service.uid)
-
         # attribute defining overall status of test execution. why is this
         # needed? when a test fails we handle the exception raised and call
         # the method to archive test artifacts. once fetching artifacts is
@@ -214,9 +209,6 @@ class RunnerExecutor(CarbonExecutor):
                 results/
                     ..
         """
-        # TODO: Refactor a lot of this attribute/extra_vars setting logic into
-        #  AnsibleService run_artifact_playbook. Similar to the other functions
-
         # local path on disk to save artifacts
         destination = os.path.join(self.config.get('RESULTS_FOLDER'), 'artifacts')
 
@@ -235,22 +227,7 @@ class RunnerExecutor(CarbonExecutor):
         # setting variable so to no display any skipped tasks
         os.environ['DISPLAY_SKIPPED_HOSTS'] = 'False'
 
-        # set extra vars
-        extra_vars = copy.deepcopy(self.ans_extra_vars)
-        extra_vars['dest'] = destination
-        extra_vars['artifacts'] = self.artifacts
-
-        # check for localhost in the list of host
-        extra_vars['localhost'] = False
-        if self._hosts:
-            for h in self._hosts:
-                if not isinstance(h, string_types) and is_host_localhost(h.ip_address):
-                    extra_vars['localhost'] = True
-                elif isinstance(h, string_types) and h == 'localhost':
-                    extra_vars['localhost'] = True
-        # data injection
-        extra_vars = self.injector.inject_dictionary(extra_vars)
-        results = self.ans_service.run_artifact_playbook(extra_vars)
+        results = self.ans_service.run_artifact_playbook(destination, self.artifacts)
 
         if results[0] != 0:
             self.logger.error(results[1])
@@ -286,7 +263,7 @@ class RunnerExecutor(CarbonExecutor):
                 res_folder_parts = self.config['RESULTS_FOLDER'].split('/')
                 dest_path_parts = r['destination'].split('/')
 
-                if not extra_vars['localhost']:
+                if not self.ans_service.ans_extra_vars['localhost']:
                     art_list = [a[11:] for a in temp_list if 'cd+' not in a]
                     path = '/'.join(r['destination'].split('/')[-3:])
                 else:

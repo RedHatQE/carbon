@@ -32,6 +32,7 @@ CARBON_ROOT = os.path.join("/".join(os.path.dirname(__file__).split('/')[0:-2]))
 SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "files", "schema.yml")
 SCHEMA_EXT = os.path.join(os.path.dirname(__file__), 'files/extensions.py')
 DATA_FOLDER = tempfile.gettempdir()
+DEFAULT_INVENTORY = os.path.join(DATA_FOLDER, '.results/inventory')
 
 TASKLIST = [
     "validate",
@@ -79,7 +80,7 @@ DEFAULT_TASK_CONCURRENCY = dict(VALIDATE='True',
                                 PROVISION='True',
                                 ORCHESTRATE='False',
                                 EXECUTE='False',
-                                REPORT='True',
+                                REPORT='False',
                                 CLEANUP='False')
 
 # This is the default timeout for each tasks,
@@ -101,7 +102,7 @@ DEFAULT_CONFIG = {
     'DATA_FOLDER': DATA_FOLDER,
     'LOG_LEVEL': 'info',
     'RESOURCE_CHECK_ENDPOINT': '',
-    'INVENTORY_FOLDER': '',
+    'INVENTORY_FOLDER': DEFAULT_INVENTORY,
     'RESULTS_FOLDER': os.path.join(DATA_FOLDER, '.results'),
     'TASK_CONCURRENCY': DEFAULT_TASK_CONCURRENCY,
     'TOGGLES': [],

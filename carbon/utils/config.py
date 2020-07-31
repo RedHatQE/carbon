@@ -291,6 +291,6 @@ class Config(dict):
             else:
                 vaultpass = self.get("VAULTPASS", "")
             if vaultpass is "":
-                raise AnsibleVaultError('No vaultpass was found, please set the\
-vaultpass in carbon.cfg or in environment variable.')
+                raise AnsibleVaultError('No vaultpass was found, please set the \
+                vaultpass in carbon.cfg or in environment variable.')
             self.populate_credetials(self["CREDENTIAL_PATH"], vaultpass)
