@@ -132,14 +132,17 @@ class AssetProvisioner(LoggerMixin, TimeMixin):
                 return res_profile_list
             else:
                 # Single resource has been provisioned
-                if res[-1].get('ip', False):
-                    setattr(getattr(self.plugin, 'asset'), 'ip_address', res[-1].pop('ip'))
-                for k, v in res[-1].items():
-                    if k != 'name':
-                        self.logger.info("%s: %s" % (k, v))
-                        setattr(getattr(self.plugin, 'asset'), k, v)
+                host_profile = copy.deepcopy(getattr(getattr(self.plugin, 'asset'), 'profile')())
+                if res[-1].get('name', False):
+                    host_profile['name'] = res[-1].pop('name')
+                if 'ip' in res[-1]:
+                    host_profile['ip_address'] = res[-1].pop('ip')
+                if host_profile.get('provider', False):
+                    host_profile.get('provider').update(res[-1])
+                else:
+                    host_profile.update(res[-1])
                 self.logger.info('Successfully provisioned asset %s.' % host)
-                return
+                return [host_profile]
 
         except Exception as ex:
             self.logger.error(ex)
