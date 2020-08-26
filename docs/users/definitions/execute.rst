@@ -395,6 +395,14 @@ of the following two examples:
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
    :lines: 192-195
 
+Carbon by default will **NOT** exit if the collection of artifact task fails. In order to exit the run on an error during
+collection of artifacts user can set the **exit_on_error** field for executor in the carbon.cfg as below:
+
+.. code-block:: bash
+
+   [executor:runner]
+   exit_on_error=True
+
 .. _finding_locations:
 
 Artifact Locations

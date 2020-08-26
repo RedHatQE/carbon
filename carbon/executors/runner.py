@@ -256,7 +256,11 @@ class RunnerExecutor(CarbonExecutor):
 
         for r in sync_results:
             if r['rc'] != 0 and not r['skipped']:
-                self.logger.error('Failed to copy the artifact(s), %s, from %s' % (r['artifact'], r['host']))
+                # checking if exit on error is set to true in carbon.cfg file
+                if self.config.get('RUNNER_EXIT_ON_ERROR', 'False').lower() == 'true':
+                    raise CarbonExecuteError('Failed to copy the artifact(s), %s, from %s' % (r['artifact'], r['host']))
+                else:
+                    self.logger.error('Failed to copy the artifact(s), %s, from %s' % (r['artifact'], r['host']))
             if r['rc'] == 0 and not r['skipped']:
                 temp_list = r['artifact'].replace('[', '').replace(']', '').replace("'", "").split(',')
                 # TODO Will need to change this temp fix for getting correct path and art_list, when working on CID 5481
