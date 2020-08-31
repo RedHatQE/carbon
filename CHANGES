@@ -1,3 +1,20 @@
+Version 1.8.1 (2020-08-31)
+--------------------------
+
+New Features
+~~~~~~~~~~~~
+* Carbon_openstack_client_plugin version 1.1.0 available with new features and enhancements
+
+Enhancements
+~~~~~~~~~~~~
+* Refactor/redesign how carbon initializes Inventory
+* Update asset_provisioner such that name is updated when single resource is provisioned
+* Add function to move ansible generated logs from user defined location to data folder to other modules
+
+Bug Fixes
+~~~~~~~~~~~~
+* dogpile.cache version causing failures when linchpin and openstack-client plugin are installed
+
 Version 1.8.0 (2020-07-27)
 --------------------------
 
