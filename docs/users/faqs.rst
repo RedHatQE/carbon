@@ -156,7 +156,7 @@ Miscellaneous
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 See the list of current `Issues
-<https://projects.engineering.redhat.com/issues/?filter=32574>`_
+<https://projects.engineering.redhat.com/issues/?filter=40207>`_
 logged against carbon.
 
 ... see the supported carbon_plugins?
