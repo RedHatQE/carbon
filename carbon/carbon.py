@@ -183,11 +183,10 @@ class Carbon(LoggerMixin, TimeMixin):
 
         self.config['WORKSPACE'] = self.workspace
 
-        self.scenario = Scenario(config=self.config)
-
         # creating one time inventory object
-        self.cbn_inventory = Inventory.get_instance(self.config['RESULTS_FOLDER'],
-                                                    self.config['INVENTORY_FOLDER'], self._uid)
+        self.cbn_inventory = Inventory.get_instance(self.config, self._uid)
+
+        self.scenario = Scenario(config=self.config)
 
     @property
     def name(self):

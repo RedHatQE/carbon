@@ -337,8 +337,8 @@ class FileLockMixin(object):
         return True
 
     def cleanup_locks(self):
-        if glob(os.path.join(os.path.dirname(self.lock_file), 'cbn*')):
-            for f in glob(os.path.join(os.path.dirname(self.lock_file), 'cbn*')):
+        if glob(os.path.join(os.path.dirname(self.lock_file), 'cbn_*')):
+            for f in glob(os.path.join(os.path.dirname(self.lock_file), 'cbn_*')):
                 if f != self.lock_file:
                     os.remove(f)
 
@@ -1403,22 +1403,21 @@ class Inventory(LoggerMixin, FileLockMixin, SingletonMixin):
     ansible inventory for the carbon ansible action.
     """
 
-    def __init__(self, results_folder, static_inv_dir, uid, inv_dump=None):
+    def __init__(self, config, uid, inv_dump=None):
         """Constructor.
-        :param static_inv_dir: the static inventory folder specified in the config where inventories will go
-        :type static_inv_dir: str
+        :param config: carbon's config
+        :type static_inv_dir: dict
         :param uid: unique id created for carbon data folder
         :type uid: str
         :param inv_dump: multipart string from provisioners that generate their own inventory layout
         :type inv_dump: str
-        :param results_folder: the results folder for the carbon run
-        :type results_folder: str
         """
 
-        self.results_folder = results_folder
+        self.config = config
+        self.results_folder = self.config['RESULTS_FOLDER']
         self.uid = uid
         self.lock_file = '/tmp/cbn_%s.lock' % self.uid
-        self.static_inv_dir = static_inv_dir
+        self.static_inv_dir = self.config['INVENTORY_FOLDER']
         self.inv_dump = inv_dump
         self._create_inv_dir()
 
@@ -1430,11 +1429,12 @@ class Inventory(LoggerMixin, FileLockMixin, SingletonMixin):
                 os.path.expanduser(self.static_inv_dir)
             )
         else:
-            self.inv_dir = os.path.expandvars(
-                os.path.expanduser(os.path.join(self.static_inv_dir, 'inventory'))
-            )
-        if not os.path.isdir(self.inv_dir):
+            self.inv_dir = os.path.expandvars(os.path.expanduser(os.path.join(self.static_inv_dir, 'inventory')))
+        if not os.path.isdir(os.path.abspath(self.inv_dir)):
             os.makedirs(self.inv_dir)
+
+        # Setting config with updated static_inv folder
+        self.config['INVENTORY_FOLDER'] = self.inv_dir
 
         # set the master inventory
         self.master_inv = os.path.join(self.inv_dir, 'master-%s' % self.uid)
