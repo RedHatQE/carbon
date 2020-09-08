@@ -210,15 +210,11 @@ class RunnerExecutor(CarbonExecutor):
                     ..
         """
         # local path on disk to save artifacts
-        destination = os.path.join(self.config.get('RESULTS_FOLDER'), 'artifacts')
-
-        # create artifacts location (if needed)
-        if not os.path.exists(destination):
-            os.makedirs(destination)
+        destination = self.config['ARTIFACT_FOLDER']
 
         self.logger.info('Fetching test artifacts @ %s' % destination)
 
-        artifact_location = {}
+        artifact_location = list()
 
         # settings required by synchronize module
         os.environ['ANSIBLE_LOCAL_TEMP'] = '$HOME/.ansible/tmp'
@@ -263,7 +259,6 @@ class RunnerExecutor(CarbonExecutor):
                     self.logger.error('Failed to copy the artifact(s), %s, from %s' % (r['artifact'], r['host']))
             if r['rc'] == 0 and not r['skipped']:
                 temp_list = r['artifact'].replace('[', '').replace(']', '').replace("'", "").split(',')
-                # TODO Will need to change this temp fix for getting correct path and art_list, when working on CID 5481
                 res_folder_parts = self.config['RESULTS_FOLDER'].split('/')
                 dest_path_parts = r['destination'].split('/')
 
@@ -277,28 +272,23 @@ class RunnerExecutor(CarbonExecutor):
                 self.logger.info('Copied the artifact(s), %s, from %s' % (art_list, r['host']))
 
                 # Update the execute resource with the location of artifacts
-
-                if path in artifact_location:
-                    current_list = artifact_location.get(path)
-                    current_list.extend(art_list)
-                    artifact_location.update({path: current_list})
-                else:
-                    artifact_location[path] = art_list
-
-            if self.execute.artifact_locations:
-                self.execute.artifact_locations.update(artifact_location)
-            else:
-                self.execute.artifact_locations = artifact_location
+                for artifact in art_list:
+                    if artifact not in artifact_location:
+                        artifact_location.append(os.path.join(path, artifact))
 
             if r['skipped']:
                 self.logger.warning('Could not find artifact(s), %s, on %s. Make sure the file exists '
                                     'and defined properly in the definition file.' % (r['artifact'], r['host']))
 
+        if self.execute.artifact_locations:
+            self.execute.artifact_locations.extend(artifact_location)
+        else:
+            self.execute.artifact_locations = artifact_location
+
         if self.config.get('RUNNER_TESTRUN_RESULTS') and self.config.get('RUNNER_TESTRUN_RESULTS').lower() == 'false':
             self.execute.testrun_results = {}
         else:
-            # data injection in artifact locations if any
-            self.execute.testrun_results = create_testrun_results(self.injector.inject_dictionary
+            self.execute.testrun_results = create_testrun_results(self.injector.inject_list
                                                                   (self.execute.artifact_locations), self.config)
         # printing out the testrun results on the console
         self._print_testrun_results()
@@ -320,16 +310,17 @@ class RunnerExecutor(CarbonExecutor):
             self.logger.info(' * Passed Tests            : %s' %
                              self.execute.testrun_results['aggregate_testrun_results']['passed_tests'])
             self.logger.info('-' * 79)
-            self.logger.info(' * INDIVIDUAL RESULTS * '.center(79))
-            self.logger.info('-' * 79)
-            for res in self.execute.testrun_results.get('individual_results'):
-                for keys, values in res.items():
-                    self.logger.info(' * File Name               : %s' % keys)
-                    self.logger.info(' * Total Tests             : %s' % values['total_tests'])
-                    self.logger.info(' * Failed Tests            : %s' % values['failed_tests'])
-                    self.logger.info(' * Skipped Tests           : %s' % values['skipped_tests'])
-                    self.logger.info(' * Passed Tests            : %s' % values['passed_tests'])
-                    self.logger.info('-' * 79)
+            if len(self.execute.testrun_results.get('individual_results')) > 1:
+                self.logger.info(' * INDIVIDUAL RESULTS * '.center(79))
+                self.logger.info('-' * 79)
+                for res in self.execute.testrun_results.get('individual_results'):
+                    for keys, values in res.items():
+                        self.logger.info(' * File Name               : %s' % keys)
+                        self.logger.info(' * Total Tests             : %s' % values['total_tests'])
+                        self.logger.info(' * Failed Tests            : %s' % values['failed_tests'])
+                        self.logger.info(' * Skipped Tests           : %s' % values['skipped_tests'])
+                        self.logger.info(' * Passed Tests            : %s' % values['passed_tests'])
+                        self.logger.info('-' * 79)
         else:
             self.logger.info(' No artifacts were collected ')
             self.logger.info('-' * 79 + '\n')

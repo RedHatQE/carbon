@@ -241,6 +241,10 @@ mapping:
           artifacts:
             type: any
             func: type_str_list
+          artifact_locations:
+            type: seq
+            sequence:
+              - type: str
           ignore_rc:
             type: bool
           labels:

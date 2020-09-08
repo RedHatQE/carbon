@@ -1100,7 +1100,7 @@ class DataInjector(object):
         for key, value in dictionary.items():
             inj_key = self.inject(key)
             if isinstance(value, list):
-                inj_val = [self.inject(v) for v in value]
+                inj_val = self.inject_list(value)
             elif isinstance(value, dict):
                 inj_val = self.inject_dictionary(value)
             elif isinstance(value, string_types):
@@ -1110,6 +1110,29 @@ class DataInjector(object):
             injected_dict.update({inj_key: inj_val})
 
         return injected_dict
+
+    def inject_list(self, item_list):
+        """
+        inject data into a list where
+        data-passthrough template is encountered
+
+        :param item_list: a list to inject data into
+        :return:
+        """
+        injected_list = list()
+
+        for item in item_list:
+            if isinstance(item, list):
+                inj_item = self.inject_list(item)
+            elif isinstance(item, dict):
+                inj_item = self.inject_dictionary(item)
+            elif isinstance(item, string_types):
+                inj_item = self.inject(item)
+            else:
+                inj_item = item
+            injected_list.append(inj_item)
+
+        return injected_list
 
 
 def is_host_localhost(host_ip):
@@ -1200,7 +1223,7 @@ def search_artifact_location_dict(art_locations, report_name, data_folder, reg_q
     artifacts_path = []
 
     if art_locations:
-        full_path = [os.path.join(dir, f) for dir, file_list in art_locations.items() for f in file_list]
+        full_path = art_locations
         for f in full_path:
             LOG.debug('These are the artifact_locations in the execute: %s' % f)
         matches = [reg_query.search(p) for p in full_path]
@@ -1465,8 +1488,9 @@ def validate_cli_scenario_option(ctx, scenario, vars_data=None):
 def create_individual_testrun_results(artifact_locations, config):
     """this method creates a summary of total tests passed, failed, skipped for all the xml files found
     as artifacts
-     :param artifact_locations: dict of paths of artifacts where root dir is the key and artifact names are values
-     :type artifact_locations: dict
+     :param artifact_locations: list of relative paths of artifacts where root dir is the key and artifact names are
+                                values
+     :type artifact_locations: list
      :param config: config parameter used by execute resource
      :type config: dict
      :return testruns: a dictionary of test results summary for individual xml files as well as aggregate of all xml
@@ -1548,8 +1572,9 @@ def create_testrun_results(artifact_locations, config):
     """This method goes through the artifact_locations or paths provided and finds only the xmls. Using these
     xmls, generates a testrun_results dictionary which is a summary of total tests passed, failed, skipped. It
     generates the aggregate as well as individual xml summary
-     :param artifact_locations: dict of paths of artifacts where root dir is the key and artifact names are values
-     :type artifact_locations: dict
+     :param artifact_locations: list of relative paths of artifacts where root dir is the key and artifact names are
+                                values
+     :type artifact_locations: list
      :param config: config parameter used by execute resource
      :type config: dict
      :return testruns: a dictionary of test results summary for individual xml files as well as aggregate of all xml

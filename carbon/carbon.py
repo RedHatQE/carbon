@@ -31,7 +31,7 @@ import blaster
 import yaml
 from glob import glob
 from . import __name__ as __carbon_name__
-from .constants import TASKLIST, RESULTS_FILE, DATA_FOLDER, DEFAULT_INVENTORY
+from .constants import TASKLIST, RESULTS_FILE, DATA_FOLDER, DEFAULT_INVENTORY, DEFAULT_ARTIFACT
 from .core import CarbonError, LoggerMixin, TimeMixin, Inventory
 from .helpers import file_mgmt, gen_random_str, sort_tasklist
 from .resources import Scenario, Asset, Action, Report, Execute, Notification
@@ -116,6 +116,13 @@ class Carbon(LoggerMixin, TimeMixin):
         # define the results folder
         self.config['RESULTS_FOLDER'] = os.path.join(
             self.config['DATA_FOLDER'], '.results')
+
+        # define the artifacts folder under the results folder
+        self.config['ARTIFACT_FOLDER'] = os.path.join(self.config.get('RESULTS_FOLDER'), 'artifacts')
+
+        # create artifacts location
+        if not os.path.exists(self.config['ARTIFACT_FOLDER']):
+            os.makedirs(self.config['ARTIFACT_FOLDER'])
 
         self.static_inv_dir = False
         # Put inventory under carbon's result folder if data folder has the default config value

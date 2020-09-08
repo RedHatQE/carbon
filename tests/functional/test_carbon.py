@@ -25,7 +25,6 @@
     :license: GPLv3, see LICENSE for more details.
 """
 
-import copy
 import os
 import sys
 
@@ -91,6 +90,12 @@ class TestCarbon(object):
         carbon = Carbon(data_folder='/tmp')
         assert carbon.results_file == os.path.join(
             carbon.data_folder, RESULTS_FILE)
+
+    @staticmethod
+    def test_artifacts_folder_created():
+        carbon = Carbon(data_folder='/tmp')
+        print(carbon.data_folder)
+        assert (os.path.exists(os.path.join(carbon.config['RESULTS_FOLDER'], 'artifacts')))
 
     @staticmethod
     @mock.patch.object(yaml, 'safe_load')

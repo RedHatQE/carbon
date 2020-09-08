@@ -26,10 +26,8 @@ Failed: {{ failed_tasks }}
     {% for execute in scenario.executes %}
         {% if execute.artifact_locations %}
 Collected the following artifacts:
-            {% for dir, files in execute.artifact_locations.items() %}
-                {% for file in files %}
-- {{ [dir, file]|join }}
-                {% endfor %}
+            {% for file in execute.artifact_locations %}
+- {{ file }}
             {% endfor %}
         {% endif %}
         {% if execute.testrun_results %}

@@ -33,6 +33,7 @@ SCENARIO_SCHEMA = os.path.join(os.path.dirname(__file__), "files", "schema.yml")
 SCHEMA_EXT = os.path.join(os.path.dirname(__file__), 'files/extensions.py')
 DATA_FOLDER = tempfile.gettempdir()
 DEFAULT_INVENTORY = os.path.join(DATA_FOLDER, '.results/inventory')
+DEFAULT_ARTIFACT = os.path.join(DATA_FOLDER, '.results/artifacts')
 
 TASKLIST = [
     "validate",
@@ -104,6 +105,7 @@ DEFAULT_CONFIG = {
     'RESOURCE_CHECK_ENDPOINT': '',
     'INVENTORY_FOLDER': DEFAULT_INVENTORY,
     'RESULTS_FOLDER': os.path.join(DATA_FOLDER, '.results'),
+    'ARTIFACT_FOLDER': DEFAULT_ARTIFACT,
     'TASK_CONCURRENCY': DEFAULT_TASK_CONCURRENCY,
     'TOGGLES': [],
     'CREDENTIALS': [],

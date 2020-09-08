@@ -59,13 +59,10 @@ class ArtifactImporter(LoggerMixin, TimeMixin):
                                                (data_folder=self.report.config.get('RESULTS_FOLDER'),
                                                 report_name=self.report_name))
                 else:
-
-                    # Perform check to walk the data directory
                     self.artifact_paths.extend(find_artifacts_on_disk
                                                (data_folder=self.report.config.get('RESULTS_FOLDER'),
                                                 report_name=self.report_name,
-                                                art_location=self.injector.inject_dictionary
-                                                (execute.artifact_locations)
+                                                art_location=self.injector.inject_list(execute.artifact_locations)
                                                 )
                                                )
         else:

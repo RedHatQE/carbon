@@ -235,6 +235,21 @@ class TestDataInjector(object):
         cmd = data_injector.inject_dictionary(dict(ans_args='-c -e { node01.random } { node01.random_01[0]}'))
         assert '123' in cmd.get('ans_args')
 
+    def test_inject_list_01(self, data_injector):
+        cmd = data_injector.inject_list(['{ node01.random }'])
+        assert cmd[0] == '123'
+
+    def test_inject_list_02(self, data_injector):
+        cmd = data_injector.inject_list([dict(ans_args='-c -e { node01.random } { node01.random_01[0]}')])
+        assert isinstance(cmd[0], dict)
+        assert '123' in cmd[0].get('ans_args')
+
+    def test_inject_list_03(self, data_injector):
+        cmd = data_injector.inject_list(['hello', ['world', '{ node01.metadata.k5[0].k1 }']])
+        assert cmd[0] == 'hello'
+        assert isinstance(cmd[1], list)
+        assert cmd[1] == ['world', 'v1']
+
 
 def test_validate_render_scenario_no_include():
     result = validate_render_scenario(os.path.abspath('../assets/no_include.yml'))
@@ -332,8 +347,8 @@ def test_find_artifacts_on_disk_art_location_1(data_folder):
     This test verifies that with artifact locations we check the location and walk the results
     directory looking for a file using specific pattern.
     """
-    art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
-                                             'payload_eg/results/junit_example.xml']}
+    art_location = ['artifacts/localhosts/payload_eg/', 'artifacts/localhosts/payload_eg/results',
+                    'artifacts/localhosts/payload_eg/results/junit_example.xml']
     assert len(find_artifacts_on_disk(data_folder, 'junit_*.xml', art_location)) == 1
 
 
@@ -342,8 +357,8 @@ def test_find_artifacts_on_disk_art_location_2(data_folder):
     This test verifies that with artifact locations we check the location and walk the results
     directory looking for all files using a pattern.
     """
-    art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
-                                             'payload_eg/results/junit_example.xml']}
+    art_location = ['artifacts/localhosts/payload_eg/', 'artifacts/localhosts/payload_eg/results',
+                    'artifacts/localhosts/payload_eg/results/junit_example.xml']
     assert len(find_artifacts_on_disk(data_folder, '*.xml', art_location)) == 3
 
 
@@ -352,8 +367,8 @@ def test_find_artifacts_on_disk_art_location_3(data_folder):
     This test verifies that with artifact locations we check the location and walk the results
     directory looking for a specific file.
     """
-    art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
-                                             'payload_eg/results/junit_example.xml']}
+    art_location = ['artifacts/localhosts/payload_eg/', 'artifacts/localhosts/payload_eg/results',
+                    'artifacts/localhosts/payload_eg/results/junit_example.xml']
     assert len(find_artifacts_on_disk(data_folder, 'junit3.xml', art_location)) == 1
 
 
@@ -362,8 +377,8 @@ def test_find_artifacts_on_disk_art_location_4(data_folder):
     This test verifies that with artifact locations we check the location and walk the results
     directory looking for a file that doesn't exist.
     """
-    art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
-                                             'payload_eg/results/junit_example.xml']}
+    art_location = ['artifacts/localhosts/payload_eg/', 'artifacts/localhosts/payload_eg/results',
+                    'artifacts/localhosts/payload_eg/results/junit_example.xml']
     assert len(find_artifacts_on_disk(data_folder, 'hello.xml', art_location)) == 0
 
 
@@ -373,8 +388,8 @@ def test_find_artifacts_on_disk_art_location_5(data_folder):
     directory looking for a files using * within a specific subdirectory. The regex generated
     will match all three items in art_locations dictionary.
     """
-    art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
-                                             'payload_eg/results/junit_example.xml']}
+    art_location = ['artifacts/localhosts/payload_eg/', 'artifacts/localhosts/payload_eg/results',
+                    ' artifacts/localhosts/payload_eg/results/junit_example.xml']
     assert len(find_artifacts_on_disk(data_folder, 'payload_eg/*', art_location)) == 3
 
 
@@ -383,8 +398,8 @@ def test_find_artifacts_on_disk_art_location_6(data_folder):
     This test verifies that with artifact locations we check the location and walk the results
     directory looking for a specific subdirectory. The regex generated will only match payload_eg
     """
-    art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
-                                             'payload_eg/results/junit_example.xml']}
+    art_location = ['artifacts/localhosts/payload_eg/', 'artifacts/localhosts/payload_eg/results',
+                    'artifacts/localhosts/payload_eg/results/junit_example.xml']
     assert len(find_artifacts_on_disk(data_folder, 'payload_eg/', art_location)) == 1
 
 
@@ -394,9 +409,9 @@ def test_find_artifacts_on_disk_art_location_7(data_folder):
     directory looking for a specific file that is in results directory but the results directory
     was also specified in the art_locations.
     """
-    art_location = {'artifacts/localhosts': ['payload_eg/', 'payload_eg/results',
-                                             'payload_eg/results/junit_example.xml'],
-                    '.results': ['junit2.xml']}
+    art_location = ['artifacts/localhosts/payload_eg/', 'artifacts/localhosts/payload_eg/results',
+                    'artifacts/localhosts/payload_eg/results/junit_example.xml',
+                    'junit2.xml']
     assert len(find_artifacts_on_disk(data_folder, 'junit2.xml', art_location)) == 1
 
 

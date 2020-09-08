@@ -126,9 +126,10 @@ Please see the table below to understand the key/values defined.
         - n/a
 
     *   - artifact_locations
-        - A dictionary of data collected during artifacts or a dictionary of additional log files to be
-          considered by Carbon after execution
-          It is a dictionary of dir path as key and files in the dir as values.
+        - A list of data collected during artifacts or a list of additional log files to be
+          considered by Carbon after execution.
+          It is a list of relative path for the directories or files to be considered
+          under the carbon's **.results** folder.
         - dict
         - No
         - n/a
@@ -407,18 +408,26 @@ collection of artifacts user can set the **exit_on_error** field for executor in
 
 Artifact Locations
 ~~~~~~~~~~~~~~~~~~
-The **artifact_locations** key is used to keep track of the artifacts that were collected using artifacts.
-It's a dictionary where the path of the directory is the key and the files within the directory are values.
-With release 1.4.0, the key is being made available to users to define locations for artifacts that
+The **artifact_locations** key is used to keep track of the artifacts that were collected using artifacts key during
+execute stage. It's a list which consists of the relative path of the artifacts to be considered which are placed under
+the carbon's **.results** folder.
+With release 1.4.0, the artifact_locations key is being made available to users to define locations for artifacts that
 may not have been collected as part of artifacts but they want to be tracked for later use in Report.
 The only caveat is the artifacts defined under artifact_locations must be placed in the
-carbon_data_folder/.results directory. Refer to the `Report page <report.html>`_
+carbon_data_folder/.results directory. Refer to the :ref:`Finding the right artifacts <finding_artifacts>`
 
-In the below example, the ~payload_dir is the name of the directory , results
-is a sub directory and artifacts/test1.log  is a file in another sub directory
+Carbon also auto creates the artifacts folder under the .results folder. Users can place their artifacts in this folder
+as well
+
+In the below example, the payload_dir is the name of the directory  which is present under the .results folder
 
 .. literalinclude:: ../../../examples/docs-usage/execute.yml
-    :lines: 235-255
+    :lines: 235-254
+
+In the below example, the payload_dir  and dir1 are placed in the artifacts folder created by carbon.
+
+.. literalinclude:: ../../../examples/docs-usage/execute.yml
+    :lines: 257-276
 
 Testrun Results for Artifacts collected during the Execute block:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -446,12 +455,10 @@ of each xml file. The summary contains **number of tests passed, failed, skipped
       - /home/client1/junit/tests/*.log
       - /home/client1/junit/tests/*.xml
       artifact_locations:
-        dir1:
-        - junit_example.xml
-        artifacts/client1:
-        - junit_example.xml
-        - ocp_edge_deploment_integration_results.xml
-        - SampleTest.xml
+        - dir1/junit_example.xml
+        - artifacts/client1/junit_example.xml
+        - artifacts/client1/ocp_edge_deploment_integration_results.xml
+        - artifacts/client1/SampleTest.xml
       testrun_results:
         aggregate_testrun_results:
           total_tests: 22
