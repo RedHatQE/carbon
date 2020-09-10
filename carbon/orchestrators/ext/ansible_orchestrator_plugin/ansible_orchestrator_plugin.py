@@ -67,7 +67,8 @@ class AnsibleOrchestratorPlugin(OrchestratorPlugin):
 
         # ansible service object
         self.ans_service = AnsibleService(self.config, self.hosts, self.all_hosts,
-                                          self.options, self.galaxy_options)
+                                          self.options, self.galaxy_options,
+                                          concurrency=self.config['TASK_CONCURRENCY']['ORCHESTRATE'].lower())
 
     def backwards_compat_check(self):
         """ This method does the check if name field is a script/playbook path or name of the orchestrator task by

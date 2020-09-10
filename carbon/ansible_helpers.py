@@ -217,7 +217,7 @@ class AnsibleService(object):
 
     playbook_name = Template("cbn_execute_$type$uid.yml")
 
-    def __init__(self, config, hosts, all_hosts, ansible_options, galaxy_options=None):
+    def __init__(self, config, hosts, all_hosts, ansible_options, galaxy_options=None, concurrency=None):
         self.hosts = hosts
         self.all_hosts = all_hosts
         self.config = config
@@ -225,11 +225,18 @@ class AnsibleService(object):
         self.galaxy_options = galaxy_options
         self.injector = DataInjector(self.all_hosts)
         self.logger = LOG
-        self.env_var = {}
-        self.ans_log_path = ''
         # uuid that we can append to playbook and results file in case
         # execute/orchestrate tasks run concurrently
         self.uid = gen_random_str(5)
+        self.env_var = None
+        self.ans_log_path = ''
+
+        # Setting ANSIBLE_LOG_PATH env variable when running actions concurrently, so each action logs gets
+        # collected in a separate file
+        if concurrency == 'true':
+            ans_log = 'ansible_' + self.uid + '.log'
+            self.ans_log_path = os.path.join(self.config['WORKSPACE'], ans_log)
+            self.env_var = {'ANSIBLE_LOG_PATH': self.ans_log_path}
 
         # passing the carbon's inventory directory to the Ansible Controller
         self.ans_controller = AnsibleController(os.path.abspath(self.config['INVENTORY_FOLDER']))
@@ -238,16 +245,6 @@ class AnsibleService(object):
         # output uniquely to disk in case of concurrent execution
         self.ans_extra_vars = collections.OrderedDict(hosts=self.create_inv_group(), uuid=self.uid)
         self.ans_verbosity = get_ans_verbosity(self.config)
-
-        # Setting ANSIBLE_LOG_PATH env variable when running actions concurrently, so each action logs gets
-        # collected in a separate file
-        if self.config['TASK_CONCURRENCY']['ORCHESTRATE'].lower() == 'true' or \
-           self.config['TASK_CONCURRENCY']['EXECUTE'].lower() == 'true':
-            ans_log = 'ansible_' + self.uid + '.log'
-            self.ans_log_path = os.path.join(self.config['WORKSPACE'], ans_log)
-            self.env_var.update({'ANSIBLE_LOG_PATH': self.ans_log_path})
-        else:
-            self.env_var = None
 
     def create_inv_group(self):
         """This method creates the host group for the action object to be passed as extra_vars"""

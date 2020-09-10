@@ -517,6 +517,9 @@ def exec_local_cmd(cmd, env_var=None):
     :param env_var: a dictionary of environmental variables to pass to the subprocess
     :type env_var: dictionary
     """
+    # updating passed env variables with os env variables
+    if env_var:
+        env_var.update(os.environ)
     proc = subprocess.Popen(
         cmd,
         shell=True,
@@ -539,6 +542,9 @@ def exec_local_cmd_pipe(cmd, logger, env_var=None):
     :type logger: object
     :return: tuple of rc and error (if there was an error)
     """
+    # updating passed env variables with os env variables
+    if env_var:
+        env_var.update(os.environ)
     proc = subprocess.Popen(
         cmd,
         shell=True,

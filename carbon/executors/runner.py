@@ -82,7 +82,8 @@ class RunnerExecutor(CarbonExecutor):
 
         self.injector = DataInjector(self.all_hosts)
 
-        self.ans_service = AnsibleService(self.config, self.hosts, self.all_hosts, self.options)
+        self.ans_service = AnsibleService(self.config, self.hosts, self.all_hosts, self.options,
+                                          concurrency=self.config['TASK_CONCURRENCY']['EXECUTE'].lower())
 
         self.ans_verbosity = get_ans_verbosity(self.config)
 
