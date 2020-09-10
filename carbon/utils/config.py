@@ -29,9 +29,11 @@ import os
 from .._compat import RawConfigParser, VaultLib, ansible_ver, is_py2
 from ..constants import DEFAULT_CONFIG, DEFAULT_CONFIG_SECTIONS, DEFAULT_TASK_CONCURRENCY, DEFAULT_TIMEOUT
 from ansible.constants import DEFAULT_VAULT_ID_MATCH
+
 from ansible.parsing.vault import VaultSecret
 import sys
 from ..exceptions import AnsibleVaultError
+from ..ansible_helpers import AnsibleCredentialManager
 
 
 class Config(dict):
@@ -255,42 +257,6 @@ class Config(dict):
             # set user supplied configuration settings overriding defaults
             for config in DEFAULT_CONFIG_SECTIONS:
                 getattr(self, '__set_%s__' % config)()
-        self.populate_carbon_cfg_credentials()
 
-    def populate_credetials(self, credentials_path, vaultpass):
-        if ansible_ver < 2.4 or is_py2:
-            secret = [("default", VaultSecret(bytes(vaultpass.encode('utf-8'))))]
-            vault = VaultLib(secret)
-            cred = open(credentials_path, "rb").read()
-            cred = vault.decrypt(cred)
-            ret_str = ""
-            for asc in cred:
-                ret_str += asc
-            tmpf = open("tmppass", 'w')
-            tmpf.write(ret_str)
-            tmpf.close()
-            tmpparser = RawConfigParser()
-            tmpparser.read("tmppass")
-            os.remove("tmppass")
-        else:
-            secret = [("default", VaultSecret(bytes(vaultpass, "utf-8")))]
-            vault = VaultLib(secret)
-            cred = open(credentials_path, "rb").read()
-            cred = vault.decrypt(cred)
-            ret_str = ""
-            for asc in cred:
-                ret_str += (chr(int(asc)))
-            tmpparser = RawConfigParser()
-            tmpparser.read_string(ret_str)
-        self.__set_credentials__(parser=tmpparser)
-
-    def populate_carbon_cfg_credentials(self):
-        if not self.get("CREDENTIALS") and self.get("CREDENTIAL_PATH"):
-            if os.getenv("VAULTPASS"):
-                vaultpass = os.getenv("VAULTPASS")
-            else:
-                vaultpass = self.get("VAULTPASS", "")
-            if vaultpass is "":
-                raise AnsibleVaultError('No vaultpass was found, please set the \
-                vaultpass in carbon.cfg or in environment variable.')
-            self.populate_credetials(self["CREDENTIAL_PATH"], vaultpass)
+        cred_man = AnsibleCredentialManager(self)
+        cred_man.populate_carbon_cfg_credentials()

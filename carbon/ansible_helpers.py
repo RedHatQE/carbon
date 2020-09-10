@@ -44,6 +44,10 @@ from .helpers import ssh_retry, exec_local_cmd_pipe, DataInjector, get_ans_verbo
 from .static.playbooks import GIT_CLONE_PLAYBOOK, SYNCHRONIZE_PLAYBOOK, \
     ADHOC_SHELL_PLAYBOOK, ADHOC_SCRIPT_PLAYBOOK
 from .exceptions import AnsibleServiceError
+from ansible.parsing.vault import VaultSecret
+import sys
+from .exceptions import AnsibleVaultError
+from ._compat import RawConfigParser, VaultLib, ansible_ver, is_py2
 
 LOG = getLogger(__name__)
 
@@ -282,7 +286,6 @@ class AnsibleService(object):
         return group
 
     def build_ans_extra_args(self, attr):
-
         """Build ansible extra arguments for ansible ad hoc commands.
         ansible extra_args are the parameters that are needed by the ansible modules (script and shell)
         They can be provided in two ways:
@@ -600,7 +603,6 @@ class AnsibleService(object):
         return results
 
     def run_artifact_playbook(self, destination, artifacts):
-
         """Create playbook string for collecting artifacts"""
 
         # update and set extra vars
@@ -635,7 +637,6 @@ class AnsibleService(object):
         return results
 
     def run_shell_playbook(self, shell):
-
         """Execute the shell command supplied."""
 
         # dynamic playbook
@@ -731,7 +732,6 @@ class AnsibleService(object):
         return results[0]
 
     def run_script_playbook(self, script):
-
         """Execute the script supplied."""
 
         # dynamic playbook
@@ -787,3 +787,63 @@ class AnsibleService(object):
         # remove Script Results file
         os.remove('script-results-' + self.uid + '.json')
         return script_results
+
+
+class AnsibleCredentialManager(object):
+    """Ansible Credential Manager
+
+    The primary responsibility is managing all credential related stuff for ansible
+    """
+
+    def __init__(self, config):
+        super(AnsibleCredentialManager, self).__init__()
+        self.__config = config
+
+    @property
+    def config(self):
+        """Config object
+        :return: Config object
+        """
+        return self.__config
+
+    @config.setter
+    def config(self, value):
+        raise ValueError("you cannot set the Config object")
+
+    def populate_credetials(self, config, credentials_path, vaultpass):
+        if ansible_ver < 2.4 or is_py2:
+            secret = [("default", VaultSecret(bytes(vaultpass.encode('utf-8'))))]
+            vault = VaultLib(secret)
+            cred = open(credentials_path, "rb").read()
+            cred = vault.decrypt(cred)
+            ret_str = ""
+            for asc in cred:
+                ret_str += asc
+            tmpf = open("tmppass", 'w')
+            tmpf.write(ret_str)
+            tmpf.close()
+            tmpparser = RawConfigParser()
+            tmpparser.read("tmppass")
+            os.remove("tmppass")
+        else:
+            secret = [("default", VaultSecret(bytes(vaultpass, "utf-8")))]
+            vault = VaultLib(secret)
+            cred = open(credentials_path, "rb").read()
+            cred = vault.decrypt(cred)
+            ret_str = ""
+            for asc in cred:
+                ret_str += (chr(int(asc)))
+            tmpparser = RawConfigParser()
+            tmpparser.read_string(ret_str)
+        config.__set_credentials__(parser=tmpparser)
+
+    def populate_carbon_cfg_credentials(self):
+        if not self.__config.get("CREDENTIALS") and self.__config.get("CREDENTIAL_PATH"):
+            if os.getenv("VAULTPASS"):
+                vaultpass = os.getenv("VAULTPASS")
+            else:
+                vaultpass = self.__config.get("VAULTPASS", "")
+            if vaultpass is "":
+                raise AnsibleVaultError('No vaultpass was found, please set the \
+                vaultpass in carbon.cfg or in environment variable.')
+            self.populate_credetials(self.__config, self.__config["CREDENTIAL_PATH"], vaultpass)
