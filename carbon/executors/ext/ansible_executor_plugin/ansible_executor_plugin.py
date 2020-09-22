@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2017 Red Hat, Inc.
+# Copyright (C) 2020 Red Hat, Inc.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,43 +17,36 @@
 #
 
 """
-    carbon.executor.runner
+    Carbon's ansible executor plugin which contains all the necessary
+    methods to process steps in the executes block defined within the scenario descriptor
+    file. This pluging uses ansible to process these steps
 
-    Carbon's default and main executor.
-
-    :copyright: (c) 2018 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
 import ast
-import collections
-import copy
 import os.path
 import textwrap
-import json
-from ..core import CarbonExecutor
-from .._compat import string_types
-from ..exceptions import ArchiveArtifactsError, CarbonExecuteError, AnsibleServiceError
-from ..helpers import DataInjector, get_ans_verbosity, is_host_localhost, create_testrun_results
-from ..ansible_helpers import AnsibleService
+from carbon.core import ExecutorPlugin
+from carbon.exceptions import ArchiveArtifactsError, CarbonExecuteError, AnsibleServiceError
+from carbon.helpers import DataInjector, get_ans_verbosity, create_testrun_results, schema_validator
+from carbon.ansible_helpers import AnsibleService
 
 
-class RunnerExecutor(CarbonExecutor):
+class AnsibleExecutorPlugin(ExecutorPlugin):
     """ The main executor for Carbon.
 
-    The runner class provides three different types on how you can execute
+    The AnsibleExecutorPlugin class provides three different types on how you can execute
     tests. Its intention is to be generic enough where you just need to supply
     your test commands and it will process them. All tests executed against
     remote hosts will be run through ansible.
     """
 
+    # keeping the name as runner for backward compatibility
     __executor_name__ = 'runner'
-
-    _execute_types = [
-        'playbook',
-        'script',
-        'shell'
-    ]
+    __schema_file_path__ = os.path.abspath(os.path.join(os.path.dirname(__file__), "files/schema.yml"))
+    __schema_ext_path__ = os.path.abspath(os.path.join(os.path.dirname(__file__), "files/extensions.py"))
 
     def __init__(self, package):
         """Constructor.
@@ -61,16 +54,11 @@ class RunnerExecutor(CarbonExecutor):
         :param package: execute resource
         :type package: object
         """
-        super(RunnerExecutor, self).__init__(execute=package)
+        super(AnsibleExecutorPlugin, self).__init__(package)
 
         # set required attributes
-        self._name = getattr(package, 'name')
         self._desc = getattr(package, 'description')
-        self._hosts = getattr(package, 'hosts')
-        self.config = getattr(package, 'config')
-        self.all_hosts = getattr(package, 'all_hosts')
-        self.workspace = self.config['WORKSPACE']
-        self.datadir = self.config['DATA_FOLDER']
+        self.all_hosts = getattr(package, 'all_hosts', [])
         self.playbook = getattr(package, 'playbook', None)
         self.script = getattr(package, 'script', None)
         self.shell = getattr(package, 'shell', None)
@@ -95,7 +83,9 @@ class RunnerExecutor(CarbonExecutor):
 
     def validate(self):
         """Validate."""
-        raise NotImplementedError
+        # schema validation for ansible_orchestrate schema
+        schema_validator(schema_data=self.build_profile(self.execute), schema_files=[self.__schema_file_path__],
+                         schema_ext_files=[self.__schema_ext_path__])
 
     def __git__(self):
 
@@ -272,17 +262,19 @@ class RunnerExecutor(CarbonExecutor):
                                 for a in temp_list]
                 self.logger.info('Copied the artifact(s), %s, from %s' % (art_list, r['host']))
 
-                # Update the execute resource with the location of artifacts
+                # Adding the only the artifacts which are not already present
                 for artifact in art_list:
-                    if artifact not in artifact_location:
-                        artifact_location.append(os.path.join(path, artifact))
-
+                    art = os.path.join(path, artifact)
+                    if art not in artifact_location:
+                        artifact_location.append(art)
             if r['skipped']:
                 self.logger.warning('Could not find artifact(s), %s, on %s. Make sure the file exists '
                                     'and defined properly in the definition file.' % (r['artifact'], r['host']))
-
+        # Update the execute resource with the location of artifacts
         if self.execute.artifact_locations:
-            self.execute.artifact_locations.extend(artifact_location)
+            for item in artifact_location:
+                if item not in self.execute.artifact_locations:
+                    self.execute.artifact_locations.append(item)
         else:
             self.execute.artifact_locations = artifact_location
 
@@ -295,11 +287,15 @@ class RunnerExecutor(CarbonExecutor):
         self._print_testrun_results()
 
     def _print_testrun_results(self):
-        self.logger.info('\n')
-        self.logger.info('-' * 79)
-        self.logger.info('TESTRUN RESULTS SUMMARY'.center(79))
-        self.logger.info('-' * 79)
-        if self.execute.testrun_results:
+        """
+        This method prints out the aggregate and individual test results for the xml files in the artifacts collected
+        """
+
+        if self.execute.testrun_results and self.execute.testrun_results.get('individual_results'):
+            self.logger.info('\n')
+            self.logger.info('-' * 79)
+            self.logger.info('TESTRUN RESULTS SUMMARY'.center(79))
+            self.logger.info('-' * 79)
             self.logger.info(' * AGGREGATE RESULTS * '.center(79))
             self.logger.info('-' * 79)
             self.logger.info(' * Total Tests             : %s' %
@@ -323,7 +319,7 @@ class RunnerExecutor(CarbonExecutor):
                         self.logger.info(' * Passed Tests            : %s' % values['passed_tests'])
                         self.logger.info('-' * 79)
         else:
-            self.logger.info(' No artifacts were collected ')
+            self.logger.info(' No artifacts were collected OR artifacts collected had no xml files')
             self.logger.info('-' * 79 + '\n')
 
     def run(self):
@@ -352,5 +348,7 @@ class RunnerExecutor(CarbonExecutor):
                     self.status = 1
 
                 if self.status:
-                    raise CarbonExecuteError('Test execution failed to run '
-                                             'successfully!')
+                    break
+            finally:
+                self.ans_service.alog_update(folder_name='ansible_executor')
+        return self.status

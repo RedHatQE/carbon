@@ -8,6 +8,7 @@ include carbon/notifiers/ext/email/schema/email_extensions.py
 include carbon/notifiers/ext/email/templates/email_on_start_txt_template.jinja
 include carbon/notifiers/ext/email/templates/email_txt_template.jinja
 recursive-include carbon/orchestrators/ext/ansible_orchestrator_plugin/files *
+recursive-include carbon/executors/ext/ansible_executor_plugin/files *
 exclude setup.cfg
 prune docs/_build
 prune docs/.ropeproject

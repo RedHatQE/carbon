@@ -121,9 +121,9 @@ def provisioner_plugin_no_provider(default_host_params):
     return ProvisionerPlugin(host)
 
 
-@pytest.fixture(scope='class')
-def executor_plugin():
-    return ExecutorPlugin()
+@pytest.fixture
+def executor_plugin(execute_resource):
+    return ExecutorPlugin(execute_resource)
 
 
 @pytest.fixture
@@ -185,7 +185,6 @@ def inv_host(default_host_params, config):
 @pytest.fixture
 def inventory(inv_host):
     inv_host.config['INVENTORY_FOLDER'] = '/tmp/.results/inventory'
-    #inventory = Inventory(inv_host.config['RESULTS_FOLDER'], inv_host.config['INVENTORY_FOLDER'], 'xyz')
     inventory = Inventory(inv_host.config, 'xyz')
     return inventory
 

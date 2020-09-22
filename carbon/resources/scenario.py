@@ -233,9 +233,9 @@ class Scenario(CarbonResource):
 
     def reload_resources(self, tasks):
         """Reload scenario resources.
-        This method is used to reload host and report resources after they have been provisioned or imported.
-        Prior to adding the host/report resource to the scenario, it filters the list by checking if the resource
-        belongs to that scenario by comparing the names.
+        This method is used to reload all resources after they have been processed (provisioned/orchestrate actions/
+        execute tests/imported. Prior to adding the resource to the scenario, it filters the list by
+        checking if the resource belongs to that scenario by comparing the names.
 
         Then it filters the task list even more extracting the resource and the data in rvalue.
         If rvalue is present then linchpin count feature was used and that more new host resources will be
@@ -248,7 +248,10 @@ class Scenario(CarbonResource):
         count = 0
         filtered_task_list = list()
         non_task_assets = list()
-        non_task_reports = list()
+        non_task_package = list()
+
+        # Filtering the resources based on labels. Separate steps for each resources, to make sure same name
+        # collisions dont happen between two different types of resources
 
         filtered_task_list.extend(
             [task for task in tasks if task.get('asset') and getattr(task.get('asset'), 'name')
@@ -259,6 +262,17 @@ class Scenario(CarbonResource):
              in [r.name for r in self.reports])]
         )
 
+        filtered_task_list.extend(
+            [task for task in tasks if
+             isinstance(task.get('package'), Execute) and (getattr(task.get('package'), 'name')
+                                                           in [r.name for r in self.executes])]
+        )
+
+        filtered_task_list.extend(
+            [task for task in tasks if isinstance(task.get('package'), Action) and (getattr(task.get('package'), 'name')
+             in [r.name for r in self.actions])]
+        )
+
         # using labels in SDF will have only specific resources selected. So collecting the non task related
         # assets and report resources to be added back to the scenario resources. This is being done in order to
         # put the non provisioned asset and non imported report resources into results.yml
@@ -266,9 +280,17 @@ class Scenario(CarbonResource):
                                 [getattr(task.get('asset'), 'name') for task in filtered_task_list
                                  if task.get('asset')]])
 
-        non_task_reports.extend([report for report in self.reports if report.name not in
+        non_task_package.extend([report for report in self.reports if report.name not in
                                  [getattr(task.get('package'), 'name') for task in filtered_task_list if
                                   isinstance(task.get('package'), Report) and (getattr(task.get('package'), 'name'))]])
+
+        non_task_package.extend([execute for execute in self.executes if execute.name not in
+                                 [getattr(task.get('package'), 'name') for task in filtered_task_list if
+                                  isinstance(task.get('package'), Execute) and (getattr(task.get('package'), 'name'))]])
+
+        non_task_package.extend([action for action in self.actions if action.name not in
+                                 [getattr(task.get('package'), 'name') for task in filtered_task_list if
+                                  isinstance(task.get('package'), Action) and (getattr(task.get('package'), 'name'))]])
 
         for res, rvalue in [(res, item['rvalue']) for task in filtered_task_list
                             for res in [task.get(r) for r in ['asset', 'package'] if r in task.keys()]
@@ -298,9 +320,13 @@ class Scenario(CarbonResource):
                 for res in non_task_assets:
                     self.add_resource(res)
             elif 'package' in task_keys:
-                # Adding reports which were not part of the labels used
-                for res in non_task_reports:
-                    self.add_resource(res)
+                # Adding other resources except asset which were not part of the labels used
+                # getting the type of resource is the tasks list and comparing it with the non_task_resources
+                # if they are of same type then add the resource else pass
+                pkg_type = type(tasks[0].get('package'))
+                for res in non_task_package:
+                    if isinstance(res, pkg_type):
+                        self.add_resource(res)
 
         return
 

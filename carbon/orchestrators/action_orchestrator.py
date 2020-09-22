@@ -17,17 +17,14 @@
 #
 
 """
+    This is a generic interface that processes carbon's orchestration actions.
 
     :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
 
-import os
-import time
-from ..core import CarbonOrchestrator, LoggerMixin, TimeMixin
-from ..exceptions import CarbonOrchestratorError, AnsibleServiceError
-from ..helpers import DataInjector
-from ..ansible_helpers import AnsibleService
+from ..core import LoggerMixin, TimeMixin
+from ..exceptions import CarbonOrchestratorError
 
 
 class ActionOrchestrator(LoggerMixin, TimeMixin):

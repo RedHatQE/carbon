@@ -37,21 +37,6 @@ def type_str_list(value, rule_obj, path):
     return True
 
 
-def type_int_list(value, rule_obj, path):
-    """Verfiy a key's value is either a int or list."""
-    if not isinstance(value, (int, list)):
-        raise AssertionError(
-            '%s must be either a integer or list of integers.' % path.split('/')[-1]
-        )
-    if isinstance(value, list):
-        for x in value:
-            if not isinstance(x, int):
-                raise AssertionError(
-                    '%s must be either a integer or list of integers.' % path.split('/')[-1]
-                )
-    return True
-
-
 def valid_orchestrator(value, rule_obj, path):
     """Verify the given orchestrator is a valid selection by carbon."""
 
@@ -71,29 +56,6 @@ def valid_executor(value, rule_obj, path):
         raise AssertionError(
             'Executor %s is invalid.\n'
             'Available executors %s' % (value, executors)
-        )
-    return True
-
-
-def valid_execute_types(value, rule_obj, path):
-    """Verify the execute type defined is valid for the supplied executor."""
-    match = list()
-    executor = value['executor']
-
-    # first verify the executor is valid
-    valid_executor(executor, rule_obj, path)
-
-    types = getattr(get_executor_plugin_class(value['executor']), '_execute_types')
-
-    for item in types:
-        if item in value.keys():
-            match.append(item)
-
-    if match.__len__() > 1:
-        raise AssertionError(
-            'Only one execute type can be set for executor ~ %s.\n'
-            'Available types: %s\n'
-            'Set types: %s' % (executor, types, match)
         )
     return True
 

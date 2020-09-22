@@ -17,8 +17,7 @@
 
     Package containing carbon executor modules.
 
-    :copyright: (c) 2017 Red Hat, Inc.
+    :copyright: (c) 2020 Red Hat, Inc.
     :license: GPLv3, see LICENSE for more details.
 """
-
-from .runner import RunnerExecutor
+from .execute_manager import ExecuteManager

@@ -35,7 +35,7 @@ import pytest
 from carbon._compat import ConfigParser, string_types
 from carbon.exceptions import CarbonActionError, CarbonExecuteError, \
     ScenarioError, CarbonError, CarbonReportError, CarbonResourceError
-from carbon.executors import RunnerExecutor
+from carbon.executors.ext.ansible_executor_plugin import AnsibleExecutorPlugin
 from carbon.orchestrators.ext.ansible_orchestrator_plugin import AnsibleOrchestratorPlugin
 from carbon.providers import OpenstackProvider
 from carbon.provisioners.ext import OpenstackLibCloudProvisionerPlugin
@@ -439,7 +439,8 @@ class TestExecuteResource(object):
 
     @staticmethod
     def test_executor_property(execute_resource):
-        assert execute_resource.executor == RunnerExecutor
+        assert execute_resource.executor == AnsibleExecutorPlugin
+
 
     @staticmethod
     def test_executor_setter(execute_resource):

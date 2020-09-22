@@ -1331,11 +1331,53 @@ class ExecutorPlugin(CarbonPlugin):
     Additional support/helper methods can be added to this class.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, execute):
+        """Constructor."""
+        self._execute = execute
+        self._hosts = self.execute.hosts
+        self.execute_name = self.execute.name
+        self._status = 0
+        self.config = self.execute.config
+        self.workspace = self.execute.workspace
+
+    def validate(self):
+        raise NotImplementedError
 
     def run(self):
         raise NotImplementedError
+
+    @property
+    def name(self):
+        """Return the name of the executor."""
+        return self.__plugin_name__
+
+    @name.setter
+    def name(self, value):
+        raise AttributeError('You cannot set name for the executor.')
+
+    @property
+    def execute(self):
+        return self._execute
+
+    @execute.setter
+    def execute(self, value):
+        raise AttributeError('You cannot set the execute to run.')
+
+    @property
+    def hosts(self):
+        return self._hosts
+
+    @hosts.setter
+    def hosts(self, value):
+        raise AttributeError('Hosts cannot be set once the object is created.')
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, value):
+        self._status = value
 
 
 class NotificationPlugin(CarbonPlugin):

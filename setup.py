@@ -81,7 +81,8 @@ setup(
             'ansible = carbon.orchestrators.ext:AnsibleOrchestratorPlugin'
         ],
         'executor_plugins': [
-            'runner = carbon.executors:RunnerExecutor'
+            # 'runner = carbon.executors:RunnerExecutor'
+            'runner = carbon.executors.ext:AnsibleExecutorPlugin'
         ],
         'notification_plugins': [
             'email-notifier = carbon.notifiers.ext:EmailNotificationPlugin'

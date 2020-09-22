@@ -33,6 +33,7 @@ from ..helpers import get_executor_plugin_class, \
 from ..tasks import ExecuteTask, ValidateTask
 from ..exceptions import CarbonExecuteError
 from collections import OrderedDict
+from ..executors import ExecuteManager
 
 
 class Execute(CarbonResource):
@@ -120,14 +121,24 @@ class Execute(CarbonResource):
         self._description = parameters.pop('description', None)
 
         # every execute has a mandatory executor, lets set it
-        executor = parameters.pop('executor', EXECUTOR)
+        executor_name = parameters.pop('executor', EXECUTOR)
 
-        if executor not in get_executors_plugin_list():
+        if executor_name not in get_executors_plugin_list():
             raise CarbonExecuteError('Executor: %s is not supported!' %
-                                     executor)
+                                     executor_name)
 
         # get the executor class
-        self._executor = get_executor_plugin_class(executor)
+        self._executor = get_executor_plugin_class(executor_name)
+
+        # using plugin's method to get the schema keys and check if they are present in the parameters and then
+        # set them as executor's parameters
+        if self.executor:
+            for p in getattr(self.executor, 'get_schema_keys')():
+                if parameters.get(p, None):
+                    setattr(self, p, parameters.get(p))
+        else:
+            raise CarbonExecuteError('Executor: %s plugin was not found!' %
+                                     executor_name)
 
         self.hosts = parameters.pop('hosts')
         if self.hosts is None:
@@ -141,24 +152,17 @@ class Execute(CarbonResource):
         # set labels
         setattr(self, 'labels', parameters.pop('labels', []))
 
-        self.artifacts = parameters.pop('artifacts', None)
+        # set up status code
+        self._status = parameters.pop('status', 0)
+
+        self.artifacts = parameters.pop('artifacts', [])
         if self.artifacts:
             if isinstance(self.artifacts, string_types):
                 self.artifacts = self.artifacts.replace(' ', '').split(',')
 
-        self.artifact_locations = parameters.pop('artifact_locations', None)
+        self.artifact_locations = parameters.pop('artifact_locations', [])
 
         self.testrun_results = dict()
-
-        # create the executor attributes in the execute object
-        if self.executor:
-            for p in getattr(self.executor, 'get_all_parameters')():
-                setattr(self, p, parameters.get(p, {}))
-            # get the execute_types for the executor
-            for item in getattr(self.executor, '_execute_types'):
-                setattr(self, item, parameters.get(item, {}))
-        else:
-            raise CarbonExecuteError('Could not find appropriate Executor: %s' % executor)
 
         # set the carbon task classes for the resource
         self._validate_task_cls = validate_task_cls
@@ -184,6 +188,14 @@ class Execute(CarbonResource):
     def executor(self, value):
         """Set executor property."""
         raise AttributeError('Executor class property cannot be set.')
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, value):
+        self._status = value
 
     def profile(self):
         """Build a profile for the execute resource.
@@ -215,7 +227,13 @@ class Execute(CarbonResource):
             elif getattr(self, item, None):
                 profile.update({item: getattr(self, item)})
 
+        profile.update({'status': self.status})
+
         return profile
+
+    def validate(self):
+        """Validate the action object using the orchestrator plugin's validate method."""
+        getattr(ExecuteManager(self), 'validate')()
 
     def _construct_validate_task(self):
         """Constructs the validate task associated to the execute resource.

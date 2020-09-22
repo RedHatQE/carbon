@@ -24,6 +24,7 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from ..core import CarbonTask
+from carbon.executors import ExecuteManager
 
 
 class ExecuteTask(CarbonTask):
@@ -43,7 +44,7 @@ class ExecuteTask(CarbonTask):
         self.msg = msg
 
         # create the executor object
-        self.executor = getattr(package, 'executor')(package)
+        self.executor = ExecuteManager(package)
 
     def run(self):
         """Run.

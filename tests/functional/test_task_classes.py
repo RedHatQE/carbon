@@ -28,13 +28,12 @@
 import mock
 import pytest
 
-from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError, CarbonNotifierError
+from carbon.exceptions import CarbonOrchestratorError, CarbonImporterError, CarbonNotifierError, CarbonExecuteError
 from carbon.tasks import CleanupTask, ExecuteTask, OrchestrateTask, \
     ProvisionTask, ReportTask, ValidateTask, NotificationTask
 from carbon.core import ProvisionerPlugin
 from carbon.provisioners import AssetProvisioner
-from carbon.orchestrators import ActionOrchestrator
-from carbon.resources import Asset, Action
+from carbon.resources import Asset
 
 
 @pytest.fixture(scope='class')
@@ -52,8 +51,10 @@ def report_task():
 @pytest.fixture(scope='class')
 def execute_task():
     package = mock.MagicMock()
-    package.executor = mock.MagicMock()
-    return ExecuteTask(msg='execute task', package=package, name='Test-Package')
+    with mock.patch('carbon.tasks.execute.ExecuteManager'):
+        return ExecuteTask(msg='execute task', package=package, name='Test-Package')
+    # package.executor = mock.MagicMock()
+    # return ExecuteTask(msg='execute task', package=package, name='Test-Package')
 
 
 @pytest.fixture(scope='class')
@@ -136,9 +137,9 @@ class TestExecuteTask(object):
     @mock.patch.object(ExecuteTask, 'get_formatted_traceback')
     def test_run_execute_failure(mock_method, execute_task):
         mock_method.return_value = 'Traceback'
-        mock_executor = mock.MagicMock(run=mock.MagicMock(side_effect=CarbonOrchestratorError('e')))
+        mock_executor = mock.MagicMock(run=mock.MagicMock(side_effect=CarbonExecuteError('e')))
         execute_task.executor = mock_executor
-        with pytest.raises(CarbonOrchestratorError):
+        with pytest.raises(CarbonExecuteError):
             execute_task.run()
 
 
