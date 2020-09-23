@@ -29,7 +29,7 @@ import ansible
 
 _ver = sys.version_info
 
-ansible_ver = float('.'.join(ansible.__version__.split('.')[:2]))
+ansible_ver = int(ansible.__version__.split('.')[:2][1])
 # Python 2.x?
 is_py2 = (_ver[0] == 2)
 

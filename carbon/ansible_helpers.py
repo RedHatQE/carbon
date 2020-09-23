@@ -811,7 +811,7 @@ class AnsibleCredentialManager(object):
         raise ValueError("you cannot set the Config object")
 
     def populate_credetials(self, config, credentials_path, vaultpass):
-        if ansible_ver < 2.4 or is_py2:
+        if ansible_ver < 4 or is_py2:
             secret = [("default", VaultSecret(bytes(vaultpass.encode('utf-8'))))]
             vault = VaultLib(secret)
             cred = open(credentials_path, "rb").read()
