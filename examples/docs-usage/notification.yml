@@ -64,3 +64,16 @@ notifications:
     to: [jsnith@redhat.com, fbar@redhat.com]
     from: qe-team@redhat.com
     subject: test notification only when manually triggered.
+
+---
+notifications:
+  - name: msg_template
+    notifier: email-notifier
+    credential: email
+    on_start: true
+    to:
+      - jsmith@redhat.com
+      - fbar@redhat.com
+    from: qe-team@redhat.com
+    subject: test email notification using default template {{ UUID }}
+    message_template: email_templ.txt

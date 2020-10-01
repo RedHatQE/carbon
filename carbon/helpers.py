@@ -1592,3 +1592,28 @@ def create_testrun_results(artifact_locations, config):
     testruns.update(create_aggregate_testrun_results(individual_results))
     testruns.update(individual_results=individual_results)
     return testruns
+
+
+def generate_default_template_vars(scenario, notification):
+    """
+    Default template dictionary created to be used
+    when rendering the default notification template.
+    :return:
+    """
+
+    passed_tasks = getattr(scenario, 'passed_tasks', [])
+    failed_tasks = getattr(scenario, 'failed_tasks', [])
+
+    temp_dict = dict(scenario=scenario)
+
+    if getattr(notification, 'on_start', False):
+        temp_dict['passed_tasks'] = passed_tasks[-1]
+        return temp_dict
+
+    if passed_tasks:
+        temp_dict['passed_tasks'] = ','.join(passed_tasks)
+
+    if failed_tasks:
+        temp_dict['failed_tasks'] = ','.join(failed_tasks)
+
+    return temp_dict

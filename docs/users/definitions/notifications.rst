@@ -78,6 +78,7 @@ understand the key/values defined.
         - No
         - All Tasks (Validate, Provision, Orchestrate, Execute, Report, Cleanup)
 
+.. _notify_triggers:
 
 Triggers
 --------
@@ -203,6 +204,8 @@ Below is the list of data being rendered into the message
  * The list of artifacts that were collected after test execution if any
  * The import result urls of any test artifacts that were imported into a reporting system
 
+Carbon makes its scenario object avaialble along with the environmental variables to user when
+designing their own messaging template. The key for carbon's scenario object is **scenario**
 
 Examples
 --------
@@ -211,7 +214,7 @@ Let's go into some examples of you can define your notification resources
 
 
 Example 1
-~~~~~~~~~
++++++++++
 
 You want to trigger a notification on all successful tasks using the default template
 
@@ -220,16 +223,95 @@ You want to trigger a notification on all successful tasks using the default tem
 
 
 Example 2
-~~~~~~~~~
++++++++++
 
 You want to trigger a notification before the start of all tasks using a messaging template
 
 .. literalinclude:: ../../../examples/docs-usage/notification.yml
     :lines: 12-23
 
+Carbon's scenario data could be used to format the template email_templ.txt as shown in the examples below:
+
+a.
+
+.. code-block:: yaml
+
+   Hello All,
+
+   This is a Carbon Notification.
+
+   Carbon scenario, {{ scenario.name }}, has provisioned  the asset:
+
+   {{ scenario.assets[0].name }}
+
+b.
+
+.. code-block:: yaml
+
+   Hello All,
+
+   This is a Carbon Notification for Execute task.
+
+    {% if scenario.executes %}
+        {% for execute in scenario.executes %}
+        Execute task name: {{ execute.name }}
+                {% if execute.artifact_locations %}
+        Collected the following artifacts:
+                {% for file in execute.artifact_locations %}
+                - {{ file }}
+                {% endfor %}
+            {% endif %}
+            {% if execute.testrun_results %}
+
+        These are the test results of the scenario:
+
+          Total Tests: {{ execute.testrun_results.aggregate_testrun_results.total_tests }}
+          Passed Tests: {{ execute.testrun_results.aggregate_testrun_results.passed_tests }}
+          Failed Tests: {{ execute.testrun_results.aggregate_testrun_results.failed_tests }}
+          Skipped Tests: {{ execute.testrun_results.aggregate_testrun_results.skipped_tests }}
+
+            {% endif %}
+        {% endfor %}
+    {% else %}
+     No execute tasks were run
+    {% endif %}
+
+This is how the email sent using above template  will read:
+
+.. code-block:: yaml
+
+  Hello All,
+
+   This is a Carbon Notification for Execute task.
+
+        Execute task name: Test running playbook
+        Collected the following artifacts:
+                - artifacts/localhost/rp_preproc_qmzls.log
+                - artifacts/localhost/junit_example_5_orig.xml
+
+        These are the test results of the scenario:
+
+          Total Tests: 6
+          Passed Tests: 4
+          Failed Tests: 2
+          Skipped Tests: 0
+
+        Execute task name: Execute2
+        Collected the following artifacts:
+                - artifacts/localhost/rp_preproc_qmzls.log
+                - artifacts/localhost/junit_example_5_orig.xml
+
+        These are the test results of the scenario:
+
+          Total Tests: 6
+          Passed Tests: 4
+          Failed Tests: 2
+          Skipped Tests: 0
+
+
 
 Example 3
-~~~~~~~~~
++++++++++
 
 You want to trigger a notification regardless on failures of the Validate and Provision task
 but you want to include a multiline string in the descriptor file.
@@ -239,7 +321,7 @@ but you want to include a multiline string in the descriptor file.
 
 
 Example 4
-~~~~~~~~~
++++++++++
 
 You want to trigger a notification regardless only on failures of all tasks
 using the default template message but you want to include a file as an attachment.
@@ -249,9 +331,17 @@ using the default template message but you want to include a file as an attachme
 
 
 Example 5
-~~~~~~~~~
++++++++++
 
 You don't want a notification to trigger automatically.
+
+.. literalinclude:: ../../../examples/docs-usage/notification.yml
+    :lines: 58-66
+
+Example 6
++++++++++
+
+Using custom template and using carbon's data for formatting
 
 .. literalinclude:: ../../../examples/docs-usage/notification.yml
     :lines: 58-66

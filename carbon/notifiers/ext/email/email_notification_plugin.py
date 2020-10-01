@@ -28,7 +28,7 @@ import os
 import os.path
 import smtplib
 from ....core import NotificationPlugin
-from ....helpers import template_render, schema_validator, DataInjector
+from ....helpers import template_render, schema_validator, DataInjector, generate_default_template_vars
 from ....exceptions import CarbonNotifierError
 from email import encoders
 from email.mime.multipart import MIMEMultipart
@@ -58,9 +58,6 @@ class EmailNotificationPlugin(NotificationPlugin):
         self.body_tmpl = getattr(self.notification, 'message_template', '')
         self.attachments = [os.path.abspath(a)
                             for a in getattr(self.notification, 'attachments', [])]
-
-        # TODO: Add DataInjector capability
-        # self.di = DataInjector(self.scenario.get_all_executes())
 
     def send_message(self):
         """
@@ -134,30 +131,6 @@ class EmailNotificationPlugin(NotificationPlugin):
 
         return mail.as_string()
 
-    def generate_default_template_vars(self):
-        """
-        Default template dictionary created to be used
-        when rendering the default email template.
-        :return:
-        """
-
-        passed_tasks = getattr(self.scenario, 'passed_tasks', [])
-        failed_tasks = getattr(self.scenario, 'failed_tasks', [])
-
-        temp_dict = dict(scenario=self.scenario)
-
-        if getattr(self.notification, 'on_start', False):
-            temp_dict['passed_tasks'] = passed_tasks[-1]
-            return temp_dict
-
-        if passed_tasks:
-            temp_dict['passed_tasks'] = ','.join(passed_tasks)
-
-        if failed_tasks:
-            temp_dict['failed_tasks'] = ','.join(failed_tasks)
-
-        return temp_dict
-
     def notify(self):
         """
         Implementation of the notify method for generating the email
@@ -172,20 +145,23 @@ class EmailNotificationPlugin(NotificationPlugin):
             if not getattr(self.notification, 'on_start'):
                 self.body = template_render(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                             'templates/email_txt_template.jinja')
-                                                            ), self.generate_default_template_vars()
+                                                            ),
+                                            generate_default_template_vars(self.scenario, self.notification)
                                             )
             else:
                 self.body = template_render(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                                          'templates/email_on_start_txt_template.jinja')
-                                                            ), self.generate_default_template_vars()
+                                                            ),
+                                            generate_default_template_vars(self.scenario, self.notification)
                                             )
         elif not self.body and self.body_tmpl:
-            self.logger.info('Using user provided email template')
+            var_dict = dict()
+            # Updating the the var_dict with scenario object to be used if needed by the user template
+            var_dict.update(scenario=generate_default_template_vars(self.scenario, self.notification).get('scenario'))
+            # Updating the the var_dict with environmental variables be used in the user template
+            var_dict.update(os.environ)
             self.body = template_render(os.path.abspath(os.path.join(getattr(self.notification, 'workspace'),
-                                        self.body_tmpl)), os.environ)
-
-        # TODO: Support Data Injection of carbon data into subject/body
-        # self.body = self.di.inject(str(self.body))
+                                        self.body_tmpl)), var_dict)
 
         self.logger.debug('The loaded message body is: \n')
         self.logger.debug(self.body)
