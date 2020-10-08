@@ -417,6 +417,7 @@ def file_mgmt(operation, file_path, content=None, cfg_parser=None):
     # to maintain the sequence in the results.yml file with ruamel
     yaml = YAML()
     yaml.default_flow_style = False
+    yaml.representer.ignore_aliases = lambda *data: True
     yaml.Representer.add_representer(OrderedDict, yaml.Representer.represent_dict)
 
     # Determine file extension
@@ -615,7 +616,7 @@ def filter_notifications_to_skip(notify_list, carbon_options):
 
     if carbon_options and carbon_options.get('skip_notify', False):
         return [res for res in notify_list
-                if not set([getattr(res, 'name')]).intersection(set(carbon_options.get('skip_notify')))]
+                if not set(getattr(res, 'name')).intersection(set(carbon_options.get('skip_notify')))]
     else:
         return notify_list
 
