@@ -408,7 +408,12 @@ Provisioning Openstack Assets using carbon_openstack_client_plugin
 Starting with version 1.8.0, Carbon is offering a new plugin **carbon_openstack_client_plugin**. to provision
 openstack resources. This plugin utilizes the openstackclient to provision resources.
 
-The plugin will have to be installed separately
+User can now install this plugin from Carbon
+
+.. code-block:: bash
+
+    $ pip install carbon[openstack-client-plugin]
+
 
 In your scenario descriptor file specify the **provisioner** key in your provision section.
 
