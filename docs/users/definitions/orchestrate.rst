@@ -240,8 +240,8 @@ To get ansible logs, you must set the **log_path** in the ansible.cfg, and it
 is recommended to set the **log_filter** in the ansible.cfg as described to
 filter out non ansible logs.  If you do not set the log path or don't provide
 an ansible.cfg, you will not get any ansible logs.  The ansible log will be
-added to the logs folder of carbon's output, please see `Carbon Output
-<../output.html>`_ for more details.
+added to the **ansible_orchestrate** folder under the logs folder of carbon's output,
+please see `Carbon Output <../output.html>`_ for more details.
 
 
 .. _ans_keys:

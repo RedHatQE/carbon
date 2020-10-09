@@ -97,10 +97,13 @@ Lets go over some of the common ones you will see.
   ├── inventory
   │   └── master
   ├── logs
-  │   ├── ansible.log
-  │   └── carbon_scenario.log
-  ├── results.yml
-  └── <included_scenario_name>_results.yml
+  │   ├── ansible_executor
+  │   │   └── ansible.log
+  │   └── ansible_orchestrator
+  │       └── ansible.log
+  ├── <included_scenario_name>_results.yml
+  └── results.yml
+
 
 
 .. list-table::
@@ -125,6 +128,16 @@ Lets go over some of the common ones you will see.
     *   - logs
         - A directory where all log files are stored from the run. Logs here
           consist of carbon runtime logs, ansible logs, etc.
+        - Directory
+
+    *   - ansible_orchestrator
+        - The directory under logs directory where ansible logs related to
+          orchestrate actionsare stored
+        - Directory
+
+    *   - ansible_executor
+        - The directory under logs directory where ansible logs related to
+          execute tasks are stored
         - Directory
 
     *   - results.yml

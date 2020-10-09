@@ -164,6 +164,18 @@ performing the execution. Please see the following example for more details:
    Carbon uses the ansible copy module to process the results of the requested action. The copy module requires selinux
    access. Refer to the `install guide <../install.html#install>`_.
 
+
+Ansible Logs
+~~~~~~~~~~~~
+
+To get ansible logs, you must set the **log_path** in the ansible.cfg, and it
+is recommended to set the **log_filter** in the ansible.cfg as described to
+filter out non ansible logs.  If you do not set the log path or don't provide
+an ansible.cfg, you will not get any ansible logs.  The ansible log will be
+added to the **ansible_executor** folder under the logs folder of carbon's output,
+please see `Carbon Output <../output.html>`_ for more details.
+
+
 Return Code for Test Execution
 ------------------------------
 

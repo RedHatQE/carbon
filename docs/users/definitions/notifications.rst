@@ -345,3 +345,11 @@ Using custom template and using carbon's data for formatting
 
 .. literalinclude:: ../../../examples/docs-usage/notification.yml
     :lines: 58-66
+
+
+Sending Chat Notifications
+---------------------------
+Carbon 1.9.0 introduces carbon_webhooks_notification_plugin which allows users to send chat notification
+during and/or post carbon run. To get more information about this plugin ,on how to install and use it
+please visit `carbon_webhooks_notification_plugin
+<https://gitlab.cee.redhat.com/ccit/carbon/plugins/carbon_webhooks_notification_plugin/-/blob/master/README.md>`_
