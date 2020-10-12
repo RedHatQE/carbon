@@ -1,3 +1,29 @@
+Version 1.9.0 (2020-10-12)
+--------------------------
+
+New Features
+~~~~~~~~~~~~
+* Carbon_webhooks_notification_plugin version 1.0.0 available for gchat and slack notification
+
+Enhancements
+~~~~~~~~~~~~
+* Add Carbon scenario to template environment for user supplied templates
+* Changed how artifact_locations are collected in carbon, now they will be in a list 
+  instead of dictionary
+* Add carbon_openstack_client_plugin as install extras in carbon setup.py
+* Refactor Carbon's default Ansible Executor to use Plugin model
+
+Bug Fixes
+~~~~~~~~~~~~
+* Carbon orchestrate fails when task concurrency for execute is set to true
+* Diabled yaml anchors and aliases for carbon's results.yml file
+* OpenStack-Client plugin fails to run remove commands during cleanup task fixed in 
+  OpenStack-Client plugin version 1.1.1
+* OpenStack-Client plugin when using 'find best available ip' the network list gets duplicate 
+  networks on retries, fixed in OpenStack-Client plugin version 1.1.1
+* Linchpin CI tasks are failing with carbon master as well as develop branches fixed 
+  in linchpin version 2.0.4
+
 Version 1.8.2 (2020-09-04)
 -------------------------
 
